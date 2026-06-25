@@ -24,6 +24,33 @@ const codesOf = (env: Env) =>
   (env.PLAN_INVITE_CODES || 'SISMO911-INVEST,RELIEF-2026,TERREMOTO-VIP')
     .split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
 
+const KV_PREFIX = 'plan:invite:';
+
+/**
+ * A code is valid if it's one of the master env codes OR exists as a KV invite
+ * (key `plan:invite:<CODE>`). The 100 batch codes live in KV — see the deploy
+ * script / Google Sheet. On first redemption we stamp the KV record.
+ */
+async function codeIsValid(env: Env, code: string): Promise<boolean> {
+  if (!code) return false;
+  if (codesOf(env).includes(code)) return true;
+  try {
+    const v = await env.CACHE.get(KV_PREFIX + code);
+    if (v === null) return false;
+    // Record first redemption (best-effort; never blocks access).
+    try {
+      const meta = JSON.parse(v || '{}');
+      if (!meta.redeemed_ms) {
+        meta.redeemed_ms = Date.now();
+        await env.CACHE.put(KV_PREFIX + code, JSON.stringify(meta));
+      }
+    } catch { /* opaque value — still valid */ }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function hmacHex(secret: string, msg: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(secret),
@@ -70,17 +97,30 @@ plan.get('/', async (c) => {
   return c.html(gateHtml(), 401);
 });
 
-// ---- POST /plan/unlock — validate invite code, set cookie ----
-plan.post('/unlock', async (c) => {
-  const body = await c.req.parseBody().catch(() => ({} as any));
-  const code = String((body as any).code || '').trim().toUpperCase();
-  if (!code || !codesOf(c.env).includes(code)) {
-    return c.html(gateHtml('Código no válido. Verifica tu invitación.'), 401);
-  }
+async function grant(c: any) {
   const tok = await mintToken(c.env);
   c.header('Set-Cookie',
     `${COOKIE}=${encodeURIComponent(tok)}; HttpOnly; Secure; SameSite=Lax; Path=/plan; Max-Age=${TTL_MS / 1000}`);
   return c.redirect('/plan', 302);
+}
+
+// ---- POST /plan/unlock — validate invite code, set cookie ----
+plan.post('/unlock', async (c) => {
+  const body = await c.req.parseBody().catch(() => ({} as any));
+  const code = String((body as any).code || '').trim().toUpperCase();
+  if (!(await codeIsValid(c.env, code))) {
+    return c.html(gateHtml('Código no válido. Verifica tu invitación.'), 401);
+  }
+  return grant(c);
+});
+
+// ---- GET /plan/i/:code — one-click magic invite link (used in the Sheet) ----
+plan.get('/i/:code', async (c) => {
+  const code = String(c.req.param('code') || '').trim().toUpperCase();
+  if (!(await codeIsValid(c.env, code))) {
+    return c.html(gateHtml('Enlace de invitación no válido o expirado.'), 401);
+  }
+  return grant(c);
 });
 
 // ---- GET /plan/logout — clear access ----
@@ -148,39 +188,34 @@ function gateHtml(error?: string): string {
 
 function deckHtml(): string {
   const css = `
-  :root{--navy:#13284f;--navy2:#0c1a36;--red:#dc2626;--amber:#ea580c;--gold:#d97706;--green:#16a34a;--cream:#f9f9fc;--ink:#13284f;--mut:#5b6884;}
+  :root{--navy:#13284f;--navy2:#0c1a36;--red:#dc2626;--amber:#ea580c;--gold:#d97706;--green:#16a34a;--cream:#f9f9fc;--ink:#13284f;--mut:#5b6884;--line:#e6e9f1;}
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
-  body{font-family:'Public Sans',system-ui,sans-serif;color:var(--ink);background:var(--navy2)}
+  /* White background to match the main SISMO911 page (body bg #f9f9fc). */
+  body{font-family:'Public Sans',system-ui,sans-serif;color:var(--ink);background:#f9f9fc}
   .progress{position:fixed;top:0;left:0;height:4px;background:linear-gradient(90deg,var(--red),var(--amber));width:0;z-index:50;transition:width .2s}
-  .topbar{position:fixed;top:0;right:0;z-index:40;display:flex;gap:10px;align-items:center;padding:14px 18px;font-size:12px;color:#fff;font-weight:700;letter-spacing:.1em}
-  .topbar .pill{background:rgba(220,38,38,.9);padding:5px 11px;border-radius:999px;text-transform:uppercase}
-  .topbar a{color:#cfd9ec;text-decoration:none;border:1px solid rgba(255,255,255,.25);padding:5px 11px;border-radius:999px}
+  .topbar{position:fixed;top:0;right:0;z-index:40;display:flex;gap:10px;align-items:center;padding:14px 18px;font-size:12px;color:var(--navy);font-weight:700;letter-spacing:.1em}
+  .topbar .pill{background:var(--red);color:#fff;padding:5px 11px;border-radius:999px;text-transform:uppercase}
+  .topbar a{color:var(--navy);text-decoration:none;border:1px solid var(--line);background:#fff;padding:5px 11px;border-radius:999px}
   .deck{scroll-snap-type:y mandatory;overflow-y:scroll;height:100vh}
   .slide{scroll-snap-align:start;min-height:100vh;display:flex;flex-direction:column;justify-content:center;
-    padding:84px 7vw 72px;position:relative}
-  .slide.dark{background:radial-gradient(130% 120% at 50% -10%,#1c3a6e,var(--navy) 60%,var(--navy2));color:#fff}
-  .slide.light{background:var(--cream)}
-  .slide.band{background:linear-gradient(180deg,#fff,#eef1f7)}
+    padding:84px 7vw 72px;position:relative;color:var(--ink)}
+  /* All slides on white/cream — alternating for visual rhythm, never dark. */
+  .slide.dark{background:#ffffff;border-top:3px solid var(--red)}
+  .slide.light{background:#f9f9fc}
+  .slide.band{background:linear-gradient(180deg,#ffffff,#eef1f7)}
   .eyebrow{font-size:13px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--red);margin-bottom:16px}
-  .slide.dark .eyebrow{color:#ff8a8a}
-  h1.title{font-size:clamp(34px,6vw,72px);font-weight:900;line-height:1.02;letter-spacing:-.02em}
-  h2{font-size:clamp(26px,4.2vw,46px);font-weight:900;line-height:1.06;letter-spacing:-.01em;margin-bottom:10px}
+  h1.title{font-size:clamp(34px,6vw,72px);font-weight:900;line-height:1.02;letter-spacing:-.02em;color:var(--navy)}
+  h2{font-size:clamp(26px,4.2vw,46px);font-weight:900;line-height:1.06;letter-spacing:-.01em;margin-bottom:10px;color:var(--navy)}
   p.lead{font-size:clamp(16px,2vw,21px);line-height:1.55;color:var(--mut);max-width:60ch;margin-top:14px}
-  .slide.dark p.lead{color:#c4d2ea}
-  .snum{position:absolute;right:6vw;bottom:30px;font-size:13px;font-weight:800;color:#9fb0cc;letter-spacing:.1em}
-  .slide.light .snum,.slide.band .snum{color:#9aa6bd}
+  .snum{position:absolute;right:6vw;bottom:30px;font-size:13px;font-weight:800;color:#9aa6bd;letter-spacing:.1em}
   .grid{display:grid;gap:18px;margin-top:30px}
   .g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
-  .card{background:#fff;border:1px solid #e6e9f1;border-radius:16px;padding:22px;box-shadow:0 10px 30px rgba(19,40,79,.06)}
-  .slide.dark .card{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12);box-shadow:none}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 10px 30px rgba(19,40,79,.06)}
   .card .k{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--red);margin-bottom:8px}
-  .slide.dark .card .k{color:#ff9a9a}
-  .card h3{font-size:19px;font-weight:800;margin-bottom:6px}
+  .card h3{font-size:19px;font-weight:800;margin-bottom:6px;color:var(--navy)}
   .card p{font-size:14.5px;line-height:1.5;color:var(--mut)}
-  .slide.dark .card p{color:#c0cee6}
   .stat{font-size:clamp(28px,3.6vw,42px);font-weight:900;letter-spacing:-.02em;color:var(--navy)}
-  .slide.dark .stat{color:#fff}
   .stat .u{font-size:15px;font-weight:700;color:var(--mut);margin-left:4px}
   .pricecard{position:relative;overflow:hidden}
   .pricecard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)}
@@ -191,37 +226,44 @@ function deckHtml(): string {
   ul.kit li{font-size:13.5px;color:var(--mut);padding-left:18px;position:relative;line-height:1.4}
   ul.kit li::before{content:"▸";position:absolute;left:0;color:var(--red);font-weight:900}
   .timeline{margin-top:26px;display:flex;flex-direction:column;gap:0}
-  .ph{display:grid;grid-template-columns:130px 1fr;gap:20px;padding:16px 0;border-top:1px solid rgba(255,255,255,.14)}
-  .ph:last-child{border-bottom:1px solid rgba(255,255,255,.14)}
-  .ph .when{font-weight:900;font-size:15px;color:#ffb38a}
-  .ph .when small{display:block;font-weight:700;color:#9fb0cc;font-size:12px;letter-spacing:.05em;margin-top:3px}
-  .ph .what b{font-size:17px;font-weight:800;display:block;margin-bottom:3px}
-  .ph .what span{font-size:14px;color:#c0cee6;line-height:1.45}
+  .ph{display:grid;grid-template-columns:130px 1fr;gap:20px;padding:16px 0;border-top:1px solid var(--line)}
+  .ph:last-child{border-bottom:1px solid var(--line)}
+  .ph .when{font-weight:900;font-size:15px;color:var(--amber)}
+  .ph .when small{display:block;font-weight:700;color:#9aa6bd;font-size:12px;letter-spacing:.05em;margin-top:3px}
+  .ph .what b{font-size:17px;font-weight:800;display:block;margin-bottom:3px;color:var(--navy)}
+  .ph .what span{font-size:14px;color:var(--mut);line-height:1.45}
   .bars{margin-top:24px;display:flex;flex-direction:column;gap:13px}
   .bar{display:grid;grid-template-columns:240px 1fr 92px;align-items:center;gap:14px}
-  .bar .lab{font-size:14px;font-weight:700}
-  .slide.light .bar .lab{color:var(--navy)}
+  .bar .lab{font-size:14px;font-weight:700;color:var(--navy)}
   .track{height:22px;border-radius:7px;background:#e6e9f1;overflow:hidden}
-  .slide.dark .track{background:rgba(255,255,255,.1)}
   .fill{height:100%;border-radius:7px;background:linear-gradient(90deg,var(--red),var(--amber))}
-  .bar .val{font-size:14px;font-weight:800;text-align:right}
+  .bar .val{font-size:14px;font-weight:800;text-align:right;color:var(--navy)}
   .ask{display:flex;flex-wrap:wrap;gap:14px;margin-top:28px}
-  .ask .big{flex:1;min-width:240px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:26px}
-  .ask .big .n{font-size:clamp(30px,4vw,46px);font-weight:900;color:#fff}
-  .ask .big .l{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#ff9a9a;font-weight:800;margin-bottom:8px}
+  .ask .big{flex:1;min-width:240px;background:#fff;border:1px solid var(--line);border-left:5px solid var(--red);border-radius:16px;padding:26px;box-shadow:0 10px 30px rgba(19,40,79,.06)}
+  .ask .big .n{font-size:clamp(30px,4vw,46px);font-weight:900;color:var(--navy)}
+  .ask .big .l{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--red);font-weight:800;margin-bottom:8px}
   .cta{margin-top:30px;display:flex;gap:14px;flex-wrap:wrap}
-  .cta a{text-decoration:none;font-weight:800;font-size:15px;padding:14px 24px;border-radius:12px}
-  .cta .pri{background:var(--red);color:#fff}.cta .sec{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25)}
+  .cta a,.cta button{text-decoration:none;font-weight:800;font-size:15px;padding:14px 24px;border-radius:12px;border:none;cursor:pointer;font-family:inherit}
+  .cta .pri{background:var(--red);color:#fff}
+  .cta .sec{background:#fff;color:var(--navy);border:1px solid var(--line)}
+  .cta .pdf{background:var(--navy);color:#fff;display:inline-flex;align-items:center;gap:8px}
+  .cta .pdf:hover{background:#0e2042}
   .dots{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:10px}
-  .dots a{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.35);display:block;transition:.2s}
+  .dots a{width:10px;height:10px;border-radius:999px;background:#c7cedd;display:block;transition:.2s}
   .dots a.on{background:var(--red);transform:scale(1.35)}
-  .note{margin-top:22px;font-size:12.5px;color:#8fa0bd;max-width:70ch;line-height:1.5}
-  .slide.light .note{color:#7a8092}
-  .kbd{font-size:12px;color:#9fb0cc}
+  .note{margin-top:22px;font-size:12.5px;color:#7a8092;max-width:70ch;line-height:1.5}
+  .kbd{font-size:12px;color:#9aa6bd}
   @media(max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr}.bar{grid-template-columns:1fr;gap:5px}.bar .val{text-align:left}
     .ph{grid-template-columns:1fr;gap:5px}.dots{display:none}.slide{padding:90px 22px 70px}}
-  @media print{.deck{height:auto;overflow:visible}.slide{min-height:auto;page-break-after:always;color:#13284f!important;background:#fff!important}
-    .topbar,.dots,.progress,.cta{display:none}.slide.dark *{color:#13284f!important}}
+  @media print{
+    @page{margin:14mm}
+    html,body{background:#fff!important}
+    .deck{height:auto;overflow:visible;scroll-snap-type:none}
+    .slide{min-height:auto;page-break-after:always;break-after:page;background:#fff!important;border-top:none!important;padding:24px 0}
+    .topbar,.dots,.progress,.cta{display:none!important}
+    .card{box-shadow:none;break-inside:avoid}
+    .snum{position:static;display:block;margin-top:16px}
+  }
   `;
 
   const dots = (n: number) => {
@@ -376,6 +418,7 @@ function deckHtml(): string {
       </div>
       <p class="lead">Buscamos grants en efectivo, producto médico donado (gift-in-kind) y socios de distribución en Venezuela. El modelo de costos en vivo (10 pestañas) está disponible a solicitud.</p>
       <div class="cta">
+        <button class="pdf" id="pdfBtn" type="button">⬇ Descargar PDF</button>
         <a class="pri" href="mailto:contacto@sismo911.com?subject=SISMO911%20Plan%20M%C3%A9dico%20de%20Emergencia">Hablemos →</a>
         <a class="sec" href="/">Volver a SISMO911</a>
       </div>
@@ -400,6 +443,8 @@ function deckHtml(): string {
       else if(e.key==='Home'){go(0);}else if(e.key==='End'){go(slides.length-1);}
     });
     dots.forEach(function(d){d.addEventListener('click',function(e){e.preventDefault();go(parseInt(d.getAttribute('data-i'),10)-1);});});
+    var pdf=document.getElementById('pdfBtn');
+    if(pdf){pdf.addEventListener('click',function(){window.print();});}
   })();
   </script>`;
   return shell('SISMO911 · Plan Médico de Emergencia', body);
