@@ -5,6 +5,7 @@ import {
 import { hashPassword, verifyPassword } from '../src/lib/auth';
 import { estimatePager } from '../src/lib/pager';
 import { inBbox, normalizeFeature } from '../src/lib/usgs';
+import { scoreThreat } from '../src/lib/threat';
 
 // ---- helpers ----
 const envWith = (over: any = {}) => ({ ...over } as any);
@@ -131,5 +132,29 @@ describe('usgs: bbox filter + feature normalization', () => {
     const f = { id: 'us123', geometry: { coordinates: [-68.3, 10.4, 12.5] }, properties: { mag: 7.5, place: '23 km SE of Yumare', time: 1000, updated: 2000, alert: 'red', tsunami: 1, felt: 9, url: 'http://u' } };
     const e = normalizeFeature(f);
     expect(e).toMatchObject({ id: 'us123', mag: 7.5, lat: 10.4, lon: -68.3, depth_km: 12.5, alert: 'red', tsunami: 1 });
+  });
+});
+
+describe('scoreThreat', () => {
+  const now = 1_000_000_000_000;
+  const H = 3_600_000;
+  it('returns Alerta Máxima for a recent M7.5 red alert', () => {
+    const t = scoreThreat([{ id: 'a', mag: 7.5, time_ms: now - 22 * H, alert: 'red', place: '28 km SE of Yumare, Venezuela' }], now);
+    expect(t.level).toBe(4);
+    expect(t.label).toBe('Alerta Máxima');
+    expect(t.dot).toBe('bg-critical');
+  });
+  it('returns Vigilancia Normal when quakes are small', () => {
+    const t = scoreThreat([{ id: 'b', mag: 3.1, time_ms: now - 2 * H, alert: null, place: 'x' }], now);
+    expect(t.level).toBe(1);
+    expect(t.label).toBe('Vigilancia Normal');
+  });
+  it('returns Atención for a moderate M4.6', () => {
+    const t = scoreThreat([{ id: 'c', mag: 4.6, time_ms: now - 3 * H, alert: null, place: 'x' }], now);
+    expect(t.level).toBe(2);
+  });
+  it('decays to Normal when the big quake is older than 48h', () => {
+    const t = scoreThreat([{ id: 'd', mag: 7.5, time_ms: now - 60 * H, alert: 'red', place: 'x' }], now);
+    expect(t.level).toBe(1);
   });
 });

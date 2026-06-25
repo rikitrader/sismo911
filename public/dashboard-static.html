@@ -123,9 +123,9 @@
     <header class="flex items-center justify-between h-[72px] px-4 sm:px-8 bg-white border-b border-outline-variant/60">
       <div class="leading-tight">
         <div class="label-caps text-on-surface-variant text-[10px]">Estado Actual</div>
-        <div class="flex items-center gap-2 font-display font-bold text-[19px] text-on-surface">
-          <span class="status-dot h-2.5 w-2.5 rounded-full bg-safe"></span>
-          Vigilancia Normal
+        <div class="flex items-center gap-2 font-display font-bold text-[19px] text-on-surface" id="estadoActual" title="">
+          <span id="estadoDot" class="status-dot h-2.5 w-2.5 rounded-full bg-safe"></span>
+          <span id="estadoLabel">Vigilancia Normal</span>
         </div>
       </div>
       <div class="flex items-center gap-4 sm:gap-5">
@@ -243,6 +243,17 @@
 </div>
 
 <script>
+  // ---- "Estado Actual" badge driven by the server-scored threat level ----
+  fetch('/api/events?limit=1').then(r => r.json()).then(d => {
+    if (!d.threat) return;
+    const lab = document.getElementById('estadoLabel');
+    const dot = document.getElementById('estadoDot');
+    const box = document.getElementById('estadoActual');
+    if (lab) lab.textContent = d.threat.label;
+    if (dot) dot.className = 'status-dot h-2.5 w-2.5 rounded-full ' + d.threat.dot;
+    if (box && d.threat.reason) box.title = d.threat.reason;
+  }).catch(() => {});
+
   // ---- Severity + colors ----
   const sev = (m) => m >= 4.0 ? 'critical' : m >= 2.5 ? 'warning' : 'safe';
   const HEX = { critical: '#c8102e', warning: '#e57200', safe: '#2e7d32' };
