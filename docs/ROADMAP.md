@@ -194,3 +194,23 @@ Driven by the goal loop `20260624-2345-sismo911-full-disaster-response-platform`
 ## ⚠️ Reality check
 
 This is a **life-safety** application. Phases 7–8 (security, PII, accuracy disclaimers, testing) are **not optional polish** — they are prerequisites before anyone relies on it in a real emergency. The free-data features (Phases 1–4) can ship fast; the responsibility bar for "100%" is the hardening, not the feature count.
+
+
+---
+
+## Completion status — 2026-06-25
+
+| Phase | Status | Notes |
+|---|---|---|
+| 0 Foundation | ✅ Done | Workers+Hono+D1+KV, live USGS, custom domains, emblem |
+| 1 Multi-agency data/alerts | ✅ Done | USGS + NOAA tsunami + OpenFEMA (US-labeled) |
+| 2 Citizen safety | ✅ Done | SOS, check-ins, resources, offline guide (SW) |
+| 3 Maps & intelligence | ✅ Done | heatmap, Overpass facilities, GIBS/Esri satellite |
+| 4 Notifications & comms | ✅ Done | web-push (VAPID), HAM directory |
+| 5 AI features | ✅ Done | sit-reps + damage-photo vision (Workers AI), LIVE |
+| 6 Gated integrations | ⛔ Blocked (by design) | ShakeAlert license, social/gov keys, paid feeds — typed stubs flagged in /api/status |
+| 7 Security & compliance | ✅ Done | auth/roles, rate limit, CSP/HSTS/XFO, validation, PII coord-blur, CORS+CSRF, privacy policy, 26 tests |
+| 8 Production hardening | 🟡 ~90% | PWA ✓, tests+CI ✓, observability on; **Tailwind build deferred** (cosmetic perf); **branch protection needs GitHub Pro/public repo** |
+| 9 Launch | 🟡 Mostly | domains ✓, HSTS ✓, privacy ✓, runbook ✓; uptime monitor + backup cron + announcement = ops tasks |
+
+**Cannot be "completed" in code (need your action):** Phase 6 credentials/partnerships; GitHub Pro or public repo for branch protection; Tailwind build (deferred to avoid conflict with the in-flight SEO pass); Cloudflare WAF rate-limit rule for a hard edge cap.
