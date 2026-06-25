@@ -56,6 +56,29 @@ function ledgerRows(list){
     <span class="text-xs text-on-surface-variant whitespace-nowrap">${ago(x.paid_ms)}</span></div>`).join('');
 }
 
+const FLOW_COLORS=['#bb0027','#00173a','#0b2b5b','#e57200','#2e7d32','#7a94ca','#c8102e','#44474f'];
+function moneyFlow(c){
+  let alloc=[];
+  try{ alloc=JSON.parse(c.allocation||'[]'); }catch(e){ alloc=[]; }
+  alloc=Array.isArray(alloc)?alloc:[];
+  if(!c.fund_use && !alloc.length) return '';
+  const tiles=alloc.map((a,i)=>{
+    const pct=Math.max(0,Math.min(100,Math.round(Number(a.pct)||0)));
+    const col=FLOW_COLORS[i%FLOW_COLORS.length];
+    return `<div class="border border-outline-variant/50 rounded-xl p-3">
+      <div class="font-display font-extrabold text-2xl" style="color:${col}">${pct}%</div>
+      <div class="text-xs text-on-surface-variant mb-2 leading-tight">${esc(a.label)}</div>
+      <div class="bar"><span style="width:${pct}%;background:${col}"></span></div>
+    </div>`;
+  }).join('');
+  return `<div class="card p-5 mt-4">
+    <h2 class="font-display font-bold text-lg mb-1">¿A dónde va tu donación?</h2>
+    <p class="text-xs text-on-surface-variant mb-3">Transparencia del flujo de fondos · cada movimiento queda en el registro público.</p>
+    ${c.fund_use?`<p class="text-on-surface-variant leading-relaxed mb-4 whitespace-pre-line">${esc(c.fund_use)}</p>`:''}
+    ${alloc.length?`<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">${tiles}</div>`:''}
+  </div>`;
+}
+
 function render(c,ledger){
   const goal=Number(c.goal_usd)||0, raised=Number(c.raised_usd)||0;
   const pct=goal>0?Math.min(100,Math.round(raised/goal*100)):0;
@@ -69,6 +92,7 @@ function render(c,ledger){
       <h1 class="font-display font-extrabold text-3xl mb-2">${esc(c.title)}</h1>
       <p class="text-on-surface-variant mb-1">Organiza: <b class="text-on-surface">${esc(c.organizer_name||'SISMO911')}</b></p>
       ${c.beneficiary?`<p class="text-on-surface-variant mb-4">Beneficiario: <b class="text-on-surface">${esc(c.beneficiary)}</b></p>`:''}
+      ${moneyFlow(c)}
       <div class="card p-5 mt-4"><h2 class="font-display font-bold text-lg mb-2">La historia</h2>
         <p class="whitespace-pre-line leading-relaxed">${esc(c.story||c.summary||'')}</p></div>
       <div class="card p-5 mt-4"><h2 class="font-display font-bold text-lg mb-2">Donantes recientes</h2><div id="ledger">${ledgerRows(ledger)}</div></div>
