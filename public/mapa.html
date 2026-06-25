@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa Sísmico — SISMO911</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','secondary-fixed':'#ffb3b1'},fontFamily:{display:['Public Sans','sans-serif'],sans:['Inter','sans-serif']}}}}</script>
+<style>body{margin:0;font-family:Inter,sans-serif}.font-display{font-family:'Public Sans',sans-serif}#map{position:absolute;top:56px;bottom:0;left:0;right:0}.qp::after{content:'';position:absolute;inset:0;border-radius:9999px;box-shadow:0 0 0 0 rgba(200,16,46,.5);animation:pr 1.8s infinite}@keyframes pr{70%{box-shadow:0 0 0 16px rgba(200,16,46,0)}100%{box-shadow:0 0 0 0 rgba(200,16,46,0)}}</style>
+</head>
+<body>
+<header class="bg-primary text-white sticky top-0 z-[1000]" style="height:56px"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa.html" class="text-white">Mapa</a><a href="/alertas.html" class="hover:text-white/70">Alertas</a><a href="/sos.html" class="text-secondary-fixed font-bold">SOS</a><a href="/familia.html" class="hover:text-white/70">Familia</a><a href="/recursos.html" class="hover:text-white/70">Recursos</a><a href="/comms.html" class="hover:text-white/70">Radio</a><a href="/guia.html" class="hover:text-white/70">Guía</a></nav></div></header>
+<div id="map"></div>
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const map=L.map('map',{attributionControl:false}).setView([8.5,-66.5],6);
+L.control.attribution({prefix:false}).addTo(map);
+const street=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM, © CARTO · USGS',maxZoom:19}).addTo(map);
+const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri',maxZoom:19});
+const gibs=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2026-06-24/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',{attribution:'NASA GIBS',maxZoom:9});
+const sismos=L.layerGroup().addTo(map),heat=L.layerGroup(),refugios=L.layerGroup();
+L.control.layers({'Calle':street,'Satélite (Esri)':esri,'Satélite (NASA GIBS)':gibs},{'Sismos':sismos,'Mapa de riesgo':heat,'Refugios/Hospitales':refugios}).addTo(map);
+const HEX=m=>m>=4?'#c8102e':m>=2.5?'#e57200':'#2e7d32';
+fetch('/api/events?limit=300').then(r=>r.json()).then(d=>{(d.events||[]).forEach((e,i)=>{const s=Math.max(9,Math.min(34,8+(e.mag-1.5)*6));const rec=i===0;
+  L.marker([e.lat,e.lon],{icon:L.divIcon({className:'',html:`<div class="${rec?'qp':''}" style="position:relative;width:${s}px;height:${s}px;border-radius:9999px;background:${HEX(e.mag)};box-shadow:0 0 0 2px #fff"></div>`,iconSize:[s,s],iconAnchor:[s/2,s/2]})}).bindPopup(`<b>M ${e.mag}</b> · ${e.place}<br>prof ${e.depth_km} km`).addTo(sismos);});});
+fetch('/api/heatmap').then(r=>r.json()).then(d=>{(d.points||[]).forEach(([la,lo,w])=>L.circle([la,lo],{radius:12000+w*60000,stroke:false,fillColor:'#c8102e',fillOpacity:.08+w*.18}).addTo(heat));});
+fetch('/api/facilities?lat=10.3&lon=-67.0&radius=45000').then(r=>r.json()).then(d=>{(d.facilities||[]).forEach(f=>L.circleMarker([f.lat,f.lon],{radius:4,color:'#0b2b5b',weight:1,fillColor:f.type==='hospital'?'#2e7d32':'#445e91',fillOpacity:1}).bindTooltip(`${f.name} · ${f.type}`).addTo(refugios));});
+</script>
+</body>
+</html>

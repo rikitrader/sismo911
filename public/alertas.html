@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alertas Multi-Agencia — SISMO911</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','secondary-fixed':'#ffb3b1','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0',critical:'#c8102e',warning:'#e57200',advisory:'#ffbc3d',safe:'#2e7d32'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif'],mono:['JetBrains Mono','monospace']}}}}</script>
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa.html" class="hover:text-white/70">Mapa</a><a href="/alertas.html" class="text-white">Alertas</a><a href="/sos.html" class="text-secondary-fixed font-bold">SOS</a><a href="/familia.html" class="hover:text-white/70">Familia</a><a href="/recursos.html" class="hover:text-white/70">Recursos</a><a href="/comms.html" class="hover:text-white/70">Radio</a><a href="/guia.html" class="hover:text-white/70">Guía</a></nav></div></header>
+
+<main class="mx-auto max-w-4xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Alertas Multi-Agencia</h1>
+  <p class="text-on-surface-variant mb-2">USGS (global) · NOAA/NWS tsunami (Caribe) · OpenFEMA (EE.UU.).</p>
+  <p class="text-xs bg-advisory/15 border border-advisory/40 rounded px-3 py-2 mb-6">⚠️ FEMA y ShakeAlert son sistemas de EE.UU. y <b>no cubren Venezuela</b>. Para Venezuela rigen los datos de USGS (sismos) y NOAA (tsunami del Caribe).</p>
+  <div id="list" class="space-y-3"><p class="text-on-surface-variant text-sm">Cargando…</p></div>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const SEV={critical:['bg-critical','Crítica'],warning:['bg-warning','Alerta'],advisory:['bg-advisory text-on-surface','Aviso']};
+const ago=t=>{if(!t)return '';const s=(Date.now()-t)/1000;if(s<3600)return 'hace '+Math.floor(s/60)+' min';if(s<86400)return 'hace '+Math.floor(s/3600)+'h';return 'hace '+Math.floor(s/86400)+'d';};
+fetch('/api/alerts').then(r=>r.json()).then(d=>{
+  document.getElementById('list').innerHTML = d.alerts.length ? d.alerts.map(a=>{
+    const [cls,lbl]=SEV[a.severity]||SEV.advisory;
+    return `<div class="bg-white border border-outline-variant/60 rounded-lg p-4 flex items-start gap-3">
+      <span class="${cls} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5">${lbl}</span>
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-sm">${a.title||'(sin título)'}</div>
+        <div class="mt-1 flex items-center gap-2 text-[11px] text-on-surface-variant font-mono">
+          <span class="uppercase">${a.source}</span><span>·</span><span>${a.coverage}</span><span>·</span><span>${ago(a.time_ms)}</span>
+        </div>
+      </div>
+      ${a.url?`<a href="${a.url}" target="_blank" class="text-primary text-xs underline shrink-0">ver</a>`:''}
+    </div>`;
+  }).join('') : '<p class="text-on-surface-variant text-sm">Sin alertas activas.</p>';
+}).catch(()=>{document.getElementById('list').innerHTML='<p class="text-secondary text-sm">No se pudieron cargar las alertas.</p>';});
+</script>
+</body>
+</html>

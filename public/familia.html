@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Familia — Avísale a los tuyos | SISMO911</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','secondary-fixed':'#ffb3b1','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0',safe:'#2e7d32',warning:'#e57200'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif']}}}}</script>
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa.html" class="hover:text-white/70">Mapa</a><a href="/alertas.html" class="hover:text-white/70">Alertas</a><a href="/sos.html" class="text-secondary-fixed font-bold">SOS</a><a href="/familia.html" class="text-white">Familia</a><a href="/recursos.html" class="hover:text-white/70">Recursos</a><a href="/comms.html" class="hover:text-white/70">Radio</a><a href="/guia.html" class="hover:text-white/70">Guía</a></nav></div></header>
+
+<main class="mx-auto max-w-3xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Verificación de Seguridad Familiar</h1>
+  <p class="text-on-surface-variant mb-6">Marca tu estado para que tu familia sepa que estás bien — o pide ayuda.</p>
+
+  <form id="form" class="bg-white border border-outline-variant/60 rounded-lg p-5 grid sm:grid-cols-2 gap-3 mb-8">
+    <input name="name" required placeholder="Tu nombre" class="border border-outline-variant rounded px-3 py-2 text-sm sm:col-span-2">
+    <input name="message" placeholder="Mensaje (opcional)" class="border border-outline-variant rounded px-3 py-2 text-sm sm:col-span-2">
+    <button name="status" value="safe" class="bg-safe text-white font-display font-bold py-2.5 rounded">✅ Estoy a salvo</button>
+    <button name="status" value="need_help" class="bg-secondary text-white font-display font-bold py-2.5 rounded">🆘 Necesito ayuda</button>
+    <p id="msg" class="text-sm text-safe sm:col-span-2"></p>
+  </form>
+
+  <div class="flex items-center justify-between mb-2"><h2 class="font-display font-bold text-lg">Registro reciente</h2><span id="count" class="text-xs text-on-surface-variant"></span></div>
+  <div id="list" class="space-y-2"></div>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const ago=t=>{const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';};
+const ST={safe:['A salvo','bg-safe'],need_help:['Necesita ayuda','bg-secondary'],unknown:['Desconocido','bg-warning']};
+async function load(){const {checkins=[]}=await fetch('/api/checkins').then(r=>r.json());
+  document.getElementById('count').textContent=checkins.length+' registros';
+  document.getElementById('list').innerHTML=checkins.length?checkins.map(c=>{const[l,cl]=ST[c.status]||ST.unknown;
+    return `<div class="bg-white border border-outline-variant/60 rounded-lg px-4 py-2.5 flex items-center justify-between">
+      <div><div class="font-semibold text-sm">${c.name}</div>${c.message?`<div class="text-xs text-on-surface-variant">${c.message}</div>`:''}<div class="text-[11px] text-on-surface-variant">hace ${ago(c.created_ms)}</div></div>
+      <span class="${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span></div>`;}).join(''):'<p class="text-on-surface-variant text-sm">Sin registros aún.</p>';}
+document.getElementById('form').addEventListener('submit',async e=>{e.preventDefault();
+  const status=e.submitter.value; const fd=Object.fromEntries(new FormData(e.target)); fd.status=status;
+  const pos=await new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>r(p.coords),()=>r(null),{timeout:6000}):r(null));
+  if(pos){fd.lat=pos.latitude;fd.lon=pos.longitude;}
+  const r=await fetch('/api/checkins',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(fd)}).then(x=>x.json());
+  const m=document.getElementById('msg'); if(r.ok){m.textContent='Registrado ✓';e.target.reset();load();setTimeout(()=>m.textContent='',2500);}else m.textContent='Error';});
+load();
+</script>
+</body>
+</html>

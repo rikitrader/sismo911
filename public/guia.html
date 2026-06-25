@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guía de Emergencia — SISMO911</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','secondary-fixed':'#ffb3b1','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0',safe:'#2e7d32',warning:'#e57200'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif']}}}}</script>
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa.html" class="hover:text-white/70">Mapa</a><a href="/alertas.html" class="hover:text-white/70">Alertas</a><a href="/sos.html" class="text-secondary-fixed font-bold">SOS</a><a href="/familia.html" class="hover:text-white/70">Familia</a><a href="/recursos.html" class="hover:text-white/70">Recursos</a><a href="/comms.html" class="hover:text-white/70">Radio</a><a href="/guia.html" class="text-white">Guía</a><a href="/pager.html" class="hover:text-white/70">PAGER</a><a href="/admin.html" class="hover:text-white/70">Consola</a></nav></div></header>
+
+<main class="mx-auto max-w-3xl px-4 py-8">
+  <div class="flex items-center gap-2 text-xs text-safe font-semibold mb-1"><span class="h-2 w-2 rounded-full bg-safe"></span> Disponible sin conexión</div>
+  <h1 class="font-display font-extrabold text-3xl mb-2">Guía de Emergencia Sísmica</h1>
+  <p class="text-on-surface-variant mb-6">Qué hacer antes, durante y después de un sismo. Esta guía se almacena en su dispositivo y funciona sin internet.</p>
+
+  <section class="space-y-5">
+    <div class="bg-white border border-outline-variant/60 rounded-lg p-5">
+      <h2 class="font-display font-bold text-lg text-primary mb-2">⚠️ Durante el sismo</h2>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li><b>Agáchese, cúbrase y agárrese.</b> Bajo una mesa resistente, lejos de ventanas.</li>
+        <li>Si está en cama, quédese y proteja su cabeza con una almohada.</li>
+        <li>Si está al aire libre, aléjese de edificios, postes y cables.</li>
+        <li><b>No use ascensores.</b> No corra hacia las salidas durante el movimiento.</li>
+        <li>Si conduce, deténgase en un lugar despejado y permanezca dentro.</li>
+      </ul>
+    </div>
+    <div class="bg-white border border-outline-variant/60 rounded-lg p-5">
+      <h2 class="font-display font-bold text-lg text-primary mb-2">✅ Después del sismo</h2>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li>Revise si hay heridos y preste primeros auxilios.</li>
+        <li>Verifique fugas de gas, agua y daños eléctricos. Corte los servicios si hay riesgo.</li>
+        <li>Use el registro <a href="/familia.html" class="text-primary underline">Familia</a> para avisar que está a salvo.</li>
+        <li>Aléjese de estructuras dañadas; prepárese para réplicas.</li>
+        <li>Si está atrapado, golpee una tubería o pared; use el <a href="/sos.html" class="text-primary underline">botón SOS</a>.</li>
+      </ul>
+    </div>
+    <div class="bg-white border border-outline-variant/60 rounded-lg p-5">
+      <h2 class="font-display font-bold text-lg text-primary mb-2">🎒 Kit de emergencia (72 horas)</h2>
+      <div class="grid grid-cols-2 gap-2 text-sm">
+        <span>• Agua (4 L/persona/día)</span><span>• Alimentos no perecederos</span>
+        <span>• Linterna + pilas</span><span>• Radio a pilas</span>
+        <span>• Botiquín de primeros auxilios</span><span>• Medicamentos personales</span>
+        <span>• Documentos en bolsa sellada</span><span>• Silbato</span>
+        <span>• Efectivo en billetes pequeños</span><span>• Cargador / batería externa</span>
+      </div>
+    </div>
+    <div class="bg-secondary/5 border border-secondary/30 rounded-lg p-5">
+      <h2 class="font-display font-bold text-lg text-secondary mb-2">☎️ Números de emergencia</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 font-mono">
+        <div><div class="text-2xl font-bold">911</div><div class="text-xs text-on-surface-variant">Emergencias</div></div>
+        <div><div class="text-2xl font-bold">171</div><div class="text-xs text-on-surface-variant">Bomberos</div></div>
+        <div><div class="text-2xl font-bold">0212-257-5153</div><div class="text-xs text-on-surface-variant">FUNVISIS</div></div>
+      </div>
+      <a href="/comms.html" class="inline-block mt-3 text-sm text-primary underline">Ver directorio + frecuencias de radio →</a>
+    </div>
+  </section>
+</main>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
+</body>
+</html>

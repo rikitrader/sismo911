@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recursos y Suministros — SISMO911</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','secondary-fixed':'#ffb3b1','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0',safe:'#2e7d32',warning:'#e57200'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif']}}}}</script>
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa.html" class="hover:text-white/70">Mapa</a><a href="/alertas.html" class="hover:text-white/70">Alertas</a><a href="/sos.html" class="text-secondary-fixed font-bold">SOS</a><a href="/familia.html" class="hover:text-white/70">Familia</a><a href="/recursos.html" class="text-white">Recursos</a><a href="/comms.html" class="hover:text-white/70">Radio</a><a href="/guia.html" class="hover:text-white/70">Guía</a></nav></div></header>
+
+<main class="mx-auto max-w-4xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Recursos y Suministros</h1>
+  <p class="text-on-surface-variant mb-6">Agua, alimentos, refugios, atención médica y combustible disponibles por región.</p>
+  <div id="grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const KIND={water:['💧','Agua'],food:['🥫','Alimentos'],shelter:['🏠','Refugio'],medical:['🏥','Médico'],fuel:['⛽','Combustible'],power:['⚡','Energía']};
+const STAT={available:['Disponible','text-safe'],low:['Bajo','text-warning'],depleted:['Agotado','text-secondary']};
+fetch('/api/resources').then(r=>r.json()).then(d=>{
+  document.getElementById('grid').innerHTML=d.resources.length?d.resources.map(r=>{const[ic,kl]=KIND[r.kind]||['📦',r.kind];const[sl,sc]=STAT[r.status]||STAT.available;
+    return `<div class="bg-white border border-outline-variant/60 rounded-lg p-4">
+      <div class="flex items-center justify-between"><span class="text-2xl">${ic}</span><span class="text-xs font-bold ${sc}">${sl}</span></div>
+      <div class="font-display font-bold mt-2">${r.label}</div>
+      <div class="text-xs text-on-surface-variant">${kl}${r.region?' · '+r.region:''}${r.quantity&&r.quantity!=='—'?' · '+r.quantity:''}</div></div>`;}).join(''):'<p class="text-on-surface-variant text-sm">Sin recursos cargados.</p>';
+});
+</script>
+</body>
+</html>

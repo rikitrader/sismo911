@@ -47,6 +47,10 @@ id = "2d5be96112724b8dbfaae2723d3a4dd3"
 [observability]
 enabled = true
 
+# Cloudflare Workers AI — free-tier inference for situation reports + damage triage.
+[ai]
+binding = "AI"
+
 [vars]
 # Venezuela bounding box for the USGS FDSN query (min/max lat/lon).
 USGS_MINLAT = "-2"
@@ -59,3 +63,5 @@ USGS_WINDOW_DAYS = "30"
 # <team> part). Empty = enforcement disabled (app stays open).
 ACCESS_TEAM_DOMAIN = ""
 ACCESS_AUD = ""
+# Web Push public key (safe to expose). Private key is a Worker secret (VAPID_PRIVATE_KEY).
+VAPID_PUBLIC_KEY = "BLWuQ5I87NCxY_PJf9vplu423M7hDMbXgp98_no9mSZ54G5h4v_hYPcynxaNFWo0-HNyGTaMtQK1l-_g5g2qtL8"

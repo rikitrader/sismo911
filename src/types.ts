@@ -10,6 +10,10 @@ export interface Env {
   // Cloudflare Access (defense-in-depth). Enforcement is active only when both set.
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;
+  // Web Push
+  VAPID_PUBLIC_KEY?: string;
+  // Cloudflare Workers AI (situation reports). Optional binding.
+  AI?: Ai;
 }
 
 export interface SeismicEvent {

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radio y Comunicaciones de Emergencia — SISMO911</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','secondary-fixed':'#ffb3b1','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif'],mono:['JetBrains Mono','monospace']}}}}</script>
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa.html" class="hover:text-white/70">Mapa</a><a href="/alertas.html" class="hover:text-white/70">Alertas</a><a href="/sos.html" class="text-secondary-fixed font-bold">SOS</a><a href="/familia.html" class="hover:text-white/70">Familia</a><a href="/recursos.html" class="hover:text-white/70">Recursos</a><a href="/comms.html" class="text-white">Radio</a><a href="/guia.html" class="hover:text-white/70">Guía</a></nav></div></header>
+
+<main class="mx-auto max-w-4xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Radio y Comunicaciones de Emergencia</h1>
+  <p class="text-on-surface-variant mb-2">Frecuencias HAM, marítimas y de banda ciudadana para coordinación cuando falla la red celular.</p>
+  <p class="text-xs bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-6">Verifica las frecuencias contra el plan de bandas vigente de CONATEL / IARU Región 2 antes de operar.</p>
+  <div class="bg-white border border-outline-variant/60 rounded-lg overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-[#eeeef0] text-left font-display text-xs uppercase tracking-wide text-on-surface-variant"><tr><th class="px-4 py-2">Canal</th><th class="px-3">Banda</th><th class="px-3">Frecuencia</th><th class="px-3">Modo</th><th class="px-3">Uso</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+fetch('/api/comms').then(r=>r.json()).then(d=>{
+  document.getElementById('rows').innerHTML=d.channels.map(c=>`<tr class="border-t border-outline-variant/40">
+    <td class="px-4 py-2.5 font-medium">${c.name}</td><td class="px-3 text-xs">${c.band||''}</td>
+    <td class="px-3 font-mono font-semibold">${c.frequency||''}</td><td class="px-3 text-xs">${c.mode||''}</td>
+    <td class="px-3 text-xs text-on-surface-variant">${c.purpose||''}</td></tr>`).join('');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOS — Emergencia | SISMO911</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','secondary-fixed':'#ffb3b1','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0',safe:'#2e7d32'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif']}}}}</script>
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(200,16,46,.5)}50%{box-shadow:0 0 0 24px rgba(200,16,46,0)}}.sos-btn{animation:pulse 1.6s infinite}</style>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa.html" class="hover:text-white/70">Mapa</a><a href="/alertas.html" class="hover:text-white/70">Alertas</a><a href="/sos.html" class="text-white font-bold">SOS</a><a href="/familia.html" class="hover:text-white/70">Familia</a><a href="/recursos.html" class="hover:text-white/70">Recursos</a><a href="/comms.html" class="hover:text-white/70">Radio</a><a href="/guia.html" class="hover:text-white/70">Guía</a></nav></div></header>
+
+<main class="mx-auto max-w-md px-4 py-10 text-center">
+  <h1 class="font-display font-extrabold text-2xl mb-1">Modo SOS</h1>
+  <p class="text-on-surface-variant text-sm mb-8">Envía tu ubicación y una alerta a la red de Protección Civil. Úsalo solo en una emergencia real.</p>
+
+  <button id="sosBtn" class="sos-btn w-56 h-56 rounded-full bg-secondary text-white font-display font-black text-4xl mx-auto grid place-items-center shadow-lg active:scale-95 transition">
+    SOS
+  </button>
+  <p class="text-xs text-on-surface-variant mt-4">Mantén presionado para confirmar el envío.</p>
+
+  <form id="meta" class="mt-6 space-y-2 text-left">
+    <input name="name" placeholder="Tu nombre (opcional)" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
+    <input name="phone" placeholder="Teléfono de contacto (opcional)" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
+    <input name="note" placeholder="¿Qué ocurre? (opcional)" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
+  </form>
+
+  <div id="result" class="mt-6 hidden rounded-lg p-4 text-sm"></div>
+
+  <div class="mt-8 grid grid-cols-3 gap-2 font-mono">
+    <a href="tel:911" class="bg-white border border-outline-variant/60 rounded-lg py-3"><div class="text-xl font-bold">911</div><div class="text-[10px] text-on-surface-variant">Emergencias</div></a>
+    <a href="tel:171" class="bg-white border border-outline-variant/60 rounded-lg py-3"><div class="text-xl font-bold">171</div><div class="text-[10px] text-on-surface-variant">Bomberos</div></a>
+    <a href="/guia.html" class="bg-white border border-outline-variant/60 rounded-lg py-3 grid place-items-center"><div class="text-xs font-bold text-primary">Guía</div></a>
+  </div>
+</main>
+
+<script>
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  const btn=document.getElementById('sosBtn'), res=document.getElementById('result');
+  let holdTimer=null;
+  function getPos(){return new Promise(r=>{ if(!navigator.geolocation)return r(null);
+    navigator.geolocation.getCurrentPosition(p=>r({lat:p.coords.latitude,lon:p.coords.longitude}),()=>r(null),{timeout:8000}); }); }
+  async function fire(){
+    btn.textContent='…'; const m=Object.fromEntries(new FormData(document.getElementById('meta')));
+    const pos=await getPos();
+    const body={lat:pos?.lat??10.5,lon:pos?.lon??-66.9,name:m.name||null,phone:m.phone||null,note:m.note||null};
+    try{ const r=await fetch('/api/sos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); const d=await r.json();
+      res.className='mt-6 rounded-lg p-4 text-sm bg-safe/10 text-safe border border-safe/30';
+      res.innerHTML='✅ Alerta SOS enviada'+(pos?' con tu ubicación':' (sin GPS — usa el 911)')+'. ID: <b>'+d.id+'</b>. Mantente a salvo.';
+    }catch(e){ res.className='mt-6 rounded-lg p-4 text-sm bg-secondary/10 text-secondary border border-secondary/30'; res.textContent='No se pudo enviar. Llama al 911.'; }
+    res.classList.remove('hidden'); btn.textContent='SOS';
+  }
+  const start=()=>{ holdTimer=setTimeout(fire,800); btn.style.opacity=.7; };
+  const cancel=()=>{ clearTimeout(holdTimer); btn.style.opacity=1; };
+  btn.addEventListener('mousedown',start); btn.addEventListener('touchstart',e=>{e.preventDefault();start();});
+  btn.addEventListener('mouseup',cancel); btn.addEventListener('mouseleave',cancel); btn.addEventListener('touchend',cancel);
+</script>
+</body>
+</html>
