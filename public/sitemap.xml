@@ -10,6 +10,7 @@
   <url><loc>https://sismo911.com/contacto</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://sismo911.com/suministros-medicos</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://sismo911.com/acopio</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://sismo911.com/herramientas</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://sismo911.com/comms</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://sismo911.com/guia</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://sismo911.com/pager</loc><changefreq>hourly</changefreq><priority>0.8</priority></url>
