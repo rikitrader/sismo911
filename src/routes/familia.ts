@@ -44,7 +44,10 @@ function mapPerson(p: any, op: boolean) {
 familia.get('/persons', async (c) => {
   const q = (c.req.query('q') || '').trim();
   const limit = clampLimit(c.req.query('limit'), DEFAULT_LIMIT);
+  const op = await isOperator(c);
   const base: string[] = []; const baseBinds: unknown[] = [];
+  // Public sees only moderated rows; operators see everything (incl. pending).
+  if (!op) base.push("moderation = 'approved'");
   if (q) { base.push('(nombre LIKE ? OR ubicacion LIKE ?)'); baseBinds.push(`%${q}%`, `%${q}%`); }
   const est = statusToEstado(c.req.query('status') || '');
   if (est) { base.push('estado = ?'); baseBinds.push(est); }
@@ -58,15 +61,15 @@ familia.get('/persons', async (c) => {
     `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto, foto_r2, estado, updated_at
      FROM personas ${w} ORDER BY updated_at DESC, id DESC LIMIT ?`
   ).bind(...binds, limit + 1).all<any>();
-  const rows = results ?? []; const op = await isOperator(c);
+  const rows = results ?? [];
   return c.json({ persons: rows.slice(0, limit).map((r) => mapPerson(r, op)), total, nextCursor: nextCursor(rows, limit), limit });
 });
 
 // GET /api/familia/gallery?cursor=&limit=
 familia.get('/gallery', async (c) => {
   const limit = clampLimit(c.req.query('limit'), 30);
-  const total = ((await c.env.DESAP.prepare(`SELECT COUNT(*) AS n FROM personas WHERE foto_r2 IS NOT NULL`).first<any>())?.n) ?? 0;
-  const where = ['foto_r2 IS NOT NULL']; const binds: unknown[] = [];
+  const total = ((await c.env.DESAP.prepare(`SELECT COUNT(*) AS n FROM personas WHERE foto_r2 IS NOT NULL AND moderation='approved'`).first<any>())?.n) ?? 0;
+  const where = ['foto_r2 IS NOT NULL', "moderation = 'approved'"]; const binds: unknown[] = [];
   cursorClause(c.req.query('cursor') || '', where, binds);
   const { results } = await c.env.DESAP.prepare(
     `SELECT id, nombre, edad, ubicacion, estado, foto_r2, updated_at FROM personas
@@ -130,14 +133,35 @@ familia.post('/persons', async (c) => {
     await c.env.DESAP_FOTOS.put(foto_r2, bytes, { httpMetadata: { contentType: ctype } });
   }
   await c.env.DESAP.prepare(
-    `INSERT INTO personas (id, nombre, edad, ubicacion, descripcion, contacto, foto_r2, estado, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO personas (id, nombre, edad, ubicacion, descripcion, contacto, foto_r2, estado, moderation, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id, String(nombre).slice(0, 120), b.age ? Number(b.age) : null,
     b.last_seen ? String(b.last_seen).slice(0, 200) : null,
     b.notes ? String(b.notes).slice(0, 1000) : null,
     b.contact_phone ? String(b.contact_phone).slice(0, 80) : null,
-    foto_r2, 'sin-contacto', now, now
+    foto_r2, 'sin-contacto', 'pending', now, now
   ).run();
-  return c.json({ ok: true, id }, 201);
+  // Public submission enters moderation — not shown until an operator approves.
+  return c.json({ ok: true, id, status: 'pending', message: 'Recibido. Aparecerá tras revisión.' }, 201);
+});
+
+// GET /api/familia/queue — pending citizen submissions (operator-only).
+familia.get('/queue', async (c) => {
+  if (!(await isOperator(c))) return c.json({ error: 'unauthorized', hint: 'Inicia sesión como operador o admin' }, 401);
+  c.header('Cache-Control', 'no-store');
+  const { results } = await c.env.DESAP.prepare(
+    `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto_r2, estado, updated_at
+     FROM personas WHERE moderation='pending' ORDER BY updated_at DESC, id DESC LIMIT 300`
+  ).all<any>();
+  return c.json({ persons: (results ?? []).map((r) => mapPerson(r, true)) });
+});
+
+// POST /api/familia/:id/approve — publish a pending submission (operator-only).
+familia.post('/:id/approve', async (c) => {
+  if (!(await isOperator(c))) return c.json({ error: 'unauthorized', hint: 'Inicia sesión como operador o admin' }, 401);
+  const r = await c.env.DESAP.prepare(
+    `UPDATE personas SET moderation='approved', updated_at=? WHERE id=? AND moderation='pending'`
+  ).bind(Date.now(), c.req.param('id')).run();
+  return c.json({ ok: true, approved: r.meta.changes });
 });
