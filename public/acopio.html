@@ -41,7 +41,15 @@
     <h1 class="font-display font-extrabold text-3xl">Acopio, Hospitales y Protección Civil</h1>
     <button id="csv" class="text-sm font-semibold bg-primary text-white rounded-lg px-3 py-2 hover:bg-primary/90">⬇︎ Exportar CSV</button>
   </div>
-  <p class="text-on-surface-variant mb-5 max-w-3xl">Mapa nacional de respuesta sísmica en los <b>24 estados</b>: centros de acopio/refugio (universidades, estadios, polideportivos), <b>hospitales tipo IV</b> y sedes de <b>Protección Civil y Bomberos</b>. Toca cualquier capa para encenderla o apagarla; toca un punto para ver la dirección y cómo llegar.</p>
+  <p class="text-on-surface-variant mb-4 max-w-3xl">Mapa nacional de respuesta sísmica en los <b>24 estados</b>: centros de acopio/refugio (universidades, estadios, polideportivos), <b>hospitales tipo IV</b> y sedes de <b>Protección Civil y Bomberos</b>. Toca cualquier capa para encenderla o apagarla; toca un punto para ver la dirección, llamar o cómo llegar.</p>
+
+  <!-- Barra de emergencias -->
+  <div class="rounded-xl p-3 mb-5 flex flex-wrap items-center gap-2 text-white" style="background:#c8102e">
+    <span class="font-display font-extrabold mr-1">☎ Emergencias</span>
+    <a href="tel:911" class="inline-flex items-center gap-1 bg-white text-[#c8102e] font-extrabold rounded-lg px-3 py-1.5 hover:bg-white/90">📞 911</a>
+    <a href="tel:171" class="inline-flex items-center gap-1 bg-white/15 font-bold rounded-lg px-3 py-1.5 hover:bg-white/25">171</a>
+    <span class="text-xs text-white/90">Para Protección Civil, Bomberos y ambulancias marca <b>911</b> (Sistema Integrado VEN911). Los teléfonos directos por sede están en verificación.</span>
+  </div>
 
   <!-- Stat tiles -->
   <div id="tiles" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5"></div>
@@ -278,7 +286,7 @@ function render(){
   markers.clearLayers();const pts=[];
   list.forEach(d=>{const[c]=TIPO[d.tipo];pts.push([d.lat,d.lon]);
     L.marker([d.lat,d.lon],{icon:dot(c)}).bindPopup(
-      `<b>${esc(d.nombre)}</b><br>${TIPO[d.tipo][1]} ${TIPO[d.tipo][2]} · ${esc(d.cap)}<br><span style="color:#444">${esc(d.dir)}</span><br>${esc(d.estado)} — ${esc(d.ciudad)}<br><a href="${gmaps(d)}" target="_blank" rel="noopener" style="color:#13284f;font-weight:700">📍 Cómo llegar →</a>`
+      `<b>${esc(d.nombre)}</b><br>${TIPO[d.tipo][1]} ${TIPO[d.tipo][2]} · ${esc(d.cap)}<br><span style="color:#444">${esc(d.dir)}</span><br>${esc(d.estado)} — ${esc(d.ciudad)}<br><a href="tel:911" style="color:#c8102e;font-weight:700">📞 Llamar 911</a> · <a href="${gmaps(d)}" target="_blank" rel="noopener" style="color:#13284f;font-weight:700">📍 Cómo llegar →</a>`
     ).addTo(markers);});
   if(pts.length)map.fitBounds(pts,{padding:[30,30],maxZoom:9});
   // grouped list
@@ -292,7 +300,10 @@ function render(){
           <div class="text-xs text-on-surface-variant">${esc(d.dir)} · ${esc(d.ciudad)}</div>
           <div class="text-xs mt-0.5"><span class="inline-block rounded px-1.5 py-0.5 text-white text-[10px] font-bold" style="background:${c}">${lbl}</span> <span class="text-on-surface-variant">Capacidad: ${esc(d.cap)}</span></div>
         </div>
-        <a href="${gmaps(d)}" target="_blank" rel="noopener" class="text-xs font-semibold text-primary whitespace-nowrap hover:underline">📍 Cómo llegar</a>
+        <div class="flex flex-col items-end gap-1 shrink-0">
+          <a href="tel:911" class="text-xs font-bold whitespace-nowrap hover:underline" style="color:#c8102e">📞 911</a>
+          <a href="${gmaps(d)}" target="_blank" rel="noopener" class="text-xs font-semibold text-primary whitespace-nowrap hover:underline">📍 Cómo llegar</a>
+        </div>
       </div>`;}).join('');
     return `<section class="bg-white border border-outline-variant/60 rounded-xl overflow-hidden">
       <div class="px-4 py-2.5 bg-primary text-white flex items-center justify-between"><b class="font-display">${esc(e)}</b><span class="text-xs text-white/80">${byEst[e].length} centro${byEst[e].length>1?'s':''}</span></div>
