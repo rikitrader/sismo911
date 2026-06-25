@@ -4,10 +4,17 @@ import { uid } from '../lib/db';
 import { hashPassword, verifyPassword, createSession, setSessionCookie, clearSession, getUserFromRequest } from '../lib/auth';
 import { rateLimit } from '../lib/security';
 import { audit } from '../lib/audit';
+import { sendEmail, randomToken, sha256hex, resetEmail, welcomeEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
 
 export const auth = new Hono<{ Bindings: Env }>();
 
 const emailOk = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+
+// Send without blocking the response (keeps timing uniform for no-enumeration).
+function fireEmail(c: any, to: string, msg: EmailMsg) {
+  const promise = sendEmail(c.env, to, msg);
+  try { c.executionCtx.waitUntil(promise); } catch { /* no ctx (tests) — fire and forget */ }
+}
 
 // POST /api/auth/register — first user ever becomes admin; the rest are citizens.
 auth.post('/register', async (c) => {
@@ -39,7 +46,57 @@ auth.post('/register', async (c) => {
 
   const { token } = await createSession(c.env, id, c.req.header('user-agent'));
   setSessionCookie(c, token);
+  fireEmail(c, email, welcomeEmail(b.name));
   return c.json({ ok: true, user: { id, email, name: b.name, role } }, 201);
+});
+
+// POST /api/auth/forgot-password — always returns ok (no user enumeration).
+auth.post('/forgot-password', async (c) => {
+  const limited = await rateLimit(c.env, c, 'auth_forgot', 5, 600);
+  if (limited) return limited;
+  const b = await c.req.json().catch(() => null);
+  const email = (b?.email || '').trim().toLowerCase();
+  if (emailOk(email)) {
+    const user: any = await c.env.DB.prepare(`SELECT id, name, email FROM users WHERE email = ?`).bind(email).first();
+    if (user) {
+      const raw = randomToken();
+      const now = Date.now();
+      await c.env.DB.prepare(
+        `INSERT INTO password_resets (id, user_id, token_hash, expires_ms, used_ms, created_ms) VALUES (?,?,?,?,?,?)`
+      ).bind(uid('rst'), user.id, await sha256hex(raw), now + 60 * 60 * 1000, null, now).run();
+      const base = c.env.PUBLIC_BASE_URL || 'https://sismo911.com';
+      fireEmail(c, user.email, resetEmail(user.name, `${base}/restablecer?token=${raw}`));
+      await audit(c, 'auth.forgot', { email });
+    }
+  }
+  return c.json({ ok: true });
+});
+
+// POST /api/auth/reset-password — consume token, set new password, kill sessions.
+auth.post('/reset-password', async (c) => {
+  const limited = await rateLimit(c.env, c, 'auth_reset', 10, 600);
+  if (limited) return limited;
+  const b = await c.req.json().catch(() => null);
+  const token = (b?.token || '').trim();
+  const password = b?.password || '';
+  if (!token) return c.json({ error: 'token_required' }, 400);
+  if (password.length < 8) return c.json({ error: 'password_min_8' }, 400);
+  const now = Date.now();
+  const row: any = await c.env.DB.prepare(
+    `SELECT pr.id AS rid, pr.user_id, u.email, u.name
+       FROM password_resets pr JOIN users u ON u.id = pr.user_id
+      WHERE pr.token_hash = ? AND pr.used_ms IS NULL AND pr.expires_ms > ?`
+  ).bind(await sha256hex(token), now).first();
+  if (!row) return c.json({ error: 'token_invalid_or_expired' }, 400);
+
+  const { hash, salt } = await hashPassword(password);
+  await c.env.DB.prepare(`UPDATE users SET pw_hash = ?, pw_salt = ? WHERE id = ?`).bind(hash, salt, row.user_id).run();
+  // Burn every outstanding reset token + all sessions for this user.
+  await c.env.DB.prepare(`UPDATE password_resets SET used_ms = ? WHERE user_id = ? AND used_ms IS NULL`).bind(now, row.user_id).run();
+  await c.env.DB.prepare(`DELETE FROM sessions WHERE user_id = ?`).bind(row.user_id).run();
+  fireEmail(c, row.email, passwordChangedEmail(row.name));
+  await audit(c, 'auth.reset', { user_id: row.user_id });
+  return c.json({ ok: true });
 });
 
 // POST /api/auth/login

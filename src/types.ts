@@ -31,6 +31,17 @@ export interface Env {
   GOOGLE_REFRESH_TOKEN?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  // Cloudflare Email Sending binding (transactional email). Optional until the
+  // sismo911.com domain is onboarded to Email Sending.
+  EMAIL?: { send(message: {
+    to: string;
+    from: { email: string; name?: string };
+    subject: string;
+    html?: string;
+    text?: string;
+    reply_to?: { email: string; name?: string };
+  }): Promise<unknown> };
+  EMAIL_FROM?: string;
 }
 
 export interface SeismicEvent {

@@ -73,6 +73,12 @@ enabled = true
 [ai]
 binding = "AI"
 
+# Cloudflare Email Sending — native transactional email (no API keys).
+# Requires onboarding sismo911.com: `wrangler email sending enable sismo911.com`
+# (or Dashboard → Email → Email Sending). Until then, sends are no-ops (logged).
+[[send_email]]
+name = "EMAIL"
+
 [vars]
 # Venezuela bounding box for the USGS FDSN query (min/max lat/lon).
 USGS_MINLAT = "-2"

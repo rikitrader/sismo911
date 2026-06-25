@@ -28,6 +28,7 @@
         <input name="email" type="email" required placeholder="Correo electrónico" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
         <input name="password" type="password" required placeholder="Contraseña" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
         <button class="w-full bg-primary hover:bg-primary-container text-white font-display font-bold py-2.5 rounded-lg">Entrar</button>
+        <button type="button" id="forgotLink" class="block w-full text-center text-xs text-on-surface-variant hover:text-primary">¿Olvidaste tu contraseña?</button>
       </form>
 
       <form id="registerForm" class="space-y-3 hidden">
@@ -39,6 +40,13 @@
         <p class="text-[11px] text-on-surface-variant text-center">Las cuentas nuevas son de ciudadano. Un administrador puede elevarte a operador.</p>
       </form>
 
+      <form id="forgotForm" class="space-y-3 hidden">
+        <p class="text-sm text-on-surface-variant">Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</p>
+        <input name="email" type="email" required placeholder="Correo electrónico" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+        <button class="w-full bg-primary hover:bg-primary-container text-white font-display font-bold py-2.5 rounded-lg">Enviar enlace</button>
+        <button type="button" id="backToLogin" class="block w-full text-center text-xs text-on-surface-variant hover:text-primary">← Volver a iniciar sesión</button>
+      </form>
+
       <p id="msg" class="text-sm text-center mt-3"></p>
     </div>
     <a href="/" class="block text-center text-white/70 hover:text-white text-sm mt-4">← Volver al panel público</a>
@@ -48,10 +56,10 @@
   const params=new URLSearchParams(location.search); const rawNext=params.get('next')||'/';
   // Open-redirect guard: accept only a same-origin path (single leading "/", no "//" host, no scheme like javascript:/http:).
   const next=(/^\/(?!\/)/.test(rawNext) && !rawNext.includes(':')) ? rawNext : '/';
-  const tabs=document.querySelectorAll('.tab'), lf=document.getElementById('loginForm'), rf=document.getElementById('registerForm'), msg=document.getElementById('msg');
+  const tabs=document.querySelectorAll('.tab'), lf=document.getElementById('loginForm'), rf=document.getElementById('registerForm'), ff=document.getElementById('forgotForm'), msg=document.getElementById('msg');
   tabs.forEach(t=>t.onclick=()=>{const n=t.dataset.tab;
     tabs.forEach(x=>{const on=x.dataset.tab===n;x.classList.toggle('bg-white',on);x.classList.toggle('shadow',on);x.classList.toggle('text-primary',on);x.classList.toggle('text-on-surface-variant',!on);});
-    lf.classList.toggle('hidden',n!=='login'); rf.classList.toggle('hidden',n!=='register'); msg.textContent='';});
+    ff.classList.add('hidden'); lf.classList.toggle('hidden',n!=='login'); rf.classList.toggle('hidden',n!=='register'); msg.textContent='';});
   function dest(role){
     const isOp = role==='operator' || role==='admin';
     if (isOp) return (next.startsWith('/login') || next==='/') ? '/admin.html' : next;
@@ -67,6 +75,12 @@
   }
   lf.onsubmit=e=>{e.preventDefault();submit(lf,'/api/auth/login');};
   rf.onsubmit=e=>{e.preventDefault();submit(rf,'/api/auth/register');};
+  document.getElementById('forgotLink').onclick=()=>{lf.classList.add('hidden');rf.classList.add('hidden');ff.classList.remove('hidden');msg.textContent='';};
+  document.getElementById('backToLogin').onclick=()=>{ff.classList.add('hidden');lf.classList.remove('hidden');msg.textContent='';};
+  ff.onsubmit=async e=>{e.preventDefault();msg.className='text-sm text-center mt-3 text-on-surface-variant';msg.textContent='Enviando…';
+    const body=Object.fromEntries(new FormData(ff));
+    await fetch('/api/auth/forgot-password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).catch(()=>{});
+    msg.className='text-sm text-center mt-3 text-safe';msg.textContent='Si ese correo está registrado, te enviamos un enlace. Revisa tu bandeja y la carpeta de spam.';ff.reset();};
   // already logged in? skip
   fetch('/api/auth/me').then(r=>r.json()).then(d=>{ if(d.authenticated) location.href=dest(d.user.role); });
 </script>
