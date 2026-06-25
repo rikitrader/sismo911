@@ -57,7 +57,10 @@ app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   const method = c.req.method;
   const isAdminPage = path.startsWith('/admin');
-  const isAdminWrite = WRITE_METHODS.has(method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
+  // Citizen submission of a centro de acopio stays public (moderation queue);
+  // everything else under /api/acopio (status overrides, submission review) is operator-only.
+  const isAcopioReport = method === 'POST' && path === '/api/acopio/report';
+  const isAdminWrite = !isAcopioReport && WRITE_METHODS.has(method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
   const isUnsafe = WRITE_METHODS.has(method);
   const originHdr = c.req.header('origin') || c.req.header('referer')?.split('/').slice(0, 3).join('/');
   // For state-changing methods a missing Origin/Referer is treated as NOT same-site (defense-in-depth vs CSRF).
@@ -96,7 +99,10 @@ app.use('*', async (c, next) => {
   // Satellite GIS: GET config/google/maxar/damage are public reads; analyze +
   // verification writes are operator-only.
   const isSatWrite = WRITE_METHODS.has(method) && path.startsWith('/api/sat/');
-  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration && !isSatWrite) return next();
+  // Acopio submission review queue (GET) is operator-only; approve/reject (PATCH)
+  // is already covered by the /api/acopio admin-write rule above.
+  const isAcopioReview = method === 'GET' && path === '/api/acopio/submissions';
+  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration && !isSatWrite && !isAcopioReview) return next();
 
   const user = await getUserFromRequest(c.env, c).catch(() => null);
   // Docket submission only needs a logged-in user (any role); everything else

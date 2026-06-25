@@ -231,6 +231,15 @@
       <div class="bg-white rounded-lg border border-outline-variant/60 overflow-hidden">
         <div id="acopio-list" class="divide-y divide-outline-variant/40 max-h-[68vh] overflow-y-auto"></div>
       </div>
+
+      <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+        <div class="flex items-center justify-between">
+          <h2 class="font-display font-bold text-lg">Propuestas ciudadanas <span id="acsub-count" class="text-xs font-normal text-on-surface-variant"></span></h2>
+          <button id="acsub-reload" class="text-xs font-semibold text-primary">↻ Recargar</button>
+        </div>
+        <p class="text-sm text-on-surface-variant mt-1 mb-3">Centros de acopio reportados desde <a href="/acopio" class="text-primary underline">/acopio</a>. <b>Aprobar</b> los publica en el mapa; <b>rechazar</b> los oculta.</p>
+        <div id="acsub-list" class="divide-y divide-outline-variant/40"></div>
+      </div>
     </section>
 
     <!-- MANTENIMIENTO -->
@@ -470,7 +479,39 @@
       ACAT=cat; AST=st.status||{};
     }
     drawAcopio();
+    loadAcSubs();
   }
+  // Citizen-proposed centers — review queue
+  const ASTIPO={centro_acopio:'📦',universidad:'🎓',estadio:'🏟️',polideportivo:'🤸',hospital:'✚',proteccion_civil:'🚨',bomberos:'🚒',otro:'📍'};
+  async function loadAcSubs(){
+    const d=await api('acopio/submissions?status=pending').catch(()=>({submissions:[]}));
+    const subs=(d&&d.submissions)||[];
+    document.getElementById('acsub-count').textContent=subs.length?('· '+subs.length+' pendiente'+(subs.length>1?'s':'')):'· sin pendientes';
+    document.getElementById('acsub-list').innerHTML=subs.map(s=>`
+      <div class="py-3 flex flex-wrap items-start gap-3" data-id="${esc(s.id)}">
+        <span class="text-lg">${ASTIPO[s.tipo]||'📦'}</span>
+        <div class="flex-1 min-w-[220px]">
+          <div class="font-semibold text-sm">${esc(s.nombre)}</div>
+          <div class="text-xs text-on-surface-variant">${esc(s.estado||'—')}${s.ciudad?' · '+esc(s.ciudad):''}${s.dir?' · '+esc(s.dir):''}</div>
+          ${s.note?`<div class="text-xs mt-0.5">${esc(s.note)}</div>`:''}
+          ${s.contacto?`<div class="text-xs text-on-surface-variant mt-0.5">☎ ${esc(s.contacto)}</div>`:''}
+          ${(s.lat!=null&&s.lon!=null)?`<div class="text-xs text-on-surface-variant">📍 ${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</div>`:''}
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button class="acsub-act bg-safe text-white text-xs font-bold rounded px-3 py-1.5" data-st="approved">Aprobar</button>
+          <button class="acsub-act bg-secondary text-white text-xs font-bold rounded px-3 py-1.5" data-st="rejected">Rechazar</button>
+          <span class="acsub-msg text-xs"></span>
+        </div>
+      </div>`).join('') || '<div class="py-8 text-center text-sm text-on-surface-variant">Sin propuestas pendientes.</div>';
+    document.querySelectorAll('#acsub-list .acsub-act').forEach(b=>b.onclick=async()=>{
+      const row=b.closest('[data-id]'),id=row.dataset.id,status=b.dataset.st,msg=row.querySelector('.acsub-msg');
+      msg.textContent='…';
+      const r=await api('acopio/submissions/'+encodeURIComponent(id),{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status})});
+      if(r&&r.ok){row.style.opacity='.4';msg.textContent=status==='approved'?'✓ publicado':'✓ oculto';setTimeout(loadAcSubs,700);}
+      else{msg.textContent='Error';}
+    });
+  }
+  document.getElementById('acsub-reload').addEventListener('click',loadAcSubs);
   function drawAcopio(){
     const q=document.getElementById('acopio-q').value.trim().toLowerCase(), sf=document.getElementById('acopio-stf').value;
     const cur=d=>(AST[d.id]&&AST[d.id].status)||'operativo';
