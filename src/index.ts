@@ -53,7 +53,9 @@ app.use('*', async (c, next) => {
   const isAdminPage = path.startsWith('/admin');
   const isAdminWrite = WRITE_METHODS.has(method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
   const isUnsafe = WRITE_METHODS.has(method);
-  const isSameSite = isAllowedOrigin(c.env, c.req.header('origin') || c.req.header('referer')?.split('/').slice(0, 3).join('/'));
+  const originHdr = c.req.header('origin') || c.req.header('referer')?.split('/').slice(0, 3).join('/');
+  // For state-changing methods a missing Origin/Referer is treated as NOT same-site (defense-in-depth vs CSRF).
+  const isSameSite = originHdr ? isAllowedOrigin(c.env, originHdr) : !WRITE_METHODS.has(c.req.method);
   // Report moderation (approve/reject/delete + review queue) is operator-only.
   // Citizen submission (POST /api/reports), reactions, comments and reads stay public.
   const isReportModeration =
@@ -114,7 +116,7 @@ app.get('/api/status', async (c) => {
     ingest: log.results ?? [],
     social_adapters: adapterStatus(env),
     gated,
-  });
+  }, 200, { 'Cache-Control': 'no-store' });
 });
 
 app.route('/api/events', events);

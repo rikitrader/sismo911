@@ -36,6 +36,7 @@ persons.get('/queue', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT * FROM persons WHERE review='pending' ORDER BY created_ms ASC LIMIT 300`
   ).all();
+  c.header('Cache-Control', 'no-store'); c.header('Vary', 'Cookie');
   return c.json({ persons: results ?? [] });
 });
 
