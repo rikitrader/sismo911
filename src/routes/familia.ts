@@ -107,6 +107,18 @@ familia.post('/persons', async (c) => {
   const nombre = b.full_name || b.nombre;
   if (!nombre) return c.json({ error: 'full_name_required' }, 400);
 
+  // Anti-duplicate gate: if an identical report already exists (same name +
+  // location + contact), return it instead of creating a duplicate — no photo
+  // upload, no insert.
+  const existing = await c.env.DESAP.prepare(
+    `SELECT id FROM personas
+      WHERE lower(trim(nombre)) = lower(trim(?))
+        AND lower(trim(coalesce(ubicacion,''))) = lower(trim(coalesce(?,'')))
+        AND lower(trim(coalesce(contacto,''))) = lower(trim(coalesce(?,'')))
+      LIMIT 1`
+  ).bind(String(nombre), b.last_seen ?? '', b.contact_phone ?? '').first<{ id: string }>().catch(() => null);
+  if (existing?.id) return c.json({ ok: true, id: existing.id, duplicate: true }, 200);
+
   const id = uid('pc'); const now = Date.now(); let foto_r2: string | null = null;
   if (bytes && bytes.length) {
     if (bytes.length > 6_000_000) return c.json({ error: 'image_too_large', maxBytes: 6_000_000 }, 413);

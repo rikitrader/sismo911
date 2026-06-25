@@ -31,6 +31,7 @@
       <button data-tab="persons" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-secondary text-primary">Personas Desaparecidas</button>
       <button data-tab="contacts" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Directorio de Emergencia</button>
       <button data-tab="acopio" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Centros de Acopio</button>
+      <button data-tab="mantenimiento" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Mantenimiento</button>
       <button data-tab="adapters" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Fuentes de Datos</button>
     </div>
   </nav>
@@ -89,6 +90,19 @@
       </div>
     </section>
 
+    <!-- MANTENIMIENTO -->
+    <section id="panel-mantenimiento" class="hidden space-y-4">
+      <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+        <h2 class="font-display font-bold text-lg mb-1">Limpieza de duplicados — Personas</h2>
+        <p class="text-sm text-on-surface-variant mb-3">Detecta y elimina registros <b>duplicados</b> del directorio de personas (mismo nombre, edad, ubicación, descripción y contacto), junto con sus fotos huérfanas. <b>Revisa en seco primero.</b> «Aplicar» borra por lotes — vuelve a aplicar hasta que «restantes» llegue a 0. El cron diario también limpia duplicados exactos automáticamente.</p>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <button id="dedupe-dry" class="bg-surface-container text-on-surface text-sm font-semibold rounded px-4 py-2 border border-outline-variant">Revisar (en seco)</button>
+          <button id="dedupe-apply" class="bg-secondary text-white text-sm font-bold rounded px-4 py-2">Aplicar limpieza (lote)</button>
+        </div>
+        <pre id="dedupe-out" class="text-xs font-mono bg-[#f6f6f8] rounded p-3 whitespace-pre-wrap text-on-surface-variant">Sin ejecutar.</pre>
+      </div>
+    </section>
+
     <!-- ADAPTERS -->
     <section id="panel-adapters" class="hidden space-y-6">
       <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
@@ -108,7 +122,7 @@
   const tabs = document.querySelectorAll('.tab');
   function show(name){
     tabs.forEach(t=>{const on=t.dataset.tab===name; t.classList.toggle('border-secondary',on); t.classList.toggle('text-primary',on); t.classList.toggle('border-transparent',!on); t.classList.toggle('text-on-surface-variant',!on);});
-    ['persons','contacts','acopio','adapters'].forEach(n=>document.getElementById('panel-'+n).classList.toggle('hidden',n!==name));
+    ['persons','contacts','acopio','mantenimiento','adapters'].forEach(n=>document.getElementById('panel-'+n).classList.toggle('hidden',n!==name));
     if(name==='contacts')loadContacts(); if(name==='adapters')loadStatus(); if(name==='acopio')loadAcopio();
   }
   tabs.forEach(t=>t.onclick=()=>show(t.dataset.tab));
@@ -157,6 +171,20 @@
   }
   document.getElementById('acopio-q').addEventListener('input',drawAcopio);
   document.getElementById('acopio-stf').addEventListener('change',drawAcopio);
+
+  // Mantenimiento — dedupe personas
+  async function dedupe(apply){
+    const out=document.getElementById('dedupe-out'); out.textContent='Procesando…';
+    try{
+      const r=await api('admin/dedupe-personas',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode:'exact',apply})});
+      if(r.error){ out.textContent='Error: '+r.error; return; }
+      out.textContent = r.applied
+        ? `Eliminados en este lote: ${r.deletedRows} filas, ${r.deletedPhotos} fotos.\nDuplicados que aún quedan: ${r.remaining}.` + (r.remaining>0?'\n→ Vuelve a pulsar «Aplicar» para continuar.':' ✓ Sin duplicados restantes.')
+        : `Duplicados exactos detectados: ${r.found}. (en seco — nada borrado)`;
+    }catch(e){ out.textContent='Error: '+(e&&e.message||e); }
+  }
+  document.getElementById('dedupe-dry').onclick=()=>dedupe(false);
+  document.getElementById('dedupe-apply').onclick=()=>dedupe(true);
 
   // Persons
   const STATUS = { missing:['Desaparecida','bg-secondary'], found_safe:['Hallada a salvo','bg-safe'], found_deceased:['Fallecida','bg-on-surface'], unknown:['Desconocido','bg-warning'] };
