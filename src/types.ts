@@ -20,6 +20,8 @@ export interface Env {
   VAPID_PUBLIC_KEY?: string;
   // Cloudflare Workers AI (situation reports). Optional binding.
   AI?: Ai;
+  // Google Maps Platform key for satellite imagery (Map Tiles + Static API). Optional.
+  GOOGLE_MAPS_API_KEY?: string;
   // Social/web disaster monitor (all optional — features gate on their presence).
   PUBLIC_BASE_URL?: string;
   TELEGRAM_CHANNELS?: string;      // comma-separated public channel handles

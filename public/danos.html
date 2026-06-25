@@ -2,39 +2,156 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Evaluación de Daños (IA) — SISMO911</title>
+<title>Evaluación de Daños — Satélite + IA — SISMO911</title>
+<meta name="description" content="Análisis de daños del terremoto en Venezuela con imágenes satelitales (Google, Esri, Maxar, NASA) e inteligencia artificial. Selecciona una zona y evalúa daños desde el aire.">
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="stylesheet" href="/app.css" />
-
-<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
-  <script src="/app-shell.js" defer></script>
+<style>
+  body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}
+  .tab{padding:.6rem 1rem;font:700 14px 'Public Sans';color:#5a6172;border-bottom:2px solid transparent;cursor:pointer}
+  .tab.on{color:#13284f;border-color:#bb0027}
+  #gmap{height:72vh;min-height:460px;border-radius:.6rem;z-index:0}
+  .leaflet-container{font:inherit}
+  .sevdot{width:.7rem;height:.7rem;border-radius:9999px;display:inline-block}
+</style>
+<script src="/app-shell.js" defer></script>
 </head>
 <body class="font-sans text-on-surface">
-<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="text-white">Mapa</a><a href="/alertas" class="hover:text-white/70">Alertas</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a><a href="/familia" class="hover:text-white/70">Familia</a><a href="/acopio" class="hover:text-white/70">Acopio</a><a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/comms" class="hover:text-white/70">Radio</a><a href="/guia" class="hover:text-white/70">Guía</a><a href="/reportar" class="hover:text-white/70">Reportar</a><a href="/contacto" class="hover:text-white/70">Contacto</a><a href="/blog" class="hover:text-white/70">Blog</a></nav></div></header>
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a></div></header>
 
-<main class="mx-auto max-w-2xl px-4 py-8">
-  <h1 class="font-display font-extrabold text-3xl mb-1">Evaluación de Daños con IA</h1>
-  <p class="text-on-surface-variant mb-2">Sube o toma una foto de una estructura. La IA de visión estima la severidad del daño y los peligros visibles.</p>
-  <p class="text-xs bg-advisory/15 border border-advisory/40 rounded px-3 py-2 mb-6">⚠️ Estimación automática preliminar — no sustituye la inspección de un ingeniero estructural.</p>
+<main class="mx-auto max-w-6xl px-4 py-6">
+  <div class="mb-3">
+    <div class="text-[11px] font-extrabold tracking-widest uppercase text-on-surface-variant">Evaluación de daños</div>
+    <h1 class="font-display font-extrabold text-2xl leading-tight">Daños del terremoto — Satélite + IA</h1>
+    <p class="text-sm text-on-surface-variant mt-1">Analiza la zona afectada desde imágenes satelitales (Google, Esri, Maxar, NASA) o evalúa una foto en tierra. Anclado al sismo de Yumare M7.5.</p>
+  </div>
 
-  <label class="block bg-white border-2 border-dashed border-outline-variant rounded-lg p-6 text-center cursor-pointer hover:border-primary transition">
-    <input id="file" type="file" accept="image/*" capture="environment" class="hidden">
-    <div id="drop" class="text-on-surface-variant"><div class="text-4xl mb-1">📷</div>Toca para tomar o elegir una foto</div>
-    <img id="preview" class="hidden mx-auto max-h-72 rounded">
-  </label>
+  <div class="flex gap-1 border-b border-outline-variant/60 mb-4">
+    <div class="tab on" data-tab="gis">🛰️ Análisis satelital (GIS)</div>
+    <div class="tab" data-tab="foto">📷 Foto en tierra (IA)</div>
+  </div>
 
-  <button id="analyze" disabled class="mt-4 w-full bg-primary disabled:opacity-40 text-white font-display font-bold py-3 rounded-md">Analizar daño</button>
-  <div id="result" class="mt-6 hidden"></div>
+  <!-- ============ GIS PANEL ============ -->
+  <section id="panel-gis">
+    <div class="grid lg:grid-cols-4 gap-4">
+      <div class="lg:col-span-3">
+        <div id="gmap"></div>
+        <p class="text-[11px] text-on-surface-variant mt-1">Capas: <span id="layerinfo">cargando…</span> · Haz clic en el mapa para seleccionar un punto y analizar daños.</p>
+      </div>
+      <aside class="space-y-3">
+        <div class="bg-white border border-outline-variant/60 rounded-xl p-4">
+          <div class="text-[11px] font-extrabold uppercase tracking-wide text-on-surface-variant mb-1">Analizar zona</div>
+          <p id="aoi-coords" class="text-sm text-on-surface-variant">Haz clic en el mapa para elegir un punto.</p>
+          <button id="analyzeAoi" disabled class="mt-2 w-full bg-primary disabled:opacity-40 text-white font-display font-bold py-2.5 rounded-md text-sm">Analizar daños (IA)</button>
+          <div id="aoi-result" class="mt-3"></div>
+        </div>
+        <div class="bg-white border border-outline-variant/60 rounded-xl p-4 text-xs">
+          <div class="text-[11px] font-extrabold uppercase tracking-wide text-on-surface-variant mb-2">Leyenda de severidad</div>
+          <div class="space-y-1">
+            <div><span class="sevdot" style="background:#c8102e"></span> Grave / Severo</div>
+            <div><span class="sevdot" style="background:#e57200"></span> Moderado</div>
+            <div><span class="sevdot" style="background:#16a34a"></span> Leve / Sin daño</div>
+            <div><span class="sevdot" style="background:#94a3b8"></span> Indeterminado</div>
+          </div>
+          <div id="maxar-note" class="mt-3 text-on-surface-variant"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
 
-  <h2 class="font-display font-bold text-lg mt-10 mb-2">Reportes recientes</h2>
-  <div id="list" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+  <!-- ============ FOTO PANEL (existing ground-photo AI) ============ -->
+  <section id="panel-foto" class="hidden max-w-2xl">
+    <p class="text-xs bg-advisory/15 border border-advisory/40 rounded px-3 py-2 mb-4">⚠️ Estimación automática preliminar — no sustituye la inspección de un ingeniero estructural.</p>
+    <label class="block bg-white border-2 border-dashed border-outline-variant rounded-lg p-6 text-center cursor-pointer hover:border-primary transition">
+      <input id="file" type="file" accept="image/*" capture="environment" class="hidden">
+      <div id="drop" class="text-on-surface-variant"><div class="text-4xl mb-1">📷</div>Toca para tomar o elegir una foto</div>
+      <img id="preview" class="hidden mx-auto max-h-72 rounded">
+    </label>
+    <button id="analyze" disabled class="mt-4 w-full bg-primary disabled:opacity-40 text-white font-display font-bold py-3 rounded-md">Analizar daño</button>
+    <div id="result" class="mt-6 hidden"></div>
+    <h2 class="font-display font-bold text-lg mt-10 mb-2">Reportes recientes</h2>
+    <div id="list" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+  </section>
 </main>
 
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
-const SEV={ninguno:['Sin daño','bg-safe'],leve:['Leve','bg-safe'],moderado:['Moderado','bg-warning'],grave:['Grave','bg-critical'],severo:['Severo','bg-critical'],indeterminado:['Indeterminado','bg-on-surface-variant']};
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const SEVHEX=s=>({severo:'#c8102e',grave:'#c8102e',moderado:'#e57200',leve:'#16a34a',ninguno:'#16a34a'}[s]||'#94a3b8');
+const SEVLBL={ninguno:'Sin daño',leve:'Leve',moderado:'Moderado',grave:'Grave',severo:'Severo',indeterminado:'Indeterminado'};
+
+// ---- tabs ----
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
+  document.getElementById('panel-gis').classList.toggle('hidden',t.dataset.tab!=='gis');
+  document.getElementById('panel-foto').classList.toggle('hidden',t.dataset.tab!=='foto');
+  if(t.dataset.tab==='gis'&&map)setTimeout(()=>map.invalidateSize(),60);
+});
+
+// ===================== GIS console =====================
+let map,resultLayer,aoiMarker,aoi=null;
+const YUMARE=[10.4351,-68.4716];
+async function initGis(){
+  map=L.map('gmap',{attributionControl:false}).setView(YUMARE,11);
+  const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
+  const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
+  const gibs=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2026-06-24/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',{maxZoom:9});
+  const bases={'Esri satélite':esri,'NASA GIBS (24 jun)':gibs,'Carto claro':carto};
+
+  // epicenter
+  L.circleMarker(YUMARE,{radius:10,color:'#b91c1c',fillColor:'#ef4444',fillOpacity:.4,weight:2}).addTo(map).bindPopup('<b>Epicentro</b><br>Yumare M7.5 · 24 jun 2026');
+  resultLayer=L.layerGroup().addTo(map);
+
+  // config → add Google + Maxar
+  let cfg={}; try{cfg=await fetch('/api/sat/config').then(r=>r.json());}catch{}
+  const layerNames=['Esri'];
+  if(cfg.google){ const g=L.tileLayer('/api/sat/google/{z}/{x}/{y}',{maxZoom:20}); bases['Google satélite']=g; g.addTo(map); esri.remove(); layerNames.unshift('Google'); }
+  L.control.layers(bases,{'Evaluaciones IA':resultLayer},{collapsed:false}).addTo(map);
+  if(cfg.gibs)layerNames.push('NASA GIBS');
+  document.getElementById('layerinfo').textContent=layerNames.join(' · ');
+  document.getElementById('maxar-note').innerHTML=cfg.maxar?`🛰️ Maxar Open Data: <b>${esc(cfg.maxar.event)}</b> disponible para este evento.`:'Maxar Open Data: sin activación publicada para este sismo todavía.';
+
+  map.on('click',e=>{
+    aoi={lat:e.latlng.lat,lon:e.latlng.lng};
+    if(aoiMarker)aoiMarker.setLatLng(e.latlng); else aoiMarker=L.marker(e.latlng).addTo(map);
+    document.getElementById('aoi-coords').textContent=`Punto: ${aoi.lat.toFixed(5)}, ${aoi.lon.toFixed(5)} (zoom ${map.getZoom()})`;
+    document.getElementById('analyzeAoi').disabled=false;
+  });
+  loadAssessments();
+}
+async function loadAssessments(){
+  const {assessments=[]}=await fetch('/api/sat/damage').then(r=>r.json()).catch(()=>({assessments:[]}));
+  resultLayer.clearLayers();
+  assessments.forEach(a=>{
+    L.circleMarker([a.lat,a.lon],{radius:8,color:SEVHEX(a.severity),fillColor:SEVHEX(a.severity),fillOpacity:.7,weight:2})
+      .bindPopup(`<b>${esc(SEVLBL[a.severity]||a.severity)}</b> <span style="font-size:11px;color:#666">(${esc(a.imagery_source)}${a.verification==='verified'?' · ✓ verificado':''})</span><br><span style="font-size:12px">${esc((a.summary||'').slice(0,200))}</span>`)
+      .addTo(resultLayer);
+  });
+}
+document.getElementById('analyzeAoi').onclick=async()=>{
+  if(!aoi)return; const btn=document.getElementById('analyzeAoi'); const out=document.getElementById('aoi-result');
+  btn.disabled=true; btn.textContent='Analizando imagen satelital…';
+  try{
+    const r=await fetch('/api/sat/analyze',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({lat:aoi.lat,lon:aoi.lon,zoom:Math.min(19,Math.max(16,map.getZoom()))})});
+    if(r.status===401){out.innerHTML='<div class="text-sm text-secondary">Inicia sesión como operador para analizar. <a href="/login?next=/danos" class="underline">Entrar</a></div>';btn.textContent='Analizar daños (IA)';return;}
+    const d=await r.json();
+    if(!d.ok)throw new Error(d.error||'error');
+    out.innerHTML=`<div class="border border-outline-variant/60 rounded-lg p-3">
+      <span class="text-white text-[11px] font-bold px-2 py-0.5 rounded-full" style="background:${SEVHEX(d.severity)}">${esc(SEVLBL[d.severity]||d.severity)}</span>
+      <span class="text-[11px] text-on-surface-variant">imagen ${esc(d.source)}</span>
+      <p class="text-sm mt-2 whitespace-pre-line">${esc(d.summary)}</p>
+      ${d.hazards&&d.hazards.length?`<div class="mt-2 flex flex-wrap gap-1">${d.hazards.map(h=>`<span class="text-[11px] bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">${esc(h)}</span>`).join('')}</div>`:''}
+      ${d.action?`<p class="text-[12px] mt-2"><b>Acción:</b> ${esc(d.action)}</p>`:''}</div>`;
+    loadAssessments();
+  }catch(e){ out.innerHTML=`<div class="text-sm text-secondary">No se pudo analizar: ${esc(e.message)}</div>`; }
+  btn.textContent='Analizar daños (IA)'; btn.disabled=false;
+};
+
+// ===================== Foto en tierra (existing) =====================
+const SEV={ninguno:['Sin daño','bg-safe'],leve:['Leve','bg-safe'],moderado:['Moderado','bg-warning'],grave:['Grave','bg-critical'],severo:['Severo','bg-critical'],indeterminado:['Indeterminado','bg-on-surface-variant']};
 const file=document.getElementById('file'),preview=document.getElementById('preview'),drop=document.getElementById('drop'),btn=document.getElementById('analyze'),result=document.getElementById('result');
 let blob=null;
 file.onchange=()=>{ const f=file.files[0]; if(!f)return; blob=f; preview.src=URL.createObjectURL(f); preview.classList.remove('hidden'); drop.classList.add('hidden'); btn.disabled=false; };
@@ -51,16 +168,17 @@ btn.onclick=async()=>{
       <p class="text-sm whitespace-pre-line">${esc(d.summary)}</p>
       ${d.hazards&&d.hazards.length?`<div class="mt-3 flex flex-wrap gap-1">${d.hazards.map(h=>`<span class="text-[11px] bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">${esc(h)}</span>`).join('')}</div>`:''}
     </div>`;
-    result.classList.remove('hidden'); load();
+    result.classList.remove('hidden'); loadFotos();
   }catch(e){ result.innerHTML=`<div class="bg-secondary/10 text-secondary border border-secondary/30 rounded-lg p-4 text-sm">No se pudo analizar: ${esc(e.message)}</div>`; result.classList.remove('hidden'); }
   btn.textContent='Analizar daño'; btn.disabled=false;
 };
-async function load(){ const resp=await fetch('/api/damage'); if(!resp.ok){document.getElementById('list').innerHTML='';return;} const {reports=[]}=await resp.json();
+async function loadFotos(){ const resp=await fetch('/api/damage'); if(!resp.ok){document.getElementById('list').innerHTML='';return;} const {reports=[]}=await resp.json();
   document.getElementById('list').innerHTML=reports.map(r=>{const[l,c]=SEV[r.severity]||SEV.indeterminado;
     return `<a href="/api/damage/photo/${r.id}" target="_blank" class="block relative rounded-lg overflow-hidden border border-outline-variant/60">
       <img src="/api/damage/photo/${r.id}" class="w-full h-28 object-cover bg-surface-container">
       <span class="absolute top-1 left-1 ${c} text-white text-[10px] font-bold px-1.5 py-0.5 rounded">${l}</span></a>`;}).join('');}
-load();
+
+initGis(); loadFotos();
 </script>
 </body>
 </html>
