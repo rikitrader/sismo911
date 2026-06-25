@@ -16,7 +16,7 @@
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css" />
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="/app-shell.js" defer></script>
 <style>
   .label-caps{letter-spacing:.14em;text-transform:uppercase;font-weight:700}
@@ -296,8 +296,11 @@ function drawFocus(r){
     icons:[{icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:3,strokeColor:'#00173a'},offset:'100%'}]});
 }
 
-/* boot */
-renderRoutes();renderTables();buildCharts();loadGoogleMaps();
+/* boot — each step isolated so one failure can't block the others */
+try{renderRoutes();}catch(e){console.error('routes',e);}
+try{renderTables();}catch(e){console.error('tables',e);}
+try{if(window.Chart)buildCharts();}catch(e){console.error('charts',e);}
+try{loadGoogleMaps();}catch(e){console.error('map',e);}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 </script>
 </body>
