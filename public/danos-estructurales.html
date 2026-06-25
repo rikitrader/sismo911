@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daños Estructurales — SISMO911</title>
+<meta name="description" content="Mapa en vivo de daños estructurales del terremoto en Venezuela: edificios colapsados, dañados, fugas de gas y personas atrapadas. Fuente comunitaria SOS Venezuela 2026.">
+<link rel="canonical" href="https://sismo911.com/danos-estructurales">
+<meta property="og:type" content="website"><meta property="og:site_name" content="SISMO911"><meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Daños Estructurales — Mapa en vivo | SISMO911">
+<meta property="og:description" content="Edificios colapsados y dañados, fugas de gas y personas atrapadas tras el terremoto en Venezuela.">
+<meta property="og:url" content="https://sismo911.com/danos-estructurales"><meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link rel="manifest" href="/manifest.webmanifest">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/app.css" />
+<style>
+.font-display{font-family:'Public Sans',sans-serif}body{margin:0;font-family:Inter,sans-serif;background:#f9f9fc}
+#map{position:absolute;top:0;bottom:0;left:0;right:0}
+.dmk{border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.dmk.pulse::after{content:'';position:absolute;inset:-3px;border-radius:9999px;box-shadow:0 0 0 0 rgba(200,16,46,.6);animation:dp 1.6s infinite}
+@keyframes dp{70%{box-shadow:0 0 0 14px rgba(200,16,46,0)}100%{box-shadow:0 0 0 0 rgba(200,16,46,0)}}
+.leaflet-container{font-family:Inter,sans-serif}
+</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="text-on-surface">
+<header class="bg-primary text-white"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-2"><img src="/logo.svg" class="h-8 w-8"><b class="font-display">SISMO911</b></div></header>
+
+<div class="relative" style="height:calc(100vh - 56px)">
+  <div id="map"></div>
+
+  <!-- Filter / summary panel -->
+  <div class="absolute top-4 left-4 z-[500] bg-white rounded-xl shadow-lg border border-outline-variant/60 w-72 max-h-[calc(100%-2rem)] overflow-y-auto">
+    <div class="px-4 py-3 border-b border-outline-variant/50">
+      <div class="font-display font-extrabold text-lg">Daños Estructurales</div>
+      <div class="text-[11px] text-on-surface-variant">Fuente: <a href="https://sosvenezuela2026.com" target="_blank" class="underline">SOS Venezuela 2026</a> · mapa comunitario</div>
+    </div>
+    <div id="filters" class="p-2 space-y-1"></div>
+    <div class="px-4 py-2 text-[11px] text-on-surface-variant border-t border-outline-variant/50">⚠️ Coordenadas aproximadas (protección anti-saqueo). Verificación comunitaria — no oficial salvo indicado.</div>
+  </div>
+
+  <div id="loading" class="absolute inset-0 grid place-items-center z-[400] pointer-events-none"><div class="bg-white/90 rounded-lg px-4 py-2 text-sm">Cargando daños…</div></div>
+</div>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const CAT={
+  collapsed_building:['Edificio colapsado','#c8102e'],
+  damaged_building:['Edificio dañado','#e57200'],
+  trapped_people:['Personas atrapadas','#c8102e'],
+  gas_leak:['Fuga de gas','#e57200'],
+  aid_point:['Punto de ayuda','#0b2b5b'],
+  shelter:['Refugio','#0b2b5b'],
+  water_point:['Punto de agua','#2563eb'],
+  medical_need:['Necesidad médica','#bb0027'],
+};
+const SEVCOL={rojo:'#c8102e',naranja:'#e57200',amarillo:'#ffbc3d'};
+const VERIF={community_confirmed:'Confirmado por comunidad',official_verified:'Verificado oficial',unverified:'Sin verificar'};
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const color=r=>{ if(['aid_point','shelter','water_point','medical_need'].includes(r.category))return CAT[r.category]?.[1]||'#0b2b5b'; return SEVCOL[r.severity]||CAT[r.category]?.[1]||'#e57200'; };
+
+const map=L.map('map',{attributionControl:false}).setView([10.3,-66.9],8);
+L.control.attribution({prefix:false}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM, © CARTO · SOS Venezuela 2026',maxZoom:19}).addTo(map);
+const layers={}; let active=new Set(Object.keys(CAT));
+
+function render(reports){
+  Object.values(layers).forEach(l=>l.clearLayers());
+  reports.forEach(r=>{
+    if(!r.lat||!r.lng)return;
+    const cat=r.category||'damaged_building';
+    if(!layers[cat])layers[cat]=L.layerGroup().addTo(map);
+    const trap=cat==='trapped_people';
+    const size= cat==='collapsed_building'||trap?16:12;
+    const ic=L.divIcon({className:'',html:`<div class="dmk ${trap?'pulse':''}" style="position:relative;width:${size}px;height:${size}px;background:${color(r)}"></div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]});
+    L.marker([r.lat,r.lng],{icon:ic}).addTo(layers[cat]).bindPopup(
+      `<div style="min-width:180px"><div style="font-weight:700;color:${color(r)}">${esc(CAT[cat]?.[0]||cat)}</div>
+       <div style="font-weight:600;margin:2px 0">${esc(r.title||'')}</div>
+       <div style="font-size:12px;color:#44474f">${esc(r.description||'')}</div>
+       <div style="font-size:11px;color:#747780;margin-top:4px">${esc(r.municipio||'')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}</div>
+       ${r.source_url?`<a href="${r.source_url}" target="_blank" style="font-size:11px;color:#0b2b5b">fuente ↗</a>`:''}</div>`);
+  });
+  Object.keys(layers).forEach(c=>active.has(c)?layers[c].addTo(map):map.removeLayer(layers[c]));
+}
+
+function buildFilters(counts){
+  const byCat=Object.fromEntries(counts.map(c=>[c.category,c.n]));
+  document.getElementById('filters').innerHTML=Object.entries(CAT).map(([k,[label,col]])=>{
+    const n=byCat[k]||0;
+    return `<label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-container cursor-pointer text-sm">
+      <input type="checkbox" data-cat="${k}" checked class="catbox">
+      <span style="width:11px;height:11px;border-radius:9999px;background:${col};display:inline-block;flex:0 0 auto"></span>
+      <span class="flex-1">${label}</span><span class="text-xs text-on-surface-variant font-mono">${n}</span></label>`;
+  }).join('');
+  document.querySelectorAll('.catbox').forEach(b=>b.onchange=()=>{const c=b.dataset.cat; b.checked?active.add(c):active.delete(c); Object.keys(layers).forEach(k=>active.has(k)?layers[k].addTo(map):map.removeLayer(layers[k]));});
+}
+
+fetch('/api/danos-estructurales').then(r=>r.json()).then(d=>{
+  document.getElementById('loading').style.display='none';
+  buildFilters(d.counts||[]);
+  render(d.reports||[]);
+  if(d.reports&&d.reports.length){const g=L.featureGroup(Object.values(layers)); try{map.fitBounds(g.getBounds().pad(0.2));}catch{}}
+}).catch(()=>{document.getElementById('loading').innerHTML='<div class="bg-white rounded-lg px-4 py-2 text-sm text-secondary">No se pudieron cargar los daños.</div>';});
+</script>
+</body>
+</html>
