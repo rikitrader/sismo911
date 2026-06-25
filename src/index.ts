@@ -71,7 +71,7 @@ app.use('*', async (c, next) => {
     path === '/api/persons/queue' ||
     path === '/api/persons/docket/queue' ||
     (path.startsWith('/api/persons/') && method === 'PATCH') ||
-    path.endsWith('/approve') || path.endsWith('/reject');
+    path.endsWith('/approve') || path.endsWith('/reject') || path.endsWith('/localizar');
   // Case docket: the GET index (/api/persons/cases) + per-person docket are
   // PUBLIC reads (redacted server-side for non-operators). Submitting an update
   // requires LOGIN (any role) — citizen updates land 'pending' for operator

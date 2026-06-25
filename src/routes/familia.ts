@@ -101,6 +101,45 @@ familia.get('/photo/:id', async (c) => {
   return c.notFound();
 });
 
+// GET /api/familia/person/:id  — full public detail for the click-to-open card modal.
+familia.get('/person/:id', async (c) => {
+  const p: any = await c.env.DESAP.prepare(
+    `SELECT id, nombre, edad, ubicacion, fecha, descripcion, contacto, estado, foto, foto_r2, localizado_por, updated_at
+     FROM personas WHERE id = ? AND moderation = 'approved'`
+  ).bind(c.req.param('id')).first();
+  if (!p) return c.json({ error: 'not_found' }, 404);
+  c.header('Cache-Control', 'public, max-age=120');
+  return c.json({
+    id: p.id, full_name: p.nombre, age: p.edad, last_seen: p.ubicacion,
+    since: p.fecha || null, reporter: p.contacto || null, description: p.descripcion || null,
+    status: estadoToStatus(p.estado), estado: p.estado, found_by: p.localizado_por || null,
+    photo_url: (p.foto_r2 || p.foto) ? `/api/familia/photo/${p.id}` : null,
+    share_url: `https://sismo911.com/familia?persona=${p.id}`,
+  });
+});
+
+// POST /api/familia/:id/localizar  — mark as found (operator-gated in index.ts + here).
+familia.post('/:id/localizar', async (c) => {
+  if (!(await isOperator(c))) return c.json({ error: 'unauthorized', hint: 'Solo operadores pueden confirmar' }, 401);
+  const b = await c.req.json().catch(() => ({} as any));
+  await c.env.DESAP.prepare(
+    `UPDATE personas SET estado = 'localizado', localizado_nota = ?, updated_at = ? WHERE id = ?`
+  ).bind(String(b?.nota ?? 'Marcada como localizada').slice(0, 300), Date.now(), c.req.param('id')).run();
+  return c.json({ ok: true, status: 'found_safe' });
+});
+
+// POST /api/familia/:id/report  — public "reportar contenido obsceno" flag (rate-limited).
+familia.post('/:id/report', async (c) => {
+  const limited = await rateLimit(c.env, c, 'familia_flag', 10, 300);
+  if (limited) return limited;
+  await c.env.DESAP.prepare(
+    `UPDATE personas SET reportes = COALESCE(reportes,0) + 1,
+       reportada = CASE WHEN COALESCE(reportes,0) + 1 >= 3 THEN 1 ELSE COALESCE(reportada,0) END,
+       reportada_at = ? WHERE id = ?`
+  ).bind(Date.now(), c.req.param('id')).run();
+  return c.json({ ok: true });
+});
+
 // POST /api/familia/persons  — citizen report → personas (photo → DESAP_FOTOS)
 familia.post('/persons', async (c) => {
   const burst = await burstLimit(c.env, c, 'familia_register');
