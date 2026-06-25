@@ -43,9 +43,19 @@ curl localhost:8787/api/health
 ## Deploy
 
 ```bash
+wrangler secret put ADMIN_BOOTSTRAP_TOKEN
+# recommended before opening admin/operator paths publicly:
+# set ACCESS_TEAM_DOMAIN and ACCESS_AUD in wrangler.toml after creating the
+# Cloudflare Access application for app.sismo911.com.
 pnpm db:migrate:remote && pnpm db:seed:remote
 pnpm deploy                    # → https://sismo911.<account>.workers.dev
 ```
+
+The first `/api/auth/register` call in an empty database creates the initial
+admin only when `ADMIN_BOOTSTRAP_TOKEN` is supplied as `bootstrapToken` or the
+`x-admin-bootstrap-token` header. Public emergency submissions remain open, but
+triage, moderation queues, full SOS reads, damage photos, and status updates are
+operator/admin-only.
 
 ## API
 

@@ -82,7 +82,8 @@ app.get('/api/ready', async (c) => {
     await c.env.DB.prepare('SELECT 1').first();
     return c.json({ ready: true });
   } catch (e: any) {
-    return c.json({ ready: false, error: String(e?.message ?? e) }, 503);
+    console.error('[ready] database check failed:', e?.message ?? e);
+    return c.json({ ready: false, error: 'dependency_unavailable' }, 503);
   }
 });
 

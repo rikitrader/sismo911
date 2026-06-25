@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
+import { rateLimit, validLatLon } from '../lib/security';
+import { audit } from '../lib/audit';
 
 // Citizen damage-report map (the "movement" core). PUBLIC reads of APPROVED
 // reports; PUBLIC submission enters a moderation queue (status='pending').
@@ -18,7 +20,7 @@ const blur = (n: any) => (n == null ? null : Math.round(Number(n) * 1000) / 1000
 
 // GET /api/reports?status=approved&category=&severity=&since=&limit=
 reports.get('/', async (c) => {
-  const status = c.req.query('status') ?? 'approved';
+  const status = 'approved';
   const category = c.req.query('category');
   const severity = c.req.query('severity');
   const since = Number(c.req.query('since') ?? 0);
@@ -70,10 +72,15 @@ reports.get('/:id', async (c) => {
 
 // POST /api/reports — citizen submission → moderation queue.
 reports.post('/', async (c) => {
+  const limited = await rateLimit(c.env, c, 'reports_post', 20, 300);
+  if (limited) return limited;
   const b = await c.req.json().catch(() => null);
   if (!b?.category || !CATEGORIES.has(b.category)) return c.json({ error: 'categoría inválida' }, 400);
   if (!b?.title && !b?.description) return c.json({ error: 'título o descripción requerido' }, 400);
   if (b.severity && !SEVERITIES.has(b.severity)) return c.json({ error: 'severidad inválida' }, 400);
+  const lat = b.lat == null ? null : Number(b.lat);
+  const lon = b.lon == null ? null : Number(b.lon);
+  if ((lat != null || lon != null) && !validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
   const now = Date.now();
   const id = uid('rep');
   await c.env.DB.prepare(
@@ -84,14 +91,16 @@ reports.post('/', async (c) => {
   ).bind(
     id, b.category, b.severity ?? null, 'pending', 'unverified',
     (b.title ?? '').slice(0, 140) || null, (b.description ?? '').slice(0, 2000) || null,
-    blur(b.lat), blur(b.lon), b.estado ?? null, b.municipio ?? null, b.parroquia ?? null,
-    b.building_type ?? null, b.people_trapped ?? null, 'citizen', b.reporter ?? null, now, now
+    blur(lat), blur(lon), b.estado ? String(b.estado).slice(0, 120) : null, b.municipio ? String(b.municipio).slice(0, 120) : null, b.parroquia ? String(b.parroquia).slice(0, 120) : null,
+    b.building_type ? String(b.building_type).slice(0, 80) : null, b.people_trapped ?? null, 'citizen', b.reporter ? String(b.reporter).slice(0, 120) : null, now, now
   ).run();
   return c.json({ ok: true, id, status: 'pending', message: 'Recibido. Aparecerá tras revisión.' }, 201);
 });
 
 // POST /api/reports/:id/react — bump support counter (no auth).
 reports.post('/:id/react', async (c) => {
+  const limited = await rateLimit(c.env, c, 'reports_react', 60, 300);
+  if (limited) return limited;
   const r = await c.env.DB.prepare(
     `UPDATE map_reports SET reactions_up = reactions_up + 1 WHERE id = ? AND status='approved'`
   ).bind(c.req.param('id')).run();
@@ -108,6 +117,8 @@ reports.get('/:id/comments', async (c) => {
 
 // POST /api/reports/:id/comments
 reports.post('/:id/comments', async (c) => {
+  const limited = await rateLimit(c.env, c, 'reports_comments', 20, 300);
+  if (limited) return limited;
   const b = await c.req.json().catch(() => null);
   if (!b?.body) return c.json({ error: 'comentario vacío' }, 400);
   const id = uid('cmt');
@@ -130,17 +141,28 @@ reports.get('/queue', async (c) => {
 reports.patch('/:id', async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const sets: string[] = ['updated_ms = ?']; const args: any[] = [Date.now()];
-  if (b.status) { sets.push('status = ?'); args.push(b.status); }
-  if (b.verification) { sets.push('verification = ?'); args.push(b.verification); }
-  if (b.severity) { sets.push('severity = ?'); args.push(b.severity); }
+  if (b.status) {
+    if (!['pending', 'approved', 'rejected'].includes(b.status)) return c.json({ error: 'bad_status' }, 400);
+    sets.push('status = ?'); args.push(b.status);
+  }
+  if (b.verification) {
+    if (!['unverified', 'community_confirmed', 'official_verified'].includes(b.verification)) return c.json({ error: 'bad_verification' }, 400);
+    sets.push('verification = ?'); args.push(b.verification);
+  }
+  if (b.severity) {
+    if (!SEVERITIES.has(b.severity)) return c.json({ error: 'severidad inválida' }, 400);
+    sets.push('severity = ?'); args.push(b.severity);
+  }
   const r = await c.env.DB.prepare(
     `UPDATE map_reports SET ${sets.join(', ')} WHERE id = ?`
   ).bind(...args, c.req.param('id')).run();
+  await audit(c, 'reports.moderate', { id: c.req.param('id'), status: b.status, verification: b.verification, severity: b.severity });
   return c.json({ ok: true, changed: r.meta.changes });
 });
 
 // DELETE /api/reports/:id — remove (gated).
 reports.delete('/:id', async (c) => {
   await c.env.DB.prepare(`DELETE FROM map_reports WHERE id = ?`).bind(c.req.param('id')).run();
+  await audit(c, 'reports.delete', { id: c.req.param('id') });
   return c.json({ ok: true });
 });

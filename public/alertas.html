@@ -42,6 +42,8 @@
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 const SEV={critical:['bg-critical','Crítica'],warning:['bg-warning','Alerta'],advisory:['bg-advisory text-on-surface','Aviso']};
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl=u=>{try{const x=new URL(u);return ['https:','http:'].includes(x.protocol)?x.href:'#';}catch{return '#';}};
 const ago=t=>{if(!t)return '';const s=(Date.now()-t)/1000;if(s<3600)return 'hace '+Math.floor(s/60)+' min';if(s<86400)return 'hace '+Math.floor(s/3600)+'h';return 'hace '+Math.floor(s/86400)+'d';};
 fetch('/api/alerts').then(r=>r.json()).then(d=>{
   document.getElementById('list').innerHTML = d.alerts.length ? d.alerts.map(a=>{
@@ -49,12 +51,12 @@ fetch('/api/alerts').then(r=>r.json()).then(d=>{
     return `<div class="bg-white border border-outline-variant/60 rounded-lg p-4 flex items-start gap-3">
       <span class="${cls} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5">${lbl}</span>
       <div class="flex-1 min-w-0">
-        <div class="font-semibold text-sm">${a.title||'(sin título)'}</div>
+        <div class="font-semibold text-sm">${esc(a.title||'(sin título)')}</div>
         <div class="mt-1 flex items-center gap-2 text-[11px] text-on-surface-variant font-mono">
-          <span class="uppercase">${a.source}</span><span>·</span><span>${a.coverage}</span><span>·</span><span>${ago(a.time_ms)}</span>
+          <span class="uppercase">${esc(a.source)}</span><span>·</span><span>${esc(a.coverage)}</span><span>·</span><span>${ago(a.time_ms)}</span>
         </div>
       </div>
-      ${a.url?`<a href="${a.url}" target="_blank" class="text-primary text-xs underline shrink-0">ver</a>`:''}
+      ${a.url?`<a href="${safeUrl(a.url)}" target="_blank" rel="noopener noreferrer" class="text-primary text-xs underline shrink-0">ver</a>`:''}
     </div>`;
   }).join('') : '<p class="text-on-surface-variant text-sm">Sin alertas activas.</p>';
 }).catch(()=>{document.getElementById('list').innerHTML='<p class="text-secondary text-sm">No se pudieron cargar las alertas.</p>';});

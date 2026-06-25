@@ -304,6 +304,7 @@
   const esPlace = (p) => (p || 'Evento sísmico')
     .replace(/\bof\b/g, 'de').replace(/\bNW\b/g, 'NO').replace(/\bSW\b/g, 'SO')
     .replace(/\bWNW\b/g, 'ONO').replace(/\bWSW\b/g, 'OSO').replace(/\bW\b/g, 'O');
+  const esc = (s) => (s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
   // ---- Map ----
   const map = L.map('map', { zoomControl: true, scrollWheelZoom: false, attributionControl: false })
@@ -331,7 +332,7 @@
         .bindPopup(
           `<div style="font-family:Inter,sans-serif;min-width:170px">
              <div style="font-family:'JetBrains Mono';font-weight:700;color:${HEX[s]};font-size:15px">M ${q.mag.toFixed(1)}</div>
-             <div style="font-weight:600;margin:2px 0 4px">${esPlace(q.place)}</div>
+             <div style="font-weight:600;margin:2px 0 4px">${esc(esPlace(q.place))}</div>
              <div style="font-size:11px;color:#44474f;font-family:'JetBrains Mono'">PROF ${q.depth.toFixed(1)} km · ${q.lat.toFixed(1)}°N ${Math.abs(q.lon).toFixed(1)}°O</div>
              <div style="font-size:11px;color:#747780;margin-top:2px">${timeAgo(q.time)}</div>
            </div>`
@@ -347,7 +348,7 @@
             <span class="${badge} text-white font-mono font-bold text-[11px] px-1.5 py-0.5 rounded shrink-0">M ${q.mag.toFixed(1)}</span>
             <span class="text-[11px] text-on-surface-variant shrink-0 mt-0.5">${timeAgo(q.time)}</span>
           </div>
-          <div class="mt-1.5 font-semibold text-sm text-on-surface leading-snug">${esPlace(q.place)}</div>
+          <div class="mt-1.5 font-semibold text-sm text-on-surface leading-snug">${esc(esPlace(q.place))}</div>
           <div class="mt-1 flex items-center gap-3 text-[11px] text-on-surface-variant font-mono">
             <span>PROF: ${q.depth.toFixed(1)} km</span>
             <span>COORD: ${q.lat.toFixed(1)}°N ${Math.abs(q.lon).toFixed(1)}°O</span>

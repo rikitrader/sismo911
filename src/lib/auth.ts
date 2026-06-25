@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import type { Context } from 'hono';
+import { verifyAccessJwt } from './access';
 
 export const COOKIE = 'sismo_session';
 const SESSION_TTL_MS = 30 * 86_400_000; // 30 days
@@ -54,12 +55,24 @@ export async function createSession(env: Env, userId: string, ua?: string): Prom
 
 export async function getUserFromRequest(env: Env, c: Context): Promise<User | null> {
   const token = getCookie(c, COOKIE);
-  if (!token) return null;
+  if (token) {
+    const row: any = await env.DB.prepare(
+      `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,s.expires_ms
+       FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?`
+    ).bind(token).first();
+    if (row && row.expires_ms >= Date.now()) {
+      return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone };
+    }
+  }
+
+  const accessJwt = c.req.header('Cf-Access-Jwt-Assertion');
+  if (!accessJwt || !env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) return null;
+  const identity = await verifyAccessJwt(accessJwt, env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD);
+  if (!identity?.email) return null;
   const row: any = await env.DB.prepare(
-    `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,s.expires_ms
-     FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?`
-  ).bind(token).first();
-  if (!row || row.expires_ms < Date.now()) return null;
+    `SELECT id,email,name,role,rank,unit,phone FROM users WHERE email = ?`
+  ).bind(identity.email.trim().toLowerCase()).first();
+  if (!row) return null;
   return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone };
 }
 

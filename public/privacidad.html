@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacidad y Datos — SISMO911</title>
+<meta name="description" content="Política de privacidad y manejo de datos personales de SISMO911 (Fuerza de Protección Civil).">
+<link rel="canonical" href="https://sismo911.com/privacidad.html">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif']}}}}</script>
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}main h2{font-family:'Public Sans';font-weight:700}</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-2"><img src="/logo.svg" class="h-8 w-8"><b class="font-display">SISMO911</b></div></header>
+
+<main class="mx-auto max-w-3xl px-4 py-8 space-y-6">
+  <div>
+    <h1 class="font-display font-extrabold text-3xl mb-1">Privacidad y Manejo de Datos</h1>
+    <p class="text-on-surface-variant text-sm">Última actualización: 2026-06-25 · Fuerza de Protección Civil — SISMO911</p>
+  </div>
+
+  <section class="bg-white border border-outline-variant/60 rounded-lg p-5 space-y-3 text-sm leading-relaxed">
+    <p>SISMO911 es una plataforma de emergencia. Recolectamos el mínimo de datos necesarios para coordinar la respuesta ante un sismo y proteger vidas. Esta política explica qué datos tratamos, por qué, y cómo los protegemos.</p>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-xl">Datos que tratamos</h2>
+    <ul class="list-disc pl-5 text-sm space-y-1">
+      <li><b>Ubicación</b>: los check-ins ciudadanos se redondean aproximadamente antes de almacenarse; las alertas SOS pueden guardar coordenadas exactas para triaje de emergencia y solo son visibles para operadores.</li>
+      <li><b>Personas desaparecidas</b>: nombre, edad, última ubicación y un teléfono de contacto. Datos sensibles — acceso restringido.</li>
+      <li><b>Cuentas</b>: nombre, correo y contraseña (almacenada solo como hash PBKDF2, nunca en texto plano).</li>
+      <li><b>Fotos de daños</b>: imagen + ubicación aproximada para evaluación. Servidas de forma privada (no indexadas).</li>
+      <li><b>Datos técnicos</b>: IP (para límite de tasa anti-abuso) y registros de ingesta. No usamos rastreadores publicitarios.</li>
+    </ul>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-xl">Quién puede ver qué</h2>
+    <ul class="list-disc pl-5 text-sm space-y-1">
+      <li><b>Público</b>: mapa sísmico, alertas, guía, directorio de emergencia, y el tablero de personas desaparecidas <i>sin</i> el teléfono de contacto.</li>
+      <li><b>Operadores / Protección Civil</b>: triaje de SOS, colas de moderación, teléfonos de contacto y fotos de daños — solo tras iniciar sesión.</li>
+      <li><b>Administradores</b>: gestión de usuarios y roles.</li>
+    </ul>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-xl">Retención</h2>
+    <p class="text-sm">Las alertas SOS y check-ins se conservan mientras sean operacionalmente útiles y luego se archivan. Las sesiones expiran a los 30 días. Puedes solicitar la eliminación de tu cuenta y registros escribiendo a <b>privacidad@sismo911.com</b>.</p>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-xl">Seguridad</h2>
+    <p class="text-sm">Contraseñas con hash PBKDF2-SHA256, sesiones con cookies HttpOnly/Secure, encabezados de seguridad (CSP, X-Frame-Options, HSTS), límite de tasa anti-abuso y validación de entrada en todos los puntos públicos. Aun así, ninguna plataforma es 100% infalible.</p>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-xl">Marco de cumplimiento</h2>
+    <p class="text-sm">Diseñada con base en la Ley Especial contra los Delitos Informáticos (Venezuela) y principios de minimización de datos. Para uso oficial por Protección Civil / FUNVISIS, los convenios de tratamiento de datos rigen sobre esta política general.</p>
+  </section>
+
+  <p class="text-xs text-on-surface-variant pt-4 border-t border-outline-variant/50">SISMO911 es una herramienta de información y coordinación. En una emergencia real llama al <b>911</b> o al <b>171</b> (Bomberos).</p>
+</main>
+</body>
+</html>

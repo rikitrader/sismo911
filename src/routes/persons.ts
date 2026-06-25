@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
+import { rateLimit, validLatLon, blurCoord } from '../lib/security';
+import { audit } from '../lib/audit';
 
 export const persons = new Hono<{ Bindings: Env }>();
 
@@ -16,16 +18,16 @@ persons.get('/stats', async (c) => {
   return c.json({ missing: row?.missing ?? 0, found: row?.found ?? 0, total: row?.total ?? 0 });
 });
 
-// GET /api/persons/search?q= — name / phone lookup (approved only).
+// GET /api/persons/search?q= — name lookup (approved only, redacted).
 persons.get('/search', async (c) => {
   const q = (c.req.query('q') ?? '').trim();
   if (q.length < 2) return c.json({ persons: [] });
   const like = `%${q}%`;
   const { results } = await c.env.DB.prepare(
-    `SELECT id, full_name, age, sex, last_seen, status, contact_phone, photo_url, updated_ms
-     FROM persons WHERE review='approved' AND (full_name LIKE ? OR contact_phone LIKE ?)
+    `SELECT id, full_name, age, sex, last_seen, status, photo_url, updated_ms
+     FROM persons WHERE review='approved' AND full_name LIKE ?
      ORDER BY updated_ms DESC LIMIT 100`
-  ).bind(like, like).all();
+  ).bind(like).all();
   return c.json({ persons: results ?? [] });
 });
 
@@ -41,26 +43,32 @@ persons.get('/queue', async (c) => {
 persons.get('/', async (c) => {
   const status = c.req.query('status');
   const q = status
-    ? c.env.DB.prepare(`SELECT * FROM persons WHERE review='approved' AND status = ? ORDER BY updated_ms DESC LIMIT 500`).bind(status)
-    : c.env.DB.prepare(`SELECT * FROM persons WHERE review='approved' ORDER BY updated_ms DESC LIMIT 500`);
+    ? c.env.DB.prepare(`SELECT id,full_name,age,sex,last_seen,status,photo_url,created_ms,updated_ms FROM persons WHERE review='approved' AND status = ? ORDER BY updated_ms DESC LIMIT 500`).bind(status)
+    : c.env.DB.prepare(`SELECT id,full_name,age,sex,last_seen,status,photo_url,created_ms,updated_ms FROM persons WHERE review='approved' ORDER BY updated_ms DESC LIMIT 500`);
   const { results } = await q.all();
   return c.json({ persons: results ?? [] });
 });
 
 // POST /api/persons — PUBLIC missing-person report → moderation queue (pending).
 persons.post('/', async (c) => {
+  const limited = await rateLimit(c.env, c, 'persons_post', 10, 300);
+  if (limited) return limited;
   const b = await c.req.json().catch(() => null);
   if (!b?.full_name) return c.json({ error: 'nombre requerido' }, 400);
+  if (b.status && !['missing', 'found_safe', 'found_deceased', 'unknown'].includes(b.status)) return c.json({ error: 'bad_status' }, 400);
+  const lat = b.last_seen_lat == null ? null : Number(b.last_seen_lat);
+  const lon = b.last_seen_lon == null ? null : Number(b.last_seen_lon);
+  if ((lat != null || lon != null) && !validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
   const now = Date.now();
   const id = uid('per');
   await c.env.DB.prepare(
     `INSERT INTO persons (id, full_name, age, sex, last_seen, last_seen_lat, last_seen_lon, event_id, status, contact_phone, notes, photo_url, reported_by, review, created_ms, updated_ms)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
-    id, String(b.full_name).slice(0, 120), b.age ?? null, b.sex ?? null, (b.last_seen ?? null),
-    b.last_seen_lat ?? null, b.last_seen_lon ?? null, b.event_id ?? null,
-    b.status ?? 'missing', b.contact_phone ?? null, (b.notes ?? null),
-    b.photo_url ?? null, b.reported_by ?? null, 'pending', now, now
+    id, String(b.full_name).slice(0, 120), b.age ?? null, b.sex ?? null, b.last_seen ? String(b.last_seen).slice(0, 500) : null,
+    blurCoord(lat, 2), blurCoord(lon, 2), b.event_id ?? null,
+    b.status ?? 'missing', b.contact_phone ? String(b.contact_phone).slice(0, 40) : null, b.notes ? String(b.notes).slice(0, 2000) : null,
+    b.photo_url ? String(b.photo_url).slice(0, 500) : null, b.reported_by ? String(b.reported_by).slice(0, 120) : null, 'pending', now, now
   ).run();
   return c.json({ ok: true, id, review: 'pending', message: 'Recibido. Aparecerá tras revisión.' }, 201);
 });
@@ -69,9 +77,11 @@ persons.post('/', async (c) => {
 persons.patch('/:id', async (c) => {
   const b = await c.req.json().catch(() => ({}));
   if (!b.status) return c.json({ error: 'status_required' }, 400);
+  if (!['missing', 'found_safe', 'found_deceased', 'unknown'].includes(b.status)) return c.json({ error: 'bad_status' }, 400);
   const r = await c.env.DB.prepare(
     `UPDATE persons SET status = ?, notes = COALESCE(?, notes), updated_ms = ? WHERE id = ? AND review='approved'`
   ).bind(b.status, b.notes ?? null, Date.now(), c.req.param('id')).run();
+  await audit(c, 'persons.status_update', { id: c.req.param('id'), status: b.status });
   return c.json({ ok: true, changed: r.meta.changes });
 });
 
@@ -79,10 +89,12 @@ persons.patch('/:id', async (c) => {
 persons.post('/:id/approve', async (c) => {
   const r = await c.env.DB.prepare(`UPDATE persons SET review='approved', updated_ms=? WHERE id=?`)
     .bind(Date.now(), c.req.param('id')).run();
+  await audit(c, 'persons.approve', { id: c.req.param('id') });
   return c.json({ ok: true, changed: r.meta.changes });
 });
 persons.post('/:id/reject', async (c) => {
   const r = await c.env.DB.prepare(`UPDATE persons SET review='rejected', updated_ms=? WHERE id=?`)
     .bind(Date.now(), c.req.param('id')).run();
+  await audit(c, 'persons.reject', { id: c.req.param('id') });
   return c.json({ ok: true, changed: r.meta.changes });
 });

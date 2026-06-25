@@ -68,5 +68,8 @@ USGS_WINDOW_DAYS = "30"
 # <team> part). Empty = enforcement disabled (app stays open).
 ACCESS_TEAM_DOMAIN = ""
 ACCESS_AUD = ""
+# Optional comma-separated preview origins for CORS. Leave empty in production
+# unless a trusted deployment preview needs API access.
+ALLOWED_ORIGINS = ""
 # Web Push public key (safe to expose). Private key is a Worker secret (VAPID_PRIVATE_KEY).
 VAPID_PUBLIC_KEY = "BLWuQ5I87NCxY_PJf9vplu423M7hDMbXgp98_no9mSZ54G5h4v_hYPcynxaNFWo0-HNyGTaMtQK1l-_g5g2qtL8"
