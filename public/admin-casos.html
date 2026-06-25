@@ -3,289 +3,559 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SISMO911 — Expedientes de Personas Desaparecidas</title>
-  <meta name="description" content="CRM y expediente (docket) de casos de personas desaparecidas tras el sismo — acceso restringido." />
+  <title>SISMO911 — Expedientes de Emergencia</title>
+  <meta name="description" content="Sistema de expedientes (docket) de emergencia — acceso restringido." />
   <meta name="robots" content="noindex,nofollow" />
   <link rel="canonical" href="https://sismo911.com/admin-casos" />
   <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-  <meta name="theme-color" content="#13284f" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <meta name="theme-color" content="#0b1830" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="/app.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    body{background:#f9f9fc}
-    .font-display{font-family:'Public Sans',sans-serif}
-    .mono{font-family:'JetBrains Mono',monospace}
+    body{background:#eef0f4}
+    .font-display{font-family:'Public Sans',sans-serif}.mono{font-family:'JetBrains Mono',monospace}
+    .eoc-bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%)}
     input,select,textarea{width:100%;border:1px solid #c4c6d0;border-radius:.5rem;padding:.5rem .65rem;font-size:.875rem;background:#fff}
-    .chip{display:inline-flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:700;padding:.15rem .5rem;border-radius:9999px;white-space:nowrap}
+    .chip{display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:9999px;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
+    .eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7a8092}
+    .card{background:#fff;border:1px solid #d7dbe4;border-radius:.7rem}
     .row:hover{background:#eef1f8;cursor:pointer}
-    /* drawer */
-    #drawer{transition:transform .25s ease}
-    #drawer.closed{transform:translateX(100%)}
-    .tl{position:relative;padding-left:1.5rem}
-    .tl::before{content:'';position:absolute;left:.42rem;top:.2rem;bottom:.2rem;width:2px;background:#d3d7e3}
-    .tl-dot{position:absolute;left:0;top:.15rem;width:.9rem;height:.9rem;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px #c4c6d0}
+    table.dt{width:100%;font-size:.82rem;border-collapse:collapse}
+    table.dt th{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;text-align:left;padding:.5rem .6rem;background:#f4f6f9;position:sticky;top:0}
+    table.dt td{padding:.5rem .6rem;border-top:1px solid #eceef3;vertical-align:top}
+    /* detail overlay */
+    #detail{transition:opacity .15s ease}
+    .tabbtn{padding:.55rem .8rem;font:700 13px 'Public Sans';color:#5a6172;border-bottom:2px solid transparent;white-space:nowrap}
+    .tabbtn.on{color:#13284f;border-color:#bb0027}
+    .tl{position:relative;padding-left:1.4rem}
+    .tl::before{content:'';position:absolute;left:.4rem;top:.2rem;bottom:.2rem;width:2px;background:#d3d7e3}
+    .tl-dot{position:absolute;left:0;top:.15rem;width:.85rem;height:.85rem;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px #c4c6d0}
+    #cmap{height:380px;border-radius:.5rem;z-index:0}
+    .thumb{aspect-ratio:1;object-fit:cover;border-radius:.5rem;border:1px solid #d7dbe4;width:100%;background:#000}
+    /* print packet */
+    #packet{display:none}
+    @media print{
+      body{background:#fff}
+      body>*{display:none !important}
+      #packet{display:block !important;padding:0}
+      .no-print{display:none !important}
+    }
   </style>
 </head>
 <body class="font-sans text-on-surface">
-  <header class="bg-primary text-white">
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+  <header class="eoc-bar text-white">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
       <div class="flex items-center gap-3">
         <img src="/logo.svg" alt="SISMO911" class="h-10 w-10" />
         <div>
           <div class="font-display font-extrabold text-lg leading-none">SISMO911</div>
-          <div class="text-[10px] tracking-widest text-white/70">EXPEDIENTES · PERSONAS DESAPARECIDAS</div>
+          <div class="text-[10px] tracking-[0.18em] text-white/60 mt-0.5">SISTEMA DE EXPEDIENTES DE EMERGENCIA</div>
         </div>
       </div>
-      <nav class="flex items-center gap-4 text-sm font-medium text-white/90">
-        <a href="/admin" class="hover:text-white">Consola</a>
-        <a href="/" class="hover:text-white">← Panel</a>
+      <nav class="flex items-center gap-4 text-sm font-medium text-white/85">
+        <a href="/admin" class="hover:text-white">← Consola</a>
+        <a href="/casos" class="hover:text-white">Vista pública ↗</a>
       </nav>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-6 py-7">
-    <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
+  <main class="max-w-7xl mx-auto px-6 py-6 space-y-5">
+    <div class="flex items-end justify-between flex-wrap gap-3">
       <div>
-        <h1 class="font-display font-extrabold text-2xl">Expedientes de casos</h1>
-        <p class="text-sm text-on-surface-variant">Gestión tipo CRM / docket judicial. Haz clic en un caso para abrir su expediente completo con la línea de tiempo desde el sismo.</p>
+        <div class="eyebrow">Gestión de casos</div>
+        <h1 class="font-display font-extrabold text-2xl leading-tight">Expedientes de personas</h1>
       </div>
+      <button id="refreshBtn" class="bg-primary text-white font-semibold rounded-md px-3 py-2 text-xs">↻ Actualizar</button>
     </div>
 
-    <!-- Summary tiles -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-      <div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div id="s_missing" class="font-display font-extrabold text-2xl text-warning">—</div><div class="text-xs text-on-surface-variant">Desaparecidas</div></div>
-      <div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div id="s_safe" class="font-display font-extrabold text-2xl text-safe">—</div><div class="text-xs text-on-surface-variant">Localizadas a salvo</div></div>
-      <div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div id="s_dead" class="font-display font-extrabold text-2xl text-error">—</div><div class="text-xs text-on-surface-variant">Fallecidas</div></div>
-      <div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div id="s_pending" class="font-display font-extrabold text-2xl text-primary">—</div><div class="text-xs text-on-surface-variant">Pendientes de revisión</div></div>
-      <div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div id="s_total" class="font-display font-extrabold text-2xl">—</div><div class="text-xs text-on-surface-variant">Total expedientes</div></div>
+    <!-- pending updates banner -->
+    <div id="pendingBanner" class="hidden card p-3 flex items-center justify-between bg-amber-50" style="background:#fff7ed;border-color:#fed7aa">
+      <div class="text-sm"><b id="pendCount">0</b> actualización(es) ciudadana(s) <b>pendiente(s) de aprobación</b></div>
+      <button id="openQueue" class="bg-secondary text-white font-bold rounded-md px-3 py-1.5 text-xs">Revisar pendientes</button>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white border border-outline-variant/60 rounded-xl p-4 mb-4 grid sm:grid-cols-4 gap-3">
-      <div class="sm:col-span-2"><input id="q" placeholder="Buscar nombre, lugar o teléfono…" /></div>
-      <select id="f_status">
-        <option value="">Todos los estados</option>
-        <option value="missing">Desaparecida</option>
-        <option value="found_safe">Localizada (a salvo)</option>
-        <option value="found_deceased">Fallecida</option>
-        <option value="unknown">Desconocido</option>
-      </select>
-      <select id="f_review">
-        <option value="">Toda la revisión</option>
-        <option value="approved">Aprobado</option>
-        <option value="pending">Pendiente</option>
-        <option value="rejected">Rechazado</option>
-      </select>
+    <!-- summary -->
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+      <div class="card p-3"><div id="s_total" class="font-display font-black text-2xl">—</div><div class="eyebrow">Expedientes</div></div>
+      <div class="card p-3"><div id="s_missing" class="font-display font-black text-2xl text-warning">—</div><div class="eyebrow">Desaparecidas</div></div>
+      <div class="card p-3"><div id="s_safe" class="font-display font-black text-2xl text-safe">—</div><div class="eyebrow">A salvo</div></div>
+      <div class="card p-3"><div id="s_dead" class="font-display font-black text-2xl" style="color:#475569">—</div><div class="eyebrow">Fallecidas</div></div>
+      <div class="card p-3"><div id="s_pending" class="font-display font-black text-2xl text-primary">—</div><div class="eyebrow">Reportes pend.</div></div>
+      <div class="card p-3"><div id="s_alta" class="font-display font-black text-2xl text-error">—</div><div class="eyebrow">Prioridad alta</div></div>
     </div>
 
-    <!-- Table -->
-    <div class="bg-white border border-outline-variant/60 rounded-xl overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-surface-variant/40 text-on-surface-variant text-left">
-            <tr>
-              <th class="px-3 py-2 font-semibold">Caso</th>
-              <th class="px-3 py-2 font-semibold">Persona</th>
-              <th class="px-3 py-2 font-semibold">Estado</th>
-              <th class="px-3 py-2 font-semibold">Visto por última vez</th>
-              <th class="px-3 py-2 font-semibold">Sismo</th>
-              <th class="px-3 py-2 font-semibold text-center">Movs.</th>
-              <th class="px-3 py-2 font-semibold">Abierto</th>
-              <th class="px-3 py-2 font-semibold">Últ. act.</th>
-            </tr>
-          </thead>
-          <tbody id="rows"><tr><td colspan="8" class="px-3 py-8 text-center text-on-surface-variant">Cargando…</td></tr></tbody>
-        </table>
-      </div>
+    <!-- filters -->
+    <div class="card p-4 grid sm:grid-cols-5 gap-3">
+      <div class="sm:col-span-2"><input id="q" placeholder="Buscar nº de caso, nombre, lugar, teléfono…"></div>
+      <select id="f_status"><option value="">Todos los estados</option><option value="missing">Desaparecida</option><option value="found_safe">A salvo</option><option value="found_deceased">Fallecida</option><option value="unknown">Desconocido</option></select>
+      <select id="f_priority"><option value="">Toda prioridad</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select>
+      <select id="f_since"><option value="0">Cualquier fecha</option><option value="1">Últimas 24 h</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option></select>
     </div>
-    <p id="count" class="text-xs text-on-surface-variant mt-2"></p>
+
+    <!-- table -->
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto" style="max-height:62vh"><table class="dt">
+        <thead><tr>
+          <th>Nº de caso</th><th>Persona</th><th>Estado</th><th>Prioridad</th><th>Tipo</th><th>Lugar</th>
+          <th class="text-center">Evid.</th><th class="text-center">Act.</th><th>Asignado</th><th>Abierto</th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="10" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+      </table></div>
+    </div>
+    <p id="count" class="text-xs text-on-surface-variant"></p>
   </main>
 
-  <!-- Docket drawer -->
-  <div id="scrim" class="fixed inset-0 bg-black/40 hidden z-40"></div>
-  <aside id="drawer" class="closed fixed top-0 right-0 h-full w-full max-w-xl bg-white shadow-2xl z-50 flex flex-col">
-    <div class="bg-primary text-white px-5 py-4 flex items-center justify-between">
-      <div class="font-display font-bold">Expediente del caso</div>
-      <button id="closeDrawer" class="text-white/80 hover:text-white text-xl leading-none">✕</button>
-    </div>
-    <div id="docketBody" class="flex-1 overflow-y-auto p-5 space-y-5"></div>
-  </aside>
-
-<script>
-const $ = s => document.querySelector(s);
-const api = (p, o) => fetch('/api/' + p, Object.assign({ credentials: 'same-origin' }, o));
-const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-
-const ST = {
-  missing:        { es:'Desaparecida',         cls:'bg-warning/15 text-warning' },
-  found_safe:     { es:'Localizada · a salvo',  cls:'bg-safe/15 text-safe' },
-  found_deceased: { es:'Fallecida',             cls:'bg-error/15 text-error' },
-  unknown:        { es:'Desconocido',           cls:'bg-surface-variant text-on-surface-variant' },
-};
-const REV = { approved:'Aprobado', pending:'Pendiente', rejected:'Rechazado' };
-const KIND = {
-  report_filed:'Reporte recibido', status_change:'Cambio de estado', sighting:'Avistamiento',
-  contact:'Contacto', note:'Nota', shelter:'Refugio', hospital:'Hospital',
-  morgue:'Morgue', reunified:'Reunificación', review:'Moderación', opened:'Expediente abierto', sismo:'Sismo de referencia',
-};
-const KIND_COLOR = {
-  sismo:'#b3261e', report_filed:'#13284f', status_change:'#7a5b00', sighting:'#1b6e3c',
-  contact:'#13284f', hospital:'#1b6e3c', shelter:'#1b6e3c', morgue:'#5a5f6a',
-  reunified:'#1b6e3c', review:'#5a5f6a', note:'#5a5f6a', opened:'#13284f',
-};
-
-const fmt = ms => ms ? new Date(Number(ms)).toLocaleString('es-VE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-const fmtD = ms => ms ? new Date(Number(ms)).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-const daysOpen = ms => ms ? Math.max(0, Math.floor((Date.now()-Number(ms))/86400000)) : 0;
-
-function chip(status){ const s=ST[status]||ST.unknown; return `<span class="chip ${s.cls}">${s.es}</span>`; }
-
-async function load(){
-  const params = new URLSearchParams();
-  if ($('#q').value.trim()) params.set('q', $('#q').value.trim());
-  if ($('#f_status').value) params.set('status', $('#f_status').value);
-  if ($('#f_review').value) params.set('review', $('#f_review').value);
-  const r = await api('persons/cases?' + params.toString());
-  if (r.status === 401){ document.body.innerHTML = '<div style="padding:3rem;text-align:center;font-family:sans-serif">Sesión requerida. <a href="/login?next=/admin-casos">Inicia sesión como operador</a>.</div>'; return; }
-  const { cases, summary } = await r.json();
-  $('#s_missing').textContent = summary.missing ?? 0;
-  $('#s_safe').textContent = summary.found_safe ?? 0;
-  $('#s_dead').textContent = summary.deceased ?? 0;
-  $('#s_pending').textContent = summary.pending ?? 0;
-  $('#s_total').textContent = summary.total ?? 0;
-  const tb = $('#rows');
-  if (!cases.length){ tb.innerHTML = '<tr><td colspan="8" class="px-3 py-8 text-center text-on-surface-variant">No hay casos que coincidan.</td></tr>'; $('#count').textContent=''; return; }
-  tb.innerHTML = cases.map(c => {
-    const sismo = c.event_time ? `${esc(c.event_place||c.event_place_en||'Sismo')}${c.event_mag?` · M${c.event_mag}`:''}<div class="text-[11px] text-on-surface-variant">${fmtD(c.event_time)}</div>` : '<span class="text-on-surface-variant">—</span>';
-    const rev = c.review!=='approved' ? `<span class="chip bg-surface-variant text-on-surface-variant ml-1">${REV[c.review]||c.review}</span>` : '';
-    return `<tr class="row border-t border-outline-variant/40" data-id="${c.id}">
-      <td class="px-3 py-2 mono text-[11px] text-on-surface-variant align-top">${esc(c.id)}</td>
-      <td class="px-3 py-2 align-top"><div class="font-semibold">${esc(c.full_name)}</div><div class="text-[11px] text-on-surface-variant">${c.age?c.age+' años':''}${c.sex?' · '+esc(c.sex):''}</div></td>
-      <td class="px-3 py-2 align-top">${chip(c.status)}${rev}</td>
-      <td class="px-3 py-2 align-top">${esc(c.last_seen)||'<span class="text-on-surface-variant">—</span>'}</td>
-      <td class="px-3 py-2 align-top text-[12px]">${sismo}</td>
-      <td class="px-3 py-2 align-top text-center"><span class="chip bg-primary/10 text-primary">${c.docket_count||0}</span></td>
-      <td class="px-3 py-2 align-top text-[12px]">${fmtD(c.created_ms)}<div class="text-[11px] text-on-surface-variant">${daysOpen(c.created_ms)} d</div></td>
-      <td class="px-3 py-2 align-top text-[12px]">${fmtD(c.last_activity_ms||c.updated_ms)}</td>
-    </tr>`;
-  }).join('');
-  $('#count').textContent = `${cases.length} caso(s) mostrados`;
-  tb.querySelectorAll('.row').forEach(r => r.addEventListener('click', () => openDocket(r.dataset.id)));
-}
-
-function openDrawer(){ $('#drawer').classList.remove('closed'); $('#scrim').classList.remove('hidden'); }
-function closeDrawer(){ $('#drawer').classList.add('closed'); $('#scrim').classList.add('hidden'); }
-$('#closeDrawer').addEventListener('click', closeDrawer);
-$('#scrim').addEventListener('click', closeDrawer);
-
-async function openDocket(id){
-  openDrawer();
-  $('#docketBody').innerHTML = '<div class="text-center text-on-surface-variant py-10">Cargando expediente…</div>';
-  const r = await api('persons/' + id + '/docket');
-  if (!r.ok){ $('#docketBody').innerHTML = '<div class="text-error py-6">No se pudo cargar el expediente.</div>'; return; }
-  const { person:p, event:e, docket } = await r.json();
-
-  // Build the chronological timeline: sismo anchor → case opened → docket entries.
-  const nodes = [];
-  if (e && e.time_ms) nodes.push({ ts:e.time_ms, kind:'sismo', detail:`${e.place_es||e.place||'Sismo'} — M${e.mag||'?'}${e.depth_km?`, ${e.depth_km} km prof.`:''}${e.alert?` · PAGER ${e.alert}`:''}`, location:null });
-  nodes.push({ ts:p.created_ms, kind:'opened', detail:`Expediente registrado${p.reported_by?` por ${p.reported_by}`:''}`, location:p.last_seen });
-  for (const d of docket) nodes.push({ ts:d.created_ms, kind:d.kind, detail:d.detail, location:d.location, status_from:d.status_from, status_to:d.status_to, actor:d.actor, source:d.source });
-  nodes.sort((a,b)=>a.ts-b.ts);
-
-  const photo = p.photo_url ? `<img src="${esc(p.photo_url)}" alt="" class="w-20 h-20 rounded-lg object-cover border border-outline-variant/60" onerror="this.style.display='none'">` : `<div class="w-20 h-20 rounded-lg bg-surface-variant grid place-items-center text-on-surface-variant text-2xl">👤</div>`;
-
-  const sismoCard = e ? `<div class="bg-error/5 border border-error/20 rounded-lg p-3 text-sm">
-      <div class="font-display font-bold text-error text-xs uppercase tracking-wide">Sismo de referencia</div>
-      <div class="font-semibold mt-1">${esc(e.place_es||e.place||'Sismo')} · M${e.mag||'?'}</div>
-      <div class="text-on-surface-variant text-[12px]">${fmt(e.time_ms)}${e.depth_km?` · ${e.depth_km} km`:''}${e.alert?` · PAGER ${esc(e.alert)}`:''}</div>
-      ${e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener" class="text-[12px] text-primary underline">Ver evento USGS ↗</a>`:''}
-    </div>` : `<div class="text-[12px] text-on-surface-variant">Sin sismo vinculado a este expediente.</div>`;
-
-  const tl = nodes.map(n => {
-    const color = KIND_COLOR[n.kind] || '#5a5f6a';
-    let title = KIND[n.kind] || n.kind;
-    if (n.kind==='status_change' && (n.status_from||n.status_to)) title += `: ${ST[n.status_from]?.es||n.status_from||'—'} → ${ST[n.status_to]?.es||n.status_to||'—'}`;
-    const meta = [n.location, n.source&&n.source!=='operator'?'fuente: '+n.source:'', n.actor].filter(Boolean).map(esc).join(' · ');
-    return `<div class="tl pb-4">
-      <span class="tl-dot" style="background:${color}"></span>
-      <div class="text-[11px] text-on-surface-variant mono">${fmt(n.ts)}</div>
-      <div class="font-semibold text-sm" style="color:${color}">${esc(title)}</div>
-      ${n.detail?`<div class="text-sm text-on-surface">${esc(n.detail)}</div>`:''}
-      ${meta?`<div class="text-[11px] text-on-surface-variant">${meta}</div>`:''}
-    </div>`;
-  }).join('');
-
-  $('#docketBody').innerHTML = `
-    <div class="flex gap-4">
-      ${photo}
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2 flex-wrap">${chip(p.status)}<span class="chip bg-surface-variant text-on-surface-variant">${REV[p.review]||p.review}</span></div>
-        <h2 class="font-display font-extrabold text-xl mt-1 leading-tight">${esc(p.full_name)}</h2>
-        <div class="text-[12px] text-on-surface-variant">${p.age?p.age+' años · ':''}${p.sex?esc(p.sex)+' · ':''}<span class="mono">${esc(p.id)}</span></div>
+  <!-- ======= CASE DETAIL OVERLAY ======= -->
+  <div id="detail" class="fixed inset-0 z-50 hidden bg-[#eef0f4] overflow-y-auto">
+    <div class="eoc-bar text-white sticky top-0 z-20">
+      <div class="max-w-6xl mx-auto px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-3 min-w-0">
+          <button id="dClose" class="text-white/80 hover:text-white text-xl leading-none">←</button>
+          <div class="min-w-0">
+            <div class="mono text-[11px] text-white/60" id="d_casenum">—</div>
+            <div class="font-display font-extrabold text-lg leading-tight truncate" id="d_name">—</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="d_status" class="chip">—</span>
+          <span id="d_priority" class="chip">—</span>
+          <button id="d_export" class="no-print bg-white/10 border border-white/20 text-white font-semibold rounded-md px-3 py-1.5 text-xs hover:bg-white/20">⤓ Exportar PDF</button>
+        </div>
+      </div>
+      <div class="max-w-6xl mx-auto px-3 flex gap-1 overflow-x-auto border-t border-white/10">
+        <button class="tabbtn on" data-t="overview" style="color:#fff">Resumen</button>
+        <button class="tabbtn" data-t="docket" style="color:#cbd5e1">Actuaciones</button>
+        <button class="tabbtn" data-t="evidence" style="color:#cbd5e1">Evidencias</button>
+        <button class="tabbtn" data-t="media" style="color:#cbd5e1">Multimedia</button>
+        <button class="tabbtn" data-t="docs" style="color:#cbd5e1">Documentos</button>
+        <button class="tabbtn" data-t="victims" style="color:#cbd5e1">Víctimas/Contactos</button>
+        <button class="tabbtn" data-t="tasks" style="color:#cbd5e1">Tareas</button>
+        <button class="tabbtn" data-t="messages" style="color:#cbd5e1">Mensajes</button>
+        <button class="tabbtn" data-t="map" style="color:#cbd5e1">Mapa</button>
+        <button class="tabbtn" data-t="audit" style="color:#cbd5e1">Auditoría</button>
       </div>
     </div>
-
-    <div class="grid grid-cols-2 gap-2 text-sm">
-      <div class="bg-surface-variant/30 rounded-lg p-2"><div class="text-[10px] uppercase tracking-wide text-on-surface-variant">Visto por última vez</div><div>${esc(p.last_seen)||'—'}</div></div>
-      <div class="bg-surface-variant/30 rounded-lg p-2"><div class="text-[10px] uppercase tracking-wide text-on-surface-variant">Contacto</div><div>${esc(p.contact_phone)||'—'}</div></div>
-      <div class="bg-surface-variant/30 rounded-lg p-2"><div class="text-[10px] uppercase tracking-wide text-on-surface-variant">Reportado por</div><div>${esc(p.reported_by)||'—'}</div></div>
-      <div class="bg-surface-variant/30 rounded-lg p-2"><div class="text-[10px] uppercase tracking-wide text-on-surface-variant">Caso abierto</div><div>${fmtD(p.created_ms)} (${daysOpen(p.created_ms)} d)</div></div>
+    <div class="max-w-6xl mx-auto px-5 py-5">
+      <div id="tab-overview" class="tabpane"></div>
+      <div id="tab-docket" class="tabpane hidden"></div>
+      <div id="tab-evidence" class="tabpane hidden"></div>
+      <div id="tab-media" class="tabpane hidden"></div>
+      <div id="tab-docs" class="tabpane hidden"></div>
+      <div id="tab-victims" class="tabpane hidden"></div>
+      <div id="tab-tasks" class="tabpane hidden"></div>
+      <div id="tab-messages" class="tabpane hidden"></div>
+      <div id="tab-map" class="tabpane hidden"></div>
+      <div id="tab-audit" class="tabpane hidden"></div>
     </div>
-    ${p.notes?`<div class="bg-surface-variant/30 rounded-lg p-3 text-sm"><div class="text-[10px] uppercase tracking-wide text-on-surface-variant mb-1">Notas del reporte</div>${esc(p.notes)}</div>`:''}
+  </div>
 
-    ${sismoCard}
-
-    <div>
-      <h3 class="font-display font-bold text-sm mb-2">Línea de tiempo del caso</h3>
-      <div>${tl}</div>
+  <!-- ======= PENDING QUEUE MODAL ======= -->
+  <div id="queueModal" class="fixed inset-0 z-[60] hidden">
+    <div class="absolute inset-0 bg-black/40" id="queueScrim"></div>
+    <div class="relative max-w-2xl mx-auto mt-16 card p-5 max-h-[75vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-3"><h2 class="font-display font-bold text-lg">Actualizaciones pendientes</h2><button id="queueClose" class="text-xl">✕</button></div>
+      <div id="queueList" class="space-y-2"></div>
     </div>
+  </div>
 
-    <div class="border-t border-outline-variant/60 pt-4">
-      <h3 class="font-display font-bold text-sm mb-2">Agregar movimiento al expediente</h3>
-      <form id="addForm" class="space-y-2">
-        <input type="hidden" name="id" value="${esc(p.id)}">
-        <div class="grid grid-cols-2 gap-2">
-          <select name="kind">
-            <option value="note">Nota</option>
-            <option value="sighting">Avistamiento</option>
-            <option value="contact">Contacto telefónico</option>
-            <option value="hospital">Hospital</option>
-            <option value="shelter">Refugio</option>
-            <option value="morgue">Morgue</option>
-          </select>
-          <select name="status">
-            <option value="">— Sin cambio de estado —</option>
-            <option value="missing">Marcar desaparecida</option>
-            <option value="found_safe">Localizada a salvo</option>
-            <option value="found_deceased">Fallecida</option>
-            <option value="unknown">Desconocido</option>
-          </select>
-        </div>
-        <input name="location" placeholder="Lugar / centro (opcional)">
-        <textarea name="detail" rows="2" placeholder="Detalle del movimiento…"></textarea>
-        <button class="bg-secondary text-white font-bold rounded-lg py-2 w-full">Registrar movimiento</button>
-        <p id="addMsg" class="text-sm text-center"></p>
-      </form>
-    </div>`;
+  <!-- print packet target -->
+  <div id="packet"></div>
 
-  $('#addForm').addEventListener('submit', async ev => {
-    ev.preventDefault();
-    const f = ev.target;
-    const body = { kind:f.kind.value, detail:f.detail.value||null, location:f.location.value||null };
-    if (f.status.value) body.status = f.status.value;
-    f.querySelector('button').disabled = true;
-    const res = await api('persons/' + f.id.value + '/docket', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    if (res.ok){ $('#addMsg').textContent='✓ Registrado'; $('#addMsg').className='text-sm text-center text-safe'; openDocket(f.id.value); load(); }
-    else { $('#addMsg').textContent='Error al registrar'; $('#addMsg').className='text-sm text-center text-error'; f.querySelector('button').disabled=false; }
+<script>
+const $=s=>document.querySelector(s);
+const api=(p,o)=>fetch('/api/'+p,Object.assign({credentials:'same-origin'},o));
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const fmt=ms=>ms?new Date(Number(ms)).toLocaleString('es-VE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+const fmtD=ms=>ms?new Date(Number(ms)).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'}):'—';
+const days=ms=>ms?Math.max(0,Math.floor((Date.now()-Number(ms))/86400000)):0;
+const bytes=n=>n>1048576?(n/1048576).toFixed(1)+' MB':n>1024?(n/1024).toFixed(0)+' KB':(n||0)+' B';
+
+const ST={missing:{es:'Desaparecida',c:'#b45309',bg:'#fef3c7'},found_safe:{es:'A salvo',c:'#15803d',bg:'#dcfce7'},found_deceased:{es:'Fallecida',c:'#b91c1c',bg:'#fee2e2'},unknown:{es:'Desconocido',c:'#475569',bg:'#e2e8f0'}};
+const PR={alta:{es:'Alta',c:'#b91c1c',bg:'#fee2e2'},media:{es:'Media',c:'#b45309',bg:'#fef3c7'},baja:{es:'Baja',c:'#475569',bg:'#e2e8f0'}};
+const VER={unverified:{es:'Sin verificar',c:'#92600a',bg:'#fef9c3'},verified:{es:'Verificada',c:'#15803d',bg:'#dcfce7'},disputed:{es:'En disputa',c:'#b91c1c',bg:'#fee2e2'}};
+const KIND={report_filed:'Reporte recibido',status_change:'Cambio de estado',sighting:'Avistamiento',contact:'Contacto',note:'Nota',shelter:'Refugio',hospital:'Hospital',morgue:'Morgue',reunified:'Reunificación',review:'Moderación',opened:'Expediente abierto',sismo:'Sismo de referencia'};
+const ATTLBL={photo:'Foto',video:'Video',document:'Documento',voice:'Nota de voz',gps:'Datos GPS',report:'Informe'};
+const chip=(o,t)=>o?`<span class="chip" style="color:${o.c};background:${o.bg}">${t||o.es}</span>`:'';
+const statusChip=s=>chip(ST[s]||ST.unknown);
+const prChip=p=>chip(PR[p]||PR.media);
+const incidentLbl=t=>({persona_desaparecida:'Persona desaparecida',fallecido:'Fallecido',rescate:'Rescate',evacuacion:'Evacuación',otro:'Otro'}[t]||t||'—');
+
+let CURRENT=null;        // current case detail {person,event,...}
+let LOADED={};           // which tabs loaded for current case
+let cmap=null, cmapLayers=null;
+
+// ---------------- list / table ----------------
+async function load(){
+  const p=new URLSearchParams();
+  if($('#q').value.trim())p.set('q',$('#q').value.trim());
+  if($('#f_status').value)p.set('status',$('#f_status').value);
+  if($('#f_priority').value)p.set('priority',$('#f_priority').value);
+  const d=Number($('#f_since').value); if(d)p.set('since',String(Date.now()-d*86400000));
+  const r=await api('persons/cases?'+p.toString());
+  if(r.status===401){document.body.innerHTML='<div style="padding:3rem;text-align:center;font-family:sans-serif">Sesión requerida. <a href="/login?next=/admin-casos">Inicia sesión como operador</a>.</div>';return;}
+  const {cases=[],summary={}}=await r.json();
+  $('#s_total').textContent=summary.total??0; $('#s_missing').textContent=summary.missing??0;
+  $('#s_safe').textContent=summary.found_safe??0; $('#s_dead').textContent=summary.deceased??0;
+  $('#s_pending').textContent=summary.pending??0;
+  $('#s_alta').textContent=cases.filter(c=>c.priority==='alta').length;
+  const tb=$('#rows');
+  if(!cases.length){tb.innerHTML='<tr><td colspan="10" class="text-center text-on-surface-variant py-8">No hay expedientes.</td></tr>';$('#count').textContent='';return;}
+  tb.innerHTML=cases.map(c=>`<tr class="row" data-id="${esc(c.id)}">
+    <td class="mono text-[11px] font-bold">${esc(c.case_number||c.id)}${c.review&&c.review!=='approved'?` <span class="chip" style="color:#92600a;background:#fef9c3">${esc(c.review)}</span>`:''}</td>
+    <td><div class="font-semibold">${esc(c.full_name)}</div><div class="text-[11px] text-on-surface-variant">${c.age?c.age+' a.':''}${c.sex?' · '+esc(c.sex):''}</div></td>
+    <td>${statusChip(c.status)}</td>
+    <td>${prChip(c.priority)}</td>
+    <td class="text-[12px]">${esc(incidentLbl(c.incident_type))}</td>
+    <td class="text-[12px]">${esc(c.last_seen)||'—'}</td>
+    <td class="text-center"><span class="chip" style="color:#0369a1;background:#e0f2fe">${c.evidence_count||0}</span></td>
+    <td class="text-center"><span class="chip" style="color:#13284f;background:#e5e9f2">${c.docket_count||0}</span></td>
+    <td class="text-[12px]">${esc(c.assigned_to)||'<span class="text-on-surface-variant">sin asignar</span>'}</td>
+    <td class="text-[12px]">${fmtD(c.created_ms)}<div class="text-[11px] text-on-surface-variant">${days(c.created_ms)} d</div></td>
+  </tr>`).join('');
+  $('#count').textContent=`${cases.length} expediente(s)`;
+  tb.querySelectorAll('.row').forEach(r=>r.addEventListener('click',()=>openCase(r.dataset.id)));
+  loadPendingCount();
+}
+$('#refreshBtn').onclick=load;
+let t;const deb=fn=>{clearTimeout(t);t=setTimeout(fn,300);};
+$('#q').addEventListener('input',()=>deb(load));
+['f_status','f_priority','f_since'].forEach(id=>$('#'+id).addEventListener('change',load));
+
+// ---------------- pending queue ----------------
+async function loadPendingCount(){
+  const {updates=[]}=await api('persons/docket/queue').then(r=>r.json()).catch(()=>({updates:[]}));
+  $('#pendCount').textContent=updates.length;
+  $('#pendingBanner').classList.toggle('hidden',!updates.length);
+  return updates;
+}
+$('#openQueue').onclick=async()=>{
+  const updates=await loadPendingCount();
+  $('#queueList').innerHTML=updates.length?updates.map(u=>`<div class="card p-3" data-eid="${esc(u.id)}">
+    <div class="flex justify-between gap-2"><div><b>${esc(u.full_name)}</b> · <span class="text-on-surface-variant text-sm">${esc(KIND[u.kind]||u.kind)}</span></div><div class="text-[11px] text-on-surface-variant">${fmt(u.created_ms)}</div></div>
+    ${u.status_to?`<div class="text-[12px] mt-1">Propone estado → <b>${esc((ST[u.status_to]||{}).es||u.status_to)}</b></div>`:''}
+    ${u.detail?`<div class="text-sm mt-1">${esc(u.detail)}</div>`:''}
+    ${u.location?`<div class="text-[12px] text-on-surface-variant">📍 ${esc(u.location)}</div>`:''}
+    <div class="text-[11px] text-on-surface-variant mt-1">Fuente: ${esc(u.source||'ciudadano')}${u.actor?' · '+esc(u.actor):''}</div>
+    <div class="flex gap-2 mt-2">
+      <button class="qa bg-safe text-white text-xs font-bold rounded px-3 py-1.5">Aprobar</button>
+      <button class="qr text-xs font-bold rounded px-3 py-1.5 border border-secondary text-secondary">Rechazar</button>
+    </div></div>`).join(''):'<p class="text-sm text-on-surface-variant text-center py-6">No hay actualizaciones pendientes. ✓</p>';
+  $('#queueList').querySelectorAll('[data-eid]').forEach(el=>{
+    const eid=el.dataset.eid;
+    el.querySelector('.qa').onclick=async()=>{await api('persons/docket/'+eid+'/approve',{method:'POST'});el.remove();loadPendingCount();if(CURRENT&&LOADED.docket){LOADED.docket=false;}};
+    el.querySelector('.qr').onclick=async()=>{await api('persons/docket/'+eid+'/reject',{method:'POST'});el.remove();loadPendingCount();};
   });
+  $('#queueModal').classList.remove('hidden');
+};
+$('#queueClose').onclick=$('#queueScrim').onclick=()=>$('#queueModal').classList.add('hidden');
+
+// ---------------- detail overlay ----------------
+function openDetail(){$('#detail').classList.remove('hidden');document.body.style.overflow='hidden';}
+function closeDetail(){$('#detail').classList.add('hidden');document.body.style.overflow='';CURRENT=null;LOADED={};}
+$('#dClose').onclick=closeDetail;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#queueModal').classList.contains('hidden'))$('#queueModal').classList.add('hidden');else if(!$('#detail').classList.contains('hidden'))closeDetail();}});
+
+document.querySelectorAll('.tabbtn').forEach(b=>b.onclick=()=>showTab(b.dataset.t));
+function showTab(t){
+  document.querySelectorAll('.tabbtn').forEach(b=>{const on=b.dataset.t===t;b.classList.toggle('on',on);b.style.color=on?'#fff':'#cbd5e1';});
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.add('hidden'));
+  $('#tab-'+t).classList.remove('hidden');
+  renderTab(t);
 }
 
-let t; const debounce = fn => { clearTimeout(t); t=setTimeout(fn,300); };
-$('#q').addEventListener('input', ()=>debounce(load));
-$('#f_status').addEventListener('change', load);
-$('#f_review').addEventListener('change', load);
-document.addEventListener('keydown', e => { if(e.key==='Escape') closeDrawer(); });
+async function openCase(id){
+  openDetail(); LOADED={}; showTab('overview');
+  $('#tab-overview').innerHTML='<div class="text-center text-on-surface-variant py-12">Cargando expediente…</div>';
+  const r=await api('persons/'+id+'/docket');
+  if(!r.ok){$('#tab-overview').innerHTML='<div class="text-error py-8">No se pudo cargar.</div>';return;}
+  CURRENT=await r.json(); CURRENT.id=id;
+  const p=CURRENT.person;
+  $('#d_casenum').textContent=p.case_number||id;
+  $('#d_name').textContent=p.full_name;
+  $('#d_status').outerHTML=`<span id="d_status" class="chip" style="color:${(ST[p.status]||ST.unknown).c};background:${(ST[p.status]||ST.unknown).bg}">${(ST[p.status]||ST.unknown).es}</span>`;
+  $('#d_priority').outerHTML=`<span id="d_priority" class="chip" style="color:${(PR[p.priority]||PR.media).c};background:${(PR[p.priority]||PR.media).bg}">Prioridad ${(PR[p.priority]||PR.media).es}</span>`;
+  LOADED.overview=true; renderOverview();
+}
+
+function renderTab(t){
+  if(t==='overview') return renderOverview();
+  if(t==='docket') return loadDocketTab();
+  if(t==='evidence'||t==='media'||t==='docs') return loadAttachments(t);
+  if(t==='victims') return loadVictims();
+  if(t==='tasks') return loadTasks();
+  if(t==='messages') return loadMessages();
+  if(t==='map') return renderMap();
+  if(t==='audit') return loadAudit();
+}
+
+// ---- Overview ----
+function renderOverview(){
+  const {person:p,event:e,docket=[]}=CURRENT||{};
+  if(!p)return;
+  const photo=p.photo_url?`<img src="${esc(p.photo_url)}" class="w-28 h-28 rounded-lg object-cover border" onerror="this.style.display='none'">`:`<div class="w-28 h-28 rounded-lg bg-surface-variant grid place-items-center text-4xl">👤</div>`;
+  const fact=(l,v)=>`<div class="card p-3"><div class="eyebrow">${l}</div><div class="text-sm mt-0.5">${v||'—'}</div></div>`;
+  const sismoCard=e?`<div class="card p-4" style="background:#fff5f5;border-color:#fecaca"><div class="eyebrow" style="color:#b91c1c">Sismo de referencia</div><div class="font-semibold mt-1">${esc(e.place_es||e.place||'Sismo')} · M${e.mag||'?'}</div><div class="text-sm text-on-surface-variant">${fmt(e.time_ms)}${e.depth_km?` · ${e.depth_km} km`:''}${e.alert?` · PAGER ${esc(e.alert)}`:''}</div>${e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener" class="text-sm text-primary underline">Ver evento USGS ↗</a>`:''}</div>`:'';
+  $('#tab-overview').innerHTML=`
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-4">
+        <div class="card p-5 flex gap-4">${photo}
+          <div class="flex-1 min-w-0">
+            <div class="mono text-[12px] text-on-surface-variant">${esc(p.case_number||p.id)}</div>
+            <h2 class="font-display font-extrabold text-xl leading-tight">${esc(p.full_name)}</h2>
+            <div class="text-sm text-on-surface-variant">${p.age?p.age+' años · ':''}${p.sex?esc(p.sex)+' · ':''}Abierto ${fmtD(p.created_ms)} (${days(p.created_ms)} d)</div>
+            <div class="flex gap-2 mt-2 flex-wrap">${statusChip(p.status)}${prChip(p.priority)}<span class="chip" style="color:#475569;background:#e2e8f0">${esc(incidentLbl(p.incident_type))}</span></div>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-3">
+          ${fact('Visto por última vez',esc(p.last_seen))}
+          ${fact('Teléfono de contacto',esc(p.contact_phone))}
+          ${fact('Reportado por',esc(p.reported_by))}
+          ${fact('Responsable asignado',esc(p.assigned_to))}
+        </div>
+        ${p.notes?`<div class="card p-4"><div class="eyebrow mb-1">Descripción / señas</div><div class="text-sm">${esc(p.notes)}</div></div>`:''}
+        ${sismoCard}
+      </div>
+      <div class="space-y-4">
+        <div class="card p-4">
+          <div class="eyebrow mb-2">Gestión del caso</div>
+          <label class="text-xs font-semibold">Estado</label>
+          <select id="ov_status">${Object.keys(ST).map(k=>`<option value="${k}" ${k===p.status?'selected':''}>${ST[k].es}</option>`).join('')}</select>
+          <label class="text-xs font-semibold mt-2 block">Prioridad</label>
+          <select id="ov_priority">${Object.keys(PR).map(k=>`<option value="${k}" ${k===p.priority?'selected':''}>${PR[k].es}</option>`).join('')}</select>
+          <label class="text-xs font-semibold mt-2 block">Tipo de incidente</label>
+          <select id="ov_incident">${['persona_desaparecida','fallecido','rescate','evacuacion','otro'].map(k=>`<option value="${k}" ${k===p.incident_type?'selected':''}>${incidentLbl(k)}</option>`).join('')}</select>
+          <label class="text-xs font-semibold mt-2 block">Responsable asignado</label>
+          <input id="ov_assigned" value="${esc(p.assigned_to||'')}" placeholder="Nombre / unidad">
+          <button id="ov_save" class="mt-3 w-full bg-primary text-white font-bold rounded-md py-2 text-sm">Guardar cambios</button>
+          <p id="ov_msg" class="text-xs text-center mt-1"></p>
+        </div>
+        <div class="card p-4">
+          <div class="eyebrow mb-2">Resumen de actividad</div>
+          <div class="text-sm space-y-1">
+            <div class="flex justify-between"><span class="text-on-surface-variant">Actuaciones</span><b>${docket.length}</b></div>
+            <div class="flex justify-between"><span class="text-on-surface-variant">Última actualización</span><b>${fmtD(p.updated_ms)}</b></div>
+            <div class="flex justify-between"><span class="text-on-surface-variant">Revisión</span><b>${esc(p.review||'approved')}</b></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  $('#ov_save').onclick=async()=>{
+    const status=$('#ov_status').value, priority=$('#ov_priority').value, incident_type=$('#ov_incident').value, assigned_to=$('#ov_assigned').value;
+    const m=$('#ov_msg');
+    const r1=await api('persons/'+CURRENT.id+'/case',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({priority,incident_type,assigned_to})});
+    if(status!==CURRENT.person.status) await api('persons/'+CURRENT.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+    if(r1.ok){m.textContent='✓ Guardado';m.className='text-xs text-center mt-1 text-safe';Object.assign(CURRENT.person,{status,priority,incident_type,assigned_to});openCase(CURRENT.id);load();}
+    else{m.textContent='Error';m.className='text-xs text-center mt-1 text-error';}
+  };
+}
+
+// ---- Docket entries ----
+async function loadDocketTab(){
+  const pane=$('#tab-docket');
+  pane.innerHTML='<div class="text-on-surface-variant py-6">Cargando actuaciones…</div>';
+  const r=await api('persons/'+CURRENT.id+'/docket'); CURRENT=Object.assign(CURRENT,await r.json());CURRENT.id=CURRENT.id;
+  const d=CURRENT.docket||[]; const e=CURRENT.event; const p=CURRENT.person;
+  const nodes=[];
+  if(e&&e.time_ms)nodes.push({ts:e.time_ms,kind:'sismo',detail:`${e.place_es||e.place||'Sismo'} — M${e.mag||'?'}`});
+  nodes.push({ts:p.created_ms,kind:'opened',detail:'Expediente abierto'});
+  d.forEach(x=>nodes.push(Object.assign({ts:x.created_ms},x)));
+  nodes.sort((a,b)=>a.ts-b.ts);
+  const KC={sismo:'#b3261e',opened:'#13284f',status_change:'#7a5b00'};
+  const tl=nodes.map(n=>{const col=KC[n.kind]||'#1b6e3c';let title=KIND[n.kind]||n.kind;if(n.kind==='status_change'&&n.status_to)title+=`: ${(ST[n.status_from]||{}).es||n.status_from||'—'} → ${(ST[n.status_to]||{}).es||n.status_to}`;
+    const pend=n.review==='pending';
+    return `<div class="tl pb-4" data-eid="${esc(n.id||'')}"><span class="tl-dot" style="background:${pend?'#d97706':col}"></span>
+      <div class="text-[11px] mono text-on-surface-variant">${fmt(n.ts)} ${pend?'<span class="chip" style="color:#92600a;background:#fef9c3">pendiente</span>':''}</div>
+      <div class="font-semibold text-sm" style="color:${col}">${esc(title)}</div>
+      ${n.detail?`<div class="text-sm">${esc(n.detail)}</div>`:''}
+      ${n.location?`<div class="text-[12px] text-on-surface-variant">📍 ${esc(n.location)}</div>`:''}
+      ${n.actor||n.source?`<div class="text-[11px] text-on-surface-variant">${esc(n.source||'')}${n.actor?' · '+esc(n.actor):''}</div>`:''}
+      ${pend?`<div class="flex gap-2 mt-1"><button class="da bg-safe text-white text-[11px] font-bold rounded px-2 py-1">Aprobar</button><button class="dr text-[11px] font-bold rounded px-2 py-1 border border-secondary text-secondary">Rechazar</button></div>`:''}
+    </div>`;}).join('');
+  pane.innerHTML=`<div class="grid lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 card p-4"><div class="eyebrow mb-2">Línea de tiempo de actuaciones</div>${tl}</div>
+    <div class="card p-4 h-fit"><div class="eyebrow mb-2">Registrar actuación</div>
+      <form id="dform" class="space-y-2">
+        <div class="grid grid-cols-2 gap-2">
+          <select name="kind"><option value="note">Nota</option><option value="sighting">Avistamiento</option><option value="contact">Contacto</option><option value="hospital">Hospital</option><option value="shelter">Refugio</option><option value="morgue">Morgue</option></select>
+          <select name="status"><option value="">— Sin cambio —</option>${Object.keys(ST).map(k=>`<option value="${k}">${ST[k].es}</option>`).join('')}</select>
+        </div>
+        <input name="location" placeholder="Lugar (opcional)">
+        <textarea name="detail" rows="2" placeholder="Detalle…"></textarea>
+        <button class="w-full bg-secondary text-white font-bold rounded-md py-2 text-sm">Registrar</button>
+        <p id="dmsg" class="text-xs text-center"></p>
+      </form>
+    </div></div>`;
+  pane.querySelectorAll('[data-eid]').forEach(el=>{const eid=el.dataset.eid;if(!eid)return;
+    const a=el.querySelector('.da'),rj=el.querySelector('.dr');
+    if(a)a.onclick=async()=>{await api('persons/docket/'+eid+'/approve',{method:'POST'});loadDocketTab();load();};
+    if(rj)rj.onclick=async()=>{await api('persons/docket/'+eid+'/reject',{method:'POST'});loadDocketTab();};
+  });
+  $('#dform').onsubmit=async ev=>{ev.preventDefault();const f=ev.target;const body={kind:f.kind.value,detail:f.detail.value||null,location:f.location.value||null};if(f.status.value)body.status=f.status.value;
+    const r=await api('persons/'+CURRENT.id+'/docket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const m=$('#dmsg');if(r.ok){m.textContent='✓ Registrado';m.className='text-xs text-center text-safe';loadDocketTab();load();}else{m.textContent='Error';m.className='text-xs text-center text-error';}};
+}
+
+// ---- Attachments (evidence / media / docs) ----
+let ATT=[];
+async function loadAttachments(tab){
+  if(!LOADED.att){const {attachments=[]}=await api('persons/'+CURRENT.id+'/attachments').then(r=>r.json());ATT=attachments;LOADED.att=true;}
+  renderAttachments(tab);
+}
+function renderAttachments(tab){
+  const fileUrl=a=>`/api/persons/${CURRENT.id}/attachments/${a.id}/file`;
+  const verSel=a=>`<select class="att-ver text-[11px]" data-aid="${a.id}" style="width:auto;padding:.15rem .3rem">${Object.keys(VER).map(k=>`<option value="${k}" ${k===a.verification?'selected':''}>${VER[k].es}</option>`).join('')}</select>`;
+  if(tab==='media'){
+    const list=ATT.filter(a=>a.kind==='photo'||a.kind==='video');
+    $('#tab-media').innerHTML=`<div class="eyebrow mb-3">Fotos y videos (${list.length})</div>`+(list.length?`<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">${list.map(a=>`<div class="card p-2">${a.kind==='video'?`<video src="${fileUrl(a)}" class="thumb" controls></video>`:`<a href="${fileUrl(a)}" target="_blank"><img src="${fileUrl(a)}" class="thumb"></a>`}<div class="text-[11px] mt-1 truncate">${esc(a.description||a.filename||ATTLBL[a.kind])}</div><div class="text-[10px] text-on-surface-variant">${fmtD(a.created_ms)}</div>${chip(VER[a.verification])}</div>`).join('')}</div>`:'<p class="text-sm text-on-surface-variant py-6">Sin fotos ni videos.</p>');
+    return;
+  }
+  if(tab==='docs'){
+    const list=ATT.filter(a=>['document','report','voice','gps'].includes(a.kind));
+    $('#tab-docs').innerHTML=`<div class="eyebrow mb-3">Documentos, informes, notas de voz y GPS (${list.length})</div>`+(list.length?`<table class="dt card"><thead><tr><th>Tipo</th><th>Archivo</th><th>Categoría</th><th>Verificación</th><th>Subido</th><th></th></tr></thead><tbody>${list.map(a=>`<tr><td>${esc(ATTLBL[a.kind]||a.kind)}</td><td><a href="${fileUrl(a)}" target="_blank" class="text-primary underline">${esc(a.filename||'archivo')}</a><div class="text-[11px] text-on-surface-variant">${esc(a.description||'')}</div></td><td class="text-[12px]">${esc(a.category||'—')}</td><td>${verSel(a)}</td><td class="text-[12px]">${fmtD(a.created_ms)}<div class="text-[11px] text-on-surface-variant">${esc(a.uploaded_by||'')}</div></td><td><button class="att-del text-secondary" data-aid="${a.id}">✕</button></td></tr>`).join('')}</tbody></table>`:'<p class="text-sm text-on-surface-variant py-6">Sin documentos.</p>');
+    wireAttRowActions(); return;
+  }
+  // evidence (all) + uploader
+  $('#tab-evidence').innerHTML=`
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2">
+        <div class="eyebrow mb-2">Todas las evidencias (${ATT.length})</div>
+        ${ATT.length?`<table class="dt card"><thead><tr><th>Tipo</th><th>Descripción</th><th>Categoría</th><th>Fuente</th><th>Verificación</th><th>Subido</th><th></th></tr></thead><tbody>${ATT.map(a=>`<tr><td><a href="${fileUrl(a)}" target="_blank" class="text-primary underline">${esc(ATTLBL[a.kind]||a.kind)}</a></td><td>${esc(a.description||a.filename||'—')}<div class="text-[10px] text-on-surface-variant">${bytes(a.size)}</div></td><td class="text-[12px]">${esc(a.category||'—')}</td><td class="text-[12px]">${esc(a.source||'—')}</td><td>${verSel(a)}</td><td class="text-[12px]">${fmtD(a.created_ms)}<div class="text-[11px] text-on-surface-variant">${esc(a.uploaded_by||'')}</div></td><td><button class="att-del text-secondary" data-aid="${a.id}">✕</button></td></tr>`).join('')}</tbody></table>`:'<p class="text-sm text-on-surface-variant py-6">Sin evidencias cargadas.</p>'}
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-2">Cargar evidencia</div>
+        <form id="upform" class="space-y-2">
+          <input type="file" name="file" required class="text-sm">
+          <select name="kind"><option value="photo">Foto</option><option value="video">Video</option><option value="document">Documento (PDF)</option><option value="voice">Nota de voz</option><option value="gps">Datos GPS</option><option value="report">Informe</option></select>
+          <select name="category"><option value="evidencia">Evidencia</option><option value="parte_policial">Parte policial</option><option value="identificacion">Identificación</option><option value="escena">Escena</option><option value="otro">Otro</option></select>
+          <select name="source"><option value="operator">Operador</option><option value="citizen">Ciudadano</option><option value="hospital">Hospital</option><option value="morgue">Morgue</option><option value="gov">Gobierno</option><option value="ngo">ONG</option></select>
+          <input name="description" placeholder="Descripción">
+          <div class="grid grid-cols-2 gap-2"><input name="lat" placeholder="Lat (GPS)"><input name="lon" placeholder="Lon (GPS)"></div>
+          <button class="w-full bg-secondary text-white font-bold rounded-md py-2 text-sm">Subir archivo</button>
+          <p class="text-[11px] text-on-surface-variant text-center">Máx 25 MB · fotos, video, PDF, audio, GPS</p>
+          <p id="upmsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+    </div>`;
+  wireAttRowActions();
+  $('#upform').onsubmit=async ev=>{ev.preventDefault();const f=ev.target;const fd=new FormData();
+    if(!f.file.files[0]){return;} fd.append('file',f.file.files[0]);
+    ['kind','category','source','description','lat','lon'].forEach(k=>{if(f[k].value)fd.append(k,f[k].value);});
+    const btn=f.querySelector('button');btn.disabled=true;const m=$('#upmsg');m.textContent='Subiendo…';m.className='text-xs text-center';
+    const r=await api('persons/'+CURRENT.id+'/attachments',{method:'POST',body:fd});
+    if(r.ok){m.textContent='✓ Cargada';m.className='text-xs text-center text-safe';LOADED.att=false;await loadAttachments('evidence');load();}
+    else{const j=await r.json().catch(()=>({}));m.textContent='Error: '+(j.error||'falló');m.className='text-xs text-center text-error';btn.disabled=false;}
+  };
+}
+function wireAttRowActions(){
+  document.querySelectorAll('.att-ver').forEach(s=>s.onchange=async()=>{await api('persons/'+CURRENT.id+'/attachments/'+s.dataset.aid,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({verification:s.value})});const a=ATT.find(x=>x.id===s.dataset.aid);if(a)a.verification=s.value;});
+  document.querySelectorAll('.att-del').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar esta evidencia?'))return;await api('persons/'+CURRENT.id+'/attachments/'+b.dataset.aid,{method:'DELETE'});ATT=ATT.filter(x=>x.id!==b.dataset.aid);LOADED.att=false;loadAttachments('evidence');load();});
+}
+
+// ---- Victims / contacts ----
+async function loadVictims(){
+  const {victims=[]}=await api('persons/'+CURRENT.id+'/victims').then(r=>r.json());
+  const RL={victima:'Víctima',contacto:'Contacto',testigo:'Testigo',familiar:'Familiar'};
+  $('#tab-victims').innerHTML=`<div class="grid lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2"><div class="eyebrow mb-2">Personas vinculadas (${victims.length})</div>
+      ${victims.length?`<table class="dt card"><thead><tr><th>Nombre</th><th>Rol</th><th>Teléfono</th><th>Relación</th><th></th></tr></thead><tbody>${victims.map(v=>`<tr><td><b>${esc(v.name)}</b>${v.notes?`<div class="text-[11px] text-on-surface-variant">${esc(v.notes)}</div>`:''}</td><td>${esc(RL[v.role]||v.role)}</td><td class="mono text-[12px]">${esc(v.phone||'—')}</td><td class="text-[12px]">${esc(v.relation||'—')}</td><td><button class="vdel text-secondary" data-vid="${v.id}">✕</button></td></tr>`).join('')}</tbody></table>`:'<p class="text-sm text-on-surface-variant py-6">Sin personas vinculadas.</p>'}
+    </div>
+    <div class="card p-4 h-fit"><div class="eyebrow mb-2">Agregar persona</div>
+      <form id="vform" class="space-y-2"><input name="name" placeholder="Nombre*" required>
+        <select name="role"><option value="contacto">Contacto</option><option value="victima">Víctima</option><option value="testigo">Testigo</option><option value="familiar">Familiar</option></select>
+        <input name="phone" placeholder="Teléfono"><input name="relation" placeholder="Relación / parentesco"><textarea name="notes" rows="2" placeholder="Notas"></textarea>
+        <button class="w-full bg-secondary text-white font-bold rounded-md py-2 text-sm">Agregar</button></form></div></div>`;
+  $('#tab-victims').querySelectorAll('.vdel').forEach(b=>b.onclick=async()=>{await api('persons/'+CURRENT.id+'/victims/'+b.dataset.vid,{method:'DELETE'});loadVictims();});
+  $('#vform').onsubmit=async ev=>{ev.preventDefault();const fd=Object.fromEntries(new FormData(ev.target));await api('persons/'+CURRENT.id+'/victims',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fd)});loadVictims();};
+}
+
+// ---- Tasks ----
+async function loadTasks(){
+  const {tasks=[]}=await api('persons/'+CURRENT.id+'/tasks').then(r=>r.json());
+  const TS={open:'Abierta',in_progress:'En curso',done:'Hecha'};
+  $('#tab-tasks').innerHTML=`<div class="grid lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2"><div class="eyebrow mb-2">Tareas (${tasks.length})</div>
+      ${tasks.length?`<div class="space-y-2">${tasks.map(t=>`<div class="card p-3 ${t.status==='done'?'opacity-60':''}"><div class="flex justify-between gap-2"><div><b>${esc(t.title)}</b>${t.detail?`<div class="text-[12px] text-on-surface-variant">${esc(t.detail)}</div>`:''}<div class="text-[11px] text-on-surface-variant mt-0.5">${prChip(t.priority)} ${t.assignee?'· '+esc(t.assignee):''} ${t.due_ms?'· vence '+fmtD(t.due_ms):''}</div></div>
+        <select class="tstat" data-tid="${t.id}" style="width:auto;padding:.2rem .4rem;font-size:.75rem">${Object.keys(TS).map(k=>`<option value="${k}" ${k===t.status?'selected':''}>${TS[k]}</option>`).join('')}</select></div></div>`).join('')}</div>`:'<p class="text-sm text-on-surface-variant py-6">Sin tareas.</p>'}
+    </div>
+    <div class="card p-4 h-fit"><div class="eyebrow mb-2">Nueva tarea</div>
+      <form id="tform" class="space-y-2"><input name="title" placeholder="Título*" required><textarea name="detail" rows="2" placeholder="Detalle"></textarea>
+        <input name="assignee" placeholder="Responsable"><select name="priority"><option value="media">Media</option><option value="alta">Alta</option><option value="baja">Baja</option></select>
+        <button class="w-full bg-secondary text-white font-bold rounded-md py-2 text-sm">Crear tarea</button></form></div></div>`;
+  $('#tab-tasks').querySelectorAll('.tstat').forEach(s=>s.onchange=async()=>{await api('persons/'+CURRENT.id+'/tasks/'+s.dataset.tid,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:s.value})});loadTasks();});
+  $('#tform').onsubmit=async ev=>{ev.preventDefault();const fd=Object.fromEntries(new FormData(ev.target));await api('persons/'+CURRENT.id+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fd)});loadTasks();};
+}
+
+// ---- Messages ----
+async function loadMessages(){
+  const {messages=[]}=await api('persons/'+CURRENT.id+'/messages').then(r=>r.json());
+  $('#tab-messages').innerHTML=`<div class="card p-4 max-w-2xl"><div class="eyebrow mb-2">Coordinación interna</div>
+    <div class="space-y-2 mb-3 max-h-[50vh] overflow-y-auto">${messages.length?messages.map(m=>`<div class="bg-surface-variant/40 rounded-lg p-2"><div class="text-[11px] text-on-surface-variant"><b>${esc(m.author||'operador')}</b> · ${fmt(m.created_ms)}</div><div class="text-sm">${esc(m.body)}</div></div>`).join(''):'<p class="text-sm text-on-surface-variant">Sin mensajes.</p>'}</div>
+    <form id="mform" class="flex gap-2"><input name="body" placeholder="Escribe un mensaje…" required><button class="bg-primary text-white font-bold rounded-md px-4 text-sm">Enviar</button></form></div>`;
+  $('#mform').onsubmit=async ev=>{ev.preventDefault();const b=ev.target.body.value;if(!b)return;await api('persons/'+CURRENT.id+'/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:b})});loadMessages();};
+}
+
+// ---- Map ----
+async function renderMap(){
+  $('#tab-map').innerHTML='<div class="card p-3"><div class="eyebrow mb-2">Ubicaciones del caso</div><div id="cmap"></div></div>';
+  if(!LOADED.att){const {attachments=[]}=await api('persons/'+CURRENT.id+'/attachments').then(r=>r.json());ATT=attachments;LOADED.att=true;}
+  setTimeout(()=>{
+    cmap=L.map('cmap',{attributionControl:false}).setView([8.5,-66.5],6);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(cmap);
+    const pts=[]; const p=CURRENT.person;
+    if(p.last_seen_lat!=null&&p.last_seen_lon!=null){const m=L.marker([p.last_seen_lat,p.last_seen_lon]).addTo(cmap).bindPopup('Visto por última vez');pts.push([p.last_seen_lat,p.last_seen_lon]);}
+    if(CURRENT.event&&CURRENT.event.lat!=null){L.circleMarker([CURRENT.event.lat,CURRENT.event.lon],{radius:10,color:'#dc2626',fillOpacity:.3}).addTo(cmap).bindPopup('Epicentro M'+CURRENT.event.mag);pts.push([CURRENT.event.lat,CURRENT.event.lon]);}
+    ATT.forEach(a=>{if(a.lat!=null&&a.lon!=null){L.circleMarker([a.lat,a.lon],{radius:6,color:'#ea580c',fillColor:'#f97316',fillOpacity:.8}).addTo(cmap).bindPopup('Evidencia: '+esc(a.description||ATTLBL[a.kind]||''));pts.push([a.lat,a.lon]);}});
+    if(pts.length)cmap.fitBounds(pts,{padding:[40,40],maxZoom:13});
+  },80);
+}
+
+// ---- Audit ----
+async function loadAudit(){
+  const {audit=[]}=await api('persons/'+CURRENT.id+'/audit').then(r=>r.json());
+  $('#tab-audit').innerHTML=`<div class="card overflow-hidden"><table class="dt"><thead><tr><th>Fecha</th><th>Acción</th><th>Actor</th><th>Detalle</th></tr></thead><tbody>${audit.length?audit.map(a=>`<tr><td class="text-[12px] mono">${fmt(a.created_ms)}</td><td class="text-[12px]">${esc(a.action)}</td><td class="text-[12px]">${esc(a.actor||'—')}</td><td class="text-[11px] text-on-surface-variant">${esc(a.detail||'')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-on-surface-variant py-6">Sin registros de auditoría.</td></tr>'}</tbody></table></div>`;
+}
+
+// ---- Export PDF (print packet) ----
+$('#d_export').onclick=async()=>{
+  const p=CURRENT.person, e=CURRENT.event;
+  // ensure data loaded
+  const [att,vic,tsk]=await Promise.all([
+    api('persons/'+CURRENT.id+'/attachments').then(r=>r.json()).catch(()=>({attachments:[]})),
+    api('persons/'+CURRENT.id+'/victims').then(r=>r.json()).catch(()=>({victims:[]})),
+    api('persons/'+CURRENT.id+'/tasks').then(r=>r.json()).catch(()=>({tasks:[]})),
+  ]);
+  const d=CURRENT.docket||[];
+  const row=(k,v)=>`<tr><td style="padding:3px 8px;color:#555;font-weight:600">${k}</td><td style="padding:3px 8px">${v||'—'}</td></tr>`;
+  $('#packet').innerHTML=`
+    <div style="font-family:'Public Sans',Arial,sans-serif;color:#111;padding:24px;max-width:760px;margin:0 auto">
+      <div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid #13284f;padding-bottom:10px">
+        <img src="/logo.svg" style="width:48px;height:48px"><div><div style="font-weight:900;font-size:20px;color:#13284f">SISMO911 — Expediente de Emergencia</div><div style="font-size:11px;letter-spacing:.1em;color:#666">CENTRO NACIONAL DE COORDINACIÓN DE RESPUESTA</div></div>
+        <div style="margin-left:auto;text-align:right;font-family:monospace"><div style="font-weight:700">${esc(p.case_number||p.id)}</div><div style="font-size:11px;color:#666">${fmtD(Date.now())}</div></div>
+      </div>
+      <h1 style="font-size:22px;margin:14px 0 4px">${esc(p.full_name)}</h1>
+      <table style="font-size:13px;border-collapse:collapse;width:100%">
+        ${row('Estado',(ST[p.status]||{}).es)}${row('Prioridad',(PR[p.priority]||{}).es)}${row('Tipo de incidente',incidentLbl(p.incident_type))}
+        ${row('Edad / Sexo',[p.age,p.sex].filter(Boolean).join(' / '))}${row('Visto por última vez',esc(p.last_seen))}
+        ${row('Teléfono',esc(p.contact_phone))}${row('Reportado por',esc(p.reported_by))}${row('Responsable',esc(p.assigned_to))}
+        ${row('Caso abierto',fmtD(p.created_ms)+' ('+days(p.created_ms)+' días)')}
+        ${e?row('Sismo de referencia',`${esc(e.place_es||e.place||'')} M${e.mag||'?'} · ${fmt(e.time_ms)}`):''}
+      </table>
+      ${p.notes?`<div style="margin-top:10px;font-size:13px"><b>Descripción:</b> ${esc(p.notes)}</div>`:''}
+      <h2 style="font-size:15px;border-bottom:1px solid #ccc;margin-top:18px">Actuaciones (${d.length})</h2>
+      <ol style="font-size:12.5px;padding-left:18px">${d.map(x=>`<li style="margin:3px 0"><b>${esc(KIND[x.kind]||x.kind)}</b> — ${fmt(x.created_ms)}${x.detail?': '+esc(x.detail):''}${x.location?' ['+esc(x.location)+']':''}</li>`).join('')||'<li>—</li>'}</ol>
+      <h2 style="font-size:15px;border-bottom:1px solid #ccc;margin-top:14px">Personas vinculadas (${(vic.victims||[]).length})</h2>
+      <ul style="font-size:12.5px;padding-left:18px">${(vic.victims||[]).map(v=>`<li>${esc(v.name)} — ${esc(v.role)}${v.phone?' · '+esc(v.phone):''}</li>`).join('')||'<li>—</li>'}</ul>
+      <h2 style="font-size:15px;border-bottom:1px solid #ccc;margin-top:14px">Evidencias (${(att.attachments||[]).length})</h2>
+      <ul style="font-size:12.5px;padding-left:18px">${(att.attachments||[]).map(a=>`<li>${esc(ATTLBL[a.kind]||a.kind)} — ${esc(a.description||a.filename||'')} [${(VER[a.verification]||{}).es||a.verification}] · ${fmtD(a.created_ms)}</li>`).join('')||'<li>—</li>'}</ul>
+      <h2 style="font-size:15px;border-bottom:1px solid #ccc;margin-top:14px">Tareas (${(tsk.tasks||[]).length})</h2>
+      <ul style="font-size:12.5px;padding-left:18px">${(tsk.tasks||[]).map(t=>`<li>[${esc(t.status)}] ${esc(t.title)}${t.assignee?' — '+esc(t.assignee):''}</li>`).join('')||'<li>—</li>'}</ul>
+      <div style="margin-top:24px;font-size:10px;color:#888;border-top:1px solid #ccc;padding-top:6px">Documento generado por SISMO911 · ${fmt(Date.now())} · Confidencial — uso oficial</div>
+    </div>`;
+  window.print();
+};
+
 load();
 </script>
 </body>
