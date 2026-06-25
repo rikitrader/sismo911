@@ -75,25 +75,43 @@ export async function rateLimit(
 }
 
 /**
- * Atomic burst limiter backed by Cloudflare's native Rate Limiting binding
- * (env.WRITE_BURST_LIMITER, period 60s). Unlike rateLimit() — which reads then
- * writes KV non-atomically and can under-count under a concurrent burst — this
- * is atomic, so it reliably caps the dangerous case (rapid abuse from one IP).
- * Use it on public, abuse-prone write endpoints. Returns a 429 Response when the
- * burst cap is exceeded, else null. If the binding is absent (local/test/older
- * config) it no-ops (fails open) so behavior degrades to the KV limiter only.
+ * Atomic burst limiter backed by D1. A single SQLite statement increments the
+ * per-(name,ip) counter and returns the new value, so unlike rateLimit() (KV
+ * read-then-write race, and KV throttles hot keys to ~1 write/s → 429/500) this
+ * is genuinely atomic and sustains bursts. Use it on public, abuse-prone write
+ * endpoints. Returns a 429 Response when the cap is exceeded, else null. Any DB
+ * error fails OPEN — never block a write on infra failure.
  *
  * NOTE: never call this on life-safety endpoints (SOS, "I'm safe"); those must
  * fail open — a dropped emergency submission is worse than a few extra.
  */
-export async function burstLimit(env: Env, c: Context, name: string): Promise<Response | null> {
-  const limiter = env.WRITE_BURST_LIMITER;
-  if (!limiter) return null; // binding absent → fail open
+export async function burstLimit(
+  env: Env,
+  c: Context,
+  name: string,
+  limit = 30,
+  windowSec = 60
+): Promise<Response | null> {
+  const key = `${name}:${requestIp(c)}`;
+  const now = Date.now();
+  const reset = now + windowSec * 1000;
   try {
-    const { success } = await limiter.limit({ key: `${name}:${requestIp(c)}` });
-    if (!success) return c.json({ error: 'rate_limited', retry_after: 60 }, 429);
+    // Atomic: insert fresh, or if the existing window expired reset it to 1,
+    // else increment. RETURNING gives us the post-write count in one round-trip.
+    const row: any = await env.DB.prepare(
+      `INSERT INTO rate_buckets (key, count, reset_ms) VALUES (?1, 1, ?2)
+       ON CONFLICT(key) DO UPDATE SET
+         count    = CASE WHEN reset_ms < ?3 THEN 1     ELSE count + 1 END,
+         reset_ms = CASE WHEN reset_ms < ?3 THEN ?2    ELSE reset_ms  END
+       RETURNING count, reset_ms`
+    ).bind(key, reset, now).first();
+    const count = Number(row?.count ?? 0);
+    const resetMs = Number(row?.reset_ms ?? reset);
+    if (count > limit) {
+      return c.json({ error: 'rate_limited', retry_after: Math.max(1, Math.ceil((resetMs - now) / 1000)) }, 429);
+    }
   } catch {
-    return null; // limiter error → fail open, never block a write on infra failure
+    return null; // DB error → fail open
   }
   return null;
 }
