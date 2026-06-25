@@ -54,7 +54,7 @@ export async function createSession(env: Env, userId: string, ua?: string): Prom
 }
 
 export async function getUserFromRequest(env: Env, c: Context): Promise<User | null> {
-  const token = getCookie(c, COOKIE);
+  const token = getSessionToken(c);
   if (token) {
     const row: any = await env.DB.prepare(
       `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,s.expires_ms
@@ -80,8 +80,17 @@ export function setSessionCookie(c: Context, token: string) {
   setCookie(c, COOKIE, token, { httpOnly: true, secure: true, sameSite: 'Lax', path: '/', maxAge: SESSION_TTL_MS / 1000 });
 }
 
+export function getSessionToken(c: Context): string | undefined {
+  const cookieToken = getCookie(c, COOKIE);
+  if (cookieToken) return cookieToken;
+  const auth = c.req.header('authorization') || '';
+  const [scheme, token] = auth.split(/\s+/, 2);
+  if (scheme?.toLowerCase() !== 'bearer' || !token) return undefined;
+  return token;
+}
+
 export async function clearSession(env: Env, c: Context) {
-  const token = getCookie(c, COOKIE);
+  const token = getSessionToken(c);
   if (token) await env.DB.prepare(`DELETE FROM sessions WHERE token = ?`).bind(token).run();
   deleteCookie(c, COOKIE, { path: '/' });
 }
