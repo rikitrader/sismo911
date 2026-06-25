@@ -38,8 +38,8 @@ export interface CleanReport { scanned: number; flagged: number; applied: boolea
 export async function cleanPersonas(env: Env, opts: { apply?: boolean } = {}): Promise<CleanReport> {
   const apply = !!opts.apply;
   const where = `moderation = 'approved' AND (${junkWhere('nombre')})`;
-  const scanned = (await env.DESAP.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${where}`).first<{ n: number }>())?.n ?? 0;
+  const scanned = (await env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${where}`).first<{ n: number }>())?.n ?? 0;
   if (!apply || scanned === 0) return { scanned, flagged: 0, applied: false };
-  await env.DESAP.prepare(`UPDATE personas SET moderation = 'rejected', updated_at = ? WHERE ${where}`).bind(Date.now()).run();
+  await env.DB.prepare(`UPDATE personas SET moderation = 'rejected', updated_at = ? WHERE ${where}`).bind(Date.now()).run();
   return { scanned, flagged: scanned, applied: true };
 }

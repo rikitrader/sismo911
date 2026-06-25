@@ -43,7 +43,7 @@ export async function dedupePersonas(
         ORDER BY (CASE WHEN foto_r2 IS NOT NULL THEN 0 ELSE 1 END), updated_at DESC, id ASC
       ) AS rn FROM personas ${scope}
     ) WHERE rn > 1`;
-  const { results } = await env.DESAP.prepare(sql).all<{ id: string; foto_r2: string | null }>();
+  const { results } = await env.DB.prepare(sql).all<{ id: string; foto_r2: string | null }>();
   const all = results ?? [];
   const found = all.length;
   if (!apply) return { mode, found, applied: false, deletedRows: 0, deletedPhotos: 0, remaining: found };
@@ -57,7 +57,7 @@ export async function dedupePersonas(
   const ids = batch.map((v) => v.id);
   for (let i = 0; i < ids.length; i += 40) {
     const chunk = ids.slice(i, i + 40);
-    await env.DESAP.prepare(`DELETE FROM personas WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).run();
+    await env.DB.prepare(`DELETE FROM personas WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).run();
     deletedRows += chunk.length;
   }
   return { mode, found, applied: true, deletedRows, deletedPhotos, remaining: found - deletedRows };
