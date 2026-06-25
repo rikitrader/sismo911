@@ -27,6 +27,7 @@ import { ingestUsgs } from './ingest/usgs-cron';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
 import { ingestSosDamage } from './ingest/sos-damage';
+import { ingestFamilia } from './ingest/familia-cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
 import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
@@ -198,6 +199,8 @@ export default {
       // Hourly: sync structural-damage reports from sosvenezuela2026 (source of truth).
       if (new Date(_event.scheduledTime).getUTCMinutes() === 0) {
         await ingestSosDamage(env).catch((e: any) => console.error('[cron] sos-damage sync failed:', e?.message ?? e));
+        // Hourly: re-ingest the missing-persons (Familia) registry from FAMILIA_SOURCE_URL (no-op if unset).
+        await ingestFamilia(env).catch((e: any) => console.error('[cron] familia sync failed:', e?.message ?? e));
         // Hourly: social/web disaster-signal monitor → D1, then mirror into the Google Sheet.
         await ingestSocialMonitor(env).catch((e: any) => console.error('[cron] social monitor failed:', e?.message ?? e));
         await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));

@@ -21,18 +21,26 @@
 <style>
   .label-caps{letter-spacing:.14em;text-transform:uppercase;font-weight:700}
   #map{width:100%;height:480px;background:#eeeef0;border-radius:.5rem}
-  @media(max-width:640px){#map{height:60vh}}
   .gm-legend{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.95);border:1px solid #c4c6d0;border-radius:.5rem;padding:9px 12px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
   .gm-legend .r{display:flex;align-items:center;gap:8px;margin:3px 0;color:#44474f;font-weight:500}
   .gm-dot{width:11px;height:11px;border-radius:50%;display:inline-block;box-shadow:0 0 0 2px #fff}
   .gm-note{position:absolute;right:12px;top:12px;max-width:280px;background:#bb0027;color:#fff;border-radius:.5rem;padding:10px 12px;font-size:12.5px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25)}
-  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:9999px}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:9999px;white-space:nowrap}
   table.dt{width:100%;border-collapse:collapse;font-size:13px}
-  table.dt th{text-align:left;font-weight:700;color:#44474f;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid #c4c6d0}
+  table.dt th{text-align:left;font-weight:700;color:#44474f;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid #c4c6d0;white-space:nowrap}
   table.dt td{padding:9px 10px;border-bottom:1px solid #eeeef0;vertical-align:top;color:#1a1c1e}
   table.dt tr:last-child td{border-bottom:none}
   .route-card{cursor:pointer;transition:.15s}
   .route-card:hover{background:#f3f3f6}
+  /* Mobile (<=640px): shrink the map, drop the map overlays (the Maiquetía
+     callout is already in the alert card above), and let the legend flow
+     statically below the map instead of covering it. */
+  @media(max-width:640px){
+    #map{height:320px}
+    .gm-note{display:none}
+    .gm-legend{position:static;width:100%;margin-top:10px;box-shadow:none}
+    .gm-legend .r{display:inline-flex;margin-right:14px}
+  }
 </style>
 </head>
 <body class="font-sans text-on-surface antialiased bg-surface">
@@ -43,15 +51,15 @@
   <div class="flex-1 flex flex-col min-w-0">
 
     <!-- Top bar (kept; app-shell only hides body>header) -->
-    <header class="flex items-center justify-between h-[72px] px-4 sm:px-8 bg-white border-b border-outline-variant/60">
-      <div class="leading-tight">
+    <header class="flex items-center justify-between gap-3 min-h-[60px] py-2.5 px-4 sm:px-8 bg-white border-b border-outline-variant/60">
+      <div class="leading-tight min-w-0">
         <div class="label-caps text-on-surface-variant text-[10px]">Comando Logístico Nacional</div>
-        <div class="flex items-center gap-2 font-display font-bold text-[19px] text-on-surface">
-          <span class="h-2.5 w-2.5 rounded-full bg-critical animate-pulse"></span>
+        <div class="flex items-center gap-2 font-display font-bold text-[15px] sm:text-[19px] text-on-surface">
+          <span class="h-2.5 w-2.5 rounded-full bg-critical animate-pulse shrink-0"></span>
           Centro de Operaciones Logísticas
         </div>
       </div>
-      <span class="pill bg-critical text-white">● SISMO M7.5 · DEFCON</span>
+      <span class="pill bg-critical text-white shrink-0 text-[10px] sm:text-[11px]">● M7.5 · DEFCON</span>
     </header>
 
     <!-- Scroll area -->
