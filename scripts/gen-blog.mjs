@@ -52,8 +52,10 @@ const HEAD = (title, desc, canon, img) => `<!DOCTYPE html><html lang="es"><head>
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${canon}"><meta property="og:image" content="${img}">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${img}">
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css" />
+<link rel="preload" as="style" href="/app.css"><link rel="stylesheet" href="/app.css" />
+<link rel="alternate" type="application/rss+xml" title="SISMO911 · Blog Sísmico" href="/blog/rss.xml">
 <script src="/app-shell.js" defer></script>
 <style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}.prose-ve p{margin:.85rem 0;line-height:1.75}.prose-ve h2{font-family:'Public Sans',sans-serif;font-weight:700;font-size:1.25rem;color:#00173a;margin:1.6rem 0 .4rem;scroll-margin-top:5rem}</style>`
 
@@ -68,8 +70,13 @@ function renderArticle(p, ov, slug) {
   const dateISO = Date.parse(p.fechaISO) ? new Date(p.fechaISO).toISOString() : '2026-06-24T21:04:00Z'
   const stats = [fmtNum(p.vistas) && `${fmtNum(p.vistas)} reproducciones`, fmtNum(p.likes) && `${fmtNum(p.likes)} me gusta`].filter(Boolean).join(' · ')
   const ld = { '@context': 'https://schema.org', '@type': 'NewsArticle', headline: title, description: desc, datePublished: dateISO, dateModified: dateISO, inLanguage: 'es', image: [cv], mainEntityOfPage: canon, author: { '@type': 'Person', name: p.autor || 'Reporte ciudadano' }, publisher: { '@type': 'Organization', name: 'SISMO911', logo: { '@type': 'ImageObject', url: 'https://sismo911.com/logo.svg' } }, about: { '@type': 'Event', name: 'Terremoto de Venezuela del 24 de junio de 2026' } }
+  const crumb = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://sismo911.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://sismo911.com/blog' },
+    { '@type': 'ListItem', position: 3, name: place(p), item: canon } ] }
   return `${HEAD(title + ' — SISMO911', desc, canon, cv)}
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
+<script type="application/ld+json">${JSON.stringify(crumb)}</script>
 </head>
 <body class="font-sans text-on-surface">
 ${HEADER}
@@ -149,7 +156,7 @@ ${HEADER}
   <!-- Featured -->
   <a href="/blog/${FEATURED.slug}" class="group block bg-white border border-outline-variant/60 rounded-2xl overflow-hidden mb-10 hover:shadow-xl transition-shadow">
     <div class="grid md:grid-cols-2">
-      <div class="aspect-[16/10] md:aspect-auto overflow-hidden bg-primary flex items-center justify-center"><img src="${FEATURED.img}" alt="${esc(FEATURED.title)}" class="w-full h-full object-contain md:object-cover md:object-left" width="1200" height="630"></div>
+      <div class="aspect-[16/10] md:aspect-auto overflow-hidden bg-primary flex items-center justify-center"><img src="${FEATURED.img}" alt="${esc(FEATURED.title)}" class="w-full h-full object-contain md:object-cover md:object-left" width="1200" height="630" fetchpriority="high" decoding="async"></div>
       <div class="p-6 sm:p-8 flex flex-col justify-center">
         <div class="flex items-center gap-2 text-xs font-bold mb-3"><span class="bg-secondary text-white px-2.5 py-1 rounded-full">${FEATURED.tag}</span><span class="text-on-surface-variant">${FEATURED.date}</span></div>
         <h2 class="font-display font-extrabold text-2xl sm:text-3xl leading-tight text-on-surface mb-3 group-hover:text-primary">${esc(FEATURED.title)}</h2>
@@ -172,4 +179,21 @@ ${HEADER}
 </body></html>`
 
 writeFileSync(`${OUT}/blog.html`, indexHtml)
-console.log(`generated blog index + ${picked.length} article pages`)
+
+// ---- SEO: blog sitemap + RSS ----
+const LASTMOD = '2026-06-25'
+const allUrls = [{ loc: 'https://sismo911.com/blog', pr: '0.8', cf: 'hourly' },
+  { loc: 'https://sismo911.com/blog/' + FEATURED.slug, pr: '0.7', cf: 'weekly' },
+  ...picked.map(x => ({ loc: 'https://sismo911.com/blog/' + x.slug, pr: '0.6', cf: 'weekly' }))]
+const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n` +
+  allUrls.map(u => `  <url><loc>${u.loc}</loc><lastmod>${LASTMOD}</lastmod><changefreq>${u.cf}</changefreq><priority>${u.pr}</priority></url>`).join('\n') + `\n</urlset>\n`
+writeFileSync(`${OUT}/sitemap-blog.xml`, sitemap)
+
+const rssItem = (title, link, desc, dateISO) => `  <item><title>${esc(title)}</title><link>${link}</link><guid>${link}</guid><pubDate>${new Date(Date.parse(dateISO) || Date.parse('2026-06-24')).toUTCString()}</pubDate><description>${esc(desc)}</description></item>`
+const rss = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>\n<title>SISMO911 · Blog Sísmico</title>\n<link>https://sismo911.com/blog</link>\n<atom:link href="https://sismo911.com/blog/rss.xml" rel="self" type="application/rss+xml"/>\n<description>Cobertura del terremoto de Venezuela: informe oficial y reportes ciudadanos geolocalizados.</description>\n<language>es-ve</language>\n` +
+  rssItem(FEATURED.title, 'https://sismo911.com/blog/' + FEATURED.slug, FEATURED.dek, '2026-06-24T22:30:00Z') + '\n' +
+  picked.map(x => rssItem(headline(x.p, x.ov), 'https://sismo911.com/blog/' + x.slug, dek(x.p, x.ov), x.p.fechaISO)).join('\n') +
+  `\n</channel></rss>\n`
+writeFileSync(`${OUT}/blog/rss.xml`, rss)
+
+console.log(`generated blog index + ${picked.length} article pages + sitemap-blog.xml(${allUrls.length}) + rss.xml`)
