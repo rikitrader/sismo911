@@ -11,7 +11,7 @@
 <style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
 </head>
 <body class="font-sans text-on-surface">
-<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex items-center gap-x-3 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/sos.html" class="text-secondary-fixed font-bold">SOS</a><button id="logout" class="hover:text-white/70">Cerrar sesión</button></nav></div></header>
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex items-center gap-x-3 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><button id="logout" class="hover:text-white/70">Cerrar sesión</button></nav></div></header>
 
 <main class="mx-auto max-w-3xl px-4 py-8" id="app">
   <p class="text-on-surface-variant">Cargando…</p>
@@ -39,7 +39,7 @@ document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logou
     </div>`;
 
   if(u.role==='operator'||u.role==='admin'){
-    html+=`<a href="/admin.html" class="block bg-primary text-white rounded-lg p-5 mb-6 hover:bg-primary-container transition">
+    html+=`<a href="/admin" class="block bg-primary text-white rounded-lg p-5 mb-6 hover:bg-primary-container transition">
       <div class="font-display font-bold text-lg">→ Consola de Operaciones</div>
       <div class="text-white/70 text-sm">Personas desaparecidas, directorio, fuentes de datos, gestión.</div></a>`;
   }
@@ -56,7 +56,7 @@ document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logou
   // my check-ins (match by name)
   const {checkins=[]}=await fetch('/api/checkins').then(r=>r.json());
   const mine=checkins.filter(c=>c.name===u.name);
-  document.getElementById('mine').innerHTML=mine.length?mine.map(c=>`<div class="bg-white border border-outline-variant/60 rounded px-4 py-2 flex justify-between text-sm"><span>${c.status==='safe'?'✅ A salvo':'🆘 Necesita ayuda'} ${c.message?'· '+esc(c.message):''}</span><span class="text-on-surface-variant text-xs">hace ${ago(c.created_ms)}</span></div>`).join(''):'<p class="text-on-surface-variant text-sm">Aún no has registrado tu estado. <a href="/familia.html" class="text-primary underline">Hazlo aquí</a>.</p>';
+  document.getElementById('mine').innerHTML=mine.length?mine.map(c=>`<div class="bg-white border border-outline-variant/60 rounded px-4 py-2 flex justify-between text-sm"><span>${c.status==='safe'?'✅ A salvo':'🆘 Necesita ayuda'} ${c.message?'· '+esc(c.message):''}</span><span class="text-on-surface-variant text-xs">hace ${ago(c.created_ms)}</span></div>`).join(''):'<p class="text-on-surface-variant text-sm">Aún no has registrado tu estado. <a href="/familia" class="text-primary underline">Hazlo aquí</a>.</p>';
 
   if(u.role==='admin'){
     const {users=[]}=await fetch('/api/auth/users').then(r=>r.json());
