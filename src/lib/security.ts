@@ -35,11 +35,11 @@ export function setSecurityHeaders(c: Context) {
       "object-src 'none'",
       "frame-ancestors 'none'",
       "form-action 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://earthquake.usgs.gov https://api.weather.gov https://www.fema.gov https://overpass-api.de https://overpass.kumi.systems https://maps.mail.ru",
+      "connect-src 'self' https://earthquake.usgs.gov https://api.weather.gov https://www.fema.gov https://overpass-api.de https://overpass.kumi.systems https://maps.mail.ru https://cloudflareinsights.com",
       "worker-src 'self'",
       "manifest-src 'self'",
     ].join('; ')

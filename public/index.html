@@ -334,9 +334,10 @@
   const markerLayer = L.layerGroup().addTo(map);
   const heatLayer = L.layerGroup();        // simple weighted circles (no plugin dependency)
   const facilityLayer = L.layerGroup();
+  const damageLayer = L.layerGroup();  // structural damage (sosvenezuela2026)
   L.control.layers(
     { 'Calle': street, 'Satélite (Esri)': satellite, 'Satélite (NASA GIBS)': gibs },
-    { 'Sismos': markerLayer, 'Mapa de riesgo': heatLayer, 'Refugios/Hospitales': facilityLayer },
+    { 'Sismos': markerLayer, 'Mapa de riesgo': heatLayer, 'Refugios/Hospitales': facilityLayer, 'Daños estructurales': damageLayer },
     { position: 'topright', collapsed: true }
   ).addTo(map);
 
@@ -352,6 +353,18 @@
     (d.facilities || []).forEach(f => L.circleMarker([f.lat, f.lon], {
       radius: 4, color: '#0b2b5b', weight: 1, fillColor: f.type === 'hospital' ? '#2e7d32' : '#445e91', fillOpacity: 1,
     }).bindTooltip(`${esc(f.name)} · ${esc(f.type)}`).addTo(facilityLayer));
+  }).catch(() => {});
+
+  // Structural damage overlay (sosvenezuela2026 source)
+  fetch('/api/danos-estructurales').then(r => r.json()).then(d => {
+    const SC = { rojo: '#c8102e', naranja: '#e57200', amarillo: '#ffbc3d' };
+    (d.reports || []).forEach(x => {
+      if (x.lat == null || x.lng == null) return;
+      const res = ['aid_point','shelter','water_point','medical_need'].includes(x.category);
+      const col = res ? '#0b2b5b' : (SC[x.severity] || '#e57200');
+      L.circleMarker([x.lat, x.lng], { radius: x.category === 'collapsed_building' ? 6 : 4, color: '#fff', weight: 1, fillColor: col, fillOpacity: 1 })
+        .bindTooltip(`${esc(x.title||'')} · ${esc(x.municipio||'')}`).addTo(damageLayer);
+    });
   }).catch(() => {});
 
   const feed = document.getElementById('feed');

@@ -48,8 +48,10 @@
   <div id="loading" class="absolute inset-0 grid place-items-center z-[400] pointer-events-none"><div class="bg-white/90 rounded-lg px-4 py-2 text-sm">Cargando daños…</div></div>
 
   <div id="listView" class="hidden absolute inset-0 z-[450] bg-surface overflow-y-auto p-4 lg:pl-[21rem]">
+    <div class="max-w-5xl mb-3"><input id="listSearch" placeholder="Buscar por título, municipio o descripción…" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm"></div>
     <div id="listCount" class="text-xs text-on-surface-variant mb-3 max-w-5xl"></div>
     <div id="listGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-5xl"></div>
+    <div id="listMore" class="max-w-5xl flex justify-center mt-4"></div>
   </div>
 </div>
 
@@ -106,12 +108,15 @@ function buildFilters(counts){
   document.querySelectorAll('.catbox').forEach(b=>b.onchange=()=>{const c=b.dataset.cat; b.checked?active.add(c):active.delete(c); Object.keys(layers).forEach(k=>active.has(k)?layers[k].addTo(map):map.removeLayer(layers[k])); renderList();});
 }
 
-// ---- List view ----
-let ALL=[];
+// ---- List view (search + pagination) ----
+let ALL=[]; let listShown=30;
 function renderList(){
-  const rows=ALL.filter(r=>active.has(r.category||'damaged_building'));
-  document.getElementById('listCount').textContent=`${rows.length} reporte(s)`;
-  document.getElementById('listGrid').innerHTML=rows.map(r=>`
+  const term=(document.getElementById('listSearch').value||'').trim().toLowerCase();
+  const rows=ALL.filter(r=>active.has(r.category||'damaged_building'))
+    .filter(r=>!term || `${r.title||''} ${r.municipio||''} ${r.parroquia||''} ${r.description||''}`.toLowerCase().includes(term));
+  const page=rows.slice(0,listShown);
+  document.getElementById('listCount').textContent=`${rows.length.toLocaleString('es')} reporte(s)${term?' (filtrado)':''} · mostrando ${page.length}`;
+  document.getElementById('listGrid').innerHTML=page.map(r=>`
     <div class="bg-white border border-outline-variant/60 rounded-lg p-3">
       <div class="flex items-center gap-2"><span style="width:10px;height:10px;border-radius:9999px;background:${color(r)};display:inline-block"></span>
       <span class="text-xs font-bold" style="color:${color(r)}">${esc(CAT[r.category]?.[0]||r.category)}</span></div>
@@ -119,8 +124,12 @@ function renderList(){
       <div class="text-xs text-on-surface-variant mt-0.5">${esc(r.description||'')}</div>
       <div class="text-[11px] text-on-surface-variant mt-1">${esc(r.municipio||'—')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}</div>
       ${r.source_url?`<a href="${esc(r.source_url)}" target="_blank" class="text-[11px] text-primary underline">fuente ↗</a>`:''}
-    </div>`).join('') || '<p class="text-on-surface-variant text-sm col-span-full">Sin reportes en estas categorías.</p>';
+    </div>`).join('') || '<p class="text-on-surface-variant text-sm col-span-full">Sin reportes.</p>';
+  document.getElementById('listMore').innerHTML = rows.length>listShown
+    ? '<button id="listMoreBtn" class="px-4 py-2 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>' : '';
+  const mb=document.getElementById('listMoreBtn'); if(mb)mb.onclick=()=>{listShown+=30;renderList();};
 }
+let lst;document.getElementById('listSearch').addEventListener('input',()=>{clearTimeout(lst);lst=setTimeout(()=>{listShown=30;renderList();},250);});
 const vMapa=document.getElementById('viewMapa'),vLista=document.getElementById('viewLista'),listView=document.getElementById('listView');
 function setView(list){ listView.classList.toggle('hidden',!list);
   vLista.classList.toggle('bg-white',list);vLista.classList.toggle('shadow',list);vLista.classList.toggle('text-primary',list);vLista.classList.toggle('text-on-surface-variant',!list);
