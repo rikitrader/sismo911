@@ -162,7 +162,11 @@ export default {
         ingestKobo(env).catch((e) => console.error('[cron] kobo ingest failed:', e?.message ?? e)),
       ]);
       // After events are fresh, announce significant new quakes to the channel.
-      await announceQuakes(env).catch((e) => console.error('[cron] quake announce failed:', e?.message ?? e));
+      // Throttled to every 15 min (minutes 0/15/30/45) to avoid channel spam;
+      // USGS/Kobo ingest above still runs every minute for fast detection.
+      if (new Date(_event.scheduledTime).getUTCMinutes() % 15 === 0) {
+        await announceQuakes(env).catch((e) => console.error('[cron] quake announce failed:', e?.message ?? e));
+      }
       // Hourly: sync structural-damage reports from sosvenezuela2026 (source of truth).
       if (new Date(_event.scheduledTime).getUTCMinutes() === 0) {
         await ingestSosDamage(env).catch((e: any) => console.error('[cron] sos-damage sync failed:', e?.message ?? e));
