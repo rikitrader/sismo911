@@ -22,8 +22,7 @@
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">fetch('/api/danos-estructurales').then(r=>r.json()).then(d=>{const SC={rojo:'#c8102e',naranja:'#e57200',amarillo:'#ffbc3d'};(d.reports||[]).forEach(x=>{if(x.lat==null||x.lng==null)return;const res=['aid_point','shelter','water_point','medical_need'].includes(x.category);const col=res?'#0b2b5b':(SC[x.severity]||'#e57200');L.circleMarker([x.lat,x.lng],{radius:x.category==='collapsed_building'?6:4,color:'#fff',weight:1,fillColor:col,fillOpacity:1}).bindTooltip(`${esc(x.title||'')} · ${esc(x.municipio||'')}`).addTo(danos);});});
-</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="stylesheet" href="/app.css" />
 
 <style>body{margin:0;font-family:Inter,sans-serif}.font-display{font-family:'Public Sans',sans-serif}#map{position:absolute;top:56px;bottom:0;left:0;right:0}.qp::after{content:'';position:absolute;inset:0;border-radius:9999px;box-shadow:0 0 0 0 rgba(200,16,46,.5);animation:pr 1.8s infinite}@keyframes pr{70%{box-shadow:0 0 0 16px rgba(200,16,46,0)}100%{box-shadow:0 0 0 0 rgba(200,16,46,0)}}</style>
@@ -59,6 +58,8 @@ function loadSismos(){fetch('/api/events?limit=300',{cache:'no-store'}).then(r=>
 loadSismos();setInterval(loadSismos,60000);
 fetch('/api/heatmap').then(r=>r.json()).then(d=>{(d.points||[]).forEach(([la,lo,w])=>L.circle([la,lo],{radius:12000+w*60000,stroke:false,fillColor:'#c8102e',fillOpacity:.08+w*.18}).addTo(heat));});
 fetch('/api/facilities?lat=10.3&lon=-67.0&radius=45000').then(r=>r.json()).then(d=>{(d.facilities||[]).forEach(f=>L.circleMarker([f.lat,f.lon],{radius:4,color:'#0b2b5b',weight:1,fillColor:f.type==='hospital'?'#2e7d32':'#445e91',fillOpacity:1}).bindTooltip(`${esc(f.name)} · ${esc(f.type)}`).addTo(refugios));});
+// Structural-damage layer (was dead: previously trapped inside the leaflet <script src> body).
+fetch('/api/danos-estructurales').then(r=>r.json()).then(d=>{const SC={rojo:'#c8102e',naranja:'#e57200',amarillo:'#ffbc3d'};(d.reports||[]).forEach(x=>{if(x.lat==null||x.lng==null)return;const res=['aid_point','shelter','water_point','medical_need'].includes(x.category);const col=res?'#0b2b5b':(SC[x.severity]||'#e57200');L.circleMarker([x.lat,x.lng],{radius:x.category==='collapsed_building'?6:4,color:'#fff',weight:1,fillColor:col,fillOpacity:1}).bindTooltip(`${esc(x.title||'')} · ${esc(x.municipio||'')}`).addTo(danos);});});
 </script>
 </body>
 </html>
