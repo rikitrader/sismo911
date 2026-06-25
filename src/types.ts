@@ -3,6 +3,7 @@ export interface Env {
   DB: D1Database;
   CACHE: KVNamespace;
   PHOTOS: KVNamespace;
+  PERSON_PHOTOS: R2Bucket;
   USGS_MINLAT: string;
   USGS_MAXLAT: string;
   USGS_MINLON: string;

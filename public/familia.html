@@ -2,70 +2,150 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Familia — Avísale a los tuyos | SISMO911</title>
-<meta name="description" content="Avisa a tu familia que estás a salvo tras un terremoto. Registro de reunificación familiar de SISMO911 para Venezuela.">
-<meta name="author" content="SISMO911 — Comando Sísmico Nacional">
-<meta name="robots" content="index,follow,max-image-preview:large">
+<title>Familia y Personas Desaparecidas — SISMO911</title>
+<meta name="description" content="Avisa que estás a salvo, reporta y busca personas desaparecidas tras un sismo en Venezuela. Galería de fotos de búsqueda.">
 <link rel="canonical" href="https://sismo911.com/familia">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="SISMO911">
-<meta property="og:locale" content="es_VE">
-<meta property="og:title" content="Familia — Avisa que estás a salvo | SISMO911">
-<meta property="og:description" content="Avisa a tu familia que estás a salvo tras un terremoto. Registro de reunificación familiar de SISMO911 para Venezuela.">
-<meta property="og:url" content="https://sismo911.com/familia">
-<meta property="og:image" content="https://sismo911.com/og/og-default.png">
-<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Familia — Avisa que estás a salvo | SISMO911">
-<meta name="twitter:description" content="Avisa a tu familia que estás a salvo tras un terremoto. Registro de reunificación familiar de SISMO911 para Venezuela.">
-<meta name="twitter:image" content="https://sismo911.com/og/og-default.png">
+<meta property="og:type" content="website"><meta property="og:site_name" content="SISMO911"><meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Familia y Personas Desaparecidas — SISMO911">
+<meta property="og:description" content="Avisa que estás a salvo, reporta y busca personas desaparecidas tras un sismo en Venezuela.">
+<meta property="og:url" content="https://sismo911.com/familia"><meta property="og:image" content="https://sismo911.com/og/og-default.png">
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link rel="manifest" href="/manifest.webmanifest">
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css" />
-
-<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebPage","name":"Familia — Avisa que estás a salvo | SISMO911","description":"Avisa a tu familia que estás a salvo tras un terremoto. Registro de reunificación familiar de SISMO911 para Venezuela.","url":"https://sismo911.com/familia","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
-</script>
-  <script src="/app-shell.js" defer></script>
+<style>.font-display{font-family:'Public Sans',sans-serif}body{background:#f9f9fc}</style>
+<script src="/app-shell.js" defer></script>
 </head>
 <body class="font-sans text-on-surface">
-<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/alertas" class="hover:text-white/70">Alertas</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a><a href="/familia" class="text-white">Familia</a><a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/comms" class="hover:text-white/70">Radio</a><a href="/guia" class="hover:text-white/70">Guía</a><a href="/reportar" class="hover:text-white/70">Reportar</a><a href="/canal" class="hover:text-white/70">Canal</a><a href="/movimiento" class="hover:text-white/70">Movimiento</a><a href="/blog" class="hover:text-white/70">Blog</a></nav></div></header>
+<header class="bg-primary text-white"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-2"><img src="/logo.svg" class="h-8 w-8"><b class="font-display">SISMO911</b></div></header>
 
-<main class="mx-auto max-w-3xl px-4 py-8">
-  <h1 class="font-display font-extrabold text-3xl mb-1">Verificación de Seguridad Familiar</h1>
-  <p class="text-on-surface-variant mb-6">Marca tu estado para que tu familia sepa que estás bien — o pide ayuda.</p>
+<main class="mx-auto max-w-5xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Familia y Personas Desaparecidas</h1>
+  <p class="text-on-surface-variant mb-6">Avisa que estás a salvo, reporta a una persona desaparecida (con foto) y busca en el registro nacional.</p>
 
-  <form id="form" class="bg-white border border-outline-variant/60 rounded-lg p-5 grid sm:grid-cols-2 gap-3 mb-8">
-    <input name="name" required placeholder="Tu nombre" class="border border-outline-variant rounded px-3 py-2 text-sm sm:col-span-2">
-    <input name="message" placeholder="Mensaje (opcional)" class="border border-outline-variant rounded px-3 py-2 text-sm sm:col-span-2">
-    <button name="status" value="safe" class="bg-safe text-white font-display font-bold py-2.5 rounded">✅ Estoy a salvo</button>
-    <button name="status" value="need_help" class="bg-secondary text-white font-display font-bold py-2.5 rounded">🆘 Necesito ayuda</button>
-    <p id="msg" class="text-sm text-safe sm:col-span-2"></p>
-  </form>
+  <div class="flex gap-1 mb-6 bg-surface-container rounded-lg p-1 w-fit flex-wrap">
+    <button data-tab="checkin" class="tab px-4 py-2 rounded-md font-display font-semibold text-sm bg-white shadow text-primary">Estoy a salvo</button>
+    <button data-tab="registro" class="tab px-4 py-2 rounded-md font-display font-semibold text-sm text-on-surface-variant">Personas desaparecidas</button>
+    <button data-tab="galeria" class="tab px-4 py-2 rounded-md font-display font-semibold text-sm text-on-surface-variant">Galería de fotos</button>
+  </div>
 
-  <div class="flex items-center justify-between mb-2"><h2 class="font-display font-bold text-lg">Registro reciente</h2><span id="count" class="text-xs text-on-surface-variant"></span></div>
-  <div id="list" class="space-y-2"></div>
+  <section id="panel-checkin">
+    <form id="checkinForm" class="bg-white border border-outline-variant/60 rounded-lg p-5 grid sm:grid-cols-2 gap-3 mb-6">
+      <input name="name" required placeholder="Tu nombre" class="border border-outline-variant rounded px-3 py-2 text-sm sm:col-span-2">
+      <input name="message" placeholder="Mensaje (opcional)" class="border border-outline-variant rounded px-3 py-2 text-sm sm:col-span-2">
+      <button name="status" value="safe" class="bg-safe text-white font-display font-bold py-2.5 rounded">✅ Estoy a salvo</button>
+      <button name="status" value="need_help" class="bg-secondary text-white font-display font-bold py-2.5 rounded">🆘 Necesito ayuda</button>
+      <p id="checkinMsg" class="text-sm text-safe sm:col-span-2"></p>
+    </form>
+    <h2 class="font-display font-bold text-lg mb-2">Registro reciente</h2>
+    <div id="checkinList" class="space-y-2"></div>
+  </section>
+
+  <section id="panel-registro" class="hidden">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <input id="search" placeholder="Buscar por nombre o lugar…" class="flex-1 min-w-[200px] border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+      <select id="statusFilter" class="border border-outline-variant rounded-lg px-3 py-2.5 text-sm text-on-surface-variant">
+        <option value="">Todos</option><option value="missing">Desaparecidas</option><option value="found_safe">Halladas</option>
+      </select>
+      <button id="openRegister" class="bg-secondary text-white font-display font-bold text-sm px-4 py-2.5 rounded-lg">+ Reportar desaparecido</button>
+    </div>
+    <div id="count" class="text-xs text-on-surface-variant mb-3"></div>
+    <div id="personGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    <div id="pager" class="flex items-center justify-center gap-3 mt-6"></div>
+  </section>
+
+  <section id="panel-galeria" class="hidden">
+    <p class="text-sm text-on-surface-variant mb-3">Todas las fotos de búsqueda. Si reconoces a alguien, llama a las autoridades (911 / 171).</p>
+    <div id="galleryGrid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+    <div id="galPager" class="flex items-center justify-center gap-3 mt-6"></div>
+  </section>
 </main>
 
+<div id="modal" class="hidden fixed inset-0 bg-black/50 z-[2000] grid place-items-center p-4">
+  <form id="registerForm" class="bg-white rounded-xl w-full max-w-md p-5 space-y-3 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between"><h3 class="font-display font-bold text-lg">Reportar persona desaparecida</h3><button type="button" id="closeModal" class="text-on-surface-variant text-xl">✕</button></div>
+    <label class="block border-2 border-dashed border-outline-variant rounded-lg p-4 text-center cursor-pointer hover:border-primary">
+      <input id="photo" name="photo" type="file" accept="image/*" capture="environment" class="hidden">
+      <div id="photoDrop" class="text-on-surface-variant text-sm"><div class="text-3xl mb-1">📷</div>Agregar foto</div>
+      <img id="photoPrev" class="hidden mx-auto max-h-40 rounded">
+    </label>
+    <input name="full_name" required placeholder="Nombre completo *" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
+    <div class="flex gap-2">
+      <input name="age" type="number" placeholder="Edad" class="w-1/2 border border-outline-variant rounded px-3 py-2 text-sm">
+      <select name="sex" class="w-1/2 border border-outline-variant rounded px-3 py-2 text-sm text-on-surface-variant"><option value="">Sexo</option><option>F</option><option>M</option><option>Otro</option></select>
+    </div>
+    <input name="last_seen" placeholder="Visto por última vez (lugar)" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
+    <input name="contact_phone" placeholder="Teléfono de contacto" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
+    <textarea name="notes" placeholder="Señas particulares, vestimenta…" rows="2" class="w-full border border-outline-variant rounded px-3 py-2 text-sm"></textarea>
+    <button class="w-full bg-secondary text-white font-display font-bold py-2.5 rounded-lg">Publicar reporte</button>
+    <p id="regMsg" class="text-sm text-center"></p>
+  </form>
+</div>
+
 <script>
-if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ago=t=>{const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';};
-const ST={safe:['A salvo','bg-safe'],need_help:['Necesita ayuda','bg-secondary'],unknown:['Desconocido','bg-warning']};
-async function load(){const {checkins=[]}=await fetch('/api/checkins').then(r=>r.json());
-  document.getElementById('count').textContent=checkins.length+' registros';
-  document.getElementById('list').innerHTML=checkins.length?checkins.map(c=>{const[l,cl]=ST[c.status]||ST.unknown;
-    return `<div class="bg-white border border-outline-variant/60 rounded-lg px-4 py-2.5 flex items-center justify-between">
-      <div><div class="font-semibold text-sm">${esc(c.name)}</div>${c.message?`<div class="text-xs text-on-surface-variant">${esc(c.message)}</div>`:''}<div class="text-[11px] text-on-surface-variant">hace ${ago(c.created_ms)}</div></div>
-      <span class="${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span></div>`;}).join(''):'<p class="text-on-surface-variant text-sm">Sin registros aún.</p>';}
-document.getElementById('form').addEventListener('submit',async e=>{e.preventDefault();
-  const status=e.submitter.value; const fd=Object.fromEntries(new FormData(e.target)); fd.status=status;
-  const pos=await new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>r(p.coords),()=>r(null),{timeout:6000}):r(null));
-  if(pos){fd.lat=pos.latitude;fd.lon=pos.longitude;}
+const ago=t=>{if(!t)return '';const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';};
+const ST={missing:['Desaparecida','bg-secondary'],found_safe:['Hallada a salvo','bg-safe'],found_deceased:['Fallecida','bg-on-surface'],unknown:['Sin estado','bg-warning']};
+
+const tabs=document.querySelectorAll('.tab');
+function show(n){tabs.forEach(t=>{const on=t.dataset.tab===n;t.classList.toggle('bg-white',on);t.classList.toggle('shadow',on);t.classList.toggle('text-primary',on);t.classList.toggle('text-on-surface-variant',!on);});
+  ['checkin','registro','galeria'].forEach(x=>document.getElementById('panel-'+x).classList.toggle('hidden',x!==n));
+  if(n==='registro')loadPersons(); if(n==='galeria')loadGallery();}
+tabs.forEach(t=>t.onclick=()=>show(t.dataset.tab));
+if(location.hash==='#registro')show('registro'); else if(location.hash==='#galeria')show('galeria');
+
+async function loadCheckins(){const {checkins=[]}=await fetch('/api/checkins').then(r=>r.json());
+  document.getElementById('checkinList').innerHTML=checkins.length?checkins.map(c=>{const[l,cl]=c.status==='safe'?['A salvo','bg-safe']:['Necesita ayuda','bg-secondary'];
+    return `<div class="bg-white border border-outline-variant/60 rounded-lg px-4 py-2.5 flex items-center justify-between"><div><div class="font-semibold text-sm">${esc(c.name)}</div>${c.message?`<div class="text-xs text-on-surface-variant">${esc(c.message)}</div>`:''}<div class="text-[11px] text-on-surface-variant">hace ${ago(c.created_ms)}</div></div><span class="${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span></div>`;}).join(''):'<p class="text-on-surface-variant text-sm">Sin registros aún.</p>';}
+document.getElementById('checkinForm').addEventListener('submit',async e=>{e.preventDefault();const status=e.submitter.value;const fd=Object.fromEntries(new FormData(e.target));fd.status=status;
   const r=await fetch('/api/checkins',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(fd)}).then(x=>x.json());
-  const m=document.getElementById('msg'); if(r.ok){m.textContent='Registrado ✓';e.target.reset();load();setTimeout(()=>m.textContent='',2500);}else m.textContent='Error';});
-load();
+  const m=document.getElementById('checkinMsg');if(r.ok){m.textContent='Registrado ✓';e.target.reset();loadCheckins();setTimeout(()=>m.textContent='',2500);}else m.textContent='Error';});
+
+let pPage=1;
+function card(p){const[l,cl]=ST[p.status]||ST.unknown;
+  const img=p.photo_url?`<img src="${p.photo_url}" loading="lazy" class="w-full h-44 object-cover bg-surface-container">`:`<div class="w-full h-44 grid place-items-center bg-surface-container text-on-surface-variant text-4xl">👤</div>`;
+  return `<div class="bg-white border border-outline-variant/60 rounded-lg overflow-hidden">
+    <div class="relative">${img}<span class="absolute top-2 left-2 ${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span></div>
+    <div class="p-3"><div class="font-display font-bold">${esc(p.full_name)} ${p.age?`<span class="text-on-surface-variant font-normal text-sm">· ${p.age}</span>`:''}</div>
+      <div class="text-xs text-on-surface-variant mt-0.5">${esc(p.last_seen||'—')}</div>
+      ${p.contact_phone?`<div class="text-xs text-on-surface-variant mt-0.5">☎ ${esc(p.contact_phone)}</div>`:''}
+      ${p.status==='missing'?`<button data-id="${p.id}" class="markFound mt-2 text-xs text-safe border border-safe/40 rounded px-2 py-1">Marcar hallada</button>`:''}</div></div>`;}
+async function loadPersons(){
+  const q=document.getElementById('search').value.trim();const st=document.getElementById('statusFilter').value;
+  const d=await fetch(`/api/familia/persons?q=${encodeURIComponent(q)}&status=${st}&page=${pPage}&limit=24`).then(r=>r.json());
+  document.getElementById('count').textContent=`${(d.total||0).toLocaleString('es')} persona(s) · página ${d.page} de ${d.pages}`;
+  document.getElementById('personGrid').innerHTML=d.persons&&d.persons.length?d.persons.map(card).join(''):'<p class="text-on-surface-variant text-sm col-span-full py-8 text-center">No hay resultados.</p>';
+  document.querySelectorAll('.markFound').forEach(b=>b.onclick=async()=>{await fetch('/api/familia/persons/'+b.dataset.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status:'found_safe'})});loadPersons();});
+  document.getElementById('pager').innerHTML=pagerHtml(d.page,d.pages,'p');}
+function pagerHtml(page,pages,kind){if(pages<=1)return '';
+  return `<button ${page<=1?'disabled':''} data-pg="${page-1}" data-k="${kind}" class="pg px-3 py-1.5 rounded border border-outline-variant text-sm disabled:opacity-40">← Anterior</button>
+    <span class="text-sm text-on-surface-variant">${page} / ${pages}</span>
+    <button ${page>=pages?'disabled':''} data-pg="${page+1}" data-k="${kind}" class="pg px-3 py-1.5 rounded border border-outline-variant text-sm disabled:opacity-40">Siguiente →</button>`;}
+document.addEventListener('click',e=>{const b=e.target.closest('.pg');if(!b)return;const pg=Number(b.dataset.pg);if(b.dataset.k==='p'){pPage=pg;loadPersons();}else{gPage=pg;loadGallery();}});
+let to;document.getElementById('search').addEventListener('input',()=>{clearTimeout(to);to=setTimeout(()=>{pPage=1;loadPersons();},300);});
+document.getElementById('statusFilter').addEventListener('change',()=>{pPage=1;loadPersons();});
+
+const modal=document.getElementById('modal');
+document.getElementById('openRegister').onclick=()=>modal.classList.remove('hidden');
+document.getElementById('closeModal').onclick=()=>modal.classList.add('hidden');
+modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.add('hidden');});
+document.getElementById('photo').onchange=function(){const f=this.files[0];if(!f)return;document.getElementById('photoPrev').src=URL.createObjectURL(f);document.getElementById('photoPrev').classList.remove('hidden');document.getElementById('photoDrop').classList.add('hidden');};
+document.getElementById('registerForm').addEventListener('submit',async e=>{e.preventDefault();
+  const fd=new FormData(e.target);const m=document.getElementById('regMsg');m.className='text-sm text-center text-on-surface-variant';m.textContent='Publicando…';
+  const r=await fetch('/api/familia/persons',{method:'POST',body:fd}).then(x=>x.json()).catch(()=>({}));
+  if(r.ok){m.className='text-sm text-center text-safe';m.textContent='Publicado ✓';e.target.reset();document.getElementById('photoPrev').classList.add('hidden');document.getElementById('photoDrop').classList.remove('hidden');setTimeout(()=>{modal.classList.add('hidden');m.textContent='';pPage=1;loadPersons();},900);}
+  else{m.className='text-sm text-center text-secondary';m.textContent='Error: '+(r.error||'no se pudo publicar');}});
+
+let gPage=1;
+async function loadGallery(){const d=await fetch(`/api/familia/gallery?page=${gPage}&limit=30`).then(r=>r.json());
+  document.getElementById('galleryGrid').innerHTML=d.photos&&d.photos.length?d.photos.map(p=>{const[l,cl]=ST[p.status]||ST.unknown;
+    return `<a href="/api/familia/photo/${p.id}" target="_blank" class="block relative rounded-lg overflow-hidden border border-outline-variant/60">
+      <img src="${p.photo_url}" loading="lazy" class="w-full aspect-square object-cover bg-surface-container">
+      <span class="absolute top-1 left-1 ${cl} text-white text-[9px] font-bold px-1.5 py-0.5 rounded">${l}</span>
+      <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1 truncate">${esc(p.full_name)}</div></a>`;}).join(''):'<p class="text-on-surface-variant text-sm col-span-full py-8 text-center">Aún no hay fotos.</p>';
+  document.getElementById('galPager').innerHTML=pagerHtml(d.page,d.pages,'g');}
+
+loadCheckins();
 </script>
 </body>
 </html>
