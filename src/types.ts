@@ -22,6 +22,8 @@ export interface Env {
   AI?: Ai;
   // Google Maps Platform key for satellite imagery (Map Tiles + Static API). Optional.
   GOOGLE_MAPS_API_KEY?: string;
+  // External missing-persons (Familia) source for hourly re-ingest. Optional.
+  FAMILIA_SOURCE_URL?: string;
   // Social/web disaster monitor (all optional — features gate on their presence).
   PUBLIC_BASE_URL?: string;
   TELEGRAM_CHANNELS?: string;      // comma-separated public channel handles
