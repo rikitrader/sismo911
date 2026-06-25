@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#001233"/>
+      <stop offset="1" stop-color="#00173a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1200" height="10" fill="#bb0027"/>
+  <!-- seismograph line -->
+  <polyline points="0,300 180,300 230,300 250,230 270,380 295,170 315,300 360,300 420,300 450,260 470,350 500,300 1200,300"
+    fill="none" stroke="#ff5a6e" stroke-width="4" opacity="0.55"/>
+  <text x="80" y="250" font-family="Helvetica, Arial, sans-serif" font-size="120" font-weight="800" fill="#ffffff" letter-spacing="-3">SISMO911</text>
+  <text x="84" y="320" font-family="Helvetica, Arial, sans-serif" font-size="40" font-weight="600" fill="#ffb3b1">Comando Sísmico Nacional · Venezuela</text>
+  <text x="84" y="470" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="400" fill="#c9d4ec">Monitoreo de terremotos en tiempo real · Datos USGS en vivo</text>
+  <text x="84" y="525" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="400" fill="#c9d4ec">Alertas · Mapa · SOS · Guía de emergencia</text>
+  <text x="84" y="595" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff" opacity="0.85">sismo911.com</text>
+</svg>
