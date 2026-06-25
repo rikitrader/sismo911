@@ -92,7 +92,14 @@ persons.get('/stats', async (c) => {
        COUNT(*) AS total
      FROM persons WHERE review='approved'`
   ).first();
-  return c.json({ missing: row?.missing ?? 0, found: row?.found ?? 0, total: row?.total ?? 0 });
+  // Federate the Familia (DESAP personas) registry so /personas reflects ALL cases.
+  let f: any = {};
+  try { f = await c.env.DESAP.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','fallecido') THEN 1 ELSE 0 END) AS found, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
+  return c.json({
+    missing: (row?.missing ?? 0) + (f?.missing ?? 0),
+    found: (row?.found ?? 0) + (f?.found ?? 0),
+    total: (row?.total ?? 0) + (f?.total ?? 0),
+  });
 });
 
 // GET /api/persons/cases — case index. PUBLIC (read-only): non-operators see only
@@ -512,9 +519,23 @@ persons.get('/search', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT id, full_name, age, sex, last_seen, status, photo_url, updated_ms
      FROM persons WHERE review='approved' AND full_name LIKE ?
-     ORDER BY updated_ms DESC LIMIT 100`
-  ).bind(like).all();
-  return c.json({ persons: results ?? [] });
+     ORDER BY updated_ms DESC LIMIT 60`
+  ).bind(like).all<any>();
+  // Federate the Familia registry so a search on /personas covers ALL cases.
+  let fam: any[] = [];
+  try {
+    const { results: fr } = await c.env.DESAP.prepare(
+      `SELECT id, nombre, edad, ubicacion, estado, foto, foto_r2, updated_at FROM personas WHERE nombre LIKE ? ORDER BY updated_at DESC LIMIT 60`
+    ).bind(like).all<any>();
+    fam = (fr || []).map((r: any) => ({
+      id: FAM + r.id, full_name: r.nombre, age: r.edad, sex: null,
+      last_seen: r.ubicacion, status: estadoToStatus(r.estado),
+      photo_url: r.foto_r2 ? `/api/familia/photo/${r.id}` : (r.foto || null),
+      updated_ms: r.updated_at, source: 'familia',
+    }));
+  } catch (e: any) { console.error('[search] familia', e?.message ?? e); }
+  const persons = [...(results ?? []), ...fam].slice(0, 100);
+  return c.json({ persons });
 });
 
 // GET /api/persons/queue — pending submissions (operator-gated in index.ts).
