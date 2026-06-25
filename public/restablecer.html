@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Restablecer contraseña — SISMO911</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>body{background:#13284f}.font-display{font-family:'Public Sans',sans-serif}</style>
+</head>
+<body class="font-sans text-on-surface min-h-screen grid place-items-center px-4">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-6">
+      <img src="/logo.svg" class="h-16 w-16 mx-auto mb-3" alt="SISMO911">
+      <div class="font-display font-extrabold text-2xl text-white">SISMO911</div>
+      <div class="text-xs tracking-widest text-white/60 uppercase">Restablecer contraseña</div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-xl p-6">
+      <form id="resetForm" class="space-y-3">
+        <p class="text-sm text-on-surface-variant">Crea una nueva contraseña para tu cuenta.</p>
+        <input name="password" type="password" required minlength="8" placeholder="Nueva contraseña (mín. 8)" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+        <input name="confirm" type="password" required minlength="8" placeholder="Confirmar contraseña" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+        <button class="w-full bg-primary hover:bg-primary-container text-white font-display font-bold py-2.5 rounded-lg">Guardar contraseña</button>
+      </form>
+      <div id="done" class="hidden text-center space-y-3">
+        <div class="text-4xl">✅</div>
+        <p class="font-display font-bold text-lg">Contraseña actualizada</p>
+        <p class="text-sm text-on-surface-variant">Ya puedes iniciar sesión con tu nueva contraseña. Tus sesiones anteriores se cerraron por seguridad.</p>
+        <a href="/login" class="block w-full bg-primary text-white font-display font-bold py-2.5 rounded-lg">Iniciar sesión</a>
+      </div>
+      <p id="msg" class="text-sm text-center mt-3"></p>
+    </div>
+    <a href="/login" class="block text-center text-white/70 hover:text-white text-sm mt-4">← Volver a iniciar sesión</a>
+  </div>
+
+<script>
+  const token=new URLSearchParams(location.search).get('token')||'';
+  const rf=document.getElementById('resetForm'), done=document.getElementById('done'), msg=document.getElementById('msg');
+  if(!token){ rf.classList.add('hidden'); msg.className='text-sm text-center mt-3 text-secondary'; msg.textContent='Enlace inválido o incompleto. Solicita uno nuevo desde «¿Olvidaste tu contraseña?».'; }
+  rf.onsubmit=async e=>{
+    e.preventDefault();
+    const f=Object.fromEntries(new FormData(rf));
+    if(f.password!==f.confirm){ msg.className='text-sm text-center mt-3 text-secondary'; msg.textContent='Las contraseñas no coinciden.'; return; }
+    msg.className='text-sm text-center mt-3 text-on-surface-variant'; msg.textContent='Guardando…';
+    const r=await fetch('/api/auth/reset-password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,password:f.password})});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok&&d.ok){ rf.classList.add('hidden'); done.classList.remove('hidden'); msg.textContent=''; }
+    else { msg.className='text-sm text-center mt-3 text-secondary'; msg.textContent={token_invalid_or_expired:'El enlace expiró o ya se usó. Solicita uno nuevo.',password_min_8:'La contraseña debe tener 8+ caracteres',token_required:'Enlace inválido'}[d.error]||'No se pudo restablecer. Intenta de nuevo.'; }
+  };
+</script>
+</body>
+</html>
