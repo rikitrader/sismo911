@@ -134,6 +134,14 @@ app.all('*', async (c) => {
   const assetRes = await c.env.ASSETS.fetch(c.req.raw);
   const res = new Response(assetRes.body, assetRes);
   setSecurityHeaders({ header: (k: string, v: string) => res.headers.set(k, v) } as any);
+  // Always revalidate HTML, the service worker, and the manifest so a deploy is
+  // visible immediately instead of being masked by browser/edge caching. Hashed
+  // assets (CSS/JS/images) keep their default long cache.
+  const ct = res.headers.get('content-type') || '';
+  const path = new URL(c.req.url).pathname;
+  if (ct.includes('text/html') || path === '/sw.js' || path.endsWith('.webmanifest')) {
+    res.headers.set('Cache-Control', 'no-cache, must-revalidate');
+  }
   return res;
 });
 
