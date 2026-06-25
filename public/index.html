@@ -37,6 +37,7 @@
 
   <!-- Tailwind -->
   <link rel="stylesheet" href="/app.css" />
+  <script src="/app-shell.js" defer></script>
   
 
   <style>
@@ -84,81 +85,7 @@
 <body class="font-sans text-on-surface antialiased">
 <div class="flex min-h-screen">
 
-  <!-- ============ SIDEBAR ============ -->
-  <aside class="hidden lg:flex w-64 flex-col bg-white border-r border-outline-variant/60 shrink-0">
-    <!-- Emblem / brand (clickable → home) -->
-    <a href="/" aria-label="Ir al inicio" class="flex items-center gap-3 px-5 h-[88px] border-b border-outline-variant/50 hover:bg-surface-container-low transition">
-      <!-- Institutional seal -->
-      <img src="/logo.svg" alt="Fuerza de Protección Civil — SISMO911" class="h-12 w-12 shrink-0" />
-      <div class="leading-tight">
-        <div class="font-display font-extrabold text-[30px] leading-none text-primary tracking-tight">SISMO911</div>
-      </div>
-    </a>
-
-    <!-- Nav — duotone navy chips -->
-    <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-      <a href="/" class="flex items-center gap-3 px-2.5 py-2 rounded-lg bg-primary/[0.06] text-primary font-semibold text-sm">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary text-white shadow-sm shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path d="M4 5.4h16a1.15 1.15 0 010 2.3H4a1.15 1.15 0 010-2.3Zm0 5.45h16a1.15 1.15 0 010 2.3H4a1.15 1.15 0 010-2.3Zm0 5.45h10a1.15 1.15 0 010 2.3H4a1.15 1.15 0 010-2.3Z"/></svg></span>
-        Feed en Tiempo Real
-      </a>
-      <a href="/mapa" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 21 8l-9 5-9-5 9-5Zm7.4 7.1L21 11l-9 5-9-5 1.6-.9L12 14l7.4-3.9Z"/></svg></span>
-        Mapa de Capas
-      </a>
-      <a href="/alertas" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 3a1.8 1.8 0 011.56.9l8.2 14.2A1.8 1.8 0 0120.2 21H3.8a1.8 1.8 0 01-1.56-2.9L10.44 3.9A1.8 1.8 0 0112 3Zm-1 6v5h2V9h-2Zm0 7v2h2v-2h-2Z"/></svg></span>
-        Alertas Multi-Agencia
-      </a>
-      <a href="/blog" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M6 2h12a1 1 0 011 1v18a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1Zm2 5.5h8V9H8V7.5Zm0 3.8h8v1.5H8v-1.5Zm0 3.8h5.5v1.5H8v-1.5Z"/></svg></span>
-        Blog
-      </a>
-      <a href="/pager" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.2l8 3.1v6.1c0 4.7-3.4 8.4-8 9.5-4.6-1.1-8-4.8-8-9.5V5.3l8-3.1Z"/></svg></span>
-        Alerta PAGER
-      </a>
-      <a href="/familia" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path d="M9 4.2a3 3 0 110 6 3 3 0 010-6Zm7 .8a2.6 2.6 0 110 5.2 2.6 2.6 0 010-5.2ZM9 11.5c-3.1 0-5.6 1.6-5.6 4.3V19h11.2v-3.2c0-2.7-2.5-4.3-5.6-4.3Zm6.4.3c1.9.6 3.2 2 3.2 3.9V19h3.2v-2.9c0-2.2-2.6-3.7-6.4-4.2Z"/></svg></span>
-        Familia / Check-in
-      </a>
-      <a href="/recursos" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2.4 3.5 6.6v9.2L12 20.6l8.5-4.8V6.6L12 2.4Zm0 2.2 5.3 2.6L12 9.8 6.7 7.2 12 4.6Z"/></svg></span>
-        Recursos y Suministros
-      </a>
-      <a href="/danos" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.5 3.4 9.6a1 1 0 00-.4.8V20a1 1 0 001 1h4.5v-6h3.9v6H20a1 1 0 001-1v-9.6a1 1 0 00-.4-.8L12 2.5Z"/></svg></span>
-        Evaluación de Daños (IA)
-      </a>
-      <a href="danos-estructurales.html" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 21V8l8-5 8 5v13M9 21v-5h6v5M8 11h2m4 0h2"/></svg></span>
-        Daños Estructurales
-      </a>
-      <a href="/comms" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 16.4a2 2 0 110 4 2 2 0 010-4Zm-3.3-3a4.7 4.7 0 016.6 0l-1.5 1.5a2.6 2.6 0 00-3.6 0l-1.5-1.5Zm-3-3a9 9 0 0112.6 0l-1.5 1.5a6.9 6.9 0 00-9.6 0L5.7 10.4Z"/></svg></span>
-        Radio / Comunicaciones
-      </a>
-      <a href="/contacto" class="hover:text-white/70">Contacto</a><a href="/guia" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path d="M6.6 2.5H18a1 1 0 011 1v16a1 1 0 01-1 1H6.8a2.8 2.8 0 01-2.8-2.8V5a2.5 2.5 0 012.6-2.5ZM6.8 17.6a1.2 1.2 0 000 2.4H17v-2.4H6.8Z"/></svg></span>
-        Guía de Emergencia
-      </a>
-      <a href="/admin#persons" class="nav-chip group flex items-center gap-3 px-2.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
-        <span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0"><svg class="h-[17px] w-[17px]" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2.2l8 3.1v6.1c0 4.7-3.4 8.4-8 9.5-4.6-1.1-8-4.8-8-9.5V5.3l8-3.1Zm3.7 6.4-4.6 4.6-2.3-2.3-1.4 1.4 3.7 3.7 6-6-1.4-1.4Z"/></svg></span>
-        Consola de Operaciones
-      </a>
-    </nav>
-
-    <!-- CTA + help -->
-    <div class="px-3 pb-4 space-y-3">
-      <a href="/sos" class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-secondary-container text-white font-display font-bold text-sm py-3 rounded-md shadow-sm transition">
-        <svg class="h-[18px] w-[18px]" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 3a1.8 1.8 0 011.56.9l8.2 14.2A1.8 1.8 0 0120.2 21H3.8a1.8 1.8 0 01-1.56-2.9L10.44 3.9A1.8 1.8 0 0112 3Zm-1 6v5h2V9h-2Zm0 7v2h2v-2h-2Z"/></svg>
-        Emergencia / SOS
-      </a>
-      <a href="/guia" class="flex items-center gap-2 px-3 py-2 text-on-surface-variant hover:text-primary text-sm transition">
-        <svg class="h-[18px] w-[18px]" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 3a9 9 0 100 18 9 9 0 000-18Zm-1 5h2v2h-2V8Zm0 4h2v5h-2v-5Z"/></svg>
-        Guía de Emergencia
-      </a>
-    </div>
-  </aside>
+  <!-- Sidebar injected by /app-shell.js (single source of truth) -->
 
   <!-- ============ MAIN ============ -->
   <div class="flex-1 flex flex-col min-w-0">
