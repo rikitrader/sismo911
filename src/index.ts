@@ -17,9 +17,20 @@ import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
+import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
 
 const app = new Hono<{ Bindings: Env }>();
-app.use('/api/*', cors());
+app.use('*', async (c, next) => {
+  setSecurityHeaders(c);
+  await next();
+});
+app.use('/api/*', cors({
+  origin: (origin, c) => (isAllowedOrigin(c.env, origin) ? (origin || allowedOrigins(c.env)[0]) : null),
+  allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['content-type', 'authorization', 'cf-access-jwt-assertion'],
+  credentials: false,
+  maxAge: 86400,
+}));
 
 // --- Role-based auth gate ---
 // Admin console + curation/management writes require an authenticated operator
@@ -31,20 +42,29 @@ app.use('*', async (c, next) => {
   const method = c.req.method;
   const isAdminPage = path.startsWith('/admin');
   const isAdminWrite = WRITE_METHODS.has(method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
+  const isUnsafe = WRITE_METHODS.has(method);
+  const isSameSite = isAllowedOrigin(c.env, c.req.header('origin') || c.req.header('referer')?.split('/').slice(0, 3).join('/'));
   // Report moderation (approve/reject/delete + review queue) is operator-only.
   // Citizen submission (POST /api/reports), reactions, comments and reads stay public.
   const isReportModeration =
     (path.startsWith('/api/reports') && (method === 'PATCH' || method === 'DELETE')) ||
     path === '/api/reports/queue';
   // Missing-persons moderation: review queue + approve/reject are operator-only.
-  // Public POST (report) and PATCH (status update) stay open.
+  // Public POST (report) stays open; status updates are operator-only.
   const isPersonModeration =
     path === '/api/persons/queue' ||
+    (path.startsWith('/api/persons/') && method === 'PATCH') ||
     path.endsWith('/approve') || path.endsWith('/reject');
-  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration) return next();
+  const isSosTriage =
+    path === '/api/sos' && method === 'GET' ||
+    (path.startsWith('/api/sos/') && method === 'PATCH');
+  const isDamageReview = path === '/api/damage' && method === 'GET' || path.startsWith('/api/damage/photo/');
+  const isManualRefresh = path === '/api/events/refresh';
+  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isSosTriage && !isDamageReview && !isManualRefresh) return next();
 
   const user = await getUserFromRequest(c.env, c).catch(() => null);
   const authorized = user && (user.role === 'operator' || user.role === 'admin');
+  if (authorized && isUnsafe && !isSameSite) return c.json({ error: 'bad_origin' }, 403);
   if (authorized) { c.header('X-User-Role', user!.role); return next(); }
 
   // Unauthenticated/unauthorized: redirect HTML to login, JSON gets 401.
@@ -99,7 +119,15 @@ app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
 
 // Anything not under /api and not a static asset → let ASSETS serve (404s handled by CF).
-app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
+app.all('*', async (c) => {
+  // Serve static assets, but re-apply the security headers — ASSETS.fetch returns
+  // a fresh Response that drops the headers set by the global middleware, so CSP,
+  // X-Frame-Options, etc. would otherwise be missing on the HTML pages.
+  const assetRes = await c.env.ASSETS.fetch(c.req.raw);
+  const res = new Response(assetRes.body, assetRes);
+  setSecurityHeaders({ header: (k: string, v: string) => res.headers.set(k, v) } as any);
+  return res;
+});
 
 export default {
   fetch: app.fetch,
