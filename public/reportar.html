@@ -30,6 +30,21 @@
   <h1 class="font-display font-extrabold text-3xl mb-1">Reportar un daño</h1>
   <p class="text-on-surface-variant text-sm mb-6">Tu reporte ayuda a salvar vidas. Pasa por revisión antes de publicarse. <b>Tu ubicación exacta nunca se comparte</b> — se redondea ~100 m.</p>
 
+  <!-- One-tap quick report (no login) — the bystander primitive -->
+  <div class="bg-white border border-outline-variant/60 rounded-xl p-4 mb-5">
+    <div class="font-display font-bold text-sm">Reporte rápido · un toque</div>
+    <p class="text-xs text-on-surface-variant mb-3">Toca, comparte tu ubicación, listo. Pasa por revisión.</p>
+    <div class="grid grid-cols-3 gap-2">
+      <button type="button" data-kind="trapped" class="qbtn rounded-lg py-3 px-2 text-sm font-bold text-white bg-critical">🆘 Atrapado</button>
+      <button type="button" data-kind="hazard" class="qbtn rounded-lg py-3 px-2 text-sm font-bold text-white bg-warning">⚠️ Peligro</button>
+      <button type="button" data-kind="safe" class="qbtn rounded-lg py-3 px-2 text-sm font-bold text-white bg-safe">✅ A salvo</button>
+    </div>
+    <p id="qmsg" class="text-sm mt-3"></p>
+    <div id="qshare" class="hidden mt-2"></div>
+  </div>
+
+  <details class="mb-3"><summary class="cursor-pointer text-sm font-semibold text-primary">Reporte detallado (con tipo, gravedad y descripción)</summary></details>
+
   <form id="f" class="space-y-4 bg-white border border-outline-variant/60 rounded-xl p-5">
     <div>
       <label>Tipo de reporte *</label>
@@ -60,6 +75,36 @@
 
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+// ---- One-tap quick report (no login) ----
+function getPos(){return new Promise(res=>{if(!navigator.geolocation)return res(null);navigator.geolocation.getCurrentPosition(p=>res(p.coords),()=>res(null),{enableHighAccuracy:true,timeout:8000});});}
+const QK={trapped:{cat:'trapped_people',sev:'rojo',desc:'Reporte rápido: persona(s) atrapada(s)',label:'persona atrapada'},hazard:{cat:'gas_leak',sev:'rojo',desc:'Reporte rápido: peligro (gas / estructura)',label:'peligro (gas/estructura)'}};
+function showShare(label,lat,lon){
+  const box=document.getElementById('qshare');if(!box)return;
+  const loc=(lat!=null&&lon!=null)?('https://maps.google.com/?q='+lat.toFixed(5)+','+lon.toFixed(5)):'';
+  const text='🆘 SISMO911: Reporté '+label+' en mi zona.'+(loc?(' Ubicación: '+loc):'')+' Sigue la emergencia: https://sismo911.com';
+  const wa='https://wa.me/?text='+encodeURIComponent(text);
+  box.innerHTML='<a href="'+wa+'" target="_blank" rel="noopener" class="inline-flex items-center gap-2 bg-[#25D366] text-white font-bold rounded-lg py-2 px-3 text-sm">📲 Compartir por WhatsApp</a>';
+  box.classList.remove('hidden');
+}
+document.querySelectorAll('.qbtn').forEach(b=>b.onclick=async()=>{
+  const kind=b.dataset.kind,qmsg=document.getElementById('qmsg');
+  document.querySelectorAll('.qbtn').forEach(x=>x.disabled=true);
+  qmsg.style.color='#44474f';qmsg.textContent='Obteniendo ubicación…';
+  document.getElementById('qshare').classList.add('hidden');
+  const pos=await getPos();const lat=pos?pos.latitude:null,lon=pos?pos.longitude:null;
+  try{
+    if(kind==='safe'){
+      const r=await fetch('/api/checkins',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'Ciudadano (reporte rápido)',status:'safe',lat,lon})});
+      qmsg.style.color=r.ok?'#2e7d32':'#bb0027';qmsg.textContent=r.ok?'✓ Registrado como a salvo. Gracias.':'No se pudo registrar.';
+    }else{
+      const q=QK[kind];const r=await fetch('/api/reports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({category:q.cat,severity:q.sev,description:q.desc,lat,lon})});
+      const d=await r.json().catch(()=>({}));
+      qmsg.style.color=r.ok?'#2e7d32':'#bb0027';qmsg.textContent=r.ok?('✓ '+(d.message||'Reporte enviado. Aparecerá tras revisión.')):(d.error||'Error al enviar.');
+      if(r.ok)showShare(q.label,lat,lon);
+    }
+  }catch{qmsg.style.color='#bb0027';qmsg.textContent='Sin conexión. Intenta de nuevo.';}
+  document.querySelectorAll('.qbtn').forEach(x=>x.disabled=false);
+});
 const CATS=[['collapsed_building','🏚️ Colapso'],['damaged_building','🧱 Daño estructural'],['trapped_people','🆘 Personas atrapadas'],['gas_leak','⛽ Fuga de gas'],['medical_need','➕ Necesidad médica'],['aid_point','🤝 Punto de ayuda'],['water_point','💧 Agua'],['shelter','⛺ Refugio'],['other','📌 Otro']];
 const SEVS=[['rojo','🔴 Crítico'],['naranja','🟠 Grave'],['amarillo','🟡 Leve']];
 const catBox=document.getElementById('cats'),sevBox=document.getElementById('sevs');
