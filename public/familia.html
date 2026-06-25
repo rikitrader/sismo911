@@ -165,6 +165,9 @@ async function loadGallery(reset){
 
 loadCheckins();
 if(location.hash==='#registro')show('registro'); else if(location.hash==='#galeria')show('galeria');
+
+// Deep-link from a blog report photo: ?reportar=1&lugar=…&ref=… → open a prefilled case
+(function(){const q=new URLSearchParams(location.search);if(!q.has('reportar')&&!q.has('caso'))return;show('registro');const m=document.getElementById('modal');if(m)m.classList.remove('hidden');const ls=document.querySelector('#registerForm [name=last_seen]');if(ls&&q.get('lugar'))ls.value=q.get('lugar');const nt=document.querySelector('#registerForm [name=notes]');if(nt&&q.get('ref'))nt.value='Posible aparición en reporte ciudadano del terremoto: '+q.get('ref');const fn=document.querySelector('#registerForm [name=full_name]');if(fn)setTimeout(()=>fn.focus(),120);})();
 </script>
 </body>
 </html>
