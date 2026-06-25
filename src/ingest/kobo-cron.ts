@@ -27,6 +27,13 @@ function categorize(evento: string, desc: string): { category: string; severity:
 
 const blur = (n: any) => (n == null || isNaN(Number(n)) ? null : Math.round(Number(n) * 1000) / 1000);
 
+// KoboToolbox choice values arrive slugified (e.g. "edificio_colapsado___daño").
+// Humanize: underscores → spaces, collapse runs, capitalize first letter.
+function humanize(s: string): string {
+  const t = String(s).replace(/_+/g, ' ').replace(/\s+/g, ' ').trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+}
+
 export async function ingestKobo(env: Env): Promise<number> {
   try {
     const res = await fetch(KOBO_URL, { headers: { accept: 'application/json' } });
@@ -42,7 +49,8 @@ export async function ingestKobo(env: Env): Promise<number> {
          lat, lon, source, source_url, created_ms, updated_ms)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
        ON CONFLICT(ext_id) DO UPDATE SET
-         description=excluded.description, severity=excluded.severity, updated_ms=excluded.updated_ms`
+         title=excluded.title, description=excluded.description, category=excluded.category,
+         severity=excluded.severity, updated_ms=excluded.updated_ms`
     );
     const batch = rows.map((r) => {
       const evento = r['Evento'] ?? r['evento'] ?? '';
@@ -52,8 +60,8 @@ export async function ingestKobo(env: Env): Promise<number> {
       const geo = Array.isArray(r['_geolocation']) ? r['_geolocation'] : [null, null];
       return stmt.bind(
         uid('kob'), `kobo_${r['_id']}`, category, severity, 'approved', 'community_confirmed',
-        String(evento).slice(0, 140) || 'Reporte ciudadano',
-        String(desc).slice(0, 2000) || null,
+        humanize(evento).slice(0, 140) || 'Reporte ciudadano',
+        humanize(desc).slice(0, 2000) || null,
         blur(geo[0]), blur(geo[1]), 'kobotoolbox', FORM_LINK, now, now
       );
     });
