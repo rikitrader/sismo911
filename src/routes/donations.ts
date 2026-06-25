@@ -27,7 +27,22 @@ function slugify(s: string): string {
 // Public shape of a campaign (recomputes progress fields are added by callers).
 const CAMPAIGN_COLS =
   `id, slug, title, summary, story, image_url, category, location, goal_usd, raised_usd,
-   donors_count, currency, beneficiary, organizer_name, status, featured, created_ms, updated_ms`;
+   donors_count, currency, beneficiary, organizer_name, status, featured, allocation, fund_use,
+   created_ms, updated_ms`;
+
+// Validate + normalize a money-flow allocation: array of {label, pct}, ≤8 items,
+// each pct 0–100. Returns a compact JSON string, or null if absent/invalid.
+export function normalizeAllocation(input: unknown): string | null {
+  if (!Array.isArray(input)) return null;
+  const out: { label: string; pct: number }[] = [];
+  for (const it of input.slice(0, 8)) {
+    const label = clip((it as any)?.label, 40);
+    const pct = Math.round(Number((it as any)?.pct));
+    if (!label || !Number.isFinite(pct) || pct < 0 || pct > 100) continue;
+    out.push({ label, pct });
+  }
+  return out.length ? JSON.stringify(out) : null;
+}
 
 // ---------------------------------------------------------------------------
 // Public reads
@@ -265,17 +280,20 @@ donations.post('/campaigns', async (c) => {
   const exists = await c.env.DB.prepare(`SELECT 1 FROM campaigns WHERE slug = ?`).bind(slug).first();
   if (exists) slug = `${slug}-${crypto.randomUUID().slice(0, 4)}`;
 
+  const allocation = normalizeAllocation(b?.allocation);
+  const fundUse = clip(b?.fund_use, 1200) || null;
+
   const id = uid('cmp');
   const now = Date.now();
   await c.env.DB.prepare(
     `INSERT INTO campaigns
        (id, slug, title, summary, story, image_url, category, location, goal_usd, raised_usd, donors_count,
-        currency, beneficiary, organizer_user_id, organizer_name, contact_email, status, featured, created_ms, updated_ms)
-     VALUES (?,?,?,?,?,?,?,?,?, 0, 0, 'USD', ?,?,?,?, 'active', 0, ?, ?)`
+        currency, beneficiary, organizer_user_id, organizer_name, contact_email, status, featured, allocation, fund_use, created_ms, updated_ms)
+     VALUES (?,?,?,?,?,?,?,?,?, 0, 0, 'USD', ?,?,?,?, 'active', 0, ?,?, ?, ?)`
   ).bind(
     id, slug, title, clip(b?.summary, 200) || null, clip(b?.story, 5000) || null,
     image || null, category, clip(b?.location, 80) || null, Math.round(goal * 100) / 100,
-    clip(b?.beneficiary, 120) || null, me.id, me.name, me.email, now, now
+    clip(b?.beneficiary, 120) || null, me.id, me.name, me.email, allocation, fundUse, now, now
   ).run();
   await audit(c, 'campaign.create', { id, slug });
   return c.json({ ok: true, id, slug }, 201);
@@ -306,6 +324,8 @@ donations.patch('/campaigns/:slug', async (c) => {
     setStr('image_url', img || null);
   }
   if (typeof b.location === 'string') setStr('location', clip(b.location, 80) || null);
+  if (typeof b.fund_use === 'string') setStr('fund_use', clip(b.fund_use, 1200) || null);
+  if ('allocation' in b) setStr('allocation', normalizeAllocation(b.allocation));
   if (b.category && CATEGORIES.includes(b.category)) setStr('category', b.category);
   if (b.goal_usd != null) {
     const g = Number(b.goal_usd);

@@ -3,7 +3,19 @@ import {
   isCrossmintConfigured, crossmintClientConfig, crossmintChain,
   orderToStatus, verifyWebhook, createDonationOrder,
 } from '../src/lib/crossmint';
-import { donations } from '../src/routes/donations';
+import { donations, normalizeAllocation } from '../src/routes/donations';
+
+describe('donations: money-flow allocation normalization', () => {
+  it('keeps valid items, clips to 8, drops bad pct/labels', () => {
+    const json = normalizeAllocation([{ label: 'Rescate', pct: 40 }, { label: 'Refugio', pct: 60 }]);
+    expect(JSON.parse(json!)).toEqual([{ label: 'Rescate', pct: 40 }, { label: 'Refugio', pct: 60 }]);
+    expect(normalizeAllocation([{ label: '', pct: 50 }, { label: 'X', pct: 200 }, { label: 'Y', pct: -1 }])).toBeNull();
+    expect(normalizeAllocation('nope')).toBeNull();
+    expect(normalizeAllocation([])).toBeNull();
+    const big = normalizeAllocation(Array.from({ length: 12 }, (_, i) => ({ label: 'c' + i, pct: 1 })));
+    expect(JSON.parse(big!).length).toBe(8);
+  });
+});
 
 // ---- a tiny in-memory D1 stub: routes by SQL substring ----
 function makeDB(opts: { campaign?: any; list?: any[] } = {}) {
