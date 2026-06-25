@@ -1,7 +1,9 @@
 import type { Env } from '../types';
 
+export type DedupeMode = 'exact' | 'loose' | 'photo';
+
 export interface DedupeReport {
-  mode: 'exact' | 'loose';
+  mode: DedupeMode;
   found: number;        // total duplicate (extra) rows detected
   applied: boolean;
   deletedRows: number;
@@ -11,8 +13,10 @@ export interface DedupeReport {
 
 // Partition that defines "the same record":
 //  exact → same name + age + location + description + contact (true re-scrapes; safe to auto-remove)
+//  photo → same photo URL (same image reused across records; safe to auto-remove)
 //  loose → same name + location only (may merge namesakes; operator-confirmed use only)
-function partitionFor(mode: 'exact' | 'loose'): string {
+function partitionFor(mode: DedupeMode): string {
+  if (mode === 'photo') return `lower(trim(foto))`;
   return mode === 'loose'
     ? `lower(trim(nombre)), lower(trim(coalesce(ubicacion,'')))`
     : `lower(trim(nombre)), coalesce(edad,-1), lower(trim(coalesce(ubicacion,''))), lower(trim(coalesce(descripcion,''))), lower(trim(coalesce(contacto,'')))`;
@@ -25,16 +29,19 @@ function partitionFor(mode: 'exact' | 'loose'): string {
 // subrequest limits; repeated runs (daily cron or the admin button) converge.
 export async function dedupePersonas(
   env: Env,
-  opts: { mode?: 'exact' | 'loose'; apply?: boolean; limit?: number } = {}
+  opts: { mode?: DedupeMode; apply?: boolean; limit?: number } = {}
 ): Promise<DedupeReport> {
-  const mode: 'exact' | 'loose' = opts.mode === 'loose' ? 'loose' : 'exact';
+  const mode: DedupeMode = opts.mode === 'loose' ? 'loose' : opts.mode === 'photo' ? 'photo' : 'exact';
   const apply = !!opts.apply;
   const limit = Math.min(Math.max(opts.limit ?? 300, 1), 400);
+  // photo mode must only group rows that actually have a photo, or it would
+  // collapse every photoless row into one bogus group.
+  const scope = mode === 'photo' ? `WHERE trim(coalesce(foto,'')) != ''` : ``;
   const sql = `SELECT id, foto_r2 FROM (
       SELECT id, foto_r2, ROW_NUMBER() OVER (
         PARTITION BY ${partitionFor(mode)}
         ORDER BY (CASE WHEN foto_r2 IS NOT NULL THEN 0 ELSE 1 END), updated_at DESC, id ASC
-      ) AS rn FROM personas
+      ) AS rn FROM personas ${scope}
     ) WHERE rn > 1`;
   const { results } = await env.DESAP.prepare(sql).all<{ id: string; foto_r2: string | null }>();
   const all = results ?? [];

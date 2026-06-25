@@ -44,10 +44,10 @@ auth.post('/register', async (c) => {
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(id, email, b.name, role, b.rank ?? null, b.unit ?? null, hash, salt, b.phone ?? null, now, now).run();
 
-  const { token } = await createSession(c.env, id, c.req.header('user-agent'));
+  const { token, expires } = await createSession(c.env, id, c.req.header('user-agent'));
   setSessionCookie(c, token);
   fireEmail(c, email, welcomeEmail(b.name));
-  return c.json({ ok: true, user: { id, email, name: b.name, role } }, 201);
+  return c.json({ ok: true, token, expires, user: { id, email, name: b.name, role } }, 201);
 });
 
 // POST /api/auth/forgot-password — always returns ok (no user enumeration).
@@ -110,9 +110,9 @@ auth.post('/login', async (c) => {
     return c.json({ error: 'invalid_credentials' }, 401);
   }
   await c.env.DB.prepare(`UPDATE users SET last_login_ms = ? WHERE id = ?`).bind(Date.now(), row.id).run();
-  const { token } = await createSession(c.env, row.id, c.req.header('user-agent'));
+  const { token, expires } = await createSession(c.env, row.id, c.req.header('user-agent'));
   setSessionCookie(c, token);
-  return c.json({ ok: true, user: { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit } });
+  return c.json({ ok: true, token, expires, user: { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit } });
 });
 
 function envTokenMatches(expected: string | undefined, got: unknown): boolean {
