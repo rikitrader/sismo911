@@ -10,3 +10,4 @@ dist/
 # never commit local credential files
 **/code-app.env
 **/*-tokens/
+missing_with_photos.json
