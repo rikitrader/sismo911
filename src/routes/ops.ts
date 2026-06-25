@@ -17,8 +17,9 @@ ops.get('/checkins', async (c) => {
   return c.json({ checkins: results ?? [] });
 });
 ops.post('/checkins', async (c) => {
-  const limited = await rateLimit(c.env, c, 'checkins_post', 20, 300);
-  if (limited) return limited;
+  // Life-safety ("I'm safe") — fail OPEN: count for abuse visibility but never
+  // reject. Dropping a real check-in is worse than accepting a few extra.
+  await rateLimit(c.env, c, 'checkins_post', 20, 300);
   const b = await c.req.json().catch(() => null);
   if (!b?.name) return c.json({ error: 'name_required' }, 400);
   if (b.status && !['safe', 'need_help', 'unknown'].includes(b.status)) return c.json({ error: 'bad_status' }, 400);
@@ -62,8 +63,9 @@ ops.get('/sos', async (c) => {
   return c.json({ sos: results ?? [] });
 });
 ops.post('/sos', async (c) => {
-  const limited = await rateLimit(c.env, c, 'sos_post', 10, 300);
-  if (limited) return limited;
+  // Life-safety (SOS) — fail OPEN: count for abuse visibility but never reject.
+  // A dropped emergency SOS is the worst possible failure mode here.
+  await rateLimit(c.env, c, 'sos_post', 10, 300);
   const b = await c.req.json().catch(() => null);
   const lat = Number(b?.lat);
   const lon = Number(b?.lon);
