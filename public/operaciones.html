@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Centro de Operaciones Logísticas — SISMO911</title>
-<meta name="description" content="Tablero de operaciones militares y logísticas SISMO911: estado de puertos, autopistas y aeropuertos de Venezuela tras el terremoto del 24-jun-2026, con rutas óptimas de despliegue e indicadores KPI.">
+<meta name="description" content="Tablero de operaciones logísticas SISMO911: estado de puertos, autopistas y aeropuertos de Venezuela tras el terremoto del 24-jun-2026, con rutas óptimas de despliegue e indicadores KPI.">
 <meta name="author" content="SISMO911 — Comando Sísmico Nacional">
 <meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="https://sismo911.com/operaciones">
@@ -13,314 +13,292 @@
 <meta property="og:description" content="Estado de la red de transporte de Venezuela y rutas óptimas de despliegue tras el terremoto del 24-jun-2026.">
 <meta property="og:url" content="https://sismo911.com/operaciones">
 <meta property="og:image" content="https://sismo911.com/og/og-default.png">
-<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#0a1730">
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="/app-shell.js" defer></script>
 <style>
-:root{
-  --navy:#0a1730; --navy2:#13284f; --panel:#0f1f3d; --panel2:#16294e;
-  --line:#23386b; --ink:#e8eefc; --mut:#8ea3c9; --mut2:#5d72a0;
-  --crimson:#c8102e; --amber:#e8a800; --green:#2ec27e; --cyan:#3bc7e0; --gold:#d4af37;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--navy);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:14px}
-.mono{font-family:'JetBrains Mono',monospace}
-.disp{font-family:'Public Sans',sans-serif}
-a{color:var(--cyan);text-decoration:none}
-/* Top command bar */
-.cmdbar{display:flex;align-items:center;gap:14px;height:56px;padding:0 16px;background:linear-gradient(90deg,#08122a,#13284f);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
-.cmdbar img{height:30px;width:30px}
-.cmdbar b{font-family:'Public Sans';font-weight:900;letter-spacing:.5px}
-.badge{font-family:'JetBrains Mono';font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.5px}
-.b-red{background:rgba(200,16,46,.16);color:#ff5c75;border:1px solid rgba(200,16,46,.5)}
-.b-amber{background:rgba(232,168,0,.14);color:#ffcc4d;border:1px solid rgba(232,168,0,.45)}
-.b-green{background:rgba(46,194,126,.14);color:#5fe0a3;border:1px solid rgba(46,194,126,.4)}
-.cmdbar nav{margin-left:auto;display:flex;gap:14px;font-size:13px;font-weight:600}
-.cmdbar nav a{color:#b9c8e8}.cmdbar nav a:hover{color:#fff}
-/* Layout */
-.wrap{display:grid;grid-template-columns:1fr 420px;gap:0;height:calc(100vh - 56px)}
-@media(max-width:1100px){.wrap{grid-template-columns:1fr;height:auto}}
-#map{width:100%;height:100%;min-height:540px;background:#0c1832}
-@media(max-width:1100px){#map{height:62vh}}
-.side{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:14px}
-.side::-webkit-scrollbar{width:8px}.side::-webkit-scrollbar-thumb{background:#23386b;border-radius:4px}
-.h{font-family:'Public Sans';font-weight:800;font-size:12px;letter-spacing:1.4px;color:var(--mut);text-transform:uppercase;margin:18px 0 8px;display:flex;align-items:center;gap:8px}
-.h::before{content:'';width:4px;height:14px;background:var(--crimson);border-radius:2px}
-.h:first-child{margin-top:2px}
-/* KPI tiles */
-.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
-.kpi .v{font-family:'Public Sans';font-weight:900;font-size:24px;line-height:1}
-.kpi .l{font-size:11px;color:var(--mut);margin-top:4px;letter-spacing:.3px}
-.kpi.alert{border-color:rgba(200,16,46,.5);background:rgba(200,16,46,.08)}
-/* Route cards */
-.route{background:var(--panel2);border:1px solid var(--line);border-left-width:4px;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:.15s}
-.route:hover{background:#1b3058;border-color:#34508c}
-.route .top{display:flex;align-items:center;gap:8px}
-.route .pri{font-family:'JetBrains Mono';font-weight:700;font-size:11px;padding:2px 7px;border-radius:4px}
-.route .nm{font-family:'Public Sans';font-weight:700;font-size:14px}
-.route .meta{font-size:12px;color:var(--mut);margin-top:5px;line-height:1.45}
-.route .rk{font-family:'JetBrains Mono';font-size:11px;font-weight:700;float:right}
-/* charts */
-.card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px}
-.card h4{margin:0 0 8px;font-family:'Public Sans';font-weight:700;font-size:13px;color:#cdddff}
-/* legend on map */
-.legend{position:absolute;left:12px;bottom:12px;background:rgba(10,23,48,.92);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12px;z-index:5;backdrop-filter:blur(4px)}
-.legend .row{display:flex;align-items:center;gap:8px;margin:3px 0;color:#cfdcf6}
-.dot{width:11px;height:11px;border-radius:50%;display:inline-block;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
-.keynote{position:absolute;right:12px;top:12px;max-width:300px;background:rgba(200,16,46,.92);color:#fff;border-radius:8px;padding:10px 12px;font-size:12.5px;z-index:6;line-height:1.45;box-shadow:0 6px 24px rgba(0,0,0,.4)}
-.keynote b{font-family:'Public Sans'}
-.banner{background:#3a1010;border:1px solid #6e2230;color:#ffd0d6;padding:8px 12px;font-size:12.5px;border-radius:8px;margin-bottom:10px;display:none}
-.foot{font-size:11px;color:var(--mut2);margin-top:14px;line-height:1.5;border-top:1px solid var(--line);padding-top:10px}
-.tabrow{display:flex;gap:6px;margin-bottom:8px}
-.tab{font-size:12px;font-weight:600;padding:5px 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);color:var(--mut);cursor:pointer}
-.tab.on{background:var(--crimson);border-color:var(--crimson);color:#fff}
+  .label-caps{letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+  #map{width:100%;height:480px;background:#eeeef0;border-radius:.5rem}
+  @media(max-width:640px){#map{height:60vh}}
+  .gm-legend{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.95);border:1px solid #c4c6d0;border-radius:.5rem;padding:9px 12px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .gm-legend .r{display:flex;align-items:center;gap:8px;margin:3px 0;color:#44474f;font-weight:500}
+  .gm-dot{width:11px;height:11px;border-radius:50%;display:inline-block;box-shadow:0 0 0 2px #fff}
+  .gm-note{position:absolute;right:12px;top:12px;max-width:280px;background:#bb0027;color:#fff;border-radius:.5rem;padding:10px 12px;font-size:12.5px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:9999px}
+  table.dt{width:100%;border-collapse:collapse;font-size:13px}
+  table.dt th{text-align:left;font-weight:700;color:#44474f;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid #c4c6d0}
+  table.dt td{padding:9px 10px;border-bottom:1px solid #eeeef0;vertical-align:top;color:#1a1c1e}
+  table.dt tr:last-child td{border-bottom:none}
+  .route-card{cursor:pointer;transition:.15s}
+  .route-card:hover{background:#f3f3f6}
 </style>
 </head>
-<body>
-<header class="cmdbar">
-  <img src="/logo.svg" alt="SISMO911"><b>SISMO911</b>
-  <span class="disp" style="font-weight:700;color:#b9c8e8;font-size:13px">· CENTRO DE OPERACIONES LOGÍSTICAS</span>
-  <span class="badge b-red mono">● DEFCON · SISMO M7.5</span>
-  <nav>
-    <a href="/">Panel</a><a href="/mapa">Mapa</a><a href="/acopio">Acopio</a><a href="/red-ayuda">Red</a><a href="/recursos">Recursos</a>
-  </nav>
-</header>
+<body class="font-sans text-on-surface antialiased bg-surface">
+<div class="flex min-h-screen">
 
-<div class="wrap">
-  <div style="position:relative">
-    <div id="map"></div>
-    <div class="keynote">
-      <b>⚠ MAIQUETÍA (CCS) CERRADO</b><br>
-      Terremotos M7.2 + M7.5 (24-jun-2026, 188+ víctimas) dañaron el terminal del principal aeropuerto internacional. Cierre vigente pendiente de inspección estructural. El puente aéreo se redirige a La Chinita (MAR) y Valencia (VLN).
-    </div>
-    <div class="legend">
-      <div style="font-family:'Public Sans';font-weight:800;font-size:11px;letter-spacing:1px;color:#9fb3d9;margin-bottom:5px">LEYENDA</div>
-      <div class="row"><span class="dot" style="background:#2ec27e"></span> Operativo</div>
-      <div class="row"><span class="dot" style="background:#e8a800"></span> Degradado / riesgo</div>
-      <div class="row"><span class="dot" style="background:#c8102e"></span> Cerrado / colapso</div>
-      <div class="row"><span style="width:18px;height:3px;background:#3bc7e0;display:inline-block"></span> Ruta logística óptima</div>
-      <div class="row"><span style="width:18px;height:3px;background:#e8a800;display:inline-block;border-top:2px dashed #e8a800"></span> Corredor de alto riesgo</div>
-    </div>
+  <!-- Sidebar injected by /app-shell.js (single source of truth — left-side menu) -->
+
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- Top bar (kept; app-shell only hides body>header) -->
+    <header class="flex items-center justify-between h-[72px] px-4 sm:px-8 bg-white border-b border-outline-variant/60">
+      <div class="leading-tight">
+        <div class="label-caps text-on-surface-variant text-[10px]">Comando Logístico Nacional</div>
+        <div class="flex items-center gap-2 font-display font-bold text-[19px] text-on-surface">
+          <span class="h-2.5 w-2.5 rounded-full bg-critical animate-pulse"></span>
+          Centro de Operaciones Logísticas
+        </div>
+      </div>
+      <span class="pill bg-critical text-white">● SISMO M7.5 · DEFCON</span>
+    </header>
+
+    <!-- Scroll area -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+      <!-- API banner -->
+      <div id="apiBanner" class="hidden rounded-lg border-l-4 border-l-warning bg-white border border-outline-variant/60 p-4 text-sm text-on-surface-variant"></div>
+
+      <!-- Critical alert: Maiquetía closed -->
+      <section class="rounded-lg border border-outline-variant/60 border-l-4 border-l-secondary bg-white p-5 flex items-start gap-4">
+        <span class="h-11 w-11 grid place-items-center rounded-full bg-secondary/10 text-secondary shrink-0 text-xl">✈</span>
+        <div>
+          <h2 class="font-display font-bold text-on-surface text-[15px]">Maiquetía (CCS) cerrado · puente aéreo redirigido</h2>
+          <p class="text-on-surface-variant text-[13.5px] mt-1 leading-relaxed">Los terremotos M7.2 + M7.5 (24-jun-2026, 188+ víctimas) dañaron el terminal del principal aeropuerto internacional. Cierre vigente pendiente de inspección estructural. La carga aérea se redirige a <b>La Chinita (MAR)</b> y <b>Valencia (VLN)</b>; la marítima prioriza <b>Puerto Cabello</b>.</p>
+        </div>
+      </section>
+
+      <!-- KPI tiles -->
+      <section>
+        <div class="label-caps text-on-surface-variant text-[10px] mb-3">Indicadores de mando (KPI)</div>
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+          <div class="bg-white rounded-lg border border-outline-variant/60 p-4">
+            <div class="font-display font-extrabold text-[26px] text-safe leading-none">6</div>
+            <div class="text-[11px] text-on-surface-variant mt-1.5">Puertos públicos (Bolipuertos)</div></div>
+          <div class="bg-white rounded-lg border border-outline-variant/60 border-l-4 border-l-secondary p-4">
+            <div class="font-display font-extrabold text-[26px] text-secondary leading-none">1<span class="text-base text-on-surface-variant">/6</span></div>
+            <div class="text-[11px] text-on-surface-variant mt-1.5">Aeropuertos intl. cerrados</div></div>
+          <div class="bg-white rounded-lg border border-outline-variant/60 p-4">
+            <div class="font-display font-extrabold text-[26px] text-warning leading-none">2.60<span class="text-base text-on-surface-variant">/7</span></div>
+            <div class="text-[11px] text-on-surface-variant mt-1.5">Calidad vial (WEF 2019)</div></div>
+          <div class="bg-white rounded-lg border border-outline-variant/60 border-l-4 border-l-secondary p-4">
+            <div class="font-display font-extrabold text-[26px] text-secondary leading-none">3</div>
+            <div class="text-[11px] text-on-surface-variant mt-1.5">Autopistas de alto riesgo</div></div>
+          <div class="bg-white rounded-lg border border-outline-variant/60 p-4">
+            <div class="font-display font-extrabold text-[26px] text-primary leading-none">9.4<span class="text-base text-on-surface-variant">M t</span></div>
+            <div class="text-[11px] text-on-surface-variant mt-1.5">Cap. Puerto Cabello /año</div></div>
+          <div class="bg-white rounded-lg border border-outline-variant/60 border-l-4 border-l-secondary p-4">
+            <div class="font-display font-extrabold text-[26px] text-secondary leading-none">4</div>
+            <div class="text-[11px] text-on-surface-variant mt-1.5">Puentes colapsados (2024)</div></div>
+        </div>
+      </section>
+
+      <!-- MAP -->
+      <section class="bg-white rounded-lg border border-outline-variant/60 p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-display font-bold text-on-surface text-[15px]">Mapa operacional — red de transporte</h3>
+          <span class="text-[11px] text-on-surface-variant">6 puertos · 6 aeropuertos · 5 corredores · epicentro M7.5</span>
+        </div>
+        <div class="relative">
+          <div id="map"></div>
+          <div class="gm-note"><b>⚠ MAIQUETÍA (CCS) CERRADO</b><br>Puente aéreo → La Chinita (MAR) + Valencia (VLN).</div>
+          <div class="gm-legend">
+            <div class="label-caps text-on-surface-variant text-[10px] mb-1.5">Leyenda</div>
+            <div class="r"><span class="gm-dot" style="background:#2e7d32"></span> Operativo</div>
+            <div class="r"><span class="gm-dot" style="background:#e57200"></span> Degradado / riesgo</div>
+            <div class="r"><span class="gm-dot" style="background:#c8102e"></span> Cerrado / colapso</div>
+            <div class="r"><span style="width:18px;height:3px;background:#00173a;display:inline-block"></span> Ruta óptima seleccionada</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BEST ROUTES (under the map) -->
+      <section>
+        <div class="label-caps text-on-surface-variant text-[10px] mb-3">Rutas óptimas de despliegue · post-sismo</div>
+        <div id="routes" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+      </section>
+
+      <!-- CHARTS -->
+      <section class="grid lg:grid-cols-2 gap-4">
+        <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+          <h4 class="font-display font-bold text-on-surface text-[14px] mb-3">Capacidad portuaria (M t/año)</h4>
+          <canvas id="chPorts" height="150"></canvas>
+        </div>
+        <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+          <h4 class="font-display font-bold text-on-surface text-[14px] mb-3">Prioridad de ruta vs. riesgo del corredor</h4>
+          <canvas id="chRoute" height="150"></canvas>
+        </div>
+      </section>
+
+      <!-- SEAPORTS TABLE -->
+      <section class="bg-white rounded-lg border border-outline-variant/60 p-5 overflow-x-auto">
+        <h3 class="font-display font-bold text-on-surface text-[15px] mb-3">Puertos marítimos</h3>
+        <table class="dt"><thead><tr>
+          <th>Puerto</th><th>Estado</th><th>Operador</th><th>Buques/año</th><th>Tonelaje</th><th>TEU/año</th><th>Muelles</th><th>Calado</th></tr></thead>
+          <tbody id="portRows"></tbody></table>
+        <p class="text-[11px] text-on-surface-variant mt-3">Cifras = línea base de capacidad (Marine Insight/Bolipuertos), no rendimiento auditado 2024-26.</p>
+      </section>
+
+      <!-- AIRPORTS TABLE -->
+      <section class="bg-white rounded-lg border border-outline-variant/60 p-5 overflow-x-auto">
+        <h3 class="font-display font-bold text-on-surface text-[15px] mb-3">Aeropuertos internacionales</h3>
+        <table class="dt"><thead><tr>
+          <th>Aeropuerto</th><th>Estado</th><th>ICAO/IATA</th><th>Ciudad</th><th>Pistas</th><th>Rol</th></tr></thead>
+          <tbody id="airRows"></tbody></table>
+      </section>
+
+      <!-- AUTOPISTAS -->
+      <section class="bg-white rounded-lg border border-outline-variant/60 p-5 overflow-x-auto">
+        <h3 class="font-display font-bold text-on-surface text-[15px] mb-3">Autopistas y corredores</h3>
+        <table class="dt"><thead><tr><th>Corredor</th><th>Riesgo</th><th>Nota operativa</th></tr></thead>
+          <tbody id="roadRows"></tbody></table>
+      </section>
+
+      <p class="text-[11px] text-on-surface-variant leading-relaxed border-t border-outline-variant/60 pt-4">
+        <b class="text-on-surface">Fuente:</b> Deep-research SISMO911 (25-jun-2026) · 23 fuentes, 25 hechos verificados (voto adversarial 3-votos). Sismo y cierre de Maiquetía confirmados (CNN/NPR/Al Jazeera). Conjunto de datos completo y niveles de confianza en la hoja de cálculo adjunta.
+      </p>
+
+    </main>
   </div>
-
-  <aside class="side">
-    <div id="apiBanner" class="banner"></div>
-
-    <div class="h">Indicadores de Mando (KPI)</div>
-    <div class="kpis">
-      <div class="kpi"><div class="v" style="color:#5fe0a3" id="kPorts">6</div><div class="l">Puertos públicos (Bolipuertos)</div></div>
-      <div class="kpi alert"><div class="v" style="color:#ff5c75" id="kAirClosed">1 / 6</div><div class="l">Aeropuertos intl. CERRADOS</div></div>
-      <div class="kpi"><div class="v" style="color:#ffcc4d">2.60<span style="font-size:13px;color:var(--mut)">/7</span></div><div class="l">Índice calidad vial (WEF 2019)</div></div>
-      <div class="kpi alert"><div class="v" style="color:#ff5c75">3</div><div class="l">Autopistas de alto riesgo</div></div>
-      <div class="kpi"><div class="v" style="color:#9ed0ff">9.4<span style="font-size:13px;color:var(--mut)">M t</span></div><div class="l">Capacidad Puerto Cabello /año</div></div>
-      <div class="kpi alert"><div class="v" style="color:#ff5c75">4</div><div class="l">Puentes troncales colapsados (2024)</div></div>
-    </div>
-
-    <div class="h">Rutas óptimas de despliegue</div>
-    <div id="routes"></div>
-
-    <div class="h">Analítica operativa</div>
-    <div class="tabrow">
-      <div class="tab on" data-ch="ports">Puertos</div>
-      <div class="tab" data-ch="risk">Riesgo vial</div>
-      <div class="tab" data-ch="air">Aéreo</div>
-    </div>
-    <div class="card"><canvas id="chPorts" height="150"></canvas></div>
-    <div class="card"><h4>Prioridad de ruta vs. riesgo del corredor</h4><canvas id="chRoute" height="170"></canvas></div>
-
-    <div class="foot">
-      <b style="color:#9fb3d9">Fuente:</b> Deep-research SISMO911 (25-jun-2026) · 23 fuentes, 25 hechos verificados (voto adversarial 3-votos). Cifras portuarias = línea base de capacidad (Marine Insight/Bolipuertos), no rendimiento auditado 2024-26. Sismo y cierre de Maiquetía confirmados (CNN/NPR/Al Jazeera). Datos completos en la hoja de cálculo adjunta.
-    </div>
-  </aside>
 </div>
 
 <script>
 /* ============================================================
    GOOGLE MAPS API KEY — pega tu clave aquí.
-   Obtén una en https://console.cloud.google.com (Maps JavaScript API).
-   Sin clave, el tablero KPI/rutas funciona; el mapa muestra un aviso.
+   https://console.cloud.google.com → Maps JavaScript API.
+   Sin clave: KPIs, rutas, tablas y gráficas funcionan; el mapa muestra aviso.
    ============================================================ */
 const GMAPS_KEY = "REPLACE_WITH_GOOGLE_MAPS_API_KEY";
 
 /* ---------- DATOS VERIFICADOS (research 2026-06-25) ---------- */
-const QUAKE = {lat:10.55,lng:-67.05,label:"Epicentro M7.5 / M7.2 · 24-jun-2026"};
+const STC={op:"#2e7d32",deg:"#e57200",clo:"#c8102e",city:"#00173a"};
+const STLAB={op:["Operativo","bg-safe/10 text-safe"],deg:["Degradado","bg-warning/15 text-warning"],clo:["Cerrado","bg-secondary/10 text-secondary"],city:["Zona ops","bg-primary/10 text-primary"]};
+const QUAKE={lat:10.55,lng:-67.05};
 
-const NODES = [
-  // PUERTOS
-  {t:"port",  n:"Puerto Cabello",          lat:10.473,lng:-68.012,st:"op",  info:"PUERTO · El mayor del país. ~2.400 buques / 9,4M t / año · 11 muelles (1.780 m) · calado ~10 m. Operador: Bolipuertos.",cap:9.4},
-  {t:"port",  n:"Puerto de La Guaira",      lat:10.602,lng:-66.931,st:"deg", info:"PUERTO · Principal terminal de contenedores; sirve a Caracas vía autopista de 17 km. Cifras específicas no verificadas. Operador: Bolipuertos.",cap:4.0},
-  {t:"port",  n:"Puerto de Maracaibo",      lat:10.654,lng:-71.612,st:"deg", info:"PUERTO · ~800 buques / 1,33M t / 8.000 TEU · 12 muelles (sólo 8 a capacidad óptima). Operador: Bolipuertos.",cap:1.33},
-  {t:"port",  n:"Puerto de Guanta",         lat:10.236,lng:-64.593,st:"op",  info:"PUERTO · ~3M t / 9.940 TEU / 650 buques · 6 muelles (958 m) · calado 10,5 m. Teatro oriental. Operador: Bolipuertos.",cap:3.0},
-  {t:"port",  n:"El Guamache",              lat:10.852,lng:-64.073,st:"deg", info:"PUERTO · Isla de Margarita. En el registro de Bolipuertos; especificaciones no resueltas.",cap:0.8},
-  {t:"port",  n:"Puerto Ordaz / Palúa",     lat:8.296, lng:-62.720,st:"op",  info:"PUERTO FLUVIAL (Orinoco) · Exportación de hierro/mineral vía Ferrominera (CVG) — fuera de Bolipuertos. Teatro sur.",cap:2.0},
-  // AEROPUERTOS
-  {t:"air",   n:"Maiquetía (CCS) · Simón Bolívar",lat:10.601,lng:-66.991,st:"clo",info:"AEROPUERTO INTL · Principal puerta aérea. Pista 3.610 m, fuselaje ancho. CERRADO tras los sismos del 24-jun-2026 (daño en terminal). ICAO SVMI.",cap:8.2},
-  {t:"air",   n:"La Chinita (MAR) · Maracaibo",   lat:10.558,lng:-71.728,st:"op", info:"AEROPUERTO INTL · #2 del país. Pistas 3.000×45 m y 2.500×30 m, fuselaje ancho. PUENTE AÉREO PRIMARIO. ICAO SVMC.",cap:3.0},
-  {t:"air",   n:"Arturo Michelena (VLN) · Valencia",lat:10.150,lng:-67.928,st:"op",info:"AEROPUERTO INTL · El intl. operativo más cercano a Caracas (~2 h vía ARC). Cinturón industrial central. ICAO SVVA.",cap:1.5},
-  {t:"air",   n:"Santiago Mariño (PMV) · Porlamar",lat:10.913,lng:-63.967,st:"op",info:"AEROPUERTO INTL · Puerta a Margarita; apoyo al teatro oriental. ICAO SVMG.",cap:1.2},
-  {t:"air",   n:"Jacinto Lara (BRM) · Barquisimeto",lat:10.043,lng:-69.359,st:"op",info:"AEROPUERTO INTL (designado) · Opera rutas mayormente domésticas. Nodo centro-occidental. ICAO SVBM.",cap:0.9},
-  {t:"air",   n:"Manuel C. Piar (PZO) · Puerto Ordaz",lat:8.288,lng:-62.760,st:"op",info:"AEROPUERTO INTL · Hub industrial del Orinoco (acero/hierro/aluminio). Teatro sur. ICAO SVPR.",cap:1.0},
-  // CIUDAD DE REFERENCIA
-  {t:"city",  n:"Caracas (capital)",        lat:10.491,lng:-66.879,st:"deg", info:"ZONA DE OPERACIONES PRINCIPAL · Capital cerca del epicentro. Depende de la frágil red Caracas–La Guaira y de la ARC.",cap:0}
+const NODES=[
+  {t:"port",n:"Puerto Cabello",lat:10.473,lng:-68.012,st:"op",op:"Bolipuertos",ves:"~2.400",ton:"9,4M t",teu:"—",ber:"11 / 1.780 m",dr:"~10 m",cap:9.4,role:"El mayor del país · ~120 km O de Caracas"},
+  {t:"port",n:"Puerto de La Guaira",lat:10.602,lng:-66.931,st:"deg",op:"Bolipuertos",ves:"s/d*",ton:"s/d",teu:"contenedores",ber:"s/d*",dr:"s/d*",cap:4.0,role:"Principal terminal de contenedores; sirve a Caracas"},
+  {t:"port",n:"Puerto de Maracaibo",lat:10.654,lng:-71.612,st:"deg",op:"Bolipuertos",ves:"~800",ton:"1,33M t",teu:"8.000",ber:"12 (8 óptimos)",dr:"s/d",cap:1.33,role:"Oil/granel; sólo 8 de 12 muelles a capacidad óptima"},
+  {t:"port",n:"Puerto de Guanta",lat:10.236,lng:-64.593,st:"op",op:"Bolipuertos",ves:"650",ton:"3,0M t",teu:"9.940",ber:"6 / 958 m",dr:"10,5 m",cap:3.0,role:"Teatro oriental (Anzoátegui)"},
+  {t:"port",n:"El Guamache",lat:10.852,lng:-64.073,st:"deg",op:"Bolipuertos",ves:"s/d",ton:"s/d",teu:"s/d",ber:"s/d",dr:"s/d",cap:0.8,role:"Isla de Margarita; specs no resueltas"},
+  {t:"port",n:"Puerto Ordaz / Palúa",lat:8.296,lng:-62.720,st:"op",op:"Ferrominera (CVG)",ves:"s/d",ton:"hierro",teu:"—",ber:"fluvial",dr:"Orinoco",cap:2.0,role:"Exportación de mineral; fuera de Bolipuertos · teatro sur"}
+];
+const AIRS=[
+  {n:"Simón Bolívar · Maiquetía",lat:10.601,lng:-66.991,st:"clo",ic:"SVMI / CCS",city:"La Guaira (Caracas)",rw:"3.610 m (fuselaje ancho)",role:"Puerta aérea principal · CERRADA por sismo",cap:8.2},
+  {n:"La Chinita",lat:10.558,lng:-71.728,st:"op",ic:"SVMC / MAR",city:"Maracaibo",rw:"3.000×45 m · 2.500×30 m",role:"#2 del país · PUENTE AÉREO PRIMARIO",cap:3.0},
+  {n:"Arturo Michelena",lat:10.150,lng:-67.928,st:"op",ic:"SVVA / VLN",city:"Valencia",rw:"intl.",role:"Intl. operativo más cercano a Caracas (~2 h)",cap:1.5},
+  {n:"Santiago Mariño",lat:10.913,lng:-63.967,st:"op",ic:"SVMG / PMV",city:"Porlamar (Margarita)",rw:"intl.",role:"Apoyo teatro oriental",cap:1.2},
+  {n:"Jacinto Lara",lat:10.043,lng:-69.359,st:"op",ic:"SVBM / BRM",city:"Barquisimeto",rw:"intl. (desig.)",role:"Mayormente doméstico · nodo centro-occidental",cap:0.9},
+  {n:"Manuel C. Piar",lat:8.288,lng:-62.760,st:"op",ic:"SVPR / PZO",city:"Puerto Ordaz",rw:"intl.",role:"Hub industrial del Orinoco · teatro sur",cap:1.0}
+];
+const ROADS=[
+  {n:"Caracas–La Guaira (17 km)",risk:"deg",path:[[10.491,-66.879],[10.602,-66.931]],note:"Corredor estratégico · ~50% de importaciones · histórico colapso del Viaducto 1 (2006)"},
+  {n:"Autopista Regional del Centro (ARC)",risk:"deg",path:[[10.491,-66.879],[10.249,-67.596],[10.168,-67.997]],note:"Alto riesgo (Sotravial) · eje Caracas–Maracay–Valencia"},
+  {n:"Autopista Gran Mariscal de Ayacucho",risk:"deg",path:[[10.491,-66.879],[10.20,-65.40],[10.236,-64.593]],note:"Alto riesgo · sector Araguaney (accidente dic-2024, ~30 víctimas)"},
+  {n:"Autopista Lara–Zulia",risk:"deg",path:[[10.043,-69.359],[10.30,-70.50],[10.654,-71.612]],note:"Alto riesgo · deslaves y subsidencia El Venado–Carora"},
+  {n:"Cabello → Caracas (ARC ramal)",risk:"deg",path:[[10.473,-68.012],[10.249,-67.596],[10.491,-66.879]],note:"Enlace puerto principal → capital"}
+];
+const ROUTES=[
+  {pri:"P1",risk:18,nm:"MAR Aéreo → Cabello Marítimo",meta:"Puente aéreo pesado por La Chinita (MAR, fuselaje ancho) + carga marítima por Puerto Cabello. Evita Caracas–La Guaira.",focus:[[10.558,-71.728],[10.473,-68.012]]},
+  {pri:"P2",risk:42,nm:"VLN Aéreo → ARC → Caracas",meta:"Aeropuerto intl. más cercano a la capital (Valencia, ~2 h). Mejor opción aérea para Caracas con Maiquetía cerrado. ARC degradado: convoy con escolta.",focus:[[10.150,-67.928],[10.491,-66.879]]},
+  {pri:"P3",risk:55,nm:"La Guaira Marítimo → Caracas",meta:"Ruta marítima más directa a la capital (17 km). Depende del frágil corredor Caracas–La Guaira. Sólo carga prioritaria.",focus:[[10.602,-66.931],[10.491,-66.879]]},
+  {pri:"P4",risk:35,nm:"Teatro Oriental: Guanta + PMV",meta:"Guanta (puerto, 6 muelles) + Santiago Mariño (PMV) abastecen el oriente sin saturar el eje central.",focus:[[10.236,-64.593],[10.913,-63.967]]},
+  {pri:"P5",risk:25,nm:"Teatro Sur: Orinoco (PZO + Palúa)",meta:"Puerto Ordaz (aéreo PZO + fluvial) sostiene Guayana/Bolívar. Lejos del epicentro = contingencia estable.",focus:[[8.288,-62.760],[8.296,-62.720]]}
 ];
 
-/* Corredores (autopistas) — riesgo: op=verde, deg=ámbar/riesgo, clo=rojo */
-const ROADS = [
-  {n:"Caracas–La Guaira (17 km)", risk:"deg", path:[[10.491,-66.879],[10.602,-66.931]], note:"Corredor estratégico · ~50% de importaciones · histórico colapso del Viaducto 1 (2006)"},
-  {n:"Autopista Regional del Centro (ARC)", risk:"deg", path:[[10.491,-66.879],[10.249,-67.596],[10.168,-67.997]], note:"Alto riesgo (Sotravial) · eje Caracas–Maracay–Valencia"},
-  {n:"Autopista Gran Mariscal de Ayacucho", risk:"deg", path:[[10.491,-66.879],[10.20,-65.40],[10.236,-64.593]], note:"Alto riesgo · sector Araguaney (accidente dic-2024, ~30 víctimas)"},
-  {n:"Autopista Lara–Zulia", risk:"deg", path:[[10.043,-69.359],[10.30,-70.50],[10.654,-71.612]], note:"Alto riesgo · deslaves y subsidencia El Venado–Carora"},
-  {n:"Cabello → Caracas (ARC ramal)", risk:"deg", path:[[10.473,-68.012],[10.249,-67.596],[10.491,-66.879]], note:"Enlace puerto principal → capital"}
-];
-
-/* Rutas óptimas de despliegue (motor de decisión, post-sismo) */
-const ROUTES = [
-  {pri:"P1", c:"#2ec27e", nm:"MAR Aéreo → Cabello Marítimo", risk:18,
-   meta:"Puente aéreo pesado por La Chinita (MAR, fuselaje ancho, OPERATIVO) + carga marítima por Puerto Cabello (mayor puerto). Evita Caracas–La Guaira.",
-   focus:[[10.558,-71.728],[10.473,-68.012]]},
-  {pri:"P2", c:"#2ec27e", nm:"VLN Aéreo → ARC → Caracas", risk:42,
-   meta:"Aeropuerto intl. más cercano a la capital (Valencia, ~2 h). Mejor opción aérea para Caracas con Maiquetía cerrado. Corredor ARC degradado: convoy con escolta.",
-   focus:[[10.150,-67.928],[10.491,-66.879]]},
-  {pri:"P3", c:"#e8a800", nm:"La Guaira Marítimo → Caracas", risk:55,
-   meta:"Ruta marítima más directa a la capital (17 km). Depende del frágil corredor Caracas–La Guaira (colapso histórico del Viaducto 1). Sólo carga prioritaria.",
-   focus:[[10.602,-66.931],[10.491,-66.879]]},
-  {pri:"P4", c:"#3bc7e0", nm:"Teatro Oriental: Guanta + PMV", risk:35,
-   meta:"Guanta (puerto, 6 muelles) + Santiago Mariño (PMV) abastecen el oriente (Anzoátegui, Sucre, Nueva Esparta) sin saturar el eje central.",
-   focus:[[10.236,-64.593],[10.913,-63.967]]},
-  {pri:"P5", c:"#3bc7e0", nm:"Teatro Sur: Orinoco (PZO + Palúa)", risk:25,
-   meta:"Puerto Ordaz (aéreo PZO + fluvial) sostiene Guayana/Bolívar y reabastecimiento por el Orinoco. Lejos del epicentro = ruta de contingencia estable.",
-   focus:[[8.288,-62.760],[8.296,-62.720]]}
-];
-
-const COL = {op:"#2ec27e", deg:"#e8a800", clo:"#c8102e", city:"#9ed0ff"};
-
-/* ---------- RENDER PANEL (no depende de Google Maps) ---------- */
-let MAP=null, INFO=null, gmarkers=[], glines=[], focusLine=null;
+/* ---------- RENDER (independiente de Google Maps) ---------- */
+const pill=(st)=>`<span class="pill ${STLAB[st][1]}"><span class="gm-dot" style="width:7px;height:7px;box-shadow:none;background:${STC[st]}"></span>${STLAB[st][0]}</span>`;
+const riskPill=(r)=>{const c=r>50?'bg-secondary/10 text-secondary':r>30?'bg-warning/15 text-warning':'bg-safe/10 text-safe';return `<span class="pill ${c}">RIESGO ${r}</span>`;};
 
 function renderRoutes(){
-  const el=document.getElementById('routes');
-  el.innerHTML=ROUTES.map((r,i)=>`
-    <div class="route" data-i="${i}" style="border-left-color:${r.c}">
-      <div class="top">
-        <span class="pri" style="background:${r.c}22;color:${r.c}">${r.pri}</span>
-        <span class="nm">${r.nm}</span>
-        <span class="rk" style="color:${r.risk>50?'#ff5c75':r.risk>30?'#ffcc4d':'#5fe0a3'}">RIESGO ${r.risk}</span>
+  document.getElementById('routes').innerHTML=ROUTES.map((r,i)=>`
+    <div class="route-card bg-white rounded-lg border border-outline-variant/60 p-4" data-i="${i}">
+      <div class="flex items-center gap-2">
+        <span class="pill bg-primary text-white">${r.pri}</span>
+        <span class="font-display font-bold text-on-surface text-[13.5px] leading-tight">${r.nm}</span>
+        <span class="ml-auto">${riskPill(r.risk)}</span>
       </div>
-      <div class="meta">${r.meta}</div>
+      <p class="text-on-surface-variant text-[12.5px] mt-2 leading-relaxed">${r.meta}</p>
     </div>`).join('');
-  el.querySelectorAll('.route').forEach(node=>node.addEventListener('click',()=>{
-    const r=ROUTES[+node.dataset.i];
-    if(MAP){ MAP.setCenter({lat:(r.focus[0][0]+r.focus[1][0])/2,lng:(r.focus[0][1]+r.focus[1][1])/2}); MAP.setZoom(7); drawFocus(r); }
+  document.querySelectorAll('.route-card').forEach(n=>n.addEventListener('click',()=>{
+    const r=ROUTES[+n.dataset.i];
+    if(MAP){MAP.setCenter({lat:(r.focus[0][0]+r.focus[1][0])/2,lng:(r.focus[0][1]+r.focus[1][1])/2});MAP.setZoom(7);drawFocus(r);}
   }));
+}
+function renderTables(){
+  document.getElementById('portRows').innerHTML=NODES.map(p=>`<tr><td><b>${p.n}</b><div class="text-[11px] text-on-surface-variant">${p.role}</div></td><td>${pill(p.st)}</td><td>${p.op}</td><td>${p.ves}</td><td>${p.ton}</td><td>${p.teu}</td><td>${p.ber}</td><td>${p.dr}</td></tr>`).join('');
+  document.getElementById('airRows').innerHTML=AIRS.map(a=>`<tr><td><b>${a.n}</b></td><td>${pill(a.st)}</td><td class="font-mono text-[12px]">${a.ic}</td><td>${a.city}</td><td>${a.rw}</td><td class="text-on-surface-variant text-[12px]">${a.role}</td></tr>`).join('');
+  document.getElementById('roadRows').innerHTML=ROADS.map(r=>`<tr><td><b>${r.n}</b></td><td>${pill(r.risk)}</td><td class="text-on-surface-variant">${r.note}</td></tr>`).join('');
 }
 
 /* ---------- CHARTS ---------- */
-let chPorts, chRoute;
 function buildCharts(){
-  const ports=NODES.filter(n=>n.t==='port');
-  const grid={color:'#1d3160'}, tick={color:'#8ea3c9',font:{family:'JetBrains Mono',size:10}};
-  chPorts=new Chart(document.getElementById('chPorts'),{type:'bar',
-    data:{labels:ports.map(p=>p.n.replace('Puerto ','').replace(' / Palúa','')),
-      datasets:[{label:'Capacidad (M t/año)',data:ports.map(p=>p.cap),
-        backgroundColor:ports.map(p=>COL[p.st]||'#3bc7e0')}]},
-    options:{plugins:{legend:{display:false},title:{display:true,text:'Capacidad portuaria por terminal (M t/año)',color:'#cdddff',font:{family:'Public Sans',size:13}}},
-      scales:{x:{ticks:tick,grid:{display:false}},y:{ticks:tick,grid}}}});
-
-  chRoute=new Chart(document.getElementById('chRoute'),{
-    data:{labels:ROUTES.map(r=>r.pri),
-      datasets:[
-        {type:'bar',label:'Índice de riesgo del corredor',data:ROUTES.map(r=>r.risk),
-          backgroundColor:ROUTES.map(r=>r.risk>50?'#c8102e':r.risk>30?'#e8a800':'#2ec27e'),order:2},
-        {type:'line',label:'Prioridad (100 = máx.)',data:ROUTES.map((r,i)=>100-i*16),
-          borderColor:'#3bc7e0',backgroundColor:'#3bc7e033',tension:.3,pointBackgroundColor:'#3bc7e0',fill:true,order:1}
-      ]},
-    options:{plugins:{legend:{labels:{color:'#9fb3d9',font:{size:10}}}},
-      scales:{x:{ticks:tick,grid:{display:false}},y:{ticks:tick,grid,suggestedMax:100}}}});
+  const tick={color:'#44474f',font:{family:'Inter',size:11}}, grid={color:'#eeeef0'};
+  new Chart(document.getElementById('chPorts'),{type:'bar',
+    data:{labels:NODES.map(p=>p.n.replace('Puerto ','').replace(' / Palúa','')),
+      datasets:[{data:NODES.map(p=>p.cap),backgroundColor:NODES.map(p=>STC[p.st])}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:tick,grid:{display:false}},y:{ticks:tick,grid}}}});
+  new Chart(document.getElementById('chRoute'),{
+    data:{labels:ROUTES.map(r=>r.pri),datasets:[
+      {type:'bar',label:'Riesgo del corredor',data:ROUTES.map(r=>r.risk),backgroundColor:ROUTES.map(r=>r.risk>50?'#bb0027':r.risk>30?'#e57200':'#2e7d32'),order:2},
+      {type:'line',label:'Prioridad (100=máx.)',data:ROUTES.map((r,i)=>100-i*16),borderColor:'#00173a',backgroundColor:'rgba(0,23,58,.08)',tension:.3,pointBackgroundColor:'#00173a',fill:true,order:1}
+    ]},
+    options:{plugins:{legend:{labels:{color:'#44474f',font:{family:'Inter',size:11}}}},scales:{x:{ticks:tick,grid:{display:false}},y:{ticks:tick,grid,suggestedMax:100}}}});
 }
 
-/* tabs swap the top chart */
-document.addEventListener('click',e=>{
-  const t=e.target.closest('.tab'); if(!t)return;
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on')); t.classList.add('on');
-  const k=t.dataset.ch, tick={color:'#8ea3c9',font:{family:'JetBrains Mono',size:10}}, grid={color:'#1d3160'};
-  if(k==='ports'){const ports=NODES.filter(n=>n.t==='port');
-    chPorts.data.labels=ports.map(p=>p.n.replace('Puerto ','').replace(' / Palúa',''));
-    chPorts.data.datasets[0]={label:'Capacidad',data:ports.map(p=>p.cap),backgroundColor:ports.map(p=>COL[p.st]||'#3bc7e0')};
-    chPorts.options.plugins.title.text='Capacidad portuaria por terminal (M t/año)';}
-  if(k==='air'){const air=NODES.filter(n=>n.t==='air');
-    chPorts.data.labels=air.map(a=>a.n.split(' ')[0]);
-    chPorts.data.datasets[0]={label:'Pax (M/año)',data:air.map(a=>a.cap),backgroundColor:air.map(a=>COL[a.st]||'#3bc7e0')};
-    chPorts.options.plugins.title.text='Tráfico aéreo internacional (M pax/año) · rojo=cerrado';}
-  if(k==='risk'){
-    chPorts.data.labels=['Calidad vial VE 2019','Promedio mundial','Calidad vial VE 2018'];
-    chPorts.data.datasets[0]={label:'Índice WEF (0-7)',data:[2.60,4.07,2.80],backgroundColor:['#c8102e','#2ec27e','#e8a800']};
-    chPorts.options.plugins.title.text='Índice de calidad vial WEF (0-7) · VE ranking #133';}
-  chPorts.update();
-});
-
 /* ---------- GOOGLE MAPS (latest async loader) ---------- */
+let MAP=null,INFO=null,focusLine=null;
 function loadGoogleMaps(){
-  if(!GMAPS_KEY || GMAPS_KEY.includes("REPLACE_WITH")){
-    const b=document.getElementById('apiBanner');
-    b.style.display='block';
-    b.innerHTML='⚠ <b>Falta la clave de Google Maps API.</b> Pega tu clave en la constante <span class="mono">GMAPS_KEY</span> (línea ~205) para activar el mapa. El tablero KPI, las rutas y las gráficas ya funcionan.';
-    document.getElementById('map').innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;text-align:center;color:#5d72a0;font-size:13px;padding:20px">🗺️ Mapa Google en espera de clave API.<br>Las capas: 6 puertos · 6 aeropuertos · 5 corredores · epicentro M7.5<br>se renderizarán al añadir la clave.</div>';
+  if(!GMAPS_KEY||GMAPS_KEY.includes("REPLACE_WITH")){
+    const b=document.getElementById('apiBanner');b.classList.remove('hidden');
+    b.innerHTML='⚠ <b>Falta la clave de Google Maps API.</b> Pega tu clave en la constante <span class="font-mono">GMAPS_KEY</span> de <span class="font-mono">operaciones.html</span> para activar el mapa. Los KPIs, rutas, tablas y gráficas ya funcionan.';
+    document.getElementById('map').innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;text-align:center;color:#747780;font-size:13px;padding:20px">🗺️ Mapa Google en espera de clave API · 6 puertos · 6 aeropuertos · 5 corredores · epicentro M7.5</div>';
     return;
   }
   ((g)=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({key:GMAPS_KEY,v:"weekly"});
   initMap();
 }
-
 async function initMap(){
   const {Map}=await google.maps.importLibrary("maps");
   const {AdvancedMarkerElement,PinElement}=await google.maps.importLibrary("marker");
-  const dark=[
-    {elementType:"geometry",stylers:[{color:"#0c1832"}]},
-    {elementType:"labels.text.fill",stylers:[{color:"#7d92bd"}]},
-    {elementType:"labels.text.stroke",stylers:[{color:"#0a1730"}]},
-    {featureType:"water",elementType:"geometry",stylers:[{color:"#07101f"}]},
-    {featureType:"road",elementType:"geometry",stylers:[{color:"#1a2c52"}]},
-    {featureType:"administrative",elementType:"geometry.stroke",stylers:[{color:"#23386b"}]},
+  const light=[
+    {elementType:"geometry",stylers:[{color:"#f3f3f6"}]},
+    {elementType:"labels.text.fill",stylers:[{color:"#44474f"}]},
+    {elementType:"labels.text.stroke",stylers:[{color:"#ffffff"}]},
+    {featureType:"water",elementType:"geometry",stylers:[{color:"#cfe0f0"}]},
+    {featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},
+    {featureType:"administrative",elementType:"geometry.stroke",stylers:[{color:"#c4c6d0"}]},
     {featureType:"poi",stylers:[{visibility:"off"}]},
-    {featureType:"landscape",elementType:"geometry",stylers:[{color:"#0f1f3d"}]}
+    {featureType:"landscape",elementType:"geometry",stylers:[{color:"#eeeef0"}]}
   ];
-  MAP=new Map(document.getElementById('map'),{center:{lat:9.6,lng:-67.5},zoom:6,styles:dark,mapId:"DEMO_MAP_ID",disableDefaultUI:false,mapTypeControl:false,streetViewControl:false,fullscreenControl:true});
+  MAP=new Map(document.getElementById('map'),{center:{lat:9.6,lng:-67.5},zoom:6,styles:light,mapId:"DEMO_MAP_ID",mapTypeControl:false,streetViewControl:false,fullscreenControl:true});
   INFO=new google.maps.InfoWindow();
-
-  // corredores
   ROADS.forEach(rd=>{
-    const line=new google.maps.Polyline({path:rd.path.map(([la,ln])=>({lat:la,lng:ln})),
-      strokeColor: rd.risk==='clo'?'#c8102e':rd.risk==='deg'?'#e8a800':'#2ec27e',
-      strokeOpacity:.9,strokeWeight:3,icons: rd.risk==='deg'?[{icon:{path:'M 0,-1 0,1',strokeOpacity:1,scale:3},offset:'0',repeat:'14px'}]:[],map:MAP});
     const mid=rd.path[Math.floor(rd.path.length/2)];
-    line.addListener('click',()=>{INFO.setContent(`<div style="font-family:Inter;color:#10203f;font-size:13px"><b>${rd.n}</b><br>${rd.note}</div>`);INFO.setPosition({lat:mid[0],lng:mid[1]});INFO.open(MAP);});
-    glines.push(line);
+    const line=new google.maps.Polyline({path:rd.path.map(([la,ln])=>({lat:la,lng:ln})),strokeColor:STC[rd.risk]||"#e57200",strokeOpacity:.95,strokeWeight:4,map:MAP,
+      icons:[{icon:{path:'M 0,-1 0,1',strokeOpacity:1,scale:3},offset:'0',repeat:'15px'}]});
+    line.addListener('click',()=>{INFO.setContent(`<div style="font-family:Inter;color:#1a1c1e;font-size:13px"><b>${rd.n}</b><br>${rd.note}</div>`);INFO.setPosition({lat:mid[0],lng:mid[1]});INFO.open(MAP);});
   });
-
-  // nodos
-  NODES.forEach(nd=>{
-    const glyph = nd.t==='air'?'✈':nd.t==='port'?'⚓':'★';
-    const pin=new PinElement({background:COL[nd.st]||'#3bc7e0',borderColor:'#ffffff',glyphColor:'#0a1730',glyph:glyph,scale: nd.st==='clo'?1.35:1.05});
+  [...NODES,...AIRS].forEach(nd=>{
+    const isAir='ic' in nd, st=nd.st, glyph=isAir?'✈':nd.t==='city'?'★':'⚓';
+    const pin=new PinElement({background:STC[st],borderColor:'#ffffff',glyphColor:'#ffffff',glyph,scale:st==='clo'?1.3:1.0});
     const mk=new AdvancedMarkerElement({map:MAP,position:{lat:nd.lat,lng:nd.lng},title:nd.n,content:pin.element});
-    mk.addListener('click',()=>{INFO.setContent(`<div style="font-family:Inter;max-width:260px;color:#10203f;font-size:12.5px;line-height:1.5"><b style="font-size:13.5px">${nd.n}</b><br>${nd.info}</div>`);INFO.open({anchor:mk,map:MAP});});
-    gmarkers.push(mk);
+    const body=isAir?`${nd.ic} · ${nd.city}<br>Pistas: ${nd.rw}<br>${nd.role}`:`${nd.op} · ${nd.role}<br>${nd.ves} buques · ${nd.ton} · ${nd.ber}`;
+    mk.addListener('click',()=>{INFO.setContent(`<div style="font-family:Inter;max-width:250px;color:#1a1c1e;font-size:12.5px;line-height:1.5"><b style="font-size:13.5px">${nd.n}</b><br>${body}</div>`);INFO.open({anchor:mk,map:MAP});});
   });
-
-  // epicentro
-  new google.maps.Circle({map:MAP,center:{lat:QUAKE.lat,lng:QUAKE.lng},radius:120000,strokeColor:'#c8102e',strokeOpacity:.8,strokeWeight:2,fillColor:'#c8102e',fillOpacity:.12});
-  new google.maps.Circle({map:MAP,center:{lat:QUAKE.lat,lng:QUAKE.lng},radius:50000,strokeColor:'#ff5c75',strokeOpacity:.9,strokeWeight:2,fillColor:'#c8102e',fillOpacity:.22});
+  new google.maps.Circle({map:MAP,center:{lat:QUAKE.lat,lng:QUAKE.lng},radius:120000,strokeColor:'#c8102e',strokeOpacity:.7,strokeWeight:2,fillColor:'#c8102e',fillOpacity:.10});
+  new google.maps.Circle({map:MAP,center:{lat:QUAKE.lat,lng:QUAKE.lng},radius:50000,strokeColor:'#bb0027',strokeOpacity:.9,strokeWeight:2,fillColor:'#c8102e',fillOpacity:.18});
 }
-
 function drawFocus(r){
   if(focusLine)focusLine.setMap(null);
-  focusLine=new google.maps.Polyline({path:r.focus.map(([la,ln])=>({lat:la,lng:ln})),
-    strokeColor:'#3bc7e0',strokeOpacity:.95,strokeWeight:5,map:MAP,
-    icons:[{icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:3,strokeColor:'#3bc7e0'},offset:'100%'}]});
+  focusLine=new google.maps.Polyline({path:r.focus.map(([la,ln])=>({lat:la,lng:ln})),strokeColor:'#00173a',strokeOpacity:.95,strokeWeight:5,map:MAP,
+    icons:[{icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:3,strokeColor:'#00173a'},offset:'100%'}]});
 }
 
 /* boot */
-renderRoutes(); buildCharts(); loadGoogleMaps();
+renderRoutes();renderTables();buildCharts();loadGoogleMaps();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 </script>
 </body>
 </html>
