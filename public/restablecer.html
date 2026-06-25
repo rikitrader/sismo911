@@ -30,6 +30,11 @@
         <p class="text-sm text-on-surface-variant">Ya puedes iniciar sesión con tu nueva contraseña. Tus sesiones anteriores se cerraron por seguridad.</p>
         <a href="/login" class="block w-full bg-primary text-white font-display font-bold py-2.5 rounded-lg">Iniciar sesión</a>
       </div>
+      <form id="renewForm" class="space-y-3 hidden">
+        <p class="text-sm text-on-surface-variant">Tu enlace no es válido o expiró. Ingresa tu correo para recibir uno nuevo.</p>
+        <input name="email" type="email" required placeholder="Correo electrónico" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+        <button class="w-full bg-primary hover:bg-primary-container text-white font-display font-bold py-2.5 rounded-lg">Enviar nuevo enlace</button>
+      </form>
       <p id="msg" class="text-sm text-center mt-3"></p>
     </div>
     <a href="/login" class="block text-center text-white/70 hover:text-white text-sm mt-4">← Volver a iniciar sesión</a>
@@ -37,8 +42,9 @@
 
 <script>
   const token=new URLSearchParams(location.search).get('token')||'';
-  const rf=document.getElementById('resetForm'), done=document.getElementById('done'), msg=document.getElementById('msg');
-  if(!token){ rf.classList.add('hidden'); msg.className='text-sm text-center mt-3 text-secondary'; msg.textContent='Enlace inválido o incompleto. Solicita uno nuevo desde «¿Olvidaste tu contraseña?».'; }
+  const rf=document.getElementById('resetForm'), done=document.getElementById('done'), renew=document.getElementById('renewForm'), msg=document.getElementById('msg');
+  function showRenew(text){ rf.classList.add('hidden'); renew.classList.remove('hidden'); if(text){ msg.className='text-sm text-center mt-3 text-secondary'; msg.textContent=text; } }
+  if(!token) showRenew('Enlace inválido o incompleto. Solicita uno nuevo aquí.');
   rf.onsubmit=async e=>{
     e.preventDefault();
     const f=Object.fromEntries(new FormData(rf));
@@ -47,7 +53,15 @@
     const r=await fetch('/api/auth/reset-password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,password:f.password})});
     const d=await r.json().catch(()=>({}));
     if(r.ok&&d.ok){ rf.classList.add('hidden'); done.classList.remove('hidden'); msg.textContent=''; }
-    else { msg.className='text-sm text-center mt-3 text-secondary'; msg.textContent={token_invalid_or_expired:'El enlace expiró o ya se usó. Solicita uno nuevo.',password_min_8:'La contraseña debe tener 8+ caracteres',token_required:'Enlace inválido'}[d.error]||'No se pudo restablecer. Intenta de nuevo.'; }
+    else if(d.error==='token_invalid_or_expired'||d.error==='token_required'){ showRenew('El enlace expiró o ya se usó. Solicita uno nuevo:'); }
+    else { msg.className='text-sm text-center mt-3 text-secondary'; msg.textContent=(d.error==='password_min_8')?'La contraseña debe tener 8+ caracteres':'No se pudo restablecer. Intenta de nuevo.'; }
+  };
+  renew.onsubmit=async e=>{
+    e.preventDefault();
+    msg.className='text-sm text-center mt-3 text-on-surface-variant'; msg.textContent='Enviando…';
+    const body=Object.fromEntries(new FormData(renew));
+    await fetch('/api/auth/forgot-password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).catch(()=>{});
+    renew.classList.add('hidden'); msg.className='text-sm text-center mt-3 text-safe'; msg.textContent='Si ese correo está registrado, te enviamos un nuevo enlace. Revisa tu bandeja y spam.';
   };
 </script>
 </body>
