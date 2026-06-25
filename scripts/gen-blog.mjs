@@ -52,7 +52,7 @@ const HEAD = (title, desc, canon, img) => `<!DOCTYPE html><html lang="es"><head>
 // ---- article page ----
 function renderArticle(p, ov, slug) {
   const title = headline(p, ov), desc = dek(p, ov), canon = `https://sismo911.com/blog/${slug}`, cv = cover(p)
-  const heroImg = p.imagen ? `<img src="${esc(p.imagen)}" alt="${esc(title)}" width="1200" height="675" class="w-full rounded-lg border border-outline-variant/60" loading="eager" decoding="async" onerror="this.onerror=null;this.src='${cv}'">` : `<img src="${cv}" alt="${esc(title)}" width="1200" height="675" class="w-full rounded-lg border border-outline-variant/60">`
+  const heroImg = `<div class="w-full rounded-lg border border-outline-variant/60 overflow-hidden bg-cover bg-center" style="aspect-ratio:16/9;background-image:url('${cv}')"><img src="${esc(p.imagen || cv)}" alt="${esc(title)}" class="w-full h-full object-cover" loading="eager" decoding="async" onerror="this.style.display='none'"></div>`
   const dateISO = Date.parse(p.fechaISO) ? new Date(p.fechaISO).toISOString() : '2026-06-24T21:04:00Z'
   const stats = [fmtNum(p.vistas) && `${fmtNum(p.vistas)} reproducciones`, fmtNum(p.likes) && `${fmtNum(p.likes)} me gusta`].filter(Boolean).join(' · ')
   const ld = { '@context': 'https://schema.org', '@type': 'NewsArticle', headline: title, description: desc, datePublished: dateISO, dateModified: dateISO, inLanguage: 'es', image: [cv], mainEntityOfPage: canon, author: { '@type': 'Person', name: p.autor || 'Reporte ciudadano' }, publisher: { '@type': 'Organization', name: 'SISMO911', logo: { '@type': 'ImageObject', url: 'https://sismo911.com/logo.svg' } }, about: { '@type': 'Event', name: 'Terremoto de Venezuela del 24 de junio de 2026' } }
@@ -106,7 +106,7 @@ const FEATURED = { slug: 'terremoto-magnitud-7-5-yumare-venezuela-24-junio-2026'
 const card = x => {
   const p = x.p, t = headline(p, x.ov)
   return `<a href="/blog/${x.slug}" class="group bg-white border border-outline-variant/60 rounded-xl overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-    <div class="aspect-[16/9] overflow-hidden bg-primary"><img src="${esc(p.imagen || cover(p))}" alt="${esc(t)}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" onerror="this.onerror=null;this.src='${cover(p)}'"></div>
+    <div class="aspect-[16/9] overflow-hidden bg-cover bg-center" style="background-image:url('${cover(p)}')"><img src="${esc(p.imagen || cover(p))}" alt="${esc(t)}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" onerror="this.style.display='none'"></div>
     <div class="p-4 flex flex-col flex-1">
       <div class="flex items-center gap-2 text-[11px] font-bold mb-2"><span class="text-white px-2 py-0.5 rounded" style="background:${PLAT[p.plataforma] || '#00173a'}">${esc(platLabel(p.plataforma))}</span><span class="text-on-surface-variant uppercase tracking-wide">${esc(place(p))}</span></div>
       <h3 class="font-display font-bold text-[15px] leading-snug text-on-surface mb-1 line-clamp-3 group-hover:text-primary">${esc(t)}</h3>
