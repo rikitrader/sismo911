@@ -35,6 +35,22 @@
   <h1 class="font-display font-extrabold text-3xl mb-1">Recursos y Suministros</h1>
   <p class="text-on-surface-variant mb-5 max-w-3xl">Agua, alimentos, refugios, atención médica y combustible <b>disponibles por región</b>. Los recursos estructurados los verifican los operadores de SISMO911; abajo también puedes ver la ayuda que la comunidad reporta <b>en vivo en X (Twitter)</b>.</p>
 
+  <!-- Crowd-sourced shelter status submit (no login; goes to moderation) -->
+  <div class="bg-white border border-outline-variant/60 rounded-xl p-4 mb-6 max-w-3xl">
+    <div class="font-display font-bold text-sm">Reportar estado de un refugio</div>
+    <p class="text-xs text-on-surface-variant mb-3">¿Sabes si un refugio está activo, lleno o cerrado? Repórtalo para el mapa. Pasa por revisión.</p>
+    <div class="grid sm:grid-cols-4 gap-2">
+      <input id="shName" placeholder="Nombre del refugio" maxlength="140" class="sm:col-span-2 border border-outline-variant rounded-lg px-3 py-2 text-sm">
+      <select id="shStatus" class="border border-outline-variant rounded-lg px-3 py-2 text-sm bg-white"><option value="activo">🟢 Activo</option><option value="lleno">🟠 Lleno</option><option value="cerrado">🔴 Cerrado</option></select>
+      <button id="shGeo" type="button" class="border border-outline-variant rounded-lg px-3 py-2 text-sm font-semibold text-primary">📍 Mi ubicación</button>
+    </div>
+    <div class="flex items-center gap-2 mt-2">
+      <input id="shNote" placeholder="Nota (ej: solo mujeres y niños, cupo ~50)" maxlength="200" class="flex-1 border border-outline-variant rounded-lg px-3 py-2 text-sm">
+      <button id="shSend" type="button" class="bg-secondary text-white font-bold rounded-lg px-4 py-2 text-sm">Enviar</button>
+    </div>
+    <p id="shMsg" class="text-sm mt-2"></p>
+  </div>
+
   <!-- Atajos -->
   <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
     <a href="/contacto" class="flex items-center gap-3 bg-white border border-outline-variant/60 rounded-xl p-3.5 hover:bg-surface-variant/30"><span class="text-2xl">📣</span><span class="flex-1 text-sm font-display font-bold leading-tight">Contacto y Compartir<br><span class="text-xs text-on-surface-variant font-normal">Difunde · salva vidas</span></span><span class="text-on-surface-variant">→</span></a>
@@ -71,6 +87,17 @@
 
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+// ---- Crowd shelter-status submit ----
+(function(){let slat=null,slon=null;const $=id=>document.getElementById(id);
+  $('shGeo').onclick=()=>{const m=$('shMsg');m.style.color='#44474f';m.textContent='Obteniendo ubicación…';navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{slat=p.coords.latitude;slon=p.coords.longitude;m.textContent='✓ Ubicación capturada.';},()=>{m.textContent='No se pudo obtener ubicación.';}):m.textContent='Geolocalización no disponible.';};
+  $('shSend').onclick=async()=>{const m=$('shMsg'),name=$('shName').value.trim();if(!name){m.style.color='#bb0027';m.textContent='Indica el nombre del refugio.';return;}
+    $('shSend').disabled=true;
+    try{const r=await fetch('/api/shelters/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,status:$('shStatus').value,capacity_note:$('shNote').value||null,lat:slat,lon:slon})});const d=await r.json().catch(()=>({}));
+      m.style.color=r.ok?'#2e7d32':'#bb0027';m.textContent=r.ok?('✓ '+(d.message||'Enviado. Aparecerá tras revisión.')):(d.error||'Error al enviar.');
+      if(r.ok){$('shName').value='';$('shNote').value='';}
+    }catch{m.style.color='#bb0027';m.textContent='Sin conexión. Intenta de nuevo.';}
+    $('shSend').disabled=false;};
+})();
 const KIND={water:['💧','Agua','#0891b2'],food:['🥫','Alimentos','#d97706'],shelter:['🏠','Refugio','#7c3aed'],medical:['🏥','Médico','#dc2626'],fuel:['⛽','Combustible','#b45309'],power:['⚡','Energía','#2563eb']};
 const STAT={available:['Disponible','#16a34a'],low:['Bajo','#d97706'],depleted:['Agotado','#dc2626']};
 const $=s=>document.querySelector(s);

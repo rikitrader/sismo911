@@ -41,8 +41,8 @@ L.control.attribution({prefix:false}).addTo(map);
 const street=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM, © CARTO · USGS',maxZoom:19}).addTo(map);
 const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri',maxZoom:19});
 const gibs=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2026-06-24/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',{attribution:'NASA GIBS',maxZoom:9});
-const sismos=L.layerGroup().addTo(map),heat=L.layerGroup(),refugios=L.layerGroup(),reportes=L.layerGroup().addTo(map),danos=L.layerGroup();
-L.control.layers({'Calle':street,'Satélite (Esri)':esri,'Satélite (NASA GIBS)':gibs},{'Sismos':sismos,'Reportes ciudadanos':reportes,'Mapa de riesgo':heat,'Refugios/Hospitales':refugios,'Daños estructurales':danos}).addTo(map);
+const sismos=L.layerGroup().addTo(map),heat=L.layerGroup(),refugios=L.layerGroup(),reportes=L.layerGroup().addTo(map),danos=L.layerGroup(),albergues=L.layerGroup().addTo(map);
+L.control.layers({'Calle':street,'Satélite (Esri)':esri,'Satélite (NASA GIBS)':gibs},{'Sismos':sismos,'Reportes ciudadanos':reportes,'Refugios (estado)':albergues,'Mapa de riesgo':heat,'Refugios/Hospitales':refugios,'Daños estructurales':danos}).addTo(map);
 // Citizen damage reports (approved) — colored by severity, labeled by category.
 const SEVHEX={rojo:'#bb0027',naranja:'#e57200',amarillo:'#f2c200'};
 const CATICON={collapsed_building:'🏚️',damaged_building:'🧱',trapped_people:'🆘',gas_leak:'⛽',medical_need:'➕',aid_point:'🤝',water_point:'💧',shelter:'⛺',other:'📌'};
@@ -61,8 +61,14 @@ function loadHeat(){fetch('/api/heatmap',{cache:'no-store'}).then(r=>r.json()).t
 function loadDanos(){fetch('/api/danos-estructurales',{cache:'no-store'}).then(r=>r.json()).then(d=>{danos.clearLayers();const SC={rojo:'#c8102e',naranja:'#e57200',amarillo:'#ffbc3d'};(d.reports||[]).forEach(x=>{if(x.lat==null||x.lng==null)return;const res=['aid_point','shelter','water_point','medical_need'].includes(x.category);const col=res?'#0b2b5b':(SC[x.severity]||'#e57200');L.circleMarker([x.lat,x.lng],{radius:x.category==='collapsed_building'?6:4,color:'#fff',weight:1,fillColor:col,fillOpacity:1}).bindTooltip(`${esc(x.title||'')} · ${esc(x.municipio||'')}`).addTo(danos);});}).catch(()=>{});}
 // Facilities (hospitals/static infra) load once — they don't change between quakes.
 fetch('/api/facilities?lat=10.3&lon=-67.0&radius=45000').then(r=>r.json()).then(d=>{(d.facilities||[]).forEach(f=>L.circleMarker([f.lat,f.lon],{radius:4,color:'#0b2b5b',weight:1,fillColor:f.type==='hospital'?'#2e7d32':'#445e91',fillOpacity:1}).bindTooltip(`${esc(f.name)} · ${esc(f.type)}`).addTo(refugios));}).catch(()=>{});
+// Crowd-sourced shelter status — colored by operational state (verde=activo,
+// ámbar=lleno, rojo=cerrado). Only operator-approved entries are returned.
+const SHCOL={activo:'#2e7d32',lleno:'#e57200',cerrado:'#c8102e'};
+const SHLBL={activo:'Activo',lleno:'Lleno',cerrado:'Cerrado'};
+function loadAlbergues(){fetch('/api/shelters',{cache:'no-store'}).then(r=>r.json()).then(d=>{albergues.clearLayers();(d.shelters||[]).forEach(s=>{if(s.lat==null||s.lon==null)return;const col=SHCOL[s.status]||'#445e91';
+  L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:`<div style="font-size:13px;line-height:22px;width:24px;height:24px;text-align:center;border-radius:9999px;background:${col};box-shadow:0 0 0 2px #fff">⛺</div>`,iconSize:[24,24],iconAnchor:[12,12]})}).bindPopup(`<b>${esc(s.name)}</b><br>Estado: <b style="color:${col}">${SHLBL[s.status]||s.status}</b>${s.capacity_note?'<br>'+esc(s.capacity_note):''}`).addTo(albergues);});}).catch(()=>{});}
 // Refresh all dynamic layers together every 60s so the whole map stays live.
-function refreshAll(){loadSismos();loadReportes();loadHeat();loadDanos();}
+function refreshAll(){loadSismos();loadReportes();loadHeat();loadDanos();loadAlbergues();}
 refreshAll();setInterval(refreshAll,60000);
 </script>
 </body>
