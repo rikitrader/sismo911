@@ -13,6 +13,50 @@ async function isOperator(c: any): Promise<boolean> {
   return !!me && (me.role === 'operator' || me.role === 'admin');
 }
 
+// ---- Familia bridge -------------------------------------------------
+// The 33k Familia registry lives in the DESAP `personas` DB. We federate those
+// records into the case system as cases with id "fam-<personas.id>", anchored to
+// the terremoto event so each docket starts at the date of the quake. Docket
+// entries / evidence / tasks for a Familia case are stored in the main DB keyed
+// by the "fam-" id (no row is copied into `persons`).
+const FAM = 'fam-';
+const isFam = (id: string) => id.startsWith(FAM);
+const famKey = (id: string) => id.slice(FAM.length);
+const estadoToStatus = (e: string) => e === 'localizado' ? 'found_safe' : e === 'fallecido' ? 'found_deceased' : 'missing';
+const statusToEstado = (s: string) => s === 'found_safe' ? 'localizado' : s === 'found_deceased' ? 'fallecido' : 'sin-contacto';
+const famCaseNumber = (pid: string) => 'FAM-' + String(pid).replace(/[^a-zA-Z0-9]/g, '').slice(-8).toUpperCase();
+
+// The reference earthquake every case is anchored to (Yumare M7.5, 2026-06-24),
+// falling back to the strongest event on record.
+async function quakeRef(env: any): Promise<any> {
+  return (await env.DB.prepare(`SELECT id, mag, place, place_es, time_ms, depth_km, alert, lat, lon, url FROM events WHERE id = 'us6000t7zp'`).first())
+    || (await env.DB.prepare(`SELECT id, mag, place, place_es, time_ms, depth_km, alert, lat, lon, url FROM events ORDER BY mag DESC LIMIT 1`).first());
+}
+
+// Does a case id exist (native persons OR Familia personas)?
+async function caseExists(env: any, id: string): Promise<boolean> {
+  if (isFam(id)) return !!(await env.DESAP.prepare(`SELECT id FROM personas WHERE id = ?`).bind(famKey(id)).first());
+  return !!(await env.DB.prepare(`SELECT id FROM persons WHERE id = ?`).bind(id).first());
+}
+
+// Build the case "person" object for a Familia record + its metadata overlay.
+async function famPerson(env: any, id: string, op: boolean): Promise<any> {
+  const row: any = await env.DESAP.prepare(`SELECT * FROM personas WHERE id = ?`).bind(famKey(id)).first();
+  if (!row) return null;
+  const meta: any = await env.DB.prepare(`SELECT priority, incident_type, assigned_to FROM case_meta WHERE person_id = ?`).bind(id).first().catch(() => null);
+  const base: any = {
+    id, case_number: famCaseNumber(row.id), full_name: row.nombre, age: row.edad, sex: null,
+    last_seen: row.ubicacion, status: estadoToStatus(row.estado), review: 'approved',
+    priority: meta?.priority || 'media', incident_type: meta?.incident_type || 'persona_desaparecida', assigned_to: meta?.assigned_to || null,
+    photo_url: row.foto_r2 ? `/api/familia/photo/${row.id}` : (row.foto || null),
+    notes: row.descripcion, created_ms: row.created_at, updated_ms: row.updated_at, source: 'familia',
+    contact_phone: row.contacto || null, reported_by: null, last_seen_lat: null, last_seen_lon: null,
+  };
+  if (op) return base;
+  const { contact_phone, reported_by, last_seen_lat, last_seen_lon, priority, assigned_to, ...pub } = base;
+  return pub;
+}
+
 // Append a tracing entry to a person's case docket. Best-effort: a docket write
 // must never break the underlying status/report operation, so failures are
 // logged and swallowed. `review` defaults to 'approved' (system/operator); a
@@ -100,8 +144,61 @@ persons.get('/cases', async (c) => {
        COUNT(*) AS total
      FROM persons${op ? '' : " WHERE review='approved'"}`
   ).first();
+
+  // ---- Familia bridge: federate DESAP personas as cases anchored to the quake.
+  const quake = await quakeRef(c.env);
+  const l = `%${q}%`;
+  const fw: string[] = []; const fb: unknown[] = [];
+  if (q) { fw.push('(nombre LIKE ? OR ubicacion LIKE ?' + (op ? ' OR contacto LIKE ?' : '') + ')'); fb.push(l, l); if (op) fb.push(l); }
+  if (status === 'found_safe') fw.push("estado = 'localizado'");
+  else if (status === 'found_deceased') fw.push("estado = 'fallecido'");
+  else if (status === 'missing') fw.push("estado NOT IN ('localizado','fallecido')");
+  if (since > 0) { fw.push('created_at >= ?'); fb.push(since); }
+  const fwSql = fw.length ? 'WHERE ' + fw.join(' AND ') : '';
+  const famLimit = Math.min(limit, 500);
+  let famCases: any[] = [];
+  try {
+    const { results: famRows } = await c.env.DESAP.prepare(
+      `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto, foto_r2, estado, created_at, updated_at
+       FROM personas ${fwSql} ORDER BY updated_at DESC, id DESC LIMIT ?`
+    ).bind(...fb, famLimit).all<any>();
+    // Activity (docket/evidence) counts + metadata overlay for federated cases.
+    const { results: famCnt } = await c.env.DB.prepare(
+      `SELECT person_id, COUNT(*) AS c FROM person_events WHERE person_id LIKE 'fam-%'${op ? '' : " AND review='approved'"} GROUP BY person_id`
+    ).all<any>().catch(() => ({ results: [] }));
+    const cnt: any = {}; (famCnt || []).forEach((r: any) => cnt[r.person_id] = r.c);
+    const { results: metaRows } = await c.env.DB.prepare(`SELECT person_id, priority, incident_type, assigned_to FROM case_meta WHERE person_id LIKE 'fam-%'`).all<any>().catch(() => ({ results: [] }));
+    const metaMap: any = {}; (metaRows || []).forEach((m: any) => metaMap[m.person_id] = m);
+    famCases = (famRows || []).map((r: any) => {
+      const id = FAM + r.id; const m = metaMap[id] || {};
+      const full: any = {
+        id, case_number: famCaseNumber(r.id), full_name: r.nombre, age: r.edad, sex: null,
+        last_seen: r.ubicacion, status: estadoToStatus(r.estado), review: 'approved',
+        priority: m.priority || 'media', incident_type: m.incident_type || 'persona_desaparecida', assigned_to: m.assigned_to || null,
+        photo_url: r.foto_r2 ? `/api/familia/photo/${r.id}` : (r.foto || null), notes: r.descripcion,
+        event_id: quake?.id || null, created_ms: r.created_at, updated_ms: r.updated_at,
+        event_place: quake?.place_es || quake?.place || null, event_place_en: quake?.place || null, event_mag: quake?.mag || null, event_time: quake?.time_ms || null,
+        docket_count: cnt[id] || 0, evidence_count: 0, last_activity_ms: null, source: 'familia',
+        contact_phone: op ? (r.contacto || null) : undefined, reported_by: null,
+      };
+      if (op) return full;
+      const { contact_phone, priority, assigned_to, ...pub } = full; return pub;
+    });
+  } catch (e: any) { console.error('[cases] familia bridge failed:', e?.message ?? e); }
+
+  const merged = [...cases, ...famCases].sort((a, b) => (b.updated_ms || 0) - (a.updated_ms || 0)).slice(0, limit);
+
+  let fsum: any = {};
+  try { fsum = await c.env.DESAP.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado='localizado' THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
+  const summary = {
+    missing: (sum?.missing || 0) + (fsum?.missing || 0),
+    found_safe: (sum?.found_safe || 0) + (fsum?.found_safe || 0),
+    deceased: (sum?.deceased || 0) + (fsum?.deceased || 0),
+    pending: sum?.pending || 0,
+    total: (sum?.total || 0) + (fsum?.total || 0),
+  };
   c.header('Cache-Control', 'no-store'); c.header('Vary', 'Cookie');
-  return c.json({ cases, summary: sum ?? {}, operator: op });
+  return c.json({ cases: merged, summary, operator: op });
 });
 
 // GET /api/persons/docket/queue — pending citizen-submitted updates awaiting
@@ -110,11 +207,19 @@ persons.get('/docket/queue', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT pe.id, pe.person_id, pe.kind, pe.status_from, pe.status_to, pe.detail, pe.location,
             pe.source, pe.actor, pe.created_ms, p.full_name
-     FROM person_events pe JOIN persons p ON p.id = pe.person_id
+     FROM person_events pe LEFT JOIN persons p ON p.id = pe.person_id
      WHERE pe.review='pending' ORDER BY pe.created_ms ASC LIMIT 300`
-  ).all();
+  ).all<any>();
+  const updates = results ?? [];
+  // Resolve names for Familia-origin pending updates (no row in persons).
+  for (const u of updates) {
+    if (!u.full_name && isFam(u.person_id)) {
+      const r: any = await c.env.DESAP.prepare(`SELECT nombre FROM personas WHERE id = ?`).bind(famKey(u.person_id)).first().catch(() => null);
+      u.full_name = r?.nombre || u.person_id;
+    }
+  }
   c.header('Cache-Control', 'no-store'); c.header('Vary', 'Cookie');
-  return c.json({ updates: results ?? [] });
+  return c.json({ updates });
 });
 
 // POST /api/persons/docket/:eid/approve|reject — moderate a pending update
@@ -124,10 +229,12 @@ persons.post('/docket/:eid/approve', async (c) => {
   const ev = await c.env.DB.prepare(`SELECT * FROM person_events WHERE id = ?`).bind(eid).first<any>();
   if (!ev) return c.json({ error: 'not_found' }, 404);
   await c.env.DB.prepare(`UPDATE person_events SET review='approved' WHERE id = ?`).bind(eid).run();
-  // If the update proposed a status change, apply it to the person now.
+  // If the update proposed a status change, apply it to the person now (native
+  // persons row, or the Familia personas record for bridged cases).
   if (ev.status_to && ['missing', 'found_safe', 'found_deceased', 'unknown'].includes(ev.status_to)) {
-    await c.env.DB.prepare(`UPDATE persons SET status = ?, updated_ms = ? WHERE id = ?`).bind(ev.status_to, Date.now(), ev.person_id).run();
-  } else {
+    if (isFam(ev.person_id)) await c.env.DESAP.prepare(`UPDATE personas SET estado = ?, updated_at = ? WHERE id = ?`).bind(statusToEstado(ev.status_to), Date.now(), famKey(ev.person_id)).run();
+    else await c.env.DB.prepare(`UPDATE persons SET status = ?, updated_ms = ? WHERE id = ?`).bind(ev.status_to, Date.now(), ev.person_id).run();
+  } else if (!isFam(ev.person_id)) {
     await c.env.DB.prepare(`UPDATE persons SET updated_ms = ? WHERE id = ?`).bind(Date.now(), ev.person_id).run();
   }
   await audit(c, 'persons.docket_approve', { eid, person_id: ev.person_id });
@@ -146,12 +253,19 @@ persons.post('/docket/:eid/reject', async (c) => {
 persons.get('/:id/docket', async (c) => {
   const op = await isOperator(c);
   const id = c.req.param('id');
-  const person: any = await c.env.DB.prepare(`SELECT * FROM persons WHERE id = ?`).bind(id).first();
-  if (!person) return c.notFound();
-  if (!op && person.review !== 'approved') return c.notFound();   // public: approved cases only
-  const event: any = person.event_id
-    ? await c.env.DB.prepare(`SELECT id, mag, place, place_es, time_ms, depth_km, alert, lat, lon, url FROM events WHERE id = ?`).bind(person.event_id).first()
-    : null;
+  let person: any; let event: any;
+  if (isFam(id)) {
+    person = await famPerson(c.env, id, op);
+    if (!person) return c.notFound();
+    event = await quakeRef(c.env);
+  } else {
+    person = await c.env.DB.prepare(`SELECT * FROM persons WHERE id = ?`).bind(id).first();
+    if (!person) return c.notFound();
+    if (!op && person.review !== 'approved') return c.notFound();   // public: approved cases only
+    event = person.event_id
+      ? await c.env.DB.prepare(`SELECT id, mag, place, place_es, time_ms, depth_km, alert, lat, lon, url FROM events WHERE id = ?`).bind(person.event_id).first()
+      : null;
+  }
   const { results: rows } = await c.env.DB.prepare(
     `SELECT id, kind, status_from, status_to, detail, location, lat, lon, source, actor, review, created_ms
      FROM person_events WHERE person_id = ?${op ? '' : " AND review='approved'"} ORDER BY created_ms ASC`
@@ -161,12 +275,15 @@ persons.get('/:id/docket', async (c) => {
     detail: d.detail, location: d.location, source: d.source, created_ms: d.created_ms,
     // redacted for the public: actor (operator identity), lat/lon
   });
-  const pubPerson = op ? person : {
-    id: person.id, full_name: person.full_name, age: person.age, sex: person.sex,
+  // Familia person objects are already shaped per role by famPerson(); native
+  // ones get redacted here for the public.
+  const pubPerson = (isFam(id) || op) ? person : {
+    id: person.id, case_number: person.case_number, full_name: person.full_name, age: person.age, sex: person.sex,
     last_seen: person.last_seen, status: person.status, review: person.review,
+    priority: person.priority, incident_type: person.incident_type,
     photo_url: person.photo_url, notes: person.notes, event_id: person.event_id,
     created_ms: person.created_ms, updated_ms: person.updated_ms,
-    // redacted: contact_phone, reported_by, last_seen_lat/lon
+    // redacted: contact_phone, reported_by, last_seen_lat/lon, assigned_to
   };
   c.header('Cache-Control', 'no-store'); c.header('Vary', 'Cookie');
   return c.json({ person: pubPerson, event, docket, operator: op });
@@ -180,20 +297,33 @@ persons.post('/:id/docket', async (c) => {
   const id = c.req.param('id');
   const op = await isOperator(c);
   const b = await c.req.json().catch(() => ({} as any));
-  const exists = await c.env.DB.prepare(`SELECT id, status FROM persons WHERE id = ?`).bind(id).first<any>();
-  if (!exists) return c.json({ error: 'not_found' }, 404);
+  const fam = isFam(id);
+  let curStatus: string;
+  if (fam) {
+    const row = await c.env.DESAP.prepare(`SELECT estado FROM personas WHERE id = ?`).bind(famKey(id)).first<any>();
+    if (!row) return c.json({ error: 'not_found' }, 404);
+    curStatus = estadoToStatus(row.estado);
+  } else {
+    const exists = await c.env.DB.prepare(`SELECT id, status FROM persons WHERE id = ?`).bind(id).first<any>();
+    if (!exists) return c.json({ error: 'not_found' }, 404);
+    curStatus = exists.status;
+  }
   const allowed = ['note', 'sighting', 'contact', 'shelter', 'hospital', 'morgue', 'review', 'status_change'];
   const kind = allowed.includes(b.kind) ? b.kind : 'note';
   const lat = b.lat == null ? null : Number(b.lat);
   const lon = b.lon == null ? null : Number(b.lon);
   if ((lat != null || lon != null) && !validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
-  const wantsStatus = b.status && ['missing', 'found_safe', 'found_deceased', 'unknown'].includes(b.status) && b.status !== exists.status;
+  const wantsStatus = b.status && ['missing', 'found_safe', 'found_deceased', 'unknown'].includes(b.status) && b.status !== curStatus;
   let status_from: string | null = null; let status_to: string | null = null;
-  if (wantsStatus) { status_from = exists.status; status_to = b.status; }
+  if (wantsStatus) { status_from = curStatus; status_to = b.status; }
   // Operators: apply immediately + approved. Citizens: pending, status untouched.
   if (op) {
-    if (status_to) await c.env.DB.prepare(`UPDATE persons SET status = ?, updated_ms = ? WHERE id = ?`).bind(status_to, Date.now(), id).run();
-    else await c.env.DB.prepare(`UPDATE persons SET updated_ms = ? WHERE id = ?`).bind(Date.now(), id).run();
+    if (status_to) {
+      if (fam) await c.env.DESAP.prepare(`UPDATE personas SET estado = ?, updated_at = ? WHERE id = ?`).bind(statusToEstado(status_to), Date.now(), famKey(id)).run();
+      else await c.env.DB.prepare(`UPDATE persons SET status = ?, updated_ms = ? WHERE id = ?`).bind(status_to, Date.now(), id).run();
+    } else if (!fam) {
+      await c.env.DB.prepare(`UPDATE persons SET updated_ms = ? WHERE id = ?`).bind(Date.now(), id).run();
+    }
   } else {
     const limited = await rateLimit(c.env, c, 'docket_submit', 10, 300);
     if (limited) return limited;
@@ -216,14 +346,30 @@ persons.post('/:id/docket', async (c) => {
 // PATCH /api/persons/:id/case — update case metadata (priority, incident, assignee).
 persons.patch('/:id/case', async (c) => {
   const id = c.req.param('id'); const b = await c.req.json().catch(() => ({} as any));
+  const priority = ['alta', 'media', 'baja'].includes(b.priority) ? b.priority : null;
+  const incident_type = typeof b.incident_type === 'string' ? b.incident_type.slice(0, 60) : null;
+  const assigned_to = typeof b.assigned_to === 'string' ? b.assigned_to.slice(0, 120) : null;
+  if (isFam(id)) {
+    // Familia cases have no persons row → store meta in the overlay table.
+    await c.env.DB.prepare(
+      `INSERT INTO case_meta (person_id, priority, incident_type, assigned_to, updated_ms) VALUES (?,?,?,?,?)
+       ON CONFLICT(person_id) DO UPDATE SET
+         priority=COALESCE(excluded.priority, case_meta.priority),
+         incident_type=COALESCE(excluded.incident_type, case_meta.incident_type),
+         assigned_to=COALESCE(excluded.assigned_to, case_meta.assigned_to),
+         updated_ms=excluded.updated_ms`
+    ).bind(id, priority, incident_type, assigned_to, Date.now()).run();
+    await audit(c, 'persons.case_update', { id, priority, incident_type, assigned_to });
+    return c.json({ ok: true });
+  }
   const sets: string[] = []; const binds: unknown[] = [];
-  if (b.priority && ['alta', 'media', 'baja'].includes(b.priority)) { sets.push('priority = ?'); binds.push(b.priority); }
-  if (typeof b.incident_type === 'string') { sets.push('incident_type = ?'); binds.push(b.incident_type.slice(0, 60)); }
-  if (typeof b.assigned_to === 'string') { sets.push('assigned_to = ?'); binds.push(b.assigned_to.slice(0, 120)); }
+  if (priority) { sets.push('priority = ?'); binds.push(priority); }
+  if (incident_type != null) { sets.push('incident_type = ?'); binds.push(incident_type); }
+  if (assigned_to != null) { sets.push('assigned_to = ?'); binds.push(assigned_to); }
   if (!sets.length) return c.json({ error: 'nothing_to_update' }, 400);
   sets.push('updated_ms = ?'); binds.push(Date.now());
   const r = await c.env.DB.prepare(`UPDATE persons SET ${sets.join(', ')} WHERE id = ?`).bind(...binds, id).run();
-  await audit(c, 'persons.case_update', { id, priority: b.priority, incident_type: b.incident_type, assigned_to: b.assigned_to });
+  await audit(c, 'persons.case_update', { id, priority, incident_type, assigned_to });
   return c.json({ ok: true, changed: r.meta.changes });
 });
 
@@ -239,8 +385,7 @@ persons.get('/:id/attachments', async (c) => {
 });
 persons.post('/:id/attachments', async (c) => {
   const id = c.req.param('id');
-  const exists = await c.env.DB.prepare(`SELECT id FROM persons WHERE id = ?`).bind(id).first();
-  if (!exists) return c.json({ error: 'not_found' }, 404);
+  if (!(await caseExists(c.env, id))) return c.json({ error: 'not_found' }, 404);
   if (!(c.req.header('content-type') || '').includes('multipart/form-data')) return c.json({ error: 'multipart_required' }, 415);
   const f = await c.req.formData();
   const meta: any = {};
@@ -427,6 +572,16 @@ persons.patch('/:id', async (c) => {
   if (!b.status) return c.json({ error: 'status_required' }, 400);
   if (!['missing', 'found_safe', 'found_deceased', 'unknown'].includes(b.status)) return c.json({ error: 'bad_status' }, 400);
   const id = c.req.param('id');
+  // Familia-bridged case: write status to the DESAP personas record.
+  if (isFam(id)) {
+    const row = await c.env.DESAP.prepare(`SELECT estado FROM personas WHERE id = ?`).bind(famKey(id)).first<any>();
+    if (!row) return c.json({ error: 'not_found' }, 404);
+    const prevStatus = estadoToStatus(row.estado);
+    await c.env.DESAP.prepare(`UPDATE personas SET estado = ?, updated_at = ? WHERE id = ?`).bind(statusToEstado(b.status), Date.now(), famKey(id)).run();
+    if (prevStatus !== b.status) await logDocket(c, id, 'status_change', { status_from: prevStatus, status_to: b.status, source: 'operator' });
+    await audit(c, 'persons.status_update', { id, status: b.status });
+    return c.json({ ok: true, changed: 1 });
+  }
   const prev = await c.env.DB.prepare(`SELECT status FROM persons WHERE id = ?`).bind(id).first<any>();
   const r = await c.env.DB.prepare(
     `UPDATE persons SET status = ?, notes = COALESCE(?, notes), updated_ms = ? WHERE id = ? AND review='approved'`
