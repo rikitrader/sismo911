@@ -99,10 +99,10 @@ reports.post('/', async (c) => {
 
 // POST /api/reports/:id/react — bump support counter (no auth).
 reports.post('/:id/react', async (c) => {
+  // Hot endpoint: use the atomic CF limiter only. The KV limiter's per-key PUT
+  // is itself throttled by KV (~1 write/s/key) and 500s under burst.
   const burst = await burstLimit(c.env, c, 'reports_react');
   if (burst) return burst;
-  const limited = await rateLimit(c.env, c, 'reports_react', 60, 300);
-  if (limited) return limited;
   const r = await c.env.DB.prepare(
     `UPDATE map_reports SET reactions_up = reactions_up + 1 WHERE id = ? AND status='approved'`
   ).bind(c.req.param('id')).run();
@@ -121,8 +121,6 @@ reports.get('/:id/comments', async (c) => {
 reports.post('/:id/comments', async (c) => {
   const burst = await burstLimit(c.env, c, 'reports_comments');
   if (burst) return burst;
-  const limited = await rateLimit(c.env, c, 'reports_comments', 20, 300);
-  if (limited) return limited;
   const b = await c.req.json().catch(() => null);
   if (!b?.body) return c.json({ error: 'comentario vacío' }, 400);
   const id = uid('cmt');

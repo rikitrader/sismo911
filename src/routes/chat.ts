@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { rateLimit, burstLimit } from '../lib/security';
+import { burstLimit } from '../lib/security';
 
 // Community channel — verified-info chat. Public read/write; lightweight guards.
 export const chat = new Hono<{ Bindings: Env }>();
@@ -23,8 +23,6 @@ chat.get('/', async (c) => {
 chat.post('/', async (c) => {
   const burst = await burstLimit(c.env, c, 'chat_post');
   if (burst) return burst;
-  const limited = await rateLimit(c.env, c, 'chat_post', 30, 300);
-  if (limited) return limited;
   const b = await c.req.json().catch(() => null);
   const body = (b?.body ?? '').trim();
   if (!body) return c.json({ error: 'mensaje vacío' }, 400);
