@@ -21,7 +21,7 @@
 
 <main class="mx-auto max-w-5xl px-4 py-8">
   <h1 class="font-display font-extrabold text-3xl mb-1">Familia y Personas Desaparecidas</h1>
-  <p class="text-on-surface-variant mb-6">Avisa que estás a salvo, reporta a una persona desaparecida (con foto) y busca en el registro nacional.</p>
+  <p class="text-on-surface-variant mb-6">Avisa que estás a salvo, reporta a una persona desaparecida (con foto) y busca en el registro nacional. Los reportes ciudadanos aparecen tras revisión de un operador.</p>
 
   <div class="flex gap-1 mb-6 bg-surface-container rounded-lg p-1 w-fit flex-wrap">
     <button data-tab="checkin" class="tab px-4 py-2 rounded-md font-display font-semibold text-sm bg-white shadow text-primary">Estoy a salvo</button>
@@ -51,13 +51,14 @@
     </div>
     <div id="count" class="text-xs text-on-surface-variant mb-3"></div>
     <div id="personGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-    <div id="pager" class="flex items-center justify-center gap-3 mt-6"></div>
+    <div id="pMore" class="flex justify-center mt-6"></div>
   </section>
 
   <section id="panel-galeria" class="hidden">
-    <p class="text-sm text-on-surface-variant mb-3">Todas las fotos de búsqueda. Si reconoces a alguien, llama a las autoridades (911 / 171).</p>
+    <p class="text-sm text-on-surface-variant mb-3">Todas las fotos de búsqueda aprobadas. Si reconoces a alguien, llama a las autoridades (911 / 171).</p>
+    <div id="galCount" class="text-xs text-on-surface-variant mb-3"></div>
     <div id="galleryGrid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3"></div>
-    <div id="galPager" class="flex items-center justify-center gap-3 mt-6"></div>
+    <div id="gMore" class="flex justify-center mt-6"></div>
   </section>
 </main>
 
@@ -86,13 +87,13 @@
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ago=t=>{if(!t)return '';const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';};
 const ST={missing:['Desaparecida','bg-secondary'],found_safe:['Hallada a salvo','bg-safe'],found_deceased:['Fallecida','bg-on-surface'],unknown:['Sin estado','bg-warning']};
+const moreBtn=(id)=>`<button id="${id}" class="px-4 py-2 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>`;
 
 const tabs=document.querySelectorAll('.tab');
 function show(n){tabs.forEach(t=>{const on=t.dataset.tab===n;t.classList.toggle('bg-white',on);t.classList.toggle('shadow',on);t.classList.toggle('text-primary',on);t.classList.toggle('text-on-surface-variant',!on);});
   ['checkin','registro','galeria'].forEach(x=>document.getElementById('panel-'+x).classList.toggle('hidden',x!==n));
-  if(n==='registro')loadPersons(); if(n==='galeria')loadGallery();}
+  if(n==='registro'&&!personGrid.children.length)loadPersons(true); if(n==='galeria'&&!galleryGrid.children.length)loadGallery(true);}
 tabs.forEach(t=>t.onclick=()=>show(t.dataset.tab));
-if(location.hash==='#registro')show('registro'); else if(location.hash==='#galeria')show('galeria');
 
 async function loadCheckins(){const {checkins=[]}=await fetch('/api/checkins').then(r=>r.json());
   document.getElementById('checkinList').innerHTML=checkins.length?checkins.map(c=>{const[l,cl]=c.status==='safe'?['A salvo','bg-safe']:['Necesita ayuda','bg-secondary'];
@@ -101,29 +102,29 @@ document.getElementById('checkinForm').addEventListener('submit',async e=>{e.pre
   const r=await fetch('/api/checkins',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(fd)}).then(x=>x.json());
   const m=document.getElementById('checkinMsg');if(r.ok){m.textContent='Registrado ✓';e.target.reset();loadCheckins();setTimeout(()=>m.textContent='',2500);}else m.textContent='Error';});
 
-let pPage=1;
+// ---- Missing persons (keyset / cursor pagination) ----
+const personGrid=document.getElementById('personGrid');
+let pCursor=null;
 function card(p){const[l,cl]=ST[p.status]||ST.unknown;
   const img=p.photo_url?`<img src="${p.photo_url}" loading="lazy" class="w-full h-44 object-cover bg-surface-container">`:`<div class="w-full h-44 grid place-items-center bg-surface-container text-on-surface-variant text-4xl">👤</div>`;
   return `<div class="bg-white border border-outline-variant/60 rounded-lg overflow-hidden">
     <div class="relative">${img}<span class="absolute top-2 left-2 ${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span></div>
     <div class="p-3"><div class="font-display font-bold">${esc(p.full_name)} ${p.age?`<span class="text-on-surface-variant font-normal text-sm">· ${p.age}</span>`:''}</div>
       <div class="text-xs text-on-surface-variant mt-0.5">${esc(p.last_seen||'—')}</div>
-      ${p.contact_phone?`<div class="text-xs text-on-surface-variant mt-0.5">☎ ${esc(p.contact_phone)}</div>`:''}
-      ${p.status==='missing'?`<button data-id="${p.id}" class="markFound mt-2 text-xs text-safe border border-safe/40 rounded px-2 py-1">Marcar hallada</button>`:''}</div></div>`;}
-async function loadPersons(){
+      ${p.contact_phone?`<div class="text-xs text-on-surface-variant mt-0.5">☎ ${esc(p.contact_phone)}</div>`:''}</div></div>`;}
+async function loadPersons(reset){
+  if(reset){pCursor=null;personGrid.innerHTML='';}
   const q=document.getElementById('search').value.trim();const st=document.getElementById('statusFilter').value;
-  const d=await fetch(`/api/familia/persons?q=${encodeURIComponent(q)}&status=${st}&page=${pPage}&limit=24`).then(r=>r.json());
-  document.getElementById('count').textContent=`${(d.total||0).toLocaleString('es')} persona(s) · página ${d.page} de ${d.pages}`;
-  document.getElementById('personGrid').innerHTML=d.persons&&d.persons.length?d.persons.map(card).join(''):'<p class="text-on-surface-variant text-sm col-span-full py-8 text-center">No hay resultados.</p>';
-  document.querySelectorAll('.markFound').forEach(b=>b.onclick=async()=>{await fetch('/api/familia/persons/'+b.dataset.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status:'found_safe'})});loadPersons();});
-  document.getElementById('pager').innerHTML=pagerHtml(d.page,d.pages,'p');}
-function pagerHtml(page,pages,kind){if(pages<=1)return '';
-  return `<button ${page<=1?'disabled':''} data-pg="${page-1}" data-k="${kind}" class="pg px-3 py-1.5 rounded border border-outline-variant text-sm disabled:opacity-40">← Anterior</button>
-    <span class="text-sm text-on-surface-variant">${page} / ${pages}</span>
-    <button ${page>=pages?'disabled':''} data-pg="${page+1}" data-k="${kind}" class="pg px-3 py-1.5 rounded border border-outline-variant text-sm disabled:opacity-40">Siguiente →</button>`;}
-document.addEventListener('click',e=>{const b=e.target.closest('.pg');if(!b)return;const pg=Number(b.dataset.pg);if(b.dataset.k==='p'){pPage=pg;loadPersons();}else{gPage=pg;loadGallery();}});
-let to;document.getElementById('search').addEventListener('input',()=>{clearTimeout(to);to=setTimeout(()=>{pPage=1;loadPersons();},300);});
-document.getElementById('statusFilter').addEventListener('change',()=>{pPage=1;loadPersons();});
+  const d=await fetch(`/api/familia/persons?q=${encodeURIComponent(q)}&status=${st}&limit=24${pCursor?'&cursor='+encodeURIComponent(pCursor):''}`).then(r=>r.json());
+  personGrid.insertAdjacentHTML('beforeend', (d.persons||[]).map(card).join(''));
+  if(!personGrid.children.length)personGrid.innerHTML='<p class="text-on-surface-variant text-sm col-span-full py-8 text-center">No hay resultados.</p>';
+  document.getElementById('count').textContent=`${(d.total||0).toLocaleString('es')} persona(s) aprobada(s) · mostrando ${personGrid.querySelectorAll('.bg-white').length}`;
+  pCursor=d.nextCursor;
+  document.getElementById('pMore').innerHTML=d.nextCursor?moreBtn('pMoreBtn'):'';
+  const mb=document.getElementById('pMoreBtn'); if(mb)mb.onclick=()=>loadPersons(false);
+}
+let to;document.getElementById('search').addEventListener('input',()=>{clearTimeout(to);to=setTimeout(()=>loadPersons(true),300);});
+document.getElementById('statusFilter').addEventListener('change',()=>loadPersons(true));
 
 const modal=document.getElementById('modal');
 document.getElementById('openRegister').onclick=()=>modal.classList.remove('hidden');
@@ -133,19 +134,29 @@ document.getElementById('photo').onchange=function(){const f=this.files[0];if(!f
 document.getElementById('registerForm').addEventListener('submit',async e=>{e.preventDefault();
   const fd=new FormData(e.target);const m=document.getElementById('regMsg');m.className='text-sm text-center text-on-surface-variant';m.textContent='Publicando…';
   const r=await fetch('/api/familia/persons',{method:'POST',body:fd}).then(x=>x.json()).catch(()=>({}));
-  if(r.ok){m.className='text-sm text-center text-safe';m.textContent='Publicado ✓';e.target.reset();document.getElementById('photoPrev').classList.add('hidden');document.getElementById('photoDrop').classList.remove('hidden');setTimeout(()=>{modal.classList.add('hidden');m.textContent='';pPage=1;loadPersons();},900);}
+  if(r.ok){m.className='text-sm text-center text-safe';m.textContent='✓ '+(r.message||'Recibido. Aparecerá tras revisión.');e.target.reset();document.getElementById('photoPrev').classList.add('hidden');document.getElementById('photoDrop').classList.remove('hidden');setTimeout(()=>{modal.classList.add('hidden');m.textContent='';},1800);}
   else{m.className='text-sm text-center text-secondary';m.textContent='Error: '+(r.error||'no se pudo publicar');}});
 
-let gPage=1;
-async function loadGallery(){const d=await fetch(`/api/familia/gallery?page=${gPage}&limit=30`).then(r=>r.json());
-  document.getElementById('galleryGrid').innerHTML=d.photos&&d.photos.length?d.photos.map(p=>{const[l,cl]=ST[p.status]||ST.unknown;
+// ---- Gallery (keyset / cursor pagination) ----
+const galleryGrid=document.getElementById('galleryGrid');
+let gCursor=null;
+async function loadGallery(reset){
+  if(reset){gCursor=null;galleryGrid.innerHTML='';}
+  const d=await fetch(`/api/familia/gallery?limit=30${gCursor?'&cursor='+encodeURIComponent(gCursor):''}`).then(r=>r.json());
+  galleryGrid.insertAdjacentHTML('beforeend',(d.photos||[]).map(p=>{const[l,cl]=ST[p.status]||ST.unknown;
     return `<a href="/api/familia/photo/${p.id}" target="_blank" class="block relative rounded-lg overflow-hidden border border-outline-variant/60">
       <img src="${p.photo_url}" loading="lazy" class="w-full aspect-square object-cover bg-surface-container">
       <span class="absolute top-1 left-1 ${cl} text-white text-[9px] font-bold px-1.5 py-0.5 rounded">${l}</span>
-      <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1 truncate">${esc(p.full_name)}</div></a>`;}).join(''):'<p class="text-on-surface-variant text-sm col-span-full py-8 text-center">Aún no hay fotos.</p>';
-  document.getElementById('galPager').innerHTML=pagerHtml(d.page,d.pages,'g');}
+      <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1 truncate">${esc(p.full_name)}</div></a>`;}).join(''));
+  if(!galleryGrid.children.length)galleryGrid.innerHTML='<p class="text-on-surface-variant text-sm col-span-full py-8 text-center">Aún no hay fotos aprobadas.</p>';
+  document.getElementById('galCount').textContent=`${(d.total||0).toLocaleString('es')} foto(s)`;
+  gCursor=d.nextCursor;
+  document.getElementById('gMore').innerHTML=d.nextCursor?moreBtn('gMoreBtn'):'';
+  const mb=document.getElementById('gMoreBtn'); if(mb)mb.onclick=()=>loadGallery(false);
+}
 
 loadCheckins();
+if(location.hash==='#registro')show('registro'); else if(location.hash==='#galeria')show('galeria');
 </script>
 </body>
 </html>
