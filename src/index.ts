@@ -8,6 +8,7 @@ import { alerts } from './routes/alerts';
 import { facilities } from './routes/facilities';
 import { ops } from './routes/ops';
 import { misc } from './routes/misc';
+import { damage } from './routes/damage';
 import { getCookie } from 'hono/cookie';
 import { ingestUsgs } from './ingest/usgs-cron';
 import { adapterStatus } from './adapters/social';
@@ -59,7 +60,7 @@ app.get('/api/status', async (c) => {
   // Gated integrations — honest health: configured only when their credential/binding exists.
   const gated = [
     { key: 'shakealert', label: 'ShakeAlert (alerta temprana)', configured: false, reason: 'Licencia requerida; cobertura EE.UU. (no Venezuela)' },
-    { key: 'damage_ai', label: 'Evaluación IA de daños', configured: Boolean(env.AI), reason: env.AI ? 'Workers AI activo' : 'Requiere binding Workers AI o ANTHROPIC_API_KEY' },
+    { key: 'damage_ai', label: 'Evaluación IA de daños', configured: Boolean(env.AI), reason: env.AI ? 'EN VIVO — Workers AI visión (llama-3.2-11b-vision)' : 'Requiere binding Workers AI o ANTHROPIC_API_KEY' },
     { key: 'sitrep_ai', label: 'Informes IA de situación', configured: Boolean(env.AI), reason: env.AI ? 'Workers AI activo' : 'Requiere binding Workers AI' },
     { key: 'power_outage', label: 'Cortes de energía', configured: false, reason: 'API de servicios eléctricos no pública en VE' },
     { key: 'traffic', label: 'Cierres viales / tráfico', configured: false, reason: 'Feeds 511 son EE.UU.; sin equivalente público en VE' },
@@ -77,6 +78,7 @@ app.route('/api/persons', persons);
 app.route('/api/contacts', contacts);
 app.route('/api/alerts', alerts);
 app.route('/api/facilities', facilities);
+app.route('/api/damage', damage);
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
 

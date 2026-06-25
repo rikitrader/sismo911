@@ -6,9 +6,23 @@
   <title>SISMO911 — Comando Sísmico Nacional</title>
   <link rel="icon" type="image/svg+xml" href="/logo.svg" />
   <link rel="apple-touch-icon" href="/logo.svg" />
-  <meta property="og:title" content="SISMO911 — Fuerza de Protección Civil" />
-  <meta property="og:description" content="Monitoreo sísmico nacional en tiempo real — datos USGS en vivo." />
-  <meta property="og:image" content="/logo.svg" />
+  <meta name="description" content="SISMO911: comando sísmico nacional de Venezuela. Monitoreo de terremotos en tiempo real con datos USGS en vivo, alertas multiagencia, mapa de epicentros, botón SOS, registro familiar y guía de emergencia.">
+  <meta name="keywords" content="terremotos Venezuela, sismos Venezuela, monitoreo sísmico, USGS Venezuela, alerta sísmica, mapa de epicentros, FUNVISIS, tsunami Caribe, emergencia sísmica">
+  <meta name="author" content="SISMO911 — Comando Sísmico Nacional">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://sismo911.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="SISMO911">
+  <meta property="og:locale" content="es_VE">
+  <meta property="og:title" content="SISMO911 — Comando Sísmico Nacional de Venezuela">
+  <meta property="og:description" content="Monitoreo de terremotos en tiempo real con datos USGS en vivo. Alertas, mapa, SOS y guía de emergencia.">
+  <meta property="og:url" content="https://sismo911.com/">
+  <meta property="og:image" content="https://sismo911.com/og/og-default.png">
+  <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SISMO911 — Comando Sísmico Nacional de Venezuela">
+  <meta name="twitter:description" content="Monitoreo de terremotos en tiempo real con datos USGS en vivo. Alertas, mapa, SOS y guía.">
+  <meta name="twitter:image" content="https://sismo911.com/og/og-default.png">
   <meta name="theme-color" content="#13284f" />
 
   <!-- Fonts -->
@@ -93,6 +107,12 @@
     @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
     .status-dot { animation: blink 1.8s ease-in-out infinite; }
   </style>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"SISMO911","alternateName":"Comando Sísmico Nacional","url":"https://sismo911.com/","inLanguage":"es","description":"Monitoreo sísmico nacional de Venezuela en tiempo real con datos USGS."}
+  </script>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"SISMO911","url":"https://sismo911.com/","logo":"https://sismo911.com/logo.svg","description":"Plataforma nacional de emergencia y monitoreo sísmico de Venezuela."}
+  </script>
 </head>
 
 <body class="font-sans text-on-surface antialiased">
@@ -124,6 +144,10 @@
         <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z"/></svg>
         Alertas Multi-Agencia
       </a>
+      <a href="/blog.html" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
+        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v16H4z M8 8h8M8 12h8M8 16h5"/></svg>
+        Blog
+      </a>
       <a href="pager.html" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
         <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 4v5c0 4.5-3.1 7.9-8 9-4.9-1.1-8-4.5-8-9V7l8-4z"/></svg>
         Alerta PAGER
@@ -135,6 +159,10 @@
       <a href="recursos.html" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
         <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v14M4 7v10l8 4"/></svg>
         Recursos y Suministros
+      </a>
+      <a href="danos.html" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
+        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10"/><circle cx="12" cy="8" r="1.2"/></svg>
+        Evaluación de Daños (IA)
       </a>
       <a href="comms.html" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
         <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 11a16 16 0 0116 0M7 14a10 10 0 0110 0M10 17a5 5 0 014 0M12 20h.01"/></svg>

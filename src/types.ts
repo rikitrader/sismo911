@@ -2,6 +2,7 @@ export interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   CACHE: KVNamespace;
+  PHOTOS: KVNamespace;
   USGS_MINLAT: string;
   USGS_MAXLAT: string;
   USGS_MINLON: string;

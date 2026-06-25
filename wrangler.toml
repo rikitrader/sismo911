@@ -44,6 +44,11 @@ database_id = "0b7aae58-b326-416d-b28b-632becb6981c"
 binding = "CACHE"
 id = "2d5be96112724b8dbfaae2723d3a4dd3"
 
+# Damage-photo storage (uploaded images, keyed; served back via /api/damage/photo).
+[[kv_namespaces]]
+binding = "PHOTOS"
+id = "dc4674529c1a4dd4b747d8e7e3398d17"
+
 [observability]
 enabled = true
 
