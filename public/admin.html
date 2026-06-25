@@ -30,6 +30,7 @@
     <div class="max-w-6xl mx-auto px-6 flex gap-1">
       <button data-tab="persons" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-secondary text-primary">Personas Desaparecidas</button>
       <button data-tab="contacts" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Directorio de Emergencia</button>
+      <button data-tab="acopio" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Centros de Acopio</button>
       <button data-tab="adapters" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Fuentes de Datos</button>
     </div>
   </nav>
@@ -72,6 +73,22 @@
       </div>
     </section>
 
+    <!-- ACOPIO -->
+    <section id="panel-acopio" class="hidden space-y-4">
+      <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+        <h2 class="font-display font-bold text-lg mb-1">Estado en vivo de Centros de Acopio</h2>
+        <p class="text-sm text-on-surface-variant mb-3">Marca cada centro, hospital o sede como <b>operativo</b>, <b>saturado</b> o <b>cerrado</b>. El cambio aparece de inmediato en <a href="/acopio" class="text-primary underline">/acopio</a> para la ciudadanía. La nota es opcional (cupo, daños, contacto).</p>
+        <div class="flex flex-wrap gap-3 items-center">
+          <input id="acopio-q" type="search" placeholder="Buscar centro, ciudad o estado…" class="flex-1 min-w-[220px] border border-outline-variant rounded px-3 py-2 text-sm">
+          <select id="acopio-stf" class="border border-outline-variant rounded px-3 py-2 text-sm"><option value="">Cualquier estado</option><option value="operativo">🟢 Operativo</option><option value="saturado">🟠 Saturado</option><option value="cerrado">🔴 Cerrado</option></select>
+          <span id="acopio-count" class="text-xs text-on-surface-variant"></span>
+        </div>
+      </div>
+      <div class="bg-white rounded-lg border border-outline-variant/60 overflow-hidden">
+        <div id="acopio-list" class="divide-y divide-outline-variant/40 max-h-[68vh] overflow-y-auto"></div>
+      </div>
+    </section>
+
     <!-- ADAPTERS -->
     <section id="panel-adapters" class="hidden space-y-6">
       <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
@@ -91,11 +108,55 @@
   const tabs = document.querySelectorAll('.tab');
   function show(name){
     tabs.forEach(t=>{const on=t.dataset.tab===name; t.classList.toggle('border-secondary',on); t.classList.toggle('text-primary',on); t.classList.toggle('border-transparent',!on); t.classList.toggle('text-on-surface-variant',!on);});
-    ['persons','contacts','adapters'].forEach(n=>document.getElementById('panel-'+n).classList.toggle('hidden',n!==name));
-    if(name==='contacts')loadContacts(); if(name==='adapters')loadStatus();
+    ['persons','contacts','acopio','adapters'].forEach(n=>document.getElementById('panel-'+n).classList.toggle('hidden',n!==name));
+    if(name==='contacts')loadContacts(); if(name==='adapters')loadStatus(); if(name==='acopio')loadAcopio();
   }
   tabs.forEach(t=>t.onclick=()=>show(t.dataset.tab));
-  if(location.hash==='#contacts')show('contacts'); else if(location.hash==='#adapters')show('adapters');
+  if(location.hash==='#contacts')show('contacts'); else if(location.hash==='#adapters')show('adapters'); else if(location.hash==='#acopio')show('acopio');
+
+  // Centros de Acopio — estado en vivo
+  const ACST={operativo:['🟢','Operativo','#16a34a'],saturado:['🟠','Saturado','#d97706'],cerrado:['🔴','Cerrado','#dc2626']};
+  const ATIPO={universidad:'🎓',estadio:'🏟️',polideportivo:'🤸',hospital:'✚',proteccion_civil:'🚨',bomberos:'🚒'};
+  let ACAT=[], AST={};
+  async function loadAcopio(){
+    if(!ACAT.length){
+      const [cat,st]=await Promise.all([
+        fetch('/acopio-data.json').then(r=>r.json()),
+        fetch('/api/acopio/status').then(r=>r.json()).catch(()=>({status:{}})),
+      ]);
+      ACAT=cat; AST=st.status||{};
+    }
+    drawAcopio();
+  }
+  function drawAcopio(){
+    const q=document.getElementById('acopio-q').value.trim().toLowerCase(), sf=document.getElementById('acopio-stf').value;
+    const cur=d=>(AST[d.id]&&AST[d.id].status)||'operativo';
+    const list=ACAT.filter(d=>{ if(sf&&cur(d)!==sf)return false; if(q&&!(d.nombre+' '+d.ciudad+' '+d.estado).toLowerCase().includes(q))return false; return true; });
+    document.getElementById('acopio-count').textContent=list.length+' de '+ACAT.length;
+    document.getElementById('acopio-list').innerHTML=list.map(d=>{const s=cur(d),[,,col]=ACST[s];const ov=AST[d.id];return `
+      <div class="px-5 py-3 flex flex-wrap items-center gap-3" data-id="${esc(d.id)}">
+        <span class="text-lg">${ATIPO[d.tipo]||'📦'}</span>
+        <div class="flex-1 min-w-[200px]">
+          <div class="font-semibold text-sm">${esc(d.nombre)}</div>
+          <div class="text-xs text-on-surface-variant">${esc(d.estado)} · ${esc(d.ciudad)}${ov&&ov.updated_ms?` · act. hace ${ago(ov.updated_ms)}`:''}</div>
+        </div>
+        <input class="ac-note border border-outline-variant rounded px-2 py-1.5 text-xs w-48" placeholder="Nota (cupo, daños…)" value="${esc(ov&&ov.note||'')}">
+        <select class="ac-sel border-2 rounded px-2 py-1.5 text-sm font-semibold" style="border-color:${col}">
+          ${Object.entries(ACST).map(([k,v])=>`<option value="${k}" ${k===s?'selected':''}>${v[0]} ${v[1]}</option>`).join('')}
+        </select>
+        <button class="ac-save bg-primary text-white text-xs font-bold rounded px-3 py-1.5">Guardar</button>
+        <span class="ac-msg text-xs"></span>
+      </div>`;}).join('') || '<div class="px-5 py-10 text-center text-sm text-on-surface-variant">Sin resultados.</div>';
+    document.querySelectorAll('#acopio-list .ac-save').forEach(b=>b.onclick=async()=>{
+      const row=b.closest('[data-id]'), id=row.dataset.id, status=row.querySelector('.ac-sel').value, note=row.querySelector('.ac-note').value;
+      const msg=row.querySelector('.ac-msg'); msg.textContent='…';
+      const r=await api('acopio/status/'+encodeURIComponent(id),{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status,note})});
+      if(r.ok){ AST[id]={status,note,updated_ms:r.updated_ms||Date.now()}; msg.textContent='✓'; msg.className='ac-msg text-xs text-safe'; setTimeout(()=>{msg.textContent='';drawAcopio();},900); }
+      else { msg.textContent='Error'; msg.className='ac-msg text-xs text-secondary'; }
+    });
+  }
+  document.getElementById('acopio-q').addEventListener('input',drawAcopio);
+  document.getElementById('acopio-stf').addEventListener('change',drawAcopio);
 
   // Persons
   const STATUS = { missing:['Desaparecida','bg-secondary'], found_safe:['Hallada a salvo','bg-safe'], found_deceased:['Fallecida','bg-on-surface'], unknown:['Desconocido','bg-warning'] };
