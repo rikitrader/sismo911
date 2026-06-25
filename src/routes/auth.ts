@@ -5,10 +5,33 @@ import { hashPassword, verifyPassword, createSession, setSessionCookie, clearSes
 import { rateLimit } from '../lib/security';
 import { audit } from '../lib/audit';
 import { sendEmail, randomToken, sha256hex, resetEmail, welcomeEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
+import { createWalletForEmail, isCrossmintConfigured } from '../lib/crossmint';
 
 export const auth = new Hono<{ Bindings: Env }>();
 
 const emailOk = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+
+// Provision the user's Crossmint custodial (encrypted) wallet, then persist the
+// public address. Fail-open: a Crossmint outage/misconfig must NEVER block signup
+// or login. Users without a wallet get one lazily via POST /api/auth/wallet.
+async function provisionWallet(env: Env, userId: string, email: string): Promise<void> {
+  try {
+    if (!isCrossmintConfigured(env)) return;
+    const w = await createWalletForEmail(env, email);
+    if (!w) return;
+    await env.DB.prepare(
+      `UPDATE users SET wallet_address = ?, wallet_locator = ?, wallet_chain = ?, wallet_created_ms = ?
+       WHERE id = ? AND wallet_address IS NULL`
+    ).bind(w.address, w.locator, w.chain, Date.now(), userId).run();
+  } catch (e: any) {
+    console.error('[auth] wallet provisioning failed:', e?.message ?? e);
+  }
+}
+
+function fireWallet(c: any, userId: string, email: string) {
+  const p = provisionWallet(c.env, userId, email);
+  try { c.executionCtx.waitUntil(p); } catch { /* no ctx (tests) — fire and forget */ }
+}
 
 // Send without blocking the response (keeps timing uniform for no-enumeration).
 function fireEmail(c: any, to: string, msg: EmailMsg) {
@@ -47,7 +70,28 @@ auth.post('/register', async (c) => {
   const { token, expires } = await createSession(c.env, id, c.req.header('user-agent'));
   setSessionCookie(c, token);
   fireEmail(c, email, welcomeEmail(b.name));
+  // Provision the user's encrypted custodial wallet (Crossmint, Base) in the
+  // background — never blocks the signup response.
+  fireWallet(c, id, email);
   return c.json({ ok: true, token, expires, user: { id, email, name: b.name, role } }, 201);
+});
+
+// POST /api/auth/wallet — lazily provision (or return) the caller's custodial
+// wallet. Idempotent: safe for users created before wallets existed, or when
+// signup-time provisioning failed. Requires a logged-in session.
+auth.post('/wallet', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  if (me.wallet_address) return c.json({ ok: true, wallet: { address: me.wallet_address, chain: c.env.CROSSMINT_CHAIN || 'base' } });
+  if (!isCrossmintConfigured(c.env)) return c.json({ error: 'wallet_not_configured' }, 503);
+  const w = await createWalletForEmail(c.env, me.email);
+  if (!w) return c.json({ error: 'wallet_create_failed' }, 502);
+  await c.env.DB.prepare(
+    `UPDATE users SET wallet_address = ?, wallet_locator = ?, wallet_chain = ?, wallet_created_ms = ?
+     WHERE id = ? AND wallet_address IS NULL`
+  ).bind(w.address, w.locator, w.chain, Date.now(), me.id).run();
+  await audit(c, 'wallet.create', { user_id: me.id });
+  return c.json({ ok: true, wallet: { address: w.address, chain: w.chain } });
 });
 
 // POST /api/auth/forgot-password — always returns ok (no user enumeration).

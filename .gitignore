@@ -11,3 +11,7 @@ dist/
 **/code-app.env
 **/*-tokens/
 missing_with_photos.json
+
+# Crossmint donation setup output (contains collection/recipient — keep out of git)
+.crossmint-donations.json
+.crossmint.json

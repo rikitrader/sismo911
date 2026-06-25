@@ -11,6 +11,7 @@ export type Role = 'citizen' | 'operator' | 'admin';
 export interface User {
   id: string; email: string; name: string; role: Role;
   rank: string | null; unit: string | null; phone: string | null;
+  wallet_address?: string | null;
 }
 
 // ---- crypto helpers ----
@@ -57,11 +58,11 @@ export async function getUserFromRequest(env: Env, c: Context): Promise<User | n
   const token = getSessionToken(c);
   if (token) {
     const row: any = await env.DB.prepare(
-      `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,s.expires_ms
+      `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,u.wallet_address,s.expires_ms
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?`
     ).bind(token).first();
     if (row && row.expires_ms >= Date.now()) {
-      return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone };
+      return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone, wallet_address: row.wallet_address };
     }
   }
 
@@ -70,10 +71,10 @@ export async function getUserFromRequest(env: Env, c: Context): Promise<User | n
   const identity = await verifyAccessJwt(accessJwt, env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD);
   if (!identity?.email) return null;
   const row: any = await env.DB.prepare(
-    `SELECT id,email,name,role,rank,unit,phone FROM users WHERE email = ?`
+    `SELECT id,email,name,role,rank,unit,phone,wallet_address FROM users WHERE email = ?`
   ).bind(identity.email.trim().toLowerCase()).first();
   if (!row) return null;
-  return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone };
+  return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone, wallet_address: row.wallet_address };
 }
 
 export function setSessionCookie(c: Context, token: string) {

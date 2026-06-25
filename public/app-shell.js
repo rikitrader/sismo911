@@ -18,6 +18,7 @@
     { label: 'Centros de Acopio', href: '/acopio', m: ['/acopio'], d: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12' },
     { label: 'Operaciones Logísticas', href: '/operaciones', m: ['/operaciones'], d: 'M3 11l19-9-9 19-2-8-8-2z' },
     { label: 'Recursos', href: '/recursos', m: ['/recursos'], d: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v14M4 7v10l8 4' },
+    { label: 'Donar / Recaudar', href: '/donar', m: ['/donar', '/campana', '/recaudar'], d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z' },
     { label: 'Panel de Suministros', href: '/suministros-dashboard', m: ['/suministros-dashboard'], d: 'M3 3v18h18M7 16V10m5 6V6m5 10v-3' },
     { label: 'Suministros Médicos', href: '/suministros-medicos', m: ['/suministros-medicos'], d: 'M12 8v8m-4-4h8M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2z' },
     { label: 'Herramientas + Cruz Roja', href: '/herramientas', m: ['/herramientas'], d: 'M14.7 6.3a4 4 0 00-5.4 5.4l-5 5a1.5 1.5 0 002 2l5-5a4 4 0 005.4-5.4l-2.3 2.3-2-2 2.3-2.3z' },

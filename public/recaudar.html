@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar una campaña — SISMO911</title>
+<meta name="description" content="Crea una campaña de recaudación de fondos para la respuesta ante sismos en Venezuela. Recibe donaciones con tarjeta, liquidadas en USDC.">
+<meta name="robots" content="index,follow">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>
+body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}
+.card{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:.85rem}
+.fld{width:100%;border:1px solid #c4c6d0;border-radius:.6rem;padding:.6rem .7rem;font-size:14px}
+.lbl{font-weight:600;font-size:13px;margin-bottom:.25rem;display:block}
+</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/donar" class="hover:text-white/70">Donar</a><a href="/recaudar" class="text-white font-bold">Recaudar</a><a href="/cuenta" class="hover:text-white/70">Mi cuenta</a></nav></div></header>
+
+<main class="mx-auto max-w-2xl px-4 py-8" id="app">
+  <p class="text-on-surface-variant">Cargando…</p>
+</main>
+
+<script>
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+(async()=>{
+  const me=await fetch('/api/auth/me').then(r=>r.json()).catch(()=>({authenticated:false}));
+  if(!me.authenticated){ location.href='/login.html?next=/recaudar.html'; return; }
+  document.getElementById('app').innerHTML=`
+    <h1 class="font-display font-extrabold text-3xl mb-1">Iniciar una campaña</h1>
+    <p class="text-on-surface-variant mb-6">Crea una campaña de recaudación. Recibirás donaciones con tarjeta, liquidadas en USDC sobre la red Base, con un registro público y transparente.</p>
+    <div class="card p-6 space-y-4">
+      <div><label class="lbl">Título de la campaña *</label><input id="title" class="fld" maxlength="120" placeholder="Ej. Rescate y refugio en El Vigía"></div>
+      <div><label class="lbl">Resumen (una línea) *</label><input id="summary" class="fld" maxlength="200" placeholder="Frase corta que aparece en la tarjeta"></div>
+      <div><label class="lbl">Historia completa</label><textarea id="story" class="fld" rows="6" maxlength="5000" placeholder="Explica a quién ayuda esta campaña y cómo se usarán los fondos."></textarea></div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="lbl">Categoría</label><select id="category" class="fld">
+          <option value="rescate">Rescate</option><option value="salud">Salud</option><option value="refugio">Refugio</option>
+          <option value="familia">Familia</option><option value="reconstruccion">Reconstrucción</option>
+          <option value="alimentos">Alimentos</option><option value="otro" selected>Otro</option></select></div>
+        <div><label class="lbl">Ubicación</label><input id="location" class="fld" maxlength="80" placeholder="Estado / municipio"></div>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="lbl">Meta (USD)</label><input id="goal_usd" class="fld" type="number" min="0" max="10000000" placeholder="Ej. 5000"></div>
+        <div><label class="lbl">Beneficiario</label><input id="beneficiary" class="fld" maxlength="120" placeholder="Persona u organización"></div>
+      </div>
+      <div><label class="lbl">Imagen (URL https)</label><input id="image_url" class="fld" maxlength="400" placeholder="https://… (opcional)"></div>
+      <button id="go" class="w-full bg-secondary hover:bg-secondary-container text-white font-bold rounded-lg py-3">Crear campaña</button>
+      <div id="err" class="text-secondary text-sm"></div>
+    </div>`;
+  document.getElementById('go').addEventListener('click',create);
+})();
+
+async function create(){
+  const v=id=>document.getElementById(id).value.trim();
+  const body={ title:v('title'), summary:v('summary'), story:v('story'), category:v('category'),
+    location:v('location'), goal_usd:Number(v('goal_usd')||0), beneficiary:v('beneficiary'), image_url:v('image_url') };
+  const err=document.getElementById('err'); err.textContent='';
+  if(body.title.length<4){err.textContent='El título es obligatorio (mín. 4 caracteres).';return;}
+  const go=document.getElementById('go'); go.disabled=true; go.textContent='Creando…';
+  try{
+    const r=await fetch('/api/campaigns',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(r.status===401){ location.href='/login.html?next=/recaudar.html'; return; }
+    if(!r.ok){ err.textContent='No se pudo crear: '+(d.error||'error'); go.disabled=false; go.textContent='Crear campaña'; return; }
+    location.href='/campana?c='+encodeURIComponent(d.slug);
+  }catch(e){ err.textContent='Error de red. Intenta de nuevo.'; go.disabled=false; go.textContent='Crear campaña'; }
+}
+</script>
+</body>
+</html>
