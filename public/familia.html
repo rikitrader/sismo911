@@ -21,7 +21,17 @@
 
 <main class="mx-auto max-w-5xl px-4 py-8">
   <h1 class="font-display font-extrabold text-3xl mb-1">Familia y Personas Desaparecidas</h1>
-  <p class="text-on-surface-variant mb-6">Avisa que estás a salvo, reporta a una persona desaparecida (con foto) y busca en el registro nacional. Los reportes ciudadanos aparecen tras revisión de un operador.</p>
+  <p class="text-on-surface-variant mb-5">Avisa que estás a salvo, reporta a una persona desaparecida (con foto) y busca en el registro nacional. Los reportes ciudadanos aparecen tras revisión de un operador.</p>
+
+  <!-- Global search: searches ALL cases (any status) from anywhere on the page -->
+  <form id="globalSearchForm" class="mb-6" role="search" onsubmit="return false">
+    <div class="relative">
+      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg pointer-events-none">🔎</span>
+      <input id="globalSearch" type="search" autocomplete="off" enterkeyhint="search"
+        placeholder="Buscar en todos los casos por nombre o lugar…"
+        class="w-full border border-outline-variant rounded-xl pl-12 pr-4 py-3.5 text-base shadow-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/30">
+    </div>
+  </form>
 
   <div class="flex gap-1 mb-6 bg-surface-container rounded-lg p-1 w-fit flex-wrap">
     <button data-tab="checkin" class="tab px-4 py-2 rounded-md font-display font-semibold text-sm bg-white shadow text-primary">Estoy a salvo</button>
@@ -141,6 +151,25 @@ document.querySelectorAll('#statusChips button').forEach(b=>b.onclick=()=>{
   b.classList.remove('border-outline-variant','text-on-surface');b.classList.add('bg-primary','text-white','border-primary');
   const sf=document.getElementById('statusFilter');sf.value=b.dataset.st;sf.dispatchEvent(new Event('change'));
 });
+
+// Global search bar: searches across ALL cases (any status) and surfaces results.
+// Mirrors into the registro tab's search + status="Todos", reusing the same API/render.
+const globalSearch=document.getElementById('globalSearch');
+if(globalSearch){
+  let gto;
+  const runGlobal=()=>{
+    document.getElementById('search').value=globalSearch.value.trim();
+    // Force status back to "Todos" (every case) — set chip + filter without an extra fetch.
+    document.querySelectorAll('#statusChips button').forEach(x=>{x.classList.remove('bg-primary','text-white','border-primary');x.classList.add('border-outline-variant','text-on-surface');});
+    const all=document.querySelector('#statusChips button[data-st=""]');
+    if(all){all.classList.remove('border-outline-variant','text-on-surface');all.classList.add('bg-primary','text-white','border-primary');}
+    document.getElementById('statusFilter').value='';
+    personGrid.innerHTML='';        // empty grid → show() runs exactly one load
+    show('registro');               // reveal results panel + loadPersons(true)
+  };
+  globalSearch.addEventListener('input',()=>{clearTimeout(gto);gto=setTimeout(runGlobal,300);});
+  globalSearch.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();clearTimeout(gto);runGlobal();}});
+}
 
 const modal=document.getElementById('modal');
 document.getElementById('openRegister').onclick=()=>modal.classList.remove('hidden');
