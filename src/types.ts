@@ -46,6 +46,9 @@ export interface Env {
     reply_to?: { email: string; name?: string };
   }): Promise<unknown> };
   EMAIL_FROM?: string;
+  // Invitation-only business-plan deck (/plan). Both have safe fallbacks.
+  PLAN_INVITE_CODES?: string; // comma-separated valid invite codes
+  PLAN_SECRET?: string;       // HMAC signing secret for the access cookie
 }
 
 export interface SeismicEvent {
