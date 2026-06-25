@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Descargar App — SISMO911</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="apple-touch-icon" href="/logo.svg" />
+  <link rel="canonical" href="https://sismo911.com/app" />
+  <meta name="description" content="Descarga la app móvil de SISMO911 para Android, iPhone o usa la versión web instalada desde el navegador." />
+  <meta name="robots" content="index,follow" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="SISMO911" />
+  <meta property="og:title" content="Descargar App — SISMO911" />
+  <meta property="og:description" content="Instala SISMO911 en Android, iPhone o como app web." />
+  <meta property="og:url" content="https://sismo911.com/app" />
+  <meta property="og:image" content="https://sismo911.com/og/og-default.png" />
+  <meta name="theme-color" content="#13284f" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/app.css" />
+  <script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans bg-surface text-on-surface antialiased">
+  <main class="min-h-screen">
+    <section class="bg-primary text-white">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+          <div class="max-w-3xl">
+            <div class="label-caps text-white/70 mb-3">SISMO911 móvil</div>
+            <h1 class="font-display text-4xl sm:text-5xl font-black leading-tight">Descargar la app</h1>
+            <p class="mt-4 text-white/85 text-lg leading-relaxed">
+              La app móvil inicia con reporte de personas desaparecidas y se conecta directamente con la base de datos operativa de SISMO911 por medio de la API segura de sismo911.com.
+            </p>
+          </div>
+          <img src="/logo.svg" alt="SISMO911" class="h-28 w-28 shrink-0 bg-white rounded-2xl p-3" />
+        </div>
+      </div>
+    </section>
+
+    <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <article class="bg-white border border-outline-variant/60 rounded-lg p-5 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="font-display font-extrabold text-2xl text-on-surface">Android</h2>
+            <span class="label-caps bg-safe/10 text-safe px-2.5 py-1 rounded-full">APK</span>
+          </div>
+          <p class="mt-3 text-on-surface-variant text-sm leading-6">
+            Descarga directa para pruebas y distribución fuera de Google Play. Android puede pedir permiso para instalar apps de origen externo.
+          </p>
+          <a id="androidDownload" href="/downloads/sismo911-latest.apk" class="mt-6 inline-flex items-center justify-center rounded-lg bg-secondary text-white font-display font-extrabold px-5 py-3 hover:bg-secondary-container transition">
+            Descargar Android
+          </a>
+          <p class="mt-3 text-xs text-on-surface-variant">
+            Archivo esperado: <code class="font-mono">/downloads/sismo911-latest.apk</code>
+          </p>
+        </article>
+
+        <article class="bg-white border border-outline-variant/60 rounded-lg p-5 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="font-display font-extrabold text-2xl text-on-surface">iPhone</h2>
+            <span class="label-caps bg-primary/10 text-primary px-2.5 py-1 rounded-full">TestFlight</span>
+          </div>
+          <p class="mt-3 text-on-surface-variant text-sm leading-6">
+            Apple no permite instalar una app pública directamente desde la web. Usa TestFlight para pruebas o App Store para distribución pública.
+          </p>
+          <a id="iosDownload" href="https://testflight.apple.com/" class="mt-6 inline-flex items-center justify-center rounded-lg bg-primary text-white font-display font-extrabold px-5 py-3 hover:bg-primary-container transition">
+            Abrir TestFlight
+          </a>
+          <p class="mt-3 text-xs text-on-surface-variant">
+            Cambia este enlace por la invitación real de TestFlight cuando el build esté aprobado.
+          </p>
+        </article>
+
+        <article class="bg-white border border-outline-variant/60 rounded-lg p-5 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="font-display font-extrabold text-2xl text-on-surface">Web App</h2>
+            <span class="label-caps bg-warning/10 text-warning px-2.5 py-1 rounded-full">PWA</span>
+          </div>
+          <p class="mt-3 text-on-surface-variant text-sm leading-6">
+            Disponible ahora desde cualquier navegador. En móvil, abre el menú del navegador y usa “Agregar a pantalla de inicio”.
+          </p>
+          <a href="/" class="mt-6 inline-flex items-center justify-center rounded-lg border border-outline-variant text-primary font-display font-extrabold px-5 py-3 hover:bg-surface-container transition">
+            Usar versión web
+          </a>
+          <p class="mt-3 text-xs text-on-surface-variant">
+            Funciona sin pasar por tiendas y sigue conectado a la API de SISMO911.
+          </p>
+        </article>
+      </div>
+
+      <div class="mt-6 bg-white border border-outline-variant/60 rounded-lg p-5">
+        <h2 class="font-display font-extrabold text-xl text-on-surface">Cómo se publica para muchas personas</h2>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="border border-outline-variant/60 rounded-lg p-4">
+            <div class="label-caps text-secondary">1. Build Android</div>
+            <p class="mt-2 text-sm text-on-surface-variant leading-6">
+              Generar APK de prueba con EAS y subirlo como <code class="font-mono">public/downloads/sismo911-latest.apk</code>.
+            </p>
+          </div>
+          <div class="border border-outline-variant/60 rounded-lg p-4">
+            <div class="label-caps text-primary">2. Build iOS</div>
+            <p class="mt-2 text-sm text-on-surface-variant leading-6">
+              Enviar build a TestFlight. Apple revisa antes de que usuarios externos puedan instalarla.
+            </p>
+          </div>
+          <div class="border border-outline-variant/60 rounded-lg p-4">
+            <div class="label-caps text-safe">3. Tiendas</div>
+            <p class="mt-2 text-sm text-on-surface-variant leading-6">
+              Cuando esté listo para público general, publicar Android en Google Play e iPhone en App Store.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
