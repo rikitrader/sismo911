@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { rateLimit, validLatLon } from '../lib/security';
+import { rateLimit, burstLimit, validLatLon } from '../lib/security';
 import { audit } from '../lib/audit';
 
 // Citizen damage-report map (the "movement" core). PUBLIC reads of APPROVED
@@ -99,6 +99,8 @@ reports.post('/', async (c) => {
 
 // POST /api/reports/:id/react — bump support counter (no auth).
 reports.post('/:id/react', async (c) => {
+  const burst = await burstLimit(c.env, c, 'reports_react');
+  if (burst) return burst;
   const limited = await rateLimit(c.env, c, 'reports_react', 60, 300);
   if (limited) return limited;
   const r = await c.env.DB.prepare(
@@ -117,6 +119,8 @@ reports.get('/:id/comments', async (c) => {
 
 // POST /api/reports/:id/comments
 reports.post('/:id/comments', async (c) => {
+  const burst = await burstLimit(c.env, c, 'reports_comments');
+  if (burst) return burst;
   const limited = await rateLimit(c.env, c, 'reports_comments', 20, 300);
   if (limited) return limited;
   const b = await c.req.json().catch(() => null);
