@@ -18,6 +18,7 @@ import { reports } from './routes/reports';
 import { chat } from './routes/chat';
 import { acopio } from './routes/acopio';
 import { admin } from './routes/admin';
+import { plan } from './routes/plan';
 import { dedupePersonas } from './lib/dedupe';
 import { cleanPersonas } from './lib/clean';
 import { monitor } from './routes/monitor';
@@ -162,6 +163,7 @@ app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET 
 app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directory (GET public; writes operator-gated)
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
+app.route('/plan', plan);  // invitation-only business-plan slide deck (own invite-code gate)
 
 // Per-person social cards: a shared /familia?persona=<id> link rewrites the page's
 // OG/Twitter meta to the person's photo + name, so the preview shows THEM (→ virality).
