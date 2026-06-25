@@ -65,6 +65,14 @@
   </section>
 </main>
 
+<!-- Person detail modal (opens on any photo click) -->
+<div id="pModal" class="hidden fixed inset-0 bg-black/50 z-[2100] grid place-items-start sm:place-items-center p-3 sm:p-4 overflow-y-auto">
+  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl relative my-4">
+    <button id="pClose" aria-label="Cerrar" class="absolute top-4 right-4 z-10 h-9 w-9 grid place-items-center rounded-lg bg-on-surface-variant/85 text-white hover:bg-on-surface transition">✕</button>
+    <div id="pBody"></div>
+  </div>
+</div>
+
 <div id="modal" class="hidden fixed inset-0 bg-black/50 z-[2000] grid place-items-center p-4">
   <form id="registerForm" class="bg-white rounded-xl w-full max-w-md p-5 space-y-3 max-h-[90vh] overflow-y-auto">
     <div class="flex items-center justify-between"><h3 class="font-display font-bold text-lg">Reportar persona desaparecida</h3><button type="button" id="closeModal" class="text-on-surface-variant text-xl">✕</button></div>
@@ -110,7 +118,7 @@ const personGrid=document.getElementById('personGrid');
 let pCursor=null;
 function card(p){const[l,cl]=ST[p.status]||ST.unknown;
   const img=p.photo_url?`<img src="${p.photo_url}" loading="lazy" class="w-full h-44 object-cover bg-surface-container">`:`<div class="w-full h-44 grid place-items-center bg-surface-container text-on-surface-variant text-4xl">👤</div>`;
-  return `<div class="bg-white border border-outline-variant/60 rounded-lg overflow-hidden">
+  return `<div onclick="openPerson('${p.id}')" class="bg-white border border-outline-variant/60 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
     <div class="relative">${img}<span class="absolute top-2 left-2 ${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span></div>
     <div class="p-3"><div class="font-display font-bold">${esc(p.full_name)} ${p.age?`<span class="text-on-surface-variant font-normal text-sm">· ${p.age}</span>`:''}</div>
       <div class="text-xs text-on-surface-variant mt-0.5">${esc(p.last_seen||'—')}</div>
@@ -152,7 +160,7 @@ async function loadGallery(reset){
   if(reset){gCursor=null;galleryGrid.innerHTML='';}
   const d=await fetch(`/api/familia/gallery?limit=30${gCursor?'&cursor='+encodeURIComponent(gCursor):''}`).then(r=>r.json());
   galleryGrid.insertAdjacentHTML('beforeend',(d.photos||[]).map(p=>{const[l,cl]=ST[p.status]||ST.unknown;
-    return `<a href="/api/familia/photo/${p.id}" target="_blank" class="block relative rounded-lg overflow-hidden border border-outline-variant/60">
+    return `<a href="/familia?persona=${p.id}" onclick="event.preventDefault();openPerson('${p.id}')" class="block relative rounded-lg overflow-hidden border border-outline-variant/60 cursor-pointer">
       <img src="${p.photo_url}" loading="lazy" class="w-full aspect-square object-cover bg-surface-container">
       <span class="absolute top-1 left-1 ${cl} text-white text-[9px] font-bold px-1.5 py-0.5 rounded">${l}</span>
       <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1 truncate">${esc(p.full_name)}</div></a>`;}).join(''));
@@ -165,6 +173,71 @@ async function loadGallery(reset){
 
 loadCheckins();
 if(location.hash==='#registro')show('registro'); else if(location.hash==='#galeria')show('galeria');
+
+// ===== Person detail modal (click any photo) — viral share + mark found =====
+const pModal=document.getElementById('pModal'),pBody=document.getElementById('pBody');
+const pClose=()=>{pModal.classList.add('hidden');if(location.search.includes('persona='))history.replaceState(null,'','/familia');};
+document.getElementById('pClose').onclick=pClose;
+pModal.addEventListener('click',e=>{if(e.target===pModal)pClose();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!pModal.classList.contains('hidden'))pClose();});
+const PSTAT={'sin-contacto':['Sin contacto','#bb0027','#e7f3ec'],'localizado':['Localizada','#2e7d32','#e7f3ec'],'fallecido':['Fallecida','#44474f','#eef0f3']};
+const initials=n=>(n||'?').split(/\s+/).map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
+const fmtD=s=>{if(!s)return '';const d=new Date(s);return isNaN(d)?esc(s):d.toLocaleDateString('es-VE',{day:'numeric',month:'short',year:'numeric'});};
+function toast(msg){let el=document.getElementById('s911toast');if(!el){el=document.createElement('div');el.id='s911toast';el.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#00173a;color:#fff;padding:10px 18px;border-radius:10px;font:600 13px Inter,sans-serif;z-index:3000;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:opacity .3s';document.body.appendChild(el);}el.textContent=msg;el.style.opacity='1';clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity='0',2400);}
+window.openPerson=async function(id){
+  pBody.innerHTML='<div class="p-12 text-center text-on-surface-variant">Cargando…</div>';
+  pModal.classList.remove('hidden');history.replaceState(null,'','/familia?persona='+id);
+  let p;try{p=await fetch('/api/familia/person/'+encodeURIComponent(id)).then(r=>r.json());}catch{p=null;}
+  if(!p||p.error){pBody.innerHTML='<div class="p-12 text-center text-on-surface-variant">No se encontró el registro.</div>';return;}
+  const[lbl,col,bg]=PSTAT[p.estado]||PSTAT['sin-contacto'];
+  const hero=p.photo_url?`<img src="${p.photo_url}" alt="${esc(p.full_name)}" class="w-full max-h-[380px] object-cover">`:`<div class="w-full grid place-items-center" style="background:${bg};aspect-ratio:16/11"><span class="font-display font-extrabold text-7xl" style="color:${col}">${esc(initials(p.full_name))}</span></div>`;
+  const url=p.share_url||('https://sismo911.com/familia?persona='+id);
+  const text=`🔴 BUSCAMOS a ${p.full_name}${p.age?', '+p.age+' años':''}. Última ubicación: ${p.last_seen||'—'}. Ayúdanos a difundir. #SISMO911 #Venezuela`;
+  const U=encodeURIComponent(url),T=encodeURIComponent(text);
+  const sb=(on,lab)=>`<button onclick="${on}" class="flex items-center gap-2 border border-outline-variant rounded-full px-3.5 py-2 text-sm font-semibold hover:bg-surface-container whitespace-nowrap">${lab}</button>`;
+  pBody.innerHTML=`<div class="relative">
+      <span class="absolute top-4 left-4 z-10 inline-flex items-center gap-1.5 bg-white/95 backdrop-blur text-sm font-bold px-3 py-1.5 rounded-full shadow-sm" style="color:${col}"><span class="h-2 w-2 rounded-full" style="background:${col}"></span>${lbl}</span>
+      <div class="rounded-t-2xl overflow-hidden">${hero}</div></div>
+    <div class="p-5 sm:p-6">
+      <h2 class="font-display font-extrabold text-3xl text-primary leading-tight">${esc(p.full_name)}</h2>
+      ${p.age?`<div class="text-on-surface-variant text-lg">${p.age} años</div>`:''}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+        <div class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3"><div class="label-caps text-on-surface-variant text-[10px]">📍 Última ubicación</div><div class="font-semibold mt-0.5">${esc(p.last_seen||'—')}</div></div>
+        <div class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3"><div class="label-caps text-on-surface-variant text-[10px]">🗓 ${p.estado==='localizado'?'Localizada':'Sin contacto desde'}</div><div class="font-semibold mt-0.5">${p.estado==='localizado'?esc(p.found_by||'—'):(fmtD(p.since)||'—')}</div></div>
+      </div>
+      ${p.reporter?`<div class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3 mt-2 text-sm"><span class="label-caps text-on-surface-variant text-[10px]">👥 Reporta</span> ${esc(p.reporter)}</div>`:''}
+      ${p.description?`<p class="text-sm text-on-surface-variant mt-3">${esc(p.description)}</p>`:''}
+      ${p.estado!=='localizado'?`<div class="bg-safe/10 border border-safe/30 rounded-xl p-4 mt-4">
+        <div class="font-display font-bold text-safe">¿Ya lograste comunicarte?</div>
+        <p class="text-sm text-on-surface-variant mt-0.5 mb-3">Márcala como localizada y su familia podrá respirar tranquila.</p>
+        <button id="pFound" class="inline-flex items-center gap-2 bg-safe text-white font-display font-bold px-4 py-2.5 rounded-lg hover:opacity-90">✓ Marcar como localizada</button>
+        <p id="pFoundMsg" class="text-sm mt-2"></p></div>`:`<div class="bg-safe/10 border border-safe/30 rounded-xl p-4 mt-4 text-safe font-semibold">✓ Marcada como localizada.</div>`}
+      <div class="border-t border-outline-variant/50 mt-5 pt-4">
+        <div class="label-caps text-on-surface-variant text-[10px] mb-2">Ayuda a difundir</div>
+        <div class="flex flex-wrap gap-2">
+          ${navigator.share?sb('pShare()','📲 Compartir'):''}
+          ${sb(`window.open('https://wa.me/?text=${T}%20${U}','_blank','noopener')`,'🟢 WhatsApp')}
+          ${sb(`window.open('https://twitter.com/intent/tweet?text=${T}&url=${U}','_blank','noopener,width=600,height=520')`,'𝕏 X')}
+          ${sb(`window.open('https://www.facebook.com/sharer/sharer.php?u=${U}','_blank','noopener,width=600,height=520')`,'f Facebook')}
+          ${sb(`window.open('https://t.me/share/url?url=${U}&text=${T}','_blank','noopener')`,'✈ Telegram')}
+          ${sb('pIG()','📷 Instagram')}
+          ${sb('pCopy()','🔗 Copiar')}
+        </div>
+      </div>
+      <button id="pReport" class="block mx-auto mt-5 text-xs text-on-surface-variant hover:text-secondary">⚠ Reportar contenido obsceno</button>
+    </div>`;
+  window.pShare=()=>navigator.share({title:p.full_name,text,url}).catch(()=>{});
+  window.pCopy=()=>{navigator.clipboard&&navigator.clipboard.writeText(url);toast('Enlace copiado');};
+  window.pIG=()=>{navigator.clipboard&&navigator.clipboard.writeText(text+' '+url);toast('Texto copiado — pégalo en tu historia de Instagram');window.open('https://www.instagram.com/','_blank','noopener');};
+  const fb=document.getElementById('pFound');
+  if(fb)fb.onclick=async()=>{const m=document.getElementById('pFoundMsg');m.textContent='Guardando…';
+    const r=await fetch('/api/familia/'+id+'/localizar',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(x=>x.json()).catch(()=>({}));
+    if(r.ok){m.className='text-sm mt-2 text-safe';m.textContent='✓ Marcada como localizada.';setTimeout(()=>openPerson(id),900);}
+    else{m.className='text-sm mt-2 text-on-surface-variant';m.textContent='Solo operadores confirman. Si tienes información, compártela arriba o repórtala.';}};
+  const rb=document.getElementById('pReport');
+  if(rb)rb.onclick=async()=>{if(!confirm('¿Reportar esta publicación como contenido inapropiado?'))return;await fetch('/api/familia/'+id+'/report',{method:'POST'}).catch(()=>{});toast('Gracias, lo revisaremos.');};
+};
+(function(){const id=new URLSearchParams(location.search).get('persona');if(id)openPerson(id);})();
 
 // Deep-link from a blog report photo: ?reportar=1&lugar=…&ref=… → open a prefilled case
 (function(){const q=new URLSearchParams(location.search);if(!q.has('reportar')&&!q.has('caso'))return;show('registro');const m=document.getElementById('modal');if(m)m.classList.remove('hidden');const ls=document.querySelector('#registerForm [name=last_seen]');if(ls&&q.get('lugar'))ls.value=q.get('lugar');const nm=document.querySelector('#registerForm [name=full_name]');if(nm&&q.get('nombre'))nm.value=q.get('nombre');const nt=document.querySelector('#registerForm [name=notes]');if(nt&&q.get('ref'))nt.value=(q.get('nombre')?'Caso vinculado: '+q.get('nombre')+'. ':'')+'Ref: '+(q.get('ref')||'');const fo=document.querySelector('#registerForm [name='+(q.get('nombre')?'last_seen':'full_name')+']');if(fo)setTimeout(()=>fo.focus(),120);})();
