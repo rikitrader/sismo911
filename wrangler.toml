@@ -7,8 +7,16 @@ compatibility_flags = ["nodejs_compat"]
 # on workers.dev by the in-Worker JWT check (run_worker_first).
 workers_dev = true
 
-# Custom domain on the sismo911.com zone — required for Cloudflare Access, which
-# cannot gate a bare *.workers.dev hostname.
+# Custom domains on the sismo911.com zone. The apex + www serve the app; Access
+# (which can't gate a bare *.workers.dev host) attaches to these hostnames.
+[[routes]]
+pattern = "sismo911.com"
+custom_domain = true
+
+[[routes]]
+pattern = "www.sismo911.com"
+custom_domain = true
+
 [[routes]]
 pattern = "app.sismo911.com"
 custom_domain = true
