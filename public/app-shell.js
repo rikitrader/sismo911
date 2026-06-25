@@ -45,8 +45,8 @@
     body > main{ max-width:none !important; margin-left:0 !important; margin-right:0 !important; width:auto !important }
     /* MOBILE (<1024px): fixed top bar with burger + brand; content cleared below it. */
     body{ padding-top:56px }
-    #s911-topbar{position:fixed;top:0;left:0;right:0;height:56px;z-index:1100;display:flex;align-items:center;gap:10px;padding:0 12px;background:#fff;border-bottom:1px solid ${LINE};box-shadow:0 1px 3px rgba(0,0,0,.06)}
-    #s911-burger{width:40px;height:40px;border-radius:10px;background:${NAVY};color:#fff;display:grid;place-items:center;border:none;flex:0 0 auto;cursor:pointer}
+    #s911-topbar{position:fixed;top:0;left:0;right:0;height:56px;z-index:1100;display:flex;align-items:center;justify-content:center;gap:10px;padding:0 12px;background:#fff;border-bottom:1px solid ${LINE};box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    #s911-burger{position:absolute;left:12px;top:8px;width:40px;height:40px;border-radius:10px;background:${NAVY};color:#fff;display:grid;place-items:center;border:none;flex:0 0 auto;cursor:pointer}
     #s911-topbar .s911-brand{font:800 20px 'Public Sans',sans-serif;color:${NAVY};letter-spacing:-.01em;text-decoration:none;display:flex;align-items:center;gap:8px}
     /* DESKTOP (>=1024px): sidebar handles nav; hide the top bar, no top padding. */
     @media(min-width:1024px){
