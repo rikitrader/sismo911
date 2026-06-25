@@ -2,24 +2,26 @@
   "name": "sismo911",
   "version": "0.1.0",
   "private": true,
-  "description": "SISMO911 — Venezuela national seismic emergency platform (Cloudflare Workers + Hono + D1 + KV, live USGS feed).",
+  "description": "SISMO911 \u2014 Venezuela national seismic emergency platform (Cloudflare Workers + Hono + D1 + KV, live USGS feed).",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "npm run build:css && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:migrate:local": "wrangler d1 migrations apply sismo911 --local",
     "db:migrate:remote": "wrangler d1 migrations apply sismo911 --remote",
     "db:seed:local": "wrangler d1 execute sismo911 --local --file=./migrations/seed.sql",
     "db:seed:remote": "wrangler d1 execute sismo911 --remote --file=./migrations/seed.sql",
-    "verify": "tsc --noEmit && vitest run"
+    "verify": "tsc --noEmit && vitest run",
+    "build:css": "tailwindcss -i src/styles.css -o public/app.css --minify"
   },
   "dependencies": {
     "hono": "^4.6.14"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
     "wrangler": "^4.104.0"

@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Shared custom utilities (previously inline per-page <style> blocks) */
+@layer base {
+  body { background: #f9f9fc; }
+}
+@layer components {
+  .font-display { font-family: 'Public Sans', sans-serif; }
+  .label-caps {
+    font-family: 'Public Sans', sans-serif;
+    font-weight: 700; font-size: 12px; line-height: 16px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+}
