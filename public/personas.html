@@ -44,6 +44,25 @@
     <div id="results" class="mt-3 space-y-2"></div>
   </div>
 
+  <!-- Todos los casos — full browsable registry (paginated, all of DB) -->
+  <div class="bg-white border border-outline-variant/60 rounded-xl p-4 mb-6">
+    <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+      <h2 class="font-display font-bold text-primary">Todos los casos</h2>
+      <span id="allN" class="text-xs text-on-surface-variant">—</span>
+    </div>
+    <p class="text-xs text-on-surface-variant mb-3">Registro nacional completo de personas desaparecidas tras el terremoto. Toca un caso para abrir su expediente.</p>
+    <div class="flex flex-wrap gap-2 mb-3">
+      <input id="allq" placeholder="Buscar nombre o lugar…" class="flex-1 min-w-[180px]">
+      <select id="allstatus" style="width:auto">
+        <option value="">Todos</option>
+        <option value="missing">Buscadas</option>
+        <option value="found_safe">A salvo</option>
+      </select>
+    </div>
+    <div id="allList" class="divide-y divide-outline-variant/40"></div>
+    <div id="allMore" class="flex justify-center mt-4"></div>
+  </div>
+
   <!-- Existing DB: still-missing photo gallery -->
   <div class="bg-white border border-outline-variant/60 rounded-xl p-4 mb-6">
     <div class="flex items-center justify-between mb-1">
@@ -107,6 +126,32 @@ async function loadGal(reset){if(reset){gCur=null;document.getElementById('galGr
   const mb=document.getElementById('galMoreBtn');if(mb)mb.onclick=()=>loadGal(false);
 }
 loadGal(true);
+
+// ---- Todos los casos — full paginated registry (/api/familia/persons) ----
+let aCur=null,aLoading=false;
+async function loadAll(reset){
+  if(aLoading)return; aLoading=true;
+  if(reset){aCur=null;document.getElementById('allList').innerHTML='';}
+  const q=document.getElementById('allq').value.trim(),st=document.getElementById('allstatus').value;
+  const qs=new URLSearchParams({limit:'30'}); if(q)qs.set('q',q); if(st)qs.set('status',st); if(aCur)qs.set('cursor',aCur);
+  const d=await fetch('/api/familia/persons?'+qs.toString()).then(r=>r.json()).catch(()=>({persons:[]}));
+  const html=(d.persons||[]).map(p=>{const[l,cl]=ST[p.status]||ST.unknown;
+    const link='/familia?reportar=1&nombre='+encodeURIComponent(p.full_name||'')+'&lugar='+encodeURIComponent(p.last_seen||'')+'&ref='+encodeURIComponent('https://sismo911.com/personas');
+    return `<a href="${link}" class="flex items-center gap-3 py-2.5 hover:bg-surface-container/40 -mx-1 px-1 rounded">
+      <div class="w-11 h-11 rounded-lg overflow-hidden bg-surface-container shrink-0">${p.photo_url?`<img src="${p.photo_url}" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentNode.innerHTML='<div class=\\'w-full h-full grid place-items-center text-on-surface-variant\\'>👤</div>'">`:'<div class="w-full h-full grid place-items-center text-on-surface-variant">👤</div>'}</div>
+      <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(p.full_name||'Sin nombre')}${p.age?', '+Number(p.age):''}</div><div class="text-xs text-on-surface-variant truncate">${esc(p.last_seen||'')}</div></div>
+      <span class="${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">${l}</span></a>`;}).join('');
+  document.getElementById('allList').insertAdjacentHTML('beforeend',html);
+  if(!document.getElementById('allList').children.length)document.getElementById('allList').innerHTML='<p class="text-sm text-on-surface-variant py-4">Sin resultados.</p>';
+  if(typeof d.total==='number')document.getElementById('allN').textContent=d.total.toLocaleString('es')+' casos';
+  aCur=d.nextCursor;
+  document.getElementById('allMore').innerHTML=aCur?'<button id="allMoreBtn" class="px-4 py-2 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>':'';
+  const mb=document.getElementById('allMoreBtn');if(mb)mb.onclick=()=>loadAll(false);
+  aLoading=false;
+}
+let at;document.getElementById('allq').oninput=()=>{clearTimeout(at);at=setTimeout(()=>loadAll(true),300);};
+document.getElementById('allstatus').onchange=()=>loadAll(true);
+loadAll(true);
 </script>
 </body>
 </html>
