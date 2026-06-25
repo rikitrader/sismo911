@@ -55,7 +55,7 @@
   <div id="tiles" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5"></div>
 
   <!-- Map -->
-  <div id="map" class="mb-3"></div>
+  <div id="acopioMap" class="mb-3"></div>
   <div id="legend" class="flex flex-wrap items-center gap-2 text-xs mb-6"></div>
 
   <!-- Filters -->
@@ -103,7 +103,7 @@ function renderLegend(){
 }
 
 // ── Map ──
-const map=L.map('map',{attributionControl:false,scrollWheelZoom:false}).setView([8.4,-66],6);
+const map=L.map('acopioMap',{attributionControl:false,scrollWheelZoom:false}).setView([8.4,-66],6);
 L.control.attribution({prefix:false}).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM · © CARTO',maxZoom:19}).addTo(map);
 const markers=L.layerGroup().addTo(map);
@@ -185,7 +185,7 @@ function fixMap(){map.invalidateSize(); if(LP&&LP.length)map.fitBounds(LP,{paddi
 [150,450,1200].forEach(t=>setTimeout(fixMap,t));
 window.addEventListener('load',fixMap);
 window.addEventListener('resize',()=>map.invalidateSize());
-if(window.ResizeObserver)new ResizeObserver(()=>map.invalidateSize()).observe(document.getElementById('map'));
+if(window.ResizeObserver)new ResizeObserver(()=>map.invalidateSize()).observe(document.getElementById('acopioMap'));
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fixMap);
 load();
 </script>
