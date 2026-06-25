@@ -35,6 +35,8 @@ function cover(p) {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='675' viewBox='0 0 1200 675'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${c}'/><stop offset='.65' stop-color='#00112e'/><stop offset='1' stop-color='#000814'/></linearGradient></defs><rect width='1200' height='675' fill='url(#g)'/><path d='M0 470 L120 470 160 380 200 540 250 300 300 470 1200 470' fill='none' stroke='#bb0027' stroke-width='3' opacity='.55'/><text x='64' y='96' fill='#ffffff' opacity='.7' font-family='Arial,Helvetica,sans-serif' font-size='26' font-weight='700' letter-spacing='3'>SISMO911 · COBERTURA</text><text x='64' y='350' fill='#ffffff' font-family='Arial,Helvetica,sans-serif' font-size='92' font-weight='800'>${loc}</text><text x='64' y='420' fill='#ffd166' font-family='Arial,Helvetica,sans-serif' font-size='34' font-weight='700'>Reporte ciudadano · ${pl}</text><text x='64' y='610' fill='#ffffff' opacity='.6' font-family='Arial,Helvetica,sans-serif' font-size='26'>Terremoto M7.5 · 24 junio 2026 · Venezuela</text></svg>`
   return 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64')
 }
+// every report photo links to a search case in /familia, prefilled with location + source
+const caseLink = (p, slug) => `/familia?reportar=1&lugar=${encodeURIComponent(place(p))}&ref=${encodeURIComponent('https://sismo911.com/blog/' + slug)}`
 const headline = (p, ov) => (ov && ov.headline) || (p.texto && p.texto.length > 22 && p.texto.length < 110 ? p.texto.replace(/\s+/g, ' ') : `Reporte del terremoto en ${place(p)} (${platLabel(p.plataforma)})`)
 const dek = (p, ov) => (ov && ov.metaDesc) || `Reporte ciudadano del terremoto M7.5 del 24 de junio de 2026 desde ${place(p)}.`
 
@@ -58,7 +60,11 @@ const HEAD = (title, desc, canon, img) => `<!DOCTYPE html><html lang="es"><head>
 // ---- article page ----
 function renderArticle(p, ov, slug) {
   const title = headline(p, ov), desc = dek(p, ov), canon = `https://sismo911.com/blog/${slug}`, cv = cover(p)
-  const heroImg = `<div class="w-full rounded-lg border border-outline-variant/60 overflow-hidden bg-cover bg-center" style="aspect-ratio:16/9;background-image:url('${cv}')"><img src="${esc(p.imagen || cv)}" alt="${esc(title)}" class="w-full h-full object-cover" loading="eager" decoding="async" onerror="this.style.display='none'"></div>`
+  const cl = caseLink(p, slug)
+  const heroImg = `<a href="${cl}" class="block relative group" title="¿Reconoces a alguien? Vincula esta imagen a un caso de búsqueda en Familia">
+    <div class="w-full rounded-lg border border-outline-variant/60 overflow-hidden bg-cover bg-center" style="aspect-ratio:16/9;background-image:url('${cv}')"><img src="${esc(p.imagen || cv)}" alt="${esc(title)}" class="w-full h-full object-cover" loading="eager" decoding="async" onerror="this.style.display='none'"></div>
+    <span class="absolute top-3 left-3 bg-primary/85 text-white text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm">🔎 Vincular a un caso</span>
+  </a>`
   const dateISO = Date.parse(p.fechaISO) ? new Date(p.fechaISO).toISOString() : '2026-06-24T21:04:00Z'
   const stats = [fmtNum(p.vistas) && `${fmtNum(p.vistas)} reproducciones`, fmtNum(p.likes) && `${fmtNum(p.likes)} me gusta`].filter(Boolean).join(' · ')
   const ld = { '@context': 'https://schema.org', '@type': 'NewsArticle', headline: title, description: desc, datePublished: dateISO, dateModified: dateISO, inLanguage: 'es', image: [cv], mainEntityOfPage: canon, author: { '@type': 'Person', name: p.autor || 'Reporte ciudadano' }, publisher: { '@type': 'Organization', name: 'SISMO911', logo: { '@type': 'ImageObject', url: 'https://sismo911.com/logo.svg' } }, about: { '@type': 'Event', name: 'Terremoto de Venezuela del 24 de junio de 2026' } }
@@ -78,7 +84,8 @@ ${HEADER}
         ${p.autor ? `<span class="text-on-surface-variant">· ${esc(p.autor)}</span>` : ''}
       </div>
       <h1 class="font-display font-extrabold text-3xl sm:text-4xl leading-tight mb-4">${esc(title)}</h1>
-      <figure class="mb-6">${heroImg}${stats ? `<figcaption class="mt-2 text-xs text-on-surface-variant">${esc(stats)} · al momento del registro</figcaption>` : ''}</figure>
+      <figure class="mb-3">${heroImg}${stats ? `<figcaption class="mt-2 text-xs text-on-surface-variant">${esc(stats)} · al momento del registro</figcaption>` : ''}</figure>
+      <a href="${cl}" class="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-lg p-3 mb-6 hover:bg-secondary/15 transition-colors no-underline"><span class="text-xl shrink-0">🔎</span><span class="text-sm text-on-surface"><b class="text-secondary">¿Reconoces a alguien en esta imagen?</b> Vincúlala a un <b>caso de búsqueda de personas</b> en Familia →</span></a>
       ${ov && ov.body_html ? ov.body_html : `<p>${esc(p.texto || '')}</p>`}
       ${p.enlace ? `<p class="mt-6"><a href="${esc(p.enlace)}" target="_blank" rel="noopener nofollow" class="inline-flex items-center gap-2 bg-primary text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-primary-container transition">▶ Ver la publicación original en ${esc(platLabel(p.plataforma))}</a></p>` : ''}
       <div class="mt-6 flex flex-wrap gap-2" aria-label="Compartir">
@@ -110,16 +117,16 @@ for (const x of picked) writeFileSync(`${OUT}/blog/${x.slug}.html`, renderArticl
 const FEATURED = { slug: 'terremoto-magnitud-7-5-yumare-venezuela-24-junio-2026', img: '/og/og-terremoto-yumare.png', tag: '🔴 INFORME · EVENTO MAYOR', date: '24 jun 2026', title: 'Terremoto M7.5 frente a Yumare: el doblete sísmico que sacudió a Venezuela', dek: 'Dos terremotos mayores (M7.2 y M7.5) con 39 segundos de diferencia frente a Yaracuy. Epicentro, daños en Caracas, alerta de tsunami, réplicas y qué puede pasar ahora — análisis con fuentes oficiales (USGS, EMSC, PTWC).' }
 
 const card = x => {
-  const p = x.p, t = headline(p, x.ov)
-  return `<a href="/blog/${x.slug}" class="group bg-white border border-outline-variant/60 rounded-xl overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-    <div class="aspect-[16/9] overflow-hidden bg-cover bg-center" style="background-image:url('${cover(p)}')"><img src="${esc(p.imagen || cover(p))}" alt="${esc(t)}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" onerror="this.style.display='none'"></div>
+  const p = x.p, t = headline(p, x.ov), a = `/blog/${x.slug}`, cl = caseLink(p, x.slug)
+  return `<div class="group bg-white border border-outline-variant/60 rounded-xl overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+    <a href="${a}" class="block relative aspect-[16/9] overflow-hidden bg-cover bg-center" style="background-image:url('${cover(p)}')"><img src="${esc(p.imagen || cover(p))}" alt="${esc(t)}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" onerror="this.style.display='none'"><span class="absolute top-2 left-2 bg-primary/85 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">🔎 Caso</span></a>
     <div class="p-4 flex flex-col flex-1">
       <div class="flex items-center gap-2 text-[11px] font-bold mb-2"><span class="text-white px-2 py-0.5 rounded" style="background:${PLAT[p.plataforma] || '#00173a'}">${esc(platLabel(p.plataforma))}</span><span class="text-on-surface-variant uppercase tracking-wide">${esc(place(p))}</span></div>
-      <h3 class="font-display font-bold text-[15px] leading-snug text-on-surface mb-1 line-clamp-3 group-hover:text-primary">${esc(t)}</h3>
+      <a href="${a}"><h3 class="font-display font-bold text-[15px] leading-snug text-on-surface mb-1 line-clamp-3 group-hover:text-primary">${esc(t)}</h3></a>
       <p class="text-xs text-on-surface-variant line-clamp-2 mb-3">${esc(dek(p, x.ov))}</p>
-      <div class="mt-auto flex items-center justify-between text-[11px] text-on-surface-variant"><span>${fmtDate(p.fechaISO)}</span><span class="text-primary font-semibold group-hover:underline">Leer →</span></div>
+      <div class="mt-auto flex items-center justify-between text-[11px]"><a href="${cl}" class="text-secondary font-semibold hover:underline">🔎 Vincular a caso</a><a href="${a}" class="text-primary font-semibold hover:underline">Leer →</a></div>
     </div>
-  </a>`
+  </div>`
 }
 
 const indexHtml = `${HEAD('Blog Sísmico — Cobertura del terremoto de Venezuela | SISMO911', 'Cobertura del terremoto M7.5 que sacudió Venezuela el 24 de junio de 2026: informe oficial con fuentes verificadas (USGS, EMSC, PTWC) y ' + picked.length + ' reportes ciudadanos en terreno geolocalizados.', 'https://sismo911.com/blog', 'https://sismo911.com/og/og-terremoto-yumare.png')}
