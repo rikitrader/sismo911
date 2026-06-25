@@ -68,8 +68,13 @@ familia.get('/persons', async (c) => {
 // GET /api/familia/gallery?cursor=&limit=
 familia.get('/gallery', async (c) => {
   const limit = clampLimit(c.req.query('limit'), 30);
-  const total = ((await c.env.DESAP.prepare(`SELECT COUNT(*) AS n FROM personas WHERE foto_r2 IS NOT NULL AND moderation='approved'`).first<any>())?.n) ?? 0;
-  const where = ['foto_r2 IS NOT NULL', "moderation = 'approved'"]; const binds: unknown[] = [];
+  // optional ?status=missing → only still-missing (estado='sin-contacto'); default = all approved photos
+  const est = statusToEstado(c.req.query('status') || '');
+  const base = ['foto_r2 IS NOT NULL', "moderation = 'approved'"]; const baseBinds: unknown[] = [];
+  if (est) { base.push('estado = ?'); baseBinds.push(est); }
+  const wBase = base.join(' AND ');
+  const total = ((await c.env.DESAP.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${wBase}`).bind(...baseBinds).first<any>())?.n) ?? 0;
+  const where = [...base]; const binds = [...baseBinds];
   cursorClause(c.req.query('cursor') || '', where, binds);
   const { results } = await c.env.DESAP.prepare(
     `SELECT id, nombre, edad, ubicacion, estado, foto_r2, updated_at FROM personas
