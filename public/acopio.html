@@ -107,6 +107,7 @@ const map=L.map('map',{attributionControl:false,scrollWheelZoom:false}).setView(
 L.control.attribution({prefix:false}).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM · © CARTO',maxZoom:19}).addTo(map);
 const markers=L.layerGroup().addTo(map);
+let LP=[];
 function dot(c,sc){return L.divIcon({className:'',html:`<div style="width:16px;height:16px;border-radius:9999px;background:${c};box-shadow:0 0 0 2px #fff,0 0 0 4px ${sc},0 1px 3px rgba(0,0,0,.4)"></div>`,iconSize:[20,20],iconAnchor:[10,10]});}
 
 // ── Tiles ──
@@ -134,7 +135,7 @@ function render(){
     L.marker([d.lat,d.lon],{icon:dot(c,scol)}).bindPopup(
       `<b>${esc(d.nombre)}</b><br><span style="color:${scol};font-weight:700">● ${slbl}</span> · ${TIPO[d.tipo][1]} ${TIPO[d.tipo][2]} · ${esc(d.cap)}<br><span style="color:#444">${esc(d.dir)}</span><br>${esc(d.estado)} — ${esc(d.ciudad)}${ov&&ov.note?`<br><i style="color:#444">${esc(ov.note)}</i>`:''}<br><a href="tel:911" style="color:#c8102e;font-weight:700">📞 Llamar 911</a> · <a href="${gmaps(d)}" target="_blank" rel="noopener" style="color:#13284f;font-weight:700">📍 Cómo llegar →</a>`
     ).addTo(markers);});
-  if(pts.length)map.fitBounds(pts,{padding:[30,30],maxZoom:9});
+  LP=pts; if(pts.length)map.fitBounds(pts,{padding:[30,30],maxZoom:9});
   // grouped list
   const byEst={};list.forEach(d=>{(byEst[d.estado]=byEst[d.estado]||[]).push(d);});
   $('#list').innerHTML=ESTADOS.filter(e=>byEst[e]).map(e=>{
@@ -178,8 +179,14 @@ async function load(){
     D=cat;ST=st.status||{};
   }catch(e){ $('#list').innerHTML='<p class="text-secondary text-sm">No se pudo cargar el catálogo. Revisa tu conexión.</p>'; }
   renderTiles();render();
-  setTimeout(()=>map.invalidateSize(),200);
+  fixMap();
 }
+function fixMap(){map.invalidateSize(); if(LP&&LP.length)map.fitBounds(LP,{padding:[30,30],maxZoom:9});}
+[150,450,1200].forEach(t=>setTimeout(fixMap,t));
+window.addEventListener('load',fixMap);
+window.addEventListener('resize',()=>map.invalidateSize());
+if(window.ResizeObserver)new ResizeObserver(()=>map.invalidateSize()).observe(document.getElementById('map'));
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fixMap);
 load();
 </script>
 </body>
