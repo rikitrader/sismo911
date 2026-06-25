@@ -42,6 +42,24 @@
   .lk b{font-family:'Public Sans',sans-serif;font-weight:800;color:#13284f;font-size:16px}
   .lk span{display:block;font-size:13px;color:#5b6884;margin-top:4px;line-height:1.45}
   .lk .go{color:#dc2626;font-weight:800;font-size:13px;margin-top:8px;display:inline-block}
+  .fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .fcard{background:#fff;border:1px solid #e6e9f1;border-radius:14px;padding:14px 15px;box-shadow:0 6px 18px rgba(19,40,79,.05);display:flex;flex-direction:column;gap:8px}
+  .fcard .ftop{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .fcard .fn{font-family:'Public Sans',sans-serif;font-weight:800;color:#13284f;font-size:14.5px;line-height:1.2}
+  .badge{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:999px;white-space:nowrap;flex:0 0 auto}
+  .badge.gik{background:#e7f6ec;color:#16a34a}.badge.cash{background:#eaf0fb;color:#13284f}
+  .badge.grant{background:#fdeee3;color:#c2410c}.badge.partner{background:#fbf1dd;color:#b45309}
+  .fcard .fmeta{font-size:11.5px;color:#5b6884;display:flex;justify-content:space-between}
+  .fcard .fbar{height:6px;border-radius:4px;background:#eef1f7;overflow:hidden}
+  .fcard .fbar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#dc2626,#ea580c)}
+  .fcard .fbot{display:flex;align-items:baseline;justify-content:space-between;margin-top:2px}
+  .fcard .fev{font-family:'Public Sans',sans-serif;font-weight:900;color:#13284f;font-size:17px}
+  .fcard .fev small{font-weight:700;color:#5b6884;font-size:11px}
+  .pill{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:#f1f3f8;color:#475569}
+  .fsum{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 16px}
+  .fsum div{background:#fff;border:1px solid #e6e9f1;border-left:4px solid #dc2626;border-radius:10px;padding:8px 14px}
+  .fsum .l{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#dc2626}
+  .fsum .v{font-family:'Public Sans',sans-serif;font-weight:900;color:#13284f;font-size:18px}
   @media(max-width:640px){.barRow{grid-template-columns:120px 1fr 64px}}
 </style>
 </head>
@@ -85,6 +103,32 @@
       <p class="text-xs mb-3" style="color:#5b6884">Miami → Caracas + última milla — total $48.2K por ola.</p>
       <div id="cDeploy"></div>
     </section>
+  </div>
+
+  <!-- Funder pipeline (real) -->
+  <h2 class="h text-xl mb-1">Pipeline de financiamiento</h2>
+  <p class="text-xs mb-2" style="color:#5b6884">Fuentes reales con monto objetivo, probabilidad y valor esperado (ajustado por riesgo). La barra = probabilidad de cierre.</p>
+  <div class="fsum">
+    <div><div class="l">Objetivo total</div><div class="v">$1.16M</div></div>
+    <div><div class="l">Esperado (ajustado)</div><div class="v">$421.5K</div></div>
+    <div><div class="l">Solicitud Año 1</div><div class="v">$497.9K</div></div>
+    <div><div class="l">Brecha a cerrar</div><div class="v">~$76K</div></div>
+  </div>
+  <div class="fgrid mb-8">
+    <div class="fcard"><div class="ftop"><div class="fn">Direct Relief</div><span class="badge gik">En especie</span></div><div class="fmeta"><span>Objetivo $150K</span><span>Prob 50%</span></div><div class="fbar"><i style="width:50%"></i></div><div class="fbot"><div class="fev">$75K <small>esperado</small></div><span class="pill">Aplicar</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">USAID / BHA</div><span class="badge grant">Grant</span></div><div class="fmeta"><span>Objetivo $250K</span><span>Prob 20%</span></div><div class="fbar"><i style="width:20%"></i></div><div class="fbot"><div class="fev">$50K <small>esperado</small></div><span class="pill">Watch</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">Diáspora venezolana</div><span class="badge cash">Efectivo</span></div><div class="fmeta"><span>Objetivo $75K</span><span>Prob 60%</span></div><div class="fbar"><i style="width:60%"></i></div><div class="fbot"><div class="fev">$45K <small>esperado</small></div><span class="pill">Cultivar</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">Americares</div><span class="badge gik">En especie</span></div><div class="fmeta"><span>Objetivo $80K</span><span>Prob 45%</span></div><div class="fbar"><i style="width:45%"></i></div><div class="fbot"><div class="fev">$36K <small>esperado</small></div><span class="pill">Aplicar</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">MedShare</div><span class="badge gik">En especie</span></div><div class="fmeta"><span>Objetivo $60K</span><span>Prob 50%</span></div><div class="fbar"><i style="width:50%"></i></div><div class="fbot"><div class="fev">$30K <small>esperado</small></div><span class="pill">Aplicar</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">Open Society Foundations</div><span class="badge grant">Grant</span></div><div class="fmeta"><span>Objetivo $100K</span><span>Prob 30%</span></div><div class="fbar"><i style="width:30%"></i></div><div class="fbot"><div class="fev">$30K <small>esperado</small></div><span class="pill">LOI</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">GoFundMe (surge post-evento)</div><span class="badge cash">Efectivo</span></div><div class="fmeta"><span>Objetivo $50K</span><span>Prob 60%</span></div><div class="fbar"><i style="width:60%"></i></div><div class="fbot"><div class="fev">$30K <small>esperado</small></div><span class="pill">On-trigger</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">GlobalGiving</div><span class="badge cash">Efectivo</span></div><div class="fmeta"><span>Objetivo $40K</span><span>Prob 70%</span></div><div class="fbar"><i style="width:70%"></i></div><div class="fbot"><div class="fev">$28K <small>esperado</small></div><span class="pill">Live</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">Banco Interamericano (BID)</div><span class="badge grant">Grant</span></div><div class="fmeta"><span>Objetivo $150K</span><span>Prob 15%</span></div><div class="fbar"><i style="width:15%"></i></div><div class="fbot"><div class="fev">$22.5K <small>esperado</small></div><span class="pill">Watch</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">Farma (J&amp;J / Pfizer / BD)</div><span class="badge gik">En especie</span></div><div class="fmeta"><span>Objetivo $60K</span><span>Prob 30%</span></div><div class="fbar"><i style="width:30%"></i></div><div class="fbot"><div class="fev">$18K <small>esperado</small></div><span class="pill">Aplicar</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">Project HOPE</div><span class="badge partner">Socio</span></div><div class="fmeta"><span>Objetivo $50K</span><span>Prob 35%</span></div><div class="fbar"><i style="width:35%"></i></div><div class="fbot"><div class="fev">$17.5K <small>esperado</small></div><span class="pill">Intro</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">Rotary / fe / NGOs locales</div><span class="badge partner">Socio</span></div><div class="fmeta"><span>Objetivo $30K</span><span>Prob 50%</span></div><div class="fbar"><i style="width:50%"></i></div><div class="fbot"><div class="fev">$15K <small>esperado</small></div><span class="pill">Cultivar</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">Crypto / Crossmint</div><span class="badge cash">Efectivo</span></div><div class="fmeta"><span>Objetivo $25K</span><span>Prob 50%</span></div><div class="fbar"><i style="width:50%"></i></div><div class="fbot"><div class="fev">$12.5K <small>esperado</small></div><span class="pill">Live</span></div></div>
+    <div class="fcard"><div class="ftop"><div class="fn">PAHO / OMS</div><span class="badge gik">En especie</span></div><div class="fmeta"><span>Objetivo $40K</span><span>Prob 30%</span></div><div class="fbar"><i style="width:30%"></i></div><div class="fbot"><div class="fev">$12K <small>esperado</small></div><span class="pill">Intro</span></div></div>
   </div>
 
   <!-- Individual pages -->
@@ -157,12 +201,17 @@
     {l:'Reserva / contingencia', v:21.4}
   ], 'k$');
 
+  var GIK='linear-gradient(90deg,#16a34a,#65d08a)';
   bars('cFund', [
-    {l:'En especie (GIK médico)', v:160, c:'linear-gradient(90deg,#16a34a,#65d08a)'},
-    {l:'Grant institucional (OSF)', v:30},
-    {l:'Diáspora + audiencia', v:75},
-    {l:'Corporativo / farma', v:60},
-    {l:'Crowd + surge post-evento', v:96}
+    {l:'Direct Relief', v:75, c:GIK},
+    {l:'USAID / BHA', v:50},
+    {l:'Diáspora venezolana', v:45},
+    {l:'Americares', v:36, c:GIK},
+    {l:'MedShare', v:30, c:GIK},
+    {l:'Open Society (OSF)', v:30},
+    {l:'GoFundMe (surge)', v:30},
+    {l:'GlobalGiving', v:28},
+    {l:'Otros (6 fuentes)', v:97.5}
   ], 'k$');
 
   donut('cTier', [
