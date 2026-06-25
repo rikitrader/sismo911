@@ -35,7 +35,7 @@ export function setSecurityHeaders(c: Context) {
       "object-src 'none'",
       "frame-ancestors 'none'",
       "form-action 'self'",
-      "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
