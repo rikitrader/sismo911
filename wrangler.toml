@@ -17,14 +17,12 @@ crons = ["* * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "sismo911"
-# Local dev uses a local SQLite file keyed by database_name; this id is a
-# placeholder until the remote D1 is created on the target account.
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "0b7aae58-b326-416d-b28b-632becb6981c"
 
 # Hot cache for the latest normalized USGS GeoJSON + computed PAGER payloads.
 [[kv_namespaces]]
 binding = "CACHE"
-id = "ac8230f9b1d445eca40cf5dcd0296fb8"
+id = "2d5be96112724b8dbfaae2723d3a4dd3"
 
 [observability]
 enabled = true
