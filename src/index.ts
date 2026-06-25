@@ -15,6 +15,9 @@ import { damageMap } from './routes/damage-map';
 import { reports } from './routes/reports';
 import { chat } from './routes/chat';
 import { acopio } from './routes/acopio';
+import { monitor } from './routes/monitor';
+import { ingestSocialMonitor } from './ingest/social-monitor';
+import { syncMonitorSheet } from './lib/sheets-sync';
 import { ingestUsgs } from './ingest/usgs-cron';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
@@ -123,6 +126,7 @@ app.route('/api/damage', damage);
 app.route('/api/reports', reports);  // citizen damage-report map + comments + reactions + moderation
 app.route('/api/chat', chat);        // community channel
 app.route('/api/acopio', acopio);    // /api/acopio/status — live status for acopio/hospitales/PC
+app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET public; refresh gated; apify webhook secret-gated)
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
 
@@ -159,6 +163,9 @@ export default {
       // Hourly: sync structural-damage reports from sosvenezuela2026 (source of truth).
       if (new Date(_event.scheduledTime).getUTCMinutes() === 0) {
         await ingestSosDamage(env).catch((e: any) => console.error('[cron] sos-damage sync failed:', e?.message ?? e));
+        // Hourly: social/web disaster-signal monitor → D1, then mirror into the Google Sheet.
+        await ingestSocialMonitor(env).catch((e: any) => console.error('[cron] social monitor failed:', e?.message ?? e));
+        await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));
       }
     })());
   },

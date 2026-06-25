@@ -20,6 +20,17 @@ export interface Env {
   VAPID_PUBLIC_KEY?: string;
   // Cloudflare Workers AI (situation reports). Optional binding.
   AI?: Ai;
+  // Social/web disaster monitor (all optional — features gate on their presence).
+  PUBLIC_BASE_URL?: string;
+  TELEGRAM_CHANNELS?: string;      // comma-separated public channel handles
+  APIFY_TOKEN?: string;
+  APIFY_TIKTOK_ACTOR?: string;
+  APIFY_IG_ACTOR?: string;
+  MONITOR_WEBHOOK_SECRET?: string; // shared secret for the Apify webhook
+  MONITOR_SHEET_ID?: string;       // Google Sheet to mirror into
+  GOOGLE_REFRESH_TOKEN?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
 }
 
 export interface SeismicEvent {
