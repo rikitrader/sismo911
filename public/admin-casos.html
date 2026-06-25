@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMO911 — Expedientes de Personas Desaparecidas</title>
+  <meta name="description" content="CRM y expediente (docket) de casos de personas desaparecidas tras el sismo — acceso restringido." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://sismo911.com/admin-casos" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#13284f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/app.css" />
+  <style>
+    body{background:#f9f9fc}
+    .font-display{font-family:'Public Sans',sans-serif}
+    .mono{font-family:'JetBrains Mono',monospace}
+    input,select,textarea{width:100%;border:1px solid #c4c6d0;border-radius:.5rem;padding:.5rem .65rem;font-size:.875rem;background:#fff}
+    .chip{display:inline-flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:700;padding:.15rem .5rem;border-radius:9999px;white-space:nowrap}
+    .row:hover{background:#eef1f8;cursor:pointer}
+    /* drawer */
+    #drawer{transition:transform .25s ease}
+    #drawer.closed{transform:translateX(100%)}
+    .tl{position:relative;padding-left:1.5rem}
+    .tl::before{content:'';position:absolute;left:.42rem;top:.2rem;bottom:.2rem;width:2px;background:#d3d7e3}
+    .tl-dot{position:absolute;left:0;top:.15rem;width:.9rem;height:.9rem;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px #c4c6d0}
+  </style>
+</head>
+<body class="font-sans text-on-surface">
+  <header class="bg-primary text-white">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="/logo.svg" alt="SISMO911" class="h-10 w-10" />
+        <div>
+          <div class="font-display font-extrabold text-lg leading-none">SISMO911</div>
+          <div class="text-[10px] tracking-widest text-white/70">EXPEDIENTES · PERSONAS DESAPARECIDAS</div>
+        </div>
+      </div>
+      <nav class="flex items-center gap-4 text-sm font-medium text-white/90">
+        <a href="/admin" class="hover:text-white">Consola</a>
+        <a href="/" class="hover:text-white">← Panel</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-7">
+    <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
+      <div>
+        <h1 class="font-display font-extrabold text-2xl">Expedientes de casos</h1>
+        <p class="text-sm text-on-surface-variant">Gestión tipo CRM / docket judicial. Haz clic en un caso para abrir su expediente completo con la línea de tiempo desde el sismo.</p>
+      </div>
+    </div>
+
+    <!-- Summary tiles -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+      <div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div id="s_missing" class="font-display font-extrabold text-2xl text-warning">—</div><div class="text-xs text-on-surface-variant">Desaparecidas</div></div>
+      <div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div id="s_safe" class="font-display font-extrabold text-2xl text-safe">—</div><div class="text-xs text-on-surface-variant">Localizadas a salvo</div></div>
+      <div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div id="s_dead" class="font-display font-extrabold text-2xl text-error">—</div><div class="text-xs text-on-surface-variant">Fallecidas</div></div>
+      <div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div id="s_pending" class="font-display font-extrabold text-2xl text-primary">—</div><div class="text-xs text-on-surface-variant">Pendientes de revisión</div></div>
+      <div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div id="s_total" class="font-display font-extrabold text-2xl">—</div><div class="text-xs text-on-surface-variant">Total expedientes</div></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border border-outline-variant/60 rounded-xl p-4 mb-4 grid sm:grid-cols-4 gap-3">
+      <div class="sm:col-span-2"><input id="q" placeholder="Buscar nombre, lugar o teléfono…" /></div>
+      <select id="f_status">
+        <option value="">Todos los estados</option>
+        <option value="missing">Desaparecida</option>
+        <option value="found_safe">Localizada (a salvo)</option>
+        <option value="found_deceased">Fallecida</option>
+        <option value="unknown">Desconocido</option>
+      </select>
+      <select id="f_review">
+        <option value="">Toda la revisión</option>
+        <option value="approved">Aprobado</option>
+        <option value="pending">Pendiente</option>
+        <option value="rejected">Rechazado</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white border border-outline-variant/60 rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-surface-variant/40 text-on-surface-variant text-left">
+            <tr>
+              <th class="px-3 py-2 font-semibold">Caso</th>
+              <th class="px-3 py-2 font-semibold">Persona</th>
+              <th class="px-3 py-2 font-semibold">Estado</th>
+              <th class="px-3 py-2 font-semibold">Visto por última vez</th>
+              <th class="px-3 py-2 font-semibold">Sismo</th>
+              <th class="px-3 py-2 font-semibold text-center">Movs.</th>
+              <th class="px-3 py-2 font-semibold">Abierto</th>
+              <th class="px-3 py-2 font-semibold">Últ. act.</th>
+            </tr>
+          </thead>
+          <tbody id="rows"><tr><td colspan="8" class="px-3 py-8 text-center text-on-surface-variant">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <p id="count" class="text-xs text-on-surface-variant mt-2"></p>
+  </main>
+
+  <!-- Docket drawer -->
+  <div id="scrim" class="fixed inset-0 bg-black/40 hidden z-40"></div>
+  <aside id="drawer" class="closed fixed top-0 right-0 h-full w-full max-w-xl bg-white shadow-2xl z-50 flex flex-col">
+    <div class="bg-primary text-white px-5 py-4 flex items-center justify-between">
+      <div class="font-display font-bold">Expediente del caso</div>
+      <button id="closeDrawer" class="text-white/80 hover:text-white text-xl leading-none">✕</button>
+    </div>
+    <div id="docketBody" class="flex-1 overflow-y-auto p-5 space-y-5"></div>
+  </aside>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = (p, o) => fetch('/api/' + p, Object.assign({ credentials: 'same-origin' }, o));
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+
+const ST = {
+  missing:        { es:'Desaparecida',         cls:'bg-warning/15 text-warning' },
+  found_safe:     { es:'Localizada · a salvo',  cls:'bg-safe/15 text-safe' },
+  found_deceased: { es:'Fallecida',             cls:'bg-error/15 text-error' },
+  unknown:        { es:'Desconocido',           cls:'bg-surface-variant text-on-surface-variant' },
+};
+const REV = { approved:'Aprobado', pending:'Pendiente', rejected:'Rechazado' };
+const KIND = {
+  report_filed:'Reporte recibido', status_change:'Cambio de estado', sighting:'Avistamiento',
+  contact:'Contacto', note:'Nota', shelter:'Refugio', hospital:'Hospital',
+  morgue:'Morgue', reunified:'Reunificación', review:'Moderación', opened:'Expediente abierto', sismo:'Sismo de referencia',
+};
+const KIND_COLOR = {
+  sismo:'#b3261e', report_filed:'#13284f', status_change:'#7a5b00', sighting:'#1b6e3c',
+  contact:'#13284f', hospital:'#1b6e3c', shelter:'#1b6e3c', morgue:'#5a5f6a',
+  reunified:'#1b6e3c', review:'#5a5f6a', note:'#5a5f6a', opened:'#13284f',
+};
+
+const fmt = ms => ms ? new Date(Number(ms)).toLocaleString('es-VE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+const fmtD = ms => ms ? new Date(Number(ms)).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const daysOpen = ms => ms ? Math.max(0, Math.floor((Date.now()-Number(ms))/86400000)) : 0;
+
+function chip(status){ const s=ST[status]||ST.unknown; return `<span class="chip ${s.cls}">${s.es}</span>`; }
+
+async function load(){
+  const params = new URLSearchParams();
+  if ($('#q').value.trim()) params.set('q', $('#q').value.trim());
+  if ($('#f_status').value) params.set('status', $('#f_status').value);
+  if ($('#f_review').value) params.set('review', $('#f_review').value);
+  const r = await api('persons/cases?' + params.toString());
+  if (r.status === 401){ document.body.innerHTML = '<div style="padding:3rem;text-align:center;font-family:sans-serif">Sesión requerida. <a href="/login?next=/admin-casos">Inicia sesión como operador</a>.</div>'; return; }
+  const { cases, summary } = await r.json();
+  $('#s_missing').textContent = summary.missing ?? 0;
+  $('#s_safe').textContent = summary.found_safe ?? 0;
+  $('#s_dead').textContent = summary.deceased ?? 0;
+  $('#s_pending').textContent = summary.pending ?? 0;
+  $('#s_total').textContent = summary.total ?? 0;
+  const tb = $('#rows');
+  if (!cases.length){ tb.innerHTML = '<tr><td colspan="8" class="px-3 py-8 text-center text-on-surface-variant">No hay casos que coincidan.</td></tr>'; $('#count').textContent=''; return; }
+  tb.innerHTML = cases.map(c => {
+    const sismo = c.event_time ? `${esc(c.event_place||c.event_place_en||'Sismo')}${c.event_mag?` · M${c.event_mag}`:''}<div class="text-[11px] text-on-surface-variant">${fmtD(c.event_time)}</div>` : '<span class="text-on-surface-variant">—</span>';
+    const rev = c.review!=='approved' ? `<span class="chip bg-surface-variant text-on-surface-variant ml-1">${REV[c.review]||c.review}</span>` : '';
+    return `<tr class="row border-t border-outline-variant/40" data-id="${c.id}">
+      <td class="px-3 py-2 mono text-[11px] text-on-surface-variant align-top">${esc(c.id)}</td>
+      <td class="px-3 py-2 align-top"><div class="font-semibold">${esc(c.full_name)}</div><div class="text-[11px] text-on-surface-variant">${c.age?c.age+' años':''}${c.sex?' · '+esc(c.sex):''}</div></td>
+      <td class="px-3 py-2 align-top">${chip(c.status)}${rev}</td>
+      <td class="px-3 py-2 align-top">${esc(c.last_seen)||'<span class="text-on-surface-variant">—</span>'}</td>
+      <td class="px-3 py-2 align-top text-[12px]">${sismo}</td>
+      <td class="px-3 py-2 align-top text-center"><span class="chip bg-primary/10 text-primary">${c.docket_count||0}</span></td>
+      <td class="px-3 py-2 align-top text-[12px]">${fmtD(c.created_ms)}<div class="text-[11px] text-on-surface-variant">${daysOpen(c.created_ms)} d</div></td>
+      <td class="px-3 py-2 align-top text-[12px]">${fmtD(c.last_activity_ms||c.updated_ms)}</td>
+    </tr>`;
+  }).join('');
+  $('#count').textContent = `${cases.length} caso(s) mostrados`;
+  tb.querySelectorAll('.row').forEach(r => r.addEventListener('click', () => openDocket(r.dataset.id)));
+}
+
+function openDrawer(){ $('#drawer').classList.remove('closed'); $('#scrim').classList.remove('hidden'); }
+function closeDrawer(){ $('#drawer').classList.add('closed'); $('#scrim').classList.add('hidden'); }
+$('#closeDrawer').addEventListener('click', closeDrawer);
+$('#scrim').addEventListener('click', closeDrawer);
+
+async function openDocket(id){
+  openDrawer();
+  $('#docketBody').innerHTML = '<div class="text-center text-on-surface-variant py-10">Cargando expediente…</div>';
+  const r = await api('persons/' + id + '/docket');
+  if (!r.ok){ $('#docketBody').innerHTML = '<div class="text-error py-6">No se pudo cargar el expediente.</div>'; return; }
+  const { person:p, event:e, docket } = await r.json();
+
+  // Build the chronological timeline: sismo anchor → case opened → docket entries.
+  const nodes = [];
+  if (e && e.time_ms) nodes.push({ ts:e.time_ms, kind:'sismo', detail:`${e.place_es||e.place||'Sismo'} — M${e.mag||'?'}${e.depth_km?`, ${e.depth_km} km prof.`:''}${e.alert?` · PAGER ${e.alert}`:''}`, location:null });
+  nodes.push({ ts:p.created_ms, kind:'opened', detail:`Expediente registrado${p.reported_by?` por ${p.reported_by}`:''}`, location:p.last_seen });
+  for (const d of docket) nodes.push({ ts:d.created_ms, kind:d.kind, detail:d.detail, location:d.location, status_from:d.status_from, status_to:d.status_to, actor:d.actor, source:d.source });
+  nodes.sort((a,b)=>a.ts-b.ts);
+
+  const photo = p.photo_url ? `<img src="${esc(p.photo_url)}" alt="" class="w-20 h-20 rounded-lg object-cover border border-outline-variant/60" onerror="this.style.display='none'">` : `<div class="w-20 h-20 rounded-lg bg-surface-variant grid place-items-center text-on-surface-variant text-2xl">👤</div>`;
+
+  const sismoCard = e ? `<div class="bg-error/5 border border-error/20 rounded-lg p-3 text-sm">
+      <div class="font-display font-bold text-error text-xs uppercase tracking-wide">Sismo de referencia</div>
+      <div class="font-semibold mt-1">${esc(e.place_es||e.place||'Sismo')} · M${e.mag||'?'}</div>
+      <div class="text-on-surface-variant text-[12px]">${fmt(e.time_ms)}${e.depth_km?` · ${e.depth_km} km`:''}${e.alert?` · PAGER ${esc(e.alert)}`:''}</div>
+      ${e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener" class="text-[12px] text-primary underline">Ver evento USGS ↗</a>`:''}
+    </div>` : `<div class="text-[12px] text-on-surface-variant">Sin sismo vinculado a este expediente.</div>`;
+
+  const tl = nodes.map(n => {
+    const color = KIND_COLOR[n.kind] || '#5a5f6a';
+    let title = KIND[n.kind] || n.kind;
+    if (n.kind==='status_change' && (n.status_from||n.status_to)) title += `: ${ST[n.status_from]?.es||n.status_from||'—'} → ${ST[n.status_to]?.es||n.status_to||'—'}`;
+    const meta = [n.location, n.source&&n.source!=='operator'?'fuente: '+n.source:'', n.actor].filter(Boolean).map(esc).join(' · ');
+    return `<div class="tl pb-4">
+      <span class="tl-dot" style="background:${color}"></span>
+      <div class="text-[11px] text-on-surface-variant mono">${fmt(n.ts)}</div>
+      <div class="font-semibold text-sm" style="color:${color}">${esc(title)}</div>
+      ${n.detail?`<div class="text-sm text-on-surface">${esc(n.detail)}</div>`:''}
+      ${meta?`<div class="text-[11px] text-on-surface-variant">${meta}</div>`:''}
+    </div>`;
+  }).join('');
+
+  $('#docketBody').innerHTML = `
+    <div class="flex gap-4">
+      ${photo}
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">${chip(p.status)}<span class="chip bg-surface-variant text-on-surface-variant">${REV[p.review]||p.review}</span></div>
+        <h2 class="font-display font-extrabold text-xl mt-1 leading-tight">${esc(p.full_name)}</h2>
+        <div class="text-[12px] text-on-surface-variant">${p.age?p.age+' años · ':''}${p.sex?esc(p.sex)+' · ':''}<span class="mono">${esc(p.id)}</span></div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 text-sm">
+      <div class="bg-surface-variant/30 rounded-lg p-2"><div class="text-[10px] uppercase tracking-wide text-on-surface-variant">Visto por última vez</div><div>${esc(p.last_seen)||'—'}</div></div>
+      <div class="bg-surface-variant/30 rounded-lg p-2"><div class="text-[10px] uppercase tracking-wide text-on-surface-variant">Contacto</div><div>${esc(p.contact_phone)||'—'}</div></div>
+      <div class="bg-surface-variant/30 rounded-lg p-2"><div class="text-[10px] uppercase tracking-wide text-on-surface-variant">Reportado por</div><div>${esc(p.reported_by)||'—'}</div></div>
+      <div class="bg-surface-variant/30 rounded-lg p-2"><div class="text-[10px] uppercase tracking-wide text-on-surface-variant">Caso abierto</div><div>${fmtD(p.created_ms)} (${daysOpen(p.created_ms)} d)</div></div>
+    </div>
+    ${p.notes?`<div class="bg-surface-variant/30 rounded-lg p-3 text-sm"><div class="text-[10px] uppercase tracking-wide text-on-surface-variant mb-1">Notas del reporte</div>${esc(p.notes)}</div>`:''}
+
+    ${sismoCard}
+
+    <div>
+      <h3 class="font-display font-bold text-sm mb-2">Línea de tiempo del caso</h3>
+      <div>${tl}</div>
+    </div>
+
+    <div class="border-t border-outline-variant/60 pt-4">
+      <h3 class="font-display font-bold text-sm mb-2">Agregar movimiento al expediente</h3>
+      <form id="addForm" class="space-y-2">
+        <input type="hidden" name="id" value="${esc(p.id)}">
+        <div class="grid grid-cols-2 gap-2">
+          <select name="kind">
+            <option value="note">Nota</option>
+            <option value="sighting">Avistamiento</option>
+            <option value="contact">Contacto telefónico</option>
+            <option value="hospital">Hospital</option>
+            <option value="shelter">Refugio</option>
+            <option value="morgue">Morgue</option>
+          </select>
+          <select name="status">
+            <option value="">— Sin cambio de estado —</option>
+            <option value="missing">Marcar desaparecida</option>
+            <option value="found_safe">Localizada a salvo</option>
+            <option value="found_deceased">Fallecida</option>
+            <option value="unknown">Desconocido</option>
+          </select>
+        </div>
+        <input name="location" placeholder="Lugar / centro (opcional)">
+        <textarea name="detail" rows="2" placeholder="Detalle del movimiento…"></textarea>
+        <button class="bg-secondary text-white font-bold rounded-lg py-2 w-full">Registrar movimiento</button>
+        <p id="addMsg" class="text-sm text-center"></p>
+      </form>
+    </div>`;
+
+  $('#addForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const f = ev.target;
+    const body = { kind:f.kind.value, detail:f.detail.value||null, location:f.location.value||null };
+    if (f.status.value) body.status = f.status.value;
+    f.querySelector('button').disabled = true;
+    const res = await api('persons/' + f.id.value + '/docket', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (res.ok){ $('#addMsg').textContent='✓ Registrado'; $('#addMsg').className='text-sm text-center text-safe'; openDocket(f.id.value); load(); }
+    else { $('#addMsg').textContent='Error al registrar'; $('#addMsg').className='text-sm text-center text-error'; f.querySelector('button').disabled=false; }
+  });
+}
+
+let t; const debounce = fn => { clearTimeout(t); t=setTimeout(fn,300); };
+$('#q').addEventListener('input', ()=>debounce(load));
+$('#f_status').addEventListener('change', load);
+$('#f_review').addEventListener('change', load);
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeDrawer(); });
+load();
+</script>
+</body>
+</html>

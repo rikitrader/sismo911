@@ -67,12 +67,17 @@ app.use('*', async (c, next) => {
     path === '/api/persons/queue' ||
     (path.startsWith('/api/persons/') && method === 'PATCH') ||
     path.endsWith('/approve') || path.endsWith('/reject');
+  // Operator CRM / case-docket: full-PII case index + per-person tracing docket
+  // (both read and write) are operator-only.
+  const isCaseDocket =
+    path === '/api/persons/cases' ||
+    (path.startsWith('/api/persons/') && path.endsWith('/docket'));
   const isSosTriage =
     path === '/api/sos' && method === 'GET' ||
     (path.startsWith('/api/sos/') && method === 'PATCH');
   const isDamageReview = path === '/api/damage' && method === 'GET' || path.startsWith('/api/damage/photo/');
   const isManualRefresh = path === '/api/events/refresh';
-  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isSosTriage && !isDamageReview && !isManualRefresh) return next();
+  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isCaseDocket && !isSosTriage && !isDamageReview && !isManualRefresh) return next();
 
   const user = await getUserFromRequest(c.env, c).catch(() => null);
   const authorized = user && (user.role === 'operator' || user.role === 'admin');
