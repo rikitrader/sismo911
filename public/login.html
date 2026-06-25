@@ -45,7 +45,9 @@
   </div>
 
 <script>
-  const params=new URLSearchParams(location.search); const next=params.get('next')||'/';
+  const params=new URLSearchParams(location.search); const rawNext=params.get('next')||'/';
+  // Open-redirect guard: accept only a same-origin path (single leading "/", no "//" host, no scheme like javascript:/http:).
+  const next=(/^\/(?!\/)/.test(rawNext) && !rawNext.includes(':')) ? rawNext : '/';
   const tabs=document.querySelectorAll('.tab'), lf=document.getElementById('loginForm'), rf=document.getElementById('registerForm'), msg=document.getElementById('msg');
   tabs.forEach(t=>t.onclick=()=>{const n=t.dataset.tab;
     tabs.forEach(x=>{const on=x.dataset.tab===n;x.classList.toggle('bg-white',on);x.classList.toggle('shadow',on);x.classList.toggle('text-primary',on);x.classList.toggle('text-on-surface-variant',!on);});
