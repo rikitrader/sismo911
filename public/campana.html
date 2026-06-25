@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaña — SISMO911</title>
+<meta name="description" content="Apoya esta campaña de respuesta sísmica. Dona con tarjeta en segundos, sin crear cuenta.">
+<meta name="robots" content="index,follow">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<meta property="og:type" content="website"><meta property="og:site_name" content="SISMO911"><meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Campaña de Ayuda — SISMO911">
+<meta property="og:description" content="Dona con tarjeta en segundos, sin crear cuenta. Registro público y transparente.">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>
+body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}
+.card{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:.85rem}
+.bar{height:.7rem;border-radius:99px;background:#e2e2e5;overflow:hidden}
+.bar>span{display:block;height:100%;background:#bb0027;border-radius:99px}
+.chip{display:inline-block;padding:.05rem .5rem;border-radius:99px;font-size:11px;font-weight:600;background:#eef1f7;color:#00173a}
+.amt{border:1.5px solid #c4c6d0;border-radius:.6rem;padding:.6rem 0;font-weight:700;font-family:'Public Sans',sans-serif;background:#fff;cursor:pointer}
+.amt.sel{border-color:#bb0027;background:#bb0027;color:#fff}
+.fld{width:100%;border:1px solid #c4c6d0;border-radius:.6rem;padding:.55rem .7rem;font-size:14px}
+.hero{height:240px;background:#0b2b5b center/cover no-repeat;border-radius:.85rem}
+</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/familia" class="hover:text-white/70">Familia</a><a href="/donar" class="text-white font-bold">Donar</a><a href="/red-ayuda" class="hover:text-white/70">Red de Ayuda</a><a href="/contacto" class="hover:text-white/70">Contacto</a></nav></div></header>
+
+<main class="mx-auto max-w-6xl px-4 py-8" id="app">
+  <p class="text-on-surface-variant">Cargando campaña…</p>
+</main>
+
+<script>
+const fmt=n=>'$'+Math.round(Number(n)||0).toLocaleString('en-US');
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ago=t=>{if(!t)return'';const s=(Date.now()-t)/1000;if(s<3600)return'hace '+Math.floor(s/60)+' min';if(s<86400)return'hace '+Math.floor(s/3600)+'h';return'hace '+Math.floor(s/86400)+'d';};
+const slug=new URLSearchParams(location.search).get('c');
+let CAMP=null, AMOUNT=25, pollTimer=null;
+
+if(!slug){ document.getElementById('app').innerHTML='<p class="text-secondary">Campaña no especificada. <a href="/donar" class="underline">Ver todas</a>.</p>'; }
+else load();
+
+async function load(){
+  const r=await fetch('/api/campaigns/'+encodeURIComponent(slug));
+  if(!r.ok){ document.getElementById('app').innerHTML='<p class="text-secondary">Campaña no encontrada. <a href="/donar" class="underline">Ver todas</a>.</p>'; return; }
+  const d=await r.json(); CAMP=d.campaign; render(d.campaign,d.donations||[]);
+}
+
+function ledgerRows(list){
+  if(!list.length) return '<p class="text-sm text-on-surface-variant">Sé la primera persona en donar.</p>';
+  return list.map(x=>`<div class="flex justify-between items-start gap-3 py-2 border-b border-outline-variant/40 text-sm">
+    <div><b>${esc(x.name||'Anónimo')}</b> · <span class="text-on-surface">${fmt(x.amount_usd)}</span>${x.message?`<div class="text-on-surface-variant">${esc(x.message)}</div>`:''}</div>
+    <span class="text-xs text-on-surface-variant whitespace-nowrap">${ago(x.paid_ms)}</span></div>`).join('');
+}
+
+function render(c,ledger){
+  const goal=Number(c.goal_usd)||0, raised=Number(c.raised_usd)||0;
+  const pct=goal>0?Math.min(100,Math.round(raised/goal*100)):0;
+  const hero=c.image_url?`style="background-image:url('${esc(c.image_url)}')"`:'';
+  document.getElementById('app').innerHTML=`
+  <a href="/donar" class="text-sm text-primary hover:underline">← Todas las campañas</a>
+  <div class="grid lg:grid-cols-3 gap-6 mt-3">
+    <div class="lg:col-span-2">
+      <div class="hero mb-4" ${hero}></div>
+      <div class="flex items-center gap-2 mb-2">${c.category?`<span class="chip">${esc(c.category)}</span>`:''}${c.location?`<span class="text-xs text-on-surface-variant">${esc(c.location)}</span>`:''}</div>
+      <h1 class="font-display font-extrabold text-3xl mb-2">${esc(c.title)}</h1>
+      <p class="text-on-surface-variant mb-1">Organiza: <b class="text-on-surface">${esc(c.organizer_name||'SISMO911')}</b></p>
+      ${c.beneficiary?`<p class="text-on-surface-variant mb-4">Beneficiario: <b class="text-on-surface">${esc(c.beneficiary)}</b></p>`:''}
+      <div class="card p-5 mt-4"><h2 class="font-display font-bold text-lg mb-2">La historia</h2>
+        <p class="whitespace-pre-line leading-relaxed">${esc(c.story||c.summary||'')}</p></div>
+      <div class="card p-5 mt-4"><h2 class="font-display font-bold text-lg mb-2">Donantes recientes</h2><div id="ledger">${ledgerRows(ledger)}</div></div>
+    </div>
+
+    <aside class="lg:sticky lg:top-20 h-max">
+      <div class="card p-5">
+        <div class="font-display font-extrabold text-2xl">${fmt(raised)}</div>
+        <div class="text-sm text-on-surface-variant mb-2">recaudado ${goal>0?`de una meta de ${fmt(goal)}`:''} · ${c.donors_count||0} donantes</div>
+        <div class="bar mb-4"><span style="width:${pct}%"></span></div>
+        <div id="donate">
+          <div class="font-display font-bold mb-2">Elige un monto (USD)</div>
+          <div class="grid grid-cols-4 gap-2 mb-2" id="amts">
+            ${[10,25,50,100].map(a=>`<button class="amt ${a===AMOUNT?'sel':''}" data-a="${a}">$${a}</button>`).join('')}
+          </div>
+          <input id="custom" class="fld mb-3" type="number" min="1" max="50000" placeholder="Otro monto" />
+          <input id="email" class="fld mb-2" type="email" placeholder="Correo (para tu recibo)" />
+          <input id="name" class="fld mb-2" type="text" maxlength="80" placeholder="Tu nombre (opcional)" />
+          <input id="msg" class="fld mb-2" type="text" maxlength="280" placeholder="Mensaje de apoyo (opcional)" />
+          <label class="flex items-center gap-2 text-sm mb-3"><input id="anon" type="checkbox" class="w-4 h-4"> Donar de forma anónima</label>
+          <button id="go" class="w-full bg-secondary hover:bg-secondary-container text-white font-bold rounded-lg py-3">Donar ahora</button>
+          <p class="text-[11px] text-on-surface-variant mt-2 text-center">Pago con tarjeta · liquidado en USDC sobre Base · sin necesidad de cuenta.</p>
+          <div id="status" class="text-sm mt-3"></div>
+        </div>
+        <div id="checkout" class="mt-4"></div>
+      </div>
+    </aside>
+  </div>`;
+
+  document.getElementById('amts').addEventListener('click',e=>{
+    const b=e.target.closest('.amt'); if(!b)return;
+    AMOUNT=Number(b.dataset.a); document.getElementById('custom').value='';
+    document.querySelectorAll('.amt').forEach(x=>x.classList.toggle('sel',x===b));
+  });
+  document.getElementById('custom').addEventListener('input',e=>{
+    if(e.target.value){AMOUNT=Number(e.target.value);document.querySelectorAll('.amt').forEach(x=>x.classList.remove('sel'));}
+  });
+  document.getElementById('go').addEventListener('click',donate);
+}
+
+function setStatus(html,cls){document.getElementById('status').innerHTML=`<div class="${cls||''}">${html}</div>`;}
+
+async function donate(){
+  const email=document.getElementById('email').value.trim();
+  const name=document.getElementById('name').value.trim();
+  const message=document.getElementById('msg').value.trim();
+  const anonymous=document.getElementById('anon').checked;
+  if(!AMOUNT||AMOUNT<1){setStatus('Ingresa un monto válido.','text-secondary');return;}
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setStatus('Ingresa un correo válido para tu recibo.','text-secondary');return;}
+  const go=document.getElementById('go'); go.disabled=true; go.textContent='Procesando…';
+  setStatus('Creando tu donación segura…');
+  try{
+    const r=await fetch('/api/campaigns/'+encodeURIComponent(slug)+'/donate',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({amount:AMOUNT,email,name,message,anonymous})});
+    if(r.status===503){ setStatus('💳 Los pagos con tarjeta se están habilitando para esta plataforma. Vuelve pronto — tu apoyo es muy valioso.','text-on-surface'); go.disabled=false; go.textContent='Donar ahora'; return; }
+    const d=await r.json();
+    if(!r.ok){ setStatus('No se pudo iniciar el pago: '+esc(d.error||'error')+'. Intenta de nuevo.','text-secondary'); go.disabled=false; go.textContent='Donar ahora'; return; }
+    document.getElementById('donate').style.display='none';
+    setStatus('Completa el pago de forma segura abajo. No cierres esta ventana.');
+    await mountCheckout(d, email);
+    poll(d.donationId);
+  }catch(e){ setStatus('Error de red. Intenta de nuevo.','text-secondary'); go.disabled=false; go.textContent='Donar ahora'; }
+}
+
+async function mountCheckout(d, email){
+  const box=document.getElementById('checkout');
+  box.innerHTML='<p class="text-sm text-on-surface-variant">Cargando pago seguro…</p>';
+  try{
+    const React=(await import('https://esm.sh/react@18.3.1')).default;
+    const { createRoot }=await import('https://esm.sh/react-dom@18.3.1/client');
+    const xm=await import('https://esm.sh/@crossmint/client-sdk-react-ui@1?deps=react@18.3.1,react-dom@18.3.1');
+    const { CrossmintProvider, CrossmintEmbeddedCheckout }=xm;
+    box.innerHTML='';
+    createRoot(box).render(
+      React.createElement(CrossmintProvider,{apiKey:d.clientKey},
+        React.createElement(CrossmintEmbeddedCheckout,{
+          orderId:d.orderId, clientSecret:d.clientSecret,
+          payment:{ receiptEmail:email, fiat:{enabled:true}, crypto:{enabled:false} }
+        })
+      )
+    );
+  }catch(e){
+    box.innerHTML=`<div class="text-sm text-on-surface">No se pudo cargar el módulo de pago en este navegador. Tu donación quedó registrada (ref. <code>${esc(d.donationId)}</code>). Escríbenos a <a class="text-primary underline" href="mailto:ayuda@sismo911.com">ayuda@sismo911.com</a> con esta referencia.</div>`;
+  }
+}
+
+function poll(id){
+  let n=0;
+  clearInterval(pollTimer);
+  pollTimer=setInterval(async()=>{
+    n++;
+    try{
+      const s=await fetch('/api/donations/'+encodeURIComponent(id)+'/status').then(r=>r.json());
+      if(s.status==='paid'){ clearInterval(pollTimer); onPaid(); }
+      else if(s.status==='failed'){ clearInterval(pollTimer); setStatus('El pago no se completó. Recarga la página para intentar de nuevo.','text-secondary'); }
+    }catch(e){}
+    if(n>40) clearInterval(pollTimer); // ~2 min
+  },3000);
+}
+
+function onPaid(){
+  document.getElementById('checkout').innerHTML='';
+  setStatus('✅ ¡Gracias! Tu donación se procesó con éxito. Recibirás un recibo por correo.','text-safe font-bold');
+  load(); // refresh totals + ledger
+}
+</script>
+</body>
+</html>
