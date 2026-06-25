@@ -65,6 +65,9 @@
     <select id="tipoFilter" class="rounded-lg border border-outline-variant px-3 py-2 text-sm">
       <option value="">Todos los tipos</option><option value="universidad">Universidad</option><option value="estadio">Estadio</option><option value="polideportivo">Polideportivo</option><option value="hospital">Hospital</option><option value="proteccion_civil">Protección Civil</option><option value="bomberos">Bomberos</option>
     </select>
+    <select id="statusFilter" class="rounded-lg border border-outline-variant px-3 py-2 text-sm">
+      <option value="">Cualquier estado</option><option value="operativo">🟢 Operativo</option><option value="saturado">🟠 Saturado</option><option value="cerrado">🔴 Cerrado</option>
+    </select>
     <span id="count" class="text-xs text-on-surface-variant ml-auto"></span>
   </div>
 
@@ -82,168 +85,12 @@ const ESTADOS=['Distrito Capital','Amazonas','Anzoátegui','Apure','Aragua','Bar
 const TIPO={universidad:['#2563eb','🎓','Universidad'],estadio:['#dc2626','🏟️','Estadio'],polideportivo:['#16a34a','🤸','Polideportivo'],hospital:['#0891b2','✚','Hospital'],proteccion_civil:['#ea580c','🚨','Protección Civil'],bomberos:['#b45309','🚒','Bomberos']};
 
 // [estado, ciudad, nombre, tipo, dirección, lat, lon, capacidad]
-const D=[
-['Distrito Capital','Caracas','Universidad Central de Venezuela (UCV)','universidad','Ciudad Universitaria, Plaza Venezuela, Caracas',10.4897,-66.8916,'Alta — Patrimonio UNESCO'],
-['Distrito Capital','Caracas','Estadio Olímpico de la UCV','estadio','Ciudad Universitaria, Los Chaguaramos, Caracas',10.4915,-66.8896,'≈24.000'],
-['Distrito Capital','Caracas','Estadio Universitario de Caracas (béisbol)','estadio','Ciudad Universitaria, Caracas',10.4906,-66.8868,'≈26.000'],
-['Distrito Capital','Caracas','Universidad Católica Andrés Bello (UCAB)','universidad','Av. Teherán, Urb. Montalbán, Caracas',10.4631,-66.9486,'Media'],
-['Distrito Capital','Caracas','Poliedro de Caracas','polideportivo','Av. La Rinconada, El Valle, Caracas',10.4642,-66.9163,'≈12.000'],
-
-['Amazonas','Puerto Ayacucho','UNEFA / UNELLEZ núcleo Amazonas','universidad','Av. Orinoco, Puerto Ayacucho',5.6635,-67.6000,'Media'],
-['Amazonas','Puerto Ayacucho','Polideportivo de Puerto Ayacucho','polideportivo','Av. Aguerrevere, Puerto Ayacucho',5.6600,-67.6300,'Media'],
-
-['Anzoátegui','Barcelona','Universidad de Oriente (UDO) núcleo Anzoátegui','universidad','Av. Argimiro Gabaldón, Barcelona',10.1286,-64.6822,'Alta'],
-['Anzoátegui','Puerto La Cruz','Estadio Alfonso «Chico» Carrasquel','estadio','Av. Intercomunal, Puerto La Cruz',10.2161,-64.6336,'≈18.000'],
-['Anzoátegui','Puerto La Cruz','Estadio José Antonio Anzoátegui','estadio','Complejo Polideportivo, Puerto La Cruz',10.2100,-64.6600,'≈40.000'],
-['Anzoátegui','El Tigre','Universidad Gran Mariscal de Ayacucho (UGMA)','universidad','Av. Las Américas, El Tigre',8.9000,-64.2600,'Media'],
-
-['Apure','San Fernando de Apure','UNELLEZ núcleo Apure','universidad','Av. Caja de Agua, San Fernando de Apure',7.8900,-67.4700,'Media'],
-['Apure','San Fernando de Apure','Polideportivo de San Fernando','polideportivo','Av. Miranda, San Fernando de Apure',7.8850,-67.4650,'Media'],
-
-['Aragua','Maracay','Estadio José Pérez Colmenares','estadio','Av. Las Delicias, Maracay',10.2715,-67.5933,'≈16.000'],
-['Aragua','Turmero','Universidad Bicentenaria de Aragua (UBA)','universidad','San Joaquín de Turmero, Aragua',10.2300,-67.4200,'Media'],
-['Aragua','Maracay','Universidad de Carabobo — Cs. de la Salud (Aragua)','universidad','Av. Bolívar, Maracay',10.2700,-67.6000,'Media'],
-['Aragua','Maracay','Polideportivo Máximo Viloria','polideportivo','Av. Universidad, Maracay',10.2600,-67.6000,'Media'],
-
-['Barinas','Barinas','UNELLEZ — Mesa de Cavacas','universidad','Av. 23 de Enero, Barinas',8.6231,-70.2075,'Media'],
-['Barinas','Barinas','Estadio Agustín Tovar «La Carolina»','estadio','Av. 23 de Enero, Barinas',8.6228,-70.2331,'≈25.000'],
-
-['Bolívar','Ciudad Guayana','Estadio CTE Cachamay','estadio','Av. Guayana, Puerto Ordaz, Ciudad Guayana',10.2925,-62.7236,'≈41.000'],
-['Bolívar','Ciudad Guayana','Universidad Nacional Experimental de Guayana (UNEG)','universidad','Av. Atlántico, Puerto Ordaz',8.2960,-62.7100,'Media'],
-['Bolívar','Ciudad Bolívar','Universidad de Oriente núcleo Bolívar','universidad','La Sabanita, Ciudad Bolívar',8.1300,-63.5400,'Media'],
-['Bolívar','Ciudad Guayana','Polideportivo Hermanas González','polideportivo','Alta Vista, Puerto Ordaz',8.3000,-62.7300,'Media'],
-
-['Carabobo','Naguanagua','Universidad de Carabobo (UC)','universidad','Campus Bárbula, Naguanagua',10.2683,-68.0006,'Alta'],
-['Carabobo','Valencia','Estadio José Bernardo Pérez','estadio','Av. Branger, Valencia',10.1839,-68.0125,'≈16.000'],
-['Carabobo','San Diego','Universidad José Antonio Páez (UJAP)','universidad','Urb. Yuma, San Diego',10.2200,-67.9600,'Media'],
-['Carabobo','Valencia','Polideportivo Misael Delgado','polideportivo','Av. Cedeño, Valencia',10.1900,-68.0000,'Media'],
-
-['Cojedes','San Carlos','UNELLEZ núcleo San Carlos','universidad','Av. Bolívar, San Carlos',9.6600,-68.5800,'Media'],
-['Cojedes','San Carlos','Polideportivo de San Carlos','polideportivo','Av. Sucre, San Carlos',9.6580,-68.5820,'Media'],
-
-['Delta Amacuro','Tucupita','Universidad de Tucupita (UDO/IUTD)','universidad','Calle Tucupita, Tucupita',9.0600,-62.0500,'Media'],
-['Delta Amacuro','Tucupita','Polideportivo de Tucupita','polideportivo','Av. Guasina, Tucupita',9.0620,-62.0480,'Media'],
-
-['Falcón','Coro','Universidad Nacional Experimental Francisco de Miranda (UNEFM)','universidad','Av. Independencia, Santa Ana de Coro',11.4047,-69.6814,'Media'],
-['Falcón','Coro','Complejo Polideportivo de Coro','polideportivo','Sector Sabana Larga, Coro',11.4000,-69.6700,'Media'],
-['Falcón','Punto Fijo','Complejo Polideportivo de Punto Fijo','polideportivo','Av. Bolívar, Punto Fijo',11.7000,-70.2000,'Media'],
-
-['Guárico','San Juan de los Morros','Universidad Rómulo Gallegos (UNERG)','universidad','Av. Rómulo Gallegos, San Juan de los Morros',9.9000,-67.3500,'Media'],
-['Guárico','Calabozo','Polideportivo de Calabozo','polideportivo','Av. 23 de Enero, Calabozo',8.9200,-67.4300,'Media'],
-
-['Lara','Barquisimeto','Universidad Centroccidental Lisandro Alvarado (UCLA)','universidad','Av. Las Industrias, Barquisimeto',10.0731,-69.3225,'Alta'],
-['Lara','Cabudare','Estadio Metropolitano de Lara (Farid Richa)','estadio','Av. Intercomunal, Cabudare',10.0356,-69.2731,'≈45.000'],
-['Lara','Barquisimeto','Estadio Antonio Herrera Gutiérrez','estadio','Av. Florencio Jiménez, Barquisimeto',10.0506,-69.3486,'≈17.000'],
-['Lara','Cabudare','Universidad Fermín Toro','universidad','Av. Las Industrias, Cabudare',10.0300,-69.2600,'Media'],
-
-['Mérida','Mérida','Universidad de Los Andes (ULA)','universidad','Av. 3 Independencia, Mérida',8.5897,-71.1561,'Alta'],
-['Mérida','Mérida','Estadio Metropolitano de Mérida (Guillermo Soto Rosa)','estadio','Av. Andrés Bello, Mérida',8.5625,-71.2086,'≈42.000'],
-['Mérida','Mérida','Polideportivo 5 Águilas Blancas','polideportivo','Av. Las Américas, Mérida',8.6000,-71.1400,'Media'],
-
-['Miranda','Baruta','Universidad Simón Bolívar (USB)','universidad','Valle de Sartenejas, Baruta',10.4083,-66.8786,'Alta'],
-['Miranda','Caracas','Universidad Metropolitana (UNIMET)','universidad','Terrazas del Ávila, Caracas',10.5000,-66.7900,'Media'],
-['Miranda','Guarenas','Polideportivo de Guarenas','polideportivo','Av. Intercomunal Guarenas-Guatire',10.4700,-66.6100,'Media'],
-
-['Monagas','Maturín','Estadio Monumental Simón Bolívar','estadio','Av. Alirio Ugarte Pelayo, Maturín',9.7236,-63.1739,'≈51.000'],
-['Monagas','Maturín','Universidad de Oriente núcleo Monagas','universidad','Av. Universidad, Juanico, Maturín',9.7500,-63.1800,'Media'],
-['Monagas','Maturín','Polideportivo de Maturín','polideportivo','Av. Bolívar, Maturín',9.7500,-63.1700,'Media'],
-
-['Nueva Esparta','Guatamare','Estadio Nueva Esparta','estadio','Av. Jóvito Villalba, Guatamare, Isla de Margarita',10.9628,-63.8589,'≈16.000'],
-['Nueva Esparta','Guatamare','Universidad de Oriente núcleo Nueva Esparta','universidad','Av. Principal, Guatamare',10.9700,-63.8500,'Media'],
-['Nueva Esparta','El Valle','Universidad de Margarita (UNIMAR)','universidad','El Valle del Espíritu Santo, Margarita',10.9900,-63.8600,'Media'],
-
-['Portuguesa','Guanare','UNELLEZ núcleo Guanare','universidad','Mesa de Cavacas, Guanare',9.0436,-69.7486,'Media'],
-['Portuguesa','Acarigua','Estadio José Antonio Páez','estadio','Av. Libertador, Acarigua-Araure',9.5500,-69.2000,'≈20.000'],
-
-['Sucre','Cumaná','Universidad de Oriente (UDO) — Sede Rectoral','universidad','Av. Universidad, Cumaná',10.4536,-64.1758,'Alta'],
-['Sucre','Cumaná','Gimnasio Cubierto de Cumaná','polideportivo','Av. Perimetral, Cumaná',10.4600,-64.1700,'Media'],
-
-['Táchira','San Cristóbal','Universidad Nacional Experimental del Táchira (UNET)','universidad','Av. Universidad, Paramillo, San Cristóbal',7.7669,-72.2236,'Alta'],
-['Táchira','San Cristóbal','Estadio Polideportivo de Pueblo Nuevo','estadio','Av. Universidad, Pueblo Nuevo, San Cristóbal',7.7706,-72.2233,'≈38.000'],
-['Táchira','San Cristóbal','Universidad Católica del Táchira (UCAT)','universidad','Carrera 14, San Cristóbal',7.7600,-72.2200,'Media'],
-
-['Trujillo','Trujillo','Universidad de Los Andes — Núcleo Rafael Rangel (NURR)','universidad','Av. Medina Angarita, Trujillo',9.3700,-70.4300,'Media'],
-['Trujillo','Valera','Universidad Valle del Momboy','universidad','Carvajal, Valera',9.3200,-70.6000,'Media'],
-['Trujillo','Valera','Polideportivo de Valera','polideportivo','Av. Independencia, Valera',9.3180,-70.6020,'Media'],
-
-['La Guaira','Catia La Mar','Universidad Marítima del Caribe','universidad','Av. El Ejército, Catia La Mar',10.6000,-67.0300,'Media'],
-['La Guaira','La Guaira','Polideportivo de La Guaira','polideportivo','Macuto, La Guaira',10.6000,-66.9000,'Media'],
-
-['Yaracuy','San Felipe','Universidad Nacional Experimental del Yaracuy (UNEY)','universidad','Av. La Patria, San Felipe',10.3403,-68.7456,'Media'],
-['Yaracuy','San Felipe','Estadio Florentino Oropeza','estadio','Sector La Manga, San Felipe',10.3300,-68.7400,'≈12.000'],
-
-['Zulia','Maracaibo','Universidad del Zulia (LUZ)','universidad','Av. Goajira, Ciudad Universitaria, Maracaibo',10.6786,-71.6042,'Alta'],
-['Zulia','Maracaibo','Estadio Pachencho Romero','estadio','Av. Universidad, Maracaibo',10.6800,-71.6600,'≈40.000'],
-['Zulia','Maracaibo','Estadio Luis Aparicio El Grande','estadio','Av. 8 Santa Rita, Maracaibo',10.6906,-71.6286,'≈24.000'],
-['Zulia','Maracaibo','Universidad Rafael Urdaneta (URU)','universidad','Av. 2 El Milagro, Maracaibo',10.6900,-71.6200,'Media'],
-
-// ── Hospitales tipo IV / centinela ──
-['Distrito Capital','Caracas','Hospital Universitario de Caracas (HUC)','hospital','Ciudad Universitaria, Los Chaguaramos, Caracas',10.4910,-66.8910,'Tipo IV'],
-['Distrito Capital','Caracas','Hospital Vargas de Caracas','hospital','Calle Vargas, San José, Caracas',10.5100,-66.9100,'Tipo IV'],
-['Distrito Capital','Caracas','Hospital J.M. de los Ríos (pediátrico)','hospital','San Bernardino, Caracas',10.5080,-66.8900,'Pediátrico IV'],
-['Distrito Capital','Caracas','Hospital Dr. Miguel Pérez Carreño','hospital','Av. Sucre, Catia, Caracas',10.4900,-66.9500,'Tipo IV'],
-['Miranda','Caracas','Hospital Dr. Domingo Luciani','hospital','El Llanito, Caracas',10.4800,-66.8100,'Tipo IV'],
-['Miranda','Los Teques','Hospital Victorino Santaella','hospital','Av. Bicentenaria, Los Teques',10.3400,-67.0400,'Tipo III-IV'],
-['La Guaira','La Guaira','Hospital Dr. José María Vargas (La Guaira)','hospital','Pariata, La Guaira',10.6000,-66.9500,'Tipo III'],
-['Zulia','Maracaibo','Hospital Universitario de Maracaibo (SAHUM)','hospital','Av. Goajira, Maracaibo',10.6800,-71.6300,'Tipo IV'],
-['Zulia','Maracaibo','Hospital General del Sur Dr. Pedro Iturbe','hospital','Av. 17, Maracaibo',10.6100,-71.6200,'Tipo IV'],
-['Carabobo','Valencia','Ciudad Hospitalaria Dr. Enrique Tejera (CHET)','hospital','Av. Michelena, Valencia',10.1800,-68.0000,'Tipo IV'],
-['Carabobo','Naguanagua','Hospital Universitario Dr. Ángel Larralde','hospital','Bárbula, Naguanagua',10.2700,-68.0000,'Tipo IV'],
-['Aragua','Maracay','Hospital Central de Maracay','hospital','Av. Bolívar, Maracay',10.2500,-67.6000,'Tipo IV'],
-['Lara','Barquisimeto','Hospital Central Univ. Dr. Antonio María Pineda','hospital','Av. Andrés Bello, Barquisimeto',10.0600,-69.3300,'Tipo IV'],
-['Anzoátegui','Barcelona','Hospital Universitario Dr. Luis Razetti','hospital','Av. Caracas, Barcelona',10.1300,-64.6900,'Tipo IV'],
-['Bolívar','Ciudad Bolívar','Complejo Hospitalario Ruiz y Páez','hospital','Av. Germania, Ciudad Bolívar',8.1300,-63.5500,'Tipo IV'],
-['Bolívar','Ciudad Guayana','Hospital Dr. Raúl Leoni (Guaiparo)','hospital','San Félix, Ciudad Guayana',8.3700,-62.6500,'Tipo IV'],
-['Táchira','San Cristóbal','Hospital Central de San Cristóbal','hospital','Av. Lucio Oquendo, San Cristóbal',7.7700,-72.2200,'Tipo IV'],
-['Mérida','Mérida','Hospital Universitario de Los Andes (IAHULA)','hospital','Av. 16 de Septiembre, Mérida',8.5900,-71.1600,'Tipo IV'],
-['Falcón','Coro','Hospital Universitario Dr. Alfredo Van Grieken','hospital','Sector Las Eugenias, Coro',11.4000,-69.6800,'Tipo IV'],
-['Nueva Esparta','Porlamar','Hospital Dr. Luis Ortega','hospital','Av. 4 de Mayo, Porlamar',10.9500,-63.8500,'Tipo III-IV'],
-['Sucre','Cumaná','Hospital Univ. Antonio Patricio de Alcalá (HUAPA)','hospital','Av. Perimetral, Cumaná',10.4500,-64.1800,'Tipo IV'],
-['Monagas','Maturín','Hospital Universitario Dr. Manuel Núñez Tovar','hospital','Av. Bicentenario, Maturín',9.7500,-63.1800,'Tipo IV'],
-['Barinas','Barinas','Hospital Dr. Luis Razetti','hospital','Av. 23 de Enero, Barinas',8.6200,-70.2100,'Tipo IV'],
-['Portuguesa','Guanare','Hospital Dr. Miguel Oraá','hospital','Av. 23 de Enero, Guanare',9.0400,-69.7500,'Tipo III-IV'],
-['Trujillo','Valera','Hospital Universitario Dr. Pedro Emilio Carrillo','hospital','Av. Bolívar, Valera',9.3200,-70.6000,'Tipo IV'],
-['Yaracuy','San Felipe','Hospital Central Dr. Plácido Rodríguez Rivero','hospital','Av. La Patria, San Felipe',10.3400,-68.7400,'Tipo IV'],
-['Guárico','San Juan de los Morros','Hospital Dr. Israel Ranuárez Balza','hospital','San Juan de los Morros',9.9000,-67.3500,'Tipo III'],
-['Cojedes','San Carlos','Hospital General de San Carlos','hospital','Av. Bolívar, San Carlos',9.6600,-68.5800,'Tipo III'],
-['Apure','San Fernando de Apure','Hospital Dr. Pablo Acosta Ortiz','hospital','San Fernando de Apure',7.8900,-67.4700,'Tipo III'],
-['Amazonas','Puerto Ayacucho','Hospital Dr. José Gregorio Hernández','hospital','Puerto Ayacucho',5.6600,-67.6000,'Tipo III'],
-['Delta Amacuro','Tucupita','Hospital Dr. Luis Razetti','hospital','Tucupita',9.0600,-62.0500,'Tipo III'],
-
-// ── Protección Civil (sede estadal en la capital) ──
-['Distrito Capital','Caracas','Protección Civil — Coordinación Nacional','proteccion_civil','El Paraíso, Caracas',10.5000,-66.9100,'Nacional'],
-['Amazonas','Puerto Ayacucho','Protección Civil Amazonas','proteccion_civil','Puerto Ayacucho',5.6600,-67.6200,'Estadal'],
-['Anzoátegui','Barcelona','Protección Civil Anzoátegui','proteccion_civil','Barcelona',10.1400,-64.6900,'Estadal'],
-['Apure','San Fernando de Apure','Protección Civil Apure','proteccion_civil','San Fernando de Apure',7.8900,-67.4700,'Estadal'],
-['Aragua','Maracay','Protección Civil Aragua','proteccion_civil','Maracay',10.2500,-67.6000,'Estadal'],
-['Barinas','Barinas','Protección Civil Barinas','proteccion_civil','Barinas',8.6200,-70.2100,'Estadal'],
-['Bolívar','Ciudad Bolívar','Protección Civil Bolívar','proteccion_civil','Ciudad Bolívar',8.1300,-63.5500,'Estadal'],
-['Carabobo','Valencia','Protección Civil Carabobo','proteccion_civil','Valencia',10.1700,-68.0000,'Estadal'],
-['Cojedes','San Carlos','Protección Civil Cojedes','proteccion_civil','San Carlos',9.6600,-68.5800,'Estadal'],
-['Delta Amacuro','Tucupita','Protección Civil Delta Amacuro','proteccion_civil','Tucupita',9.0600,-62.0500,'Estadal'],
-['Falcón','Coro','Protección Civil Falcón','proteccion_civil','Coro',11.4000,-69.6800,'Estadal'],
-['Guárico','San Juan de los Morros','Protección Civil Guárico','proteccion_civil','San Juan de los Morros',9.9000,-67.3500,'Estadal'],
-['Lara','Barquisimeto','Protección Civil Lara','proteccion_civil','Barquisimeto',10.0700,-69.3200,'Estadal'],
-['Mérida','Mérida','Protección Civil Mérida','proteccion_civil','Mérida',8.5900,-71.1500,'Estadal'],
-['Miranda','Los Teques','Protección Civil Miranda','proteccion_civil','Los Teques',10.3400,-67.0400,'Estadal'],
-['Monagas','Maturín','Protección Civil Monagas','proteccion_civil','Maturín',9.7500,-63.1800,'Estadal'],
-['Nueva Esparta','La Asunción','Protección Civil Nueva Esparta','proteccion_civil','La Asunción, Isla de Margarita',11.0300,-63.8600,'Estadal'],
-['Portuguesa','Guanare','Protección Civil Portuguesa','proteccion_civil','Guanare',9.0400,-69.7500,'Estadal'],
-['Sucre','Cumaná','Protección Civil Sucre','proteccion_civil','Cumaná',10.4600,-64.1800,'Estadal'],
-['Táchira','San Cristóbal','Protección Civil Táchira','proteccion_civil','San Cristóbal',7.7700,-72.2200,'Estadal'],
-['Trujillo','Trujillo','Protección Civil Trujillo','proteccion_civil','Trujillo',9.3700,-70.4300,'Estadal'],
-['La Guaira','La Guaira','Protección Civil La Guaira','proteccion_civil','La Guaira',10.6000,-66.9300,'Estadal'],
-['Yaracuy','San Felipe','Protección Civil Yaracuy','proteccion_civil','San Felipe',10.3400,-68.7400,'Estadal'],
-['Zulia','Maracaibo','Protección Civil Zulia','proteccion_civil','Maracaibo',10.6600,-71.6300,'Estadal'],
-
-// ── Cuerpos de Bomberos (estaciones centrales) ──
-['Distrito Capital','Caracas','Cuerpo de Bomberos del Distrito Capital','bomberos','Estación Central, Caracas',10.5060,-66.9140,'Central'],
-['Zulia','Maracaibo','Cuerpo de Bomberos de Maracaibo','bomberos','Av. 5 de Julio, Maracaibo',10.6650,-71.6200,'Central'],
-['Carabobo','Valencia','Cuerpo de Bomberos de Valencia','bomberos','Av. Bolívar, Valencia',10.1800,-68.0050,'Central'],
-['Lara','Barquisimeto','Cuerpo de Bomberos de Lara','bomberos','Av. Vargas, Barquisimeto',10.0650,-69.3300,'Central'],
-['Aragua','Maracay','Cuerpo de Bomberos de Aragua','bomberos','Av. Bolívar, Maracay',10.2500,-67.5950,'Central'],
-['Táchira','San Cristóbal','Cuerpo de Bomberos del Táchira','bomberos','Av. España, San Cristóbal',7.7680,-72.2250,'Central'],
-].map((r,i)=>({id:i,estado:r[0],ciudad:r[1],nombre:r[2],tipo:r[3],dir:r[4],lat:r[5],lon:r[6],cap:r[7]}));
+// Catálogo en /acopio-data.json (única fuente). Estado en vivo desde
+// /api/acopio/status (editable por operadores en /admin). Default = operativo.
+let D=[];
+let ST={};
+const STATUS={operativo:['#16a34a','Operativo'],saturado:['#d97706','Saturado'],cerrado:['#dc2626','Cerrado']};
+const stKey=d=>(ST[d.id]&&ST[d.id].status)||'operativo';
 
 const $=s=>document.querySelector(s);
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -260,45 +107,45 @@ const map=L.map('map',{attributionControl:false,scrollWheelZoom:false}).setView(
 L.control.attribution({prefix:false}).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM · © CARTO',maxZoom:19}).addTo(map);
 const markers=L.layerGroup().addTo(map);
-function dot(c){return L.divIcon({className:'',html:`<div style="width:16px;height:16px;border-radius:9999px;background:${c};box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.4)"></div>`,iconSize:[16,16],iconAnchor:[8,8]});}
+function dot(c,sc){return L.divIcon({className:'',html:`<div style="width:16px;height:16px;border-radius:9999px;background:${c};box-shadow:0 0 0 2px #fff,0 0 0 4px ${sc},0 1px 3px rgba(0,0,0,.4)"></div>`,iconSize:[20,20],iconAnchor:[10,10]});}
 
 // ── Tiles ──
 function renderTiles(){
-  const t={};Object.keys(TIPO).forEach(k=>t[k]=0);const est=new Set();
-  D.forEach(d=>{est.add(d.estado);t[d.tipo]++;});
-  const acopio=t.universidad+t.estadio+t.polideportivo;
-  const cards=[['Puntos totales',D.length,'#13284f'],['Acopio (univ/estadio/polid.)',acopio,'#2563eb'],['Hospitales',t.hospital,'#0891b2'],['Protección Civil',t.proteccion_civil,'#ea580c'],['Bomberos',t.bomberos,'#b45309'],['Estados',est.size+' / 24','#16a34a']];
+  const s={operativo:0,saturado:0,cerrado:0};let hosp=0;const est=new Set();
+  D.forEach(d=>{est.add(d.estado);s[stKey(d)]++;if(d.tipo==='hospital')hosp++;});
+  const cards=[['Puntos totales',D.length,'#13284f'],['🟢 Operativos',s.operativo,'#16a34a'],['🟠 Saturados',s.saturado,'#d97706'],['🔴 Cerrados',s.cerrado,'#dc2626'],['Hospitales',hosp,'#0891b2'],['Estados',est.size+' / 24','#13284f']];
   $('#tiles').innerHTML=cards.map(([l,v,c])=>`<div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div class="font-display font-extrabold text-2xl tnum" style="color:${c}">${v}</div><div class="text-xs font-semibold mt-0.5">${l}</div></div>`).join('');
 }
 
 // ── Filter + render ──
 function view(){
-  const q=$('#q').value.trim().toLowerCase(),ef=$('#estadoFilter').value,tf=$('#tipoFilter').value;
+  const q=$('#q').value.trim().toLowerCase(),ef=$('#estadoFilter').value,tf=$('#tipoFilter').value,sf=$('#statusFilter').value;
   return D.filter(d=>{
     if(hidden.has(d.tipo))return false;
-    if(ef&&d.estado!==ef)return false;if(tf&&d.tipo!==tf)return false;
+    if(ef&&d.estado!==ef)return false;if(tf&&d.tipo!==tf)return false;if(sf&&stKey(d)!==sf)return false;
     if(q&&!(d.nombre+' '+d.ciudad+' '+d.dir+' '+d.estado).toLowerCase().includes(q))return false;return true;});
 }
 function render(){
   const list=view();
-  $('#count').textContent=`${list.length} de ${D.length} centros`;
+  $('#count').textContent=`${list.length} de ${D.length} puntos`;
   // markers
   markers.clearLayers();const pts=[];
-  list.forEach(d=>{const[c]=TIPO[d.tipo];pts.push([d.lat,d.lon]);
-    L.marker([d.lat,d.lon],{icon:dot(c)}).bindPopup(
-      `<b>${esc(d.nombre)}</b><br>${TIPO[d.tipo][1]} ${TIPO[d.tipo][2]} · ${esc(d.cap)}<br><span style="color:#444">${esc(d.dir)}</span><br>${esc(d.estado)} — ${esc(d.ciudad)}<br><a href="tel:911" style="color:#c8102e;font-weight:700">📞 Llamar 911</a> · <a href="${gmaps(d)}" target="_blank" rel="noopener" style="color:#13284f;font-weight:700">📍 Cómo llegar →</a>`
+  list.forEach(d=>{const[c]=TIPO[d.tipo];const sk=stKey(d),[scol,slbl]=STATUS[sk];const ov=ST[d.id];pts.push([d.lat,d.lon]);
+    L.marker([d.lat,d.lon],{icon:dot(c,scol)}).bindPopup(
+      `<b>${esc(d.nombre)}</b><br><span style="color:${scol};font-weight:700">● ${slbl}</span> · ${TIPO[d.tipo][1]} ${TIPO[d.tipo][2]} · ${esc(d.cap)}<br><span style="color:#444">${esc(d.dir)}</span><br>${esc(d.estado)} — ${esc(d.ciudad)}${ov&&ov.note?`<br><i style="color:#444">${esc(ov.note)}</i>`:''}<br><a href="tel:911" style="color:#c8102e;font-weight:700">📞 Llamar 911</a> · <a href="${gmaps(d)}" target="_blank" rel="noopener" style="color:#13284f;font-weight:700">📍 Cómo llegar →</a>`
     ).addTo(markers);});
   if(pts.length)map.fitBounds(pts,{padding:[30,30],maxZoom:9});
   // grouped list
   const byEst={};list.forEach(d=>{(byEst[d.estado]=byEst[d.estado]||[]).push(d);});
   $('#list').innerHTML=ESTADOS.filter(e=>byEst[e]).map(e=>{
-    const rows=byEst[e].map(d=>{const[c,ic,lbl]=TIPO[d.tipo];return `
+    const rows=byEst[e].map(d=>{const[c,ic,lbl]=TIPO[d.tipo];const sk=stKey(d),[scol,slbl]=STATUS[sk];const ov=ST[d.id];return `
       <div class="flex items-start gap-3 p-3 border-t border-outline-variant/40">
         <span class="text-lg leading-6">${ic}</span>
         <div class="flex-1 min-w-0">
-          <div class="font-semibold">${esc(d.nombre)}</div>
+          <div class="font-semibold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full shrink-0" style="background:${scol}"></span>${esc(d.nombre)}</div>
           <div class="text-xs text-on-surface-variant">${esc(d.dir)} · ${esc(d.ciudad)}</div>
-          <div class="text-xs mt-0.5"><span class="inline-block rounded px-1.5 py-0.5 text-white text-[10px] font-bold" style="background:${c}">${lbl}</span> <span class="text-on-surface-variant">Capacidad: ${esc(d.cap)}</span></div>
+          <div class="text-xs mt-0.5"><span class="inline-block rounded px-1.5 py-0.5 text-white text-[10px] font-bold" style="background:${c}">${lbl}</span> <span class="inline-block rounded px-1.5 py-0.5 text-white text-[10px] font-bold" style="background:${scol}">${slbl}</span> <span class="text-on-surface-variant">Cap.: ${esc(d.cap)}</span></div>
+          ${ov&&ov.note?`<div class="text-xs text-on-surface-variant italic mt-0.5">${esc(ov.note)}</div>`:''}
         </div>
         <div class="flex flex-col items-end gap-1 shrink-0">
           <a href="tel:911" class="text-xs font-bold whitespace-nowrap hover:underline" style="color:#c8102e">📞 911</a>
@@ -313,15 +160,27 @@ function render(){
 
 // ── Wiring ──
 $('#estadoFilter').innerHTML='<option value="">Todos los estados</option>'+ESTADOS.map(e=>`<option>${esc(e)}</option>`).join('');
-['#q','#estadoFilter','#tipoFilter'].forEach(s=>$(s).addEventListener('input',render));
+['#q','#estadoFilter','#tipoFilter','#statusFilter'].forEach(s=>$(s).addEventListener('input',render));
 $('#csv').addEventListener('click',()=>{
   const head=['Estado','Ciudad','Nombre','Tipo','Direccion','Lat','Lon','Capacidad','ComoLlegar'];
   const lines=[head.join(',')].concat(D.map(d=>[d.estado,d.ciudad,d.nombre,d.tipo,d.dir,d.lat,d.lon,d.cap,gmaps(d)].map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')));
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sismo911-centros-acopio-venezuela.csv';a.click();
 });
-renderTiles();renderLegend();render();
-setTimeout(()=>map.invalidateSize(),200);
+renderLegend();
+// Cargar catálogo (única fuente) + estado en vivo.
+async function load(){
+  try{
+    const [cat,st]=await Promise.all([
+      fetch('/acopio-data.json').then(r=>r.json()),
+      fetch('/api/acopio/status').then(r=>r.ok?r.json():{status:{}}).catch(()=>({status:{}})),
+    ]);
+    D=cat;ST=st.status||{};
+  }catch(e){ $('#list').innerHTML='<p class="text-secondary text-sm">No se pudo cargar el catálogo. Revisa tu conexión.</p>'; }
+  renderTiles();render();
+  setTimeout(()=>map.invalidateSize(),200);
+}
+load();
 </script>
 </body>
 </html>
