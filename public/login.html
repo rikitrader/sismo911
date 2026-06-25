@@ -50,7 +50,12 @@
   tabs.forEach(t=>t.onclick=()=>{const n=t.dataset.tab;
     tabs.forEach(x=>{const on=x.dataset.tab===n;x.classList.toggle('bg-white',on);x.classList.toggle('shadow',on);x.classList.toggle('text-primary',on);x.classList.toggle('text-on-surface-variant',!on);});
     lf.classList.toggle('hidden',n!=='login'); rf.classList.toggle('hidden',n!=='register'); msg.textContent='';});
-  function dest(role){ return (role==='operator'||role==='admin') ? '/admin.html' : (next.startsWith('/login')?'/cuenta.html':next); }
+  function dest(role){
+    const isOp = role==='operator' || role==='admin';
+    if (isOp) return (next.startsWith('/login') || next==='/') ? '/admin.html' : next;
+    // Citizens can never go to an admin/login destination — send them to their account.
+    return (next.startsWith('/admin') || next.startsWith('/login')) ? '/cuenta.html' : next;
+  }
   async function submit(form,url){ msg.className='text-sm text-center mt-3 text-on-surface-variant'; msg.textContent='…';
     const body=Object.fromEntries(new FormData(form));
     const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});

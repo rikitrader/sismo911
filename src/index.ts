@@ -44,7 +44,7 @@ app.use('*', async (c, next) => {
   // Unauthenticated/unauthorized: redirect HTML to login, JSON gets 401.
   if (isAdminPage) {
     const next_ = encodeURIComponent(path);
-    return c.redirect(`/login.html?next=${next_}`, 302);
+    return c.redirect(`/login?next=${next_}`, 302);
   }
   return c.json({ error: 'unauthorized', hint: 'Inicia sesión como operador o admin' }, 401);
 });
