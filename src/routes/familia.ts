@@ -4,8 +4,8 @@ import { uid } from '../lib/db';
 import { getUserFromRequest } from '../lib/auth';
 import { rateLimit, burstLimit, isImageBytes } from '../lib/security';
 
-// Missing-persons registry (/familia). Reads the 31k `personas` dataset in the
-// DESAP D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
+// Missing-persons registry (/familia). Reads the `personas` dataset in the main
+// (sismo911) D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
 // Keyset/cursor pagination for scale. Phone (`contacto`) redacted for the public.
 export const familia = new Hono<{ Bindings: Env }>();
 const DEFAULT_LIMIT = 24;
@@ -53,11 +53,11 @@ familia.get('/persons', async (c) => {
   if (est) { base.push('estado = ?'); baseBinds.push(est); }
   const wBase = base.length ? 'WHERE ' + base.join(' AND ') : '';
 
-  const total = ((await c.env.DESAP.prepare(`SELECT COUNT(*) AS n FROM personas ${wBase}`).bind(...baseBinds).first<any>())?.n) ?? 0;
+  const total = ((await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas ${wBase}`).bind(...baseBinds).first<any>())?.n) ?? 0;
   const where = [...base]; const binds = [...baseBinds];
   cursorClause(c.req.query('cursor') || '', where, binds);
   const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
-  const { results } = await c.env.DESAP.prepare(
+  const { results } = await c.env.DB.prepare(
     `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto, foto_r2, estado, updated_at
      FROM personas ${w} ORDER BY updated_at DESC, id DESC LIMIT ?`
   ).bind(...binds, limit + 1).all<any>();
@@ -101,10 +101,10 @@ familia.get('/gallery', async (c) => {
   const base = ['foto_r2 IS NOT NULL', "moderation = 'approved'"]; const baseBinds: unknown[] = [];
   if (est) { base.push('estado = ?'); baseBinds.push(est); }
   const wBase = base.join(' AND ');
-  const total = ((await c.env.DESAP.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${wBase}`).bind(...baseBinds).first<any>())?.n) ?? 0;
+  const total = ((await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${wBase}`).bind(...baseBinds).first<any>())?.n) ?? 0;
   const where = [...base]; const binds = [...baseBinds];
   cursorClause(c.req.query('cursor') || '', where, binds);
-  const { results } = await c.env.DESAP.prepare(
+  const { results } = await c.env.DB.prepare(
     `SELECT id, nombre, edad, ubicacion, estado, foto_r2, updated_at FROM personas
      WHERE ${where.join(' AND ')} ORDER BY updated_at DESC, id DESC LIMIT ?`
   ).bind(...binds, limit + 1).all<any>();
@@ -117,7 +117,7 @@ familia.get('/gallery', async (c) => {
 
 // GET /api/familia/photo/:id  — serve from DESAP_FOTOS R2, fall back to the external URL
 familia.get('/photo/:id', async (c) => {
-  const row: any = await c.env.DESAP.prepare(`SELECT foto_r2, foto FROM personas WHERE id = ?`).bind(c.req.param('id')).first();
+  const row: any = await c.env.DB.prepare(`SELECT foto_r2, foto FROM personas WHERE id = ?`).bind(c.req.param('id')).first();
   if (!row) return c.notFound();
   if (row.foto_r2) {
     const obj = await c.env.DESAP_FOTOS.get(row.foto_r2);
@@ -149,7 +149,7 @@ familia.get('/person/:id', async (c) => {
       share_url: `https://sismo911.com/familia?caso=${r.id}`,
     });
   }
-  const p: any = await c.env.DESAP.prepare(
+  const p: any = await c.env.DB.prepare(
     `SELECT id, nombre, edad, ubicacion, fecha, descripcion, contacto, estado, foto, foto_r2, localizado_por, updated_at
      FROM personas WHERE id = ? AND moderation = 'approved'`
   ).bind(id).first();
@@ -168,7 +168,7 @@ familia.get('/person/:id', async (c) => {
 familia.post('/:id/localizar', async (c) => {
   if (!(await isOperator(c))) return c.json({ error: 'unauthorized', hint: 'Solo operadores pueden confirmar' }, 401);
   const b = await c.req.json().catch(() => ({} as any));
-  await c.env.DESAP.prepare(
+  await c.env.DB.prepare(
     `UPDATE personas SET estado = 'localizado', localizado_nota = ?, updated_at = ? WHERE id = ?`
   ).bind(String(b?.nota ?? 'Marcada como localizada').slice(0, 300), Date.now(), c.req.param('id')).run();
   return c.json({ ok: true, status: 'found_safe' });
@@ -178,7 +178,7 @@ familia.post('/:id/localizar', async (c) => {
 familia.post('/:id/report', async (c) => {
   const limited = await rateLimit(c.env, c, 'familia_flag', 10, 300);
   if (limited) return limited;
-  await c.env.DESAP.prepare(
+  await c.env.DB.prepare(
     `UPDATE personas SET reportes = COALESCE(reportes,0) + 1,
        reportada = CASE WHEN COALESCE(reportes,0) + 1 >= 3 THEN 1 ELSE COALESCE(reportada,0) END,
        reportada_at = ? WHERE id = ?`
@@ -205,7 +205,7 @@ familia.post('/persons', async (c) => {
   // Anti-duplicate gate: if an identical report already exists (same name +
   // location + contact), return it instead of creating a duplicate — no photo
   // upload, no insert.
-  const existing = await c.env.DESAP.prepare(
+  const existing = await c.env.DB.prepare(
     `SELECT id FROM personas
       WHERE lower(trim(nombre)) = lower(trim(?))
         AND lower(trim(coalesce(ubicacion,''))) = lower(trim(coalesce(?,'')))
@@ -222,7 +222,7 @@ familia.post('/persons', async (c) => {
     foto_r2 = `fotos/${id}.jpg`;
     await c.env.DESAP_FOTOS.put(foto_r2, bytes, { httpMetadata: { contentType: ctype } });
   }
-  await c.env.DESAP.prepare(
+  await c.env.DB.prepare(
     `INSERT INTO personas (id, nombre, edad, ubicacion, descripcion, contacto, foto_r2, estado, moderation, created_at, updated_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
@@ -242,7 +242,7 @@ familia.post('/persons', async (c) => {
 familia.get('/queue', async (c) => {
   if (!(await isOperator(c))) return c.json({ error: 'unauthorized', hint: 'Inicia sesión como operador o admin' }, 401);
   c.header('Cache-Control', 'no-store');
-  const { results } = await c.env.DESAP.prepare(
+  const { results } = await c.env.DB.prepare(
     `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto_r2, estado, updated_at
      FROM personas WHERE moderation='pending' ORDER BY updated_at DESC, id DESC LIMIT 300`
   ).all<any>();
@@ -252,7 +252,7 @@ familia.get('/queue', async (c) => {
 // POST /api/familia/:id/approve — publish a pending submission (operator-only).
 familia.post('/:id/approve', async (c) => {
   if (!(await isOperator(c))) return c.json({ error: 'unauthorized', hint: 'Inicia sesión como operador o admin' }, 401);
-  const r = await c.env.DESAP.prepare(
+  const r = await c.env.DB.prepare(
     `UPDATE personas SET moderation='approved', updated_at=? WHERE id=? AND moderation='pending'`
   ).bind(Date.now(), c.req.param('id')).run();
   return c.json({ ok: true, approved: r.meta.changes });

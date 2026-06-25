@@ -182,7 +182,7 @@ app.get('/familia', async (c) => {
   base.headers.set('Cache-Control', 'no-cache, must-revalidate');
   const id = c.req.query('persona');
   if (!id) return base;
-  const p = await c.env.DESAP.prepare(
+  const p = await c.env.DB.prepare(
     `SELECT id, nombre, edad, ubicacion, foto, foto_r2 FROM personas WHERE id = ? AND moderation='approved'`
   ).bind(id).first<any>().catch(() => null);
   if (!p) return base;
