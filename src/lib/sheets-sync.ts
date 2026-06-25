@@ -4,7 +4,7 @@ import type { Env } from '../types';
 // exchanges a stored OAuth refresh token for a short-lived access token, then
 // clears + rewrites the "Señales" tab. All Google creds are wrangler secrets.
 
-async function googleAccessToken(env: Env): Promise<string | null> {
+export async function googleAccessToken(env: Env): Promise<string | null> {
   if (!env.GOOGLE_REFRESH_TOKEN || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return null;
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',

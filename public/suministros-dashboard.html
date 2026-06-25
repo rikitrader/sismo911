@@ -78,7 +78,7 @@
     <div class="tile"><div class="k">Capacidad</div><div class="v">~5,000</div><div class="s">personas / multi-ola</div></div>
     <div class="tile"><div class="k">Costo / beneficiario</div><div class="v">$8</div><div class="s">por ola desplegada</div></div>
     <div class="tile"><div class="k">Solicitud Año 1</div><div class="v">$497.9K</div><div class="s">setup + stockpile + 1 año</div></div>
-    <div class="tile"><div class="k">Pipeline fondos</div><div class="v">$421.5K</div><div class="s">ajustado por riesgo</div></div>
+    <div class="tile"><div class="k">Pipeline fondos</div><div class="v" id="kpiPipeline">$421.5K</div><div class="s">ajustado por riesgo</div></div>
   </div>
 
   <!-- Charts -->
@@ -106,15 +106,15 @@
   </div>
 
   <!-- Funder pipeline (real) -->
-  <h2 class="h text-xl mb-1">Pipeline de financiamiento</h2>
+  <h2 class="h text-xl mb-1">Pipeline de financiamiento <span id="fLive" style="font-size:11px;font-weight:800;letter-spacing:.03em;color:#9aa6bd;vertical-align:middle"></span></h2>
   <p class="text-xs mb-2" style="color:#5b6884">Fuentes reales con monto objetivo, probabilidad y valor esperado (ajustado por riesgo). La barra = probabilidad de cierre.</p>
-  <div class="fsum">
+  <div class="fsum" id="fsum">
     <div><div class="l">Objetivo total</div><div class="v">$1.16M</div></div>
     <div><div class="l">Esperado (ajustado)</div><div class="v">$421.5K</div></div>
     <div><div class="l">Solicitud Año 1</div><div class="v">$497.9K</div></div>
     <div><div class="l">Brecha a cerrar</div><div class="v">~$76K</div></div>
   </div>
-  <div class="fgrid mb-8">
+  <div class="fgrid mb-8" id="fgrid">
     <div class="fcard"><div class="ftop"><div class="fn">Direct Relief</div><span class="badge gik">En especie</span></div><div class="fmeta"><span>Objetivo $150K</span><span>Prob 50%</span></div><div class="fbar"><i style="width:50%"></i></div><div class="fbot"><div class="fev">$75K <small>esperado</small></div><span class="pill">Aplicar</span></div></div>
     <div class="fcard"><div class="ftop"><div class="fn">USAID / BHA</div><span class="badge grant">Grant</span></div><div class="fmeta"><span>Objetivo $250K</span><span>Prob 20%</span></div><div class="fbar"><i style="width:20%"></i></div><div class="fbot"><div class="fev">$50K <small>esperado</small></div><span class="pill">Watch</span></div></div>
     <div class="fcard"><div class="ftop"><div class="fn">Diáspora venezolana</div><span class="badge cash">Efectivo</span></div><div class="fmeta"><span>Objetivo $75K</span><span>Prob 60%</span></div><div class="fbar"><i style="width:60%"></i></div><div class="fbot"><div class="fev">$45K <small>esperado</small></div><span class="pill">Cultivar</span></div></div>
@@ -229,6 +229,45 @@
     {l:'Aduana VE + INHRR', v:3.0},
     {l:'Otros + contingencia', v:10.1}
   ], 'k$');
+
+  // ---- Live funder pipeline from the 09_Funding sheet (/api/funding) ----
+  function fmtMoney(v){ v=v||0; if(v>=1e6) return '$'+(v/1e6).toFixed(2).replace(/\.?0+$/,'')+'M'; if(v>=1000) return '$'+(v/1000).toFixed(1).replace(/\.0$/,'')+'K'; return '$'+Math.round(v); }
+  function badgeOf(t){ t=(t||'').toLowerCase();
+    if(t.indexOf('grant')>=0) return ['grant','Grant'];
+    if(t.indexOf('partner')>=0||t.indexOf('socio')>=0) return ['partner','Socio'];
+    if(t.indexOf('in-kind')>=0||t.indexOf('especie')>=0||t.indexOf('gik')>=0) return ['gik','En especie'];
+    return ['cash','Efectivo']; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+  function renderFunding(d){
+    if(!d || !d.ok || !d.funders || !d.funders.length) return;
+    var grid=document.getElementById('fgrid'); if(!grid) return;
+    var html='';
+    d.funders.forEach(function(f){
+      var b=badgeOf(f.type), pct=Math.round((f.prob||0)*100);
+      html+='<div class="fcard"><div class="ftop"><div class="fn">'+esc(f.name)+'</div>'+
+        '<span class="badge '+b[0]+'">'+b[1]+'</span></div>'+
+        '<div class="fmeta"><span>Objetivo '+fmtMoney(f.target)+'</span><span>Prob '+pct+'%</span></div>'+
+        '<div class="fbar"><i style="width:'+pct+'%"></i></div>'+
+        '<div class="fbot"><div class="fev">'+fmtMoney(f.ev)+' <small>esperado</small></div>'+
+        '<span class="pill">'+esc(f.status||'—')+'</span></div></div>';
+    });
+    grid.innerHTML=html;
+    var fsum=document.getElementById('fsum');
+    if(fsum){ fsum.innerHTML=
+      '<div><div class="l">Objetivo total</div><div class="v">'+fmtMoney(d.totals.target)+'</div></div>'+
+      '<div><div class="l">Esperado (ajustado)</div><div class="v">'+fmtMoney(d.totals.expected)+'</div></div>'+
+      '<div><div class="l">Solicitud Año 1</div><div class="v">'+fmtMoney(d.ask)+'</div></div>'+
+      '<div><div class="l">Brecha a cerrar</div><div class="v">'+fmtMoney(d.gap)+'</div></div>'; }
+    var kpi=document.getElementById('kpiPipeline'); if(kpi) kpi.textContent=fmtMoney(d.totals.expected);
+    var top=d.funders.slice(0,8).map(function(f){ var b=badgeOf(f.type);
+      return {l:(f.name.length>22?f.name.slice(0,21)+'…':f.name), v:+(f.ev/1000).toFixed(1), c:(b[0]==='gik'?GIK:undefined)}; });
+    var rest=d.funders.slice(8).reduce(function(s,f){return s+f.ev;},0);
+    if(rest>0) top.push({l:'Otros ('+(d.funders.length-8)+' fuentes)', v:+(rest/1000).toFixed(1)});
+    bars('cFund', top, 'k$');
+    var live=document.getElementById('fLive');
+    if(live){ live.textContent='● En vivo desde la hoja'; live.style.color='#16a34a'; }
+  }
+  fetch('/api/funding').then(function(r){return r.json();}).then(renderFunding).catch(function(){});
 })();
 </script>
 </body>

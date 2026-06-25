@@ -18,6 +18,7 @@ import { reports } from './routes/reports';
 import { chat } from './routes/chat';
 import { acopio } from './routes/acopio';
 import { admin } from './routes/admin';
+import { funding } from './routes/funding';
 import { plan } from './routes/plan';
 import { dedupePersonas } from './lib/dedupe';
 import { cleanPersonas } from './lib/clean';
@@ -171,6 +172,7 @@ app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directo
 app.route('/api', donations); // crowdfunding: /api/campaigns* + /api/donations* (anonymous donate; card→USDC via Crossmint)
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
+app.route('/api/funding', funding); // live funder pipeline for the supply dashboard (reads 09_Funding sheet)
 app.route('/plan', plan);  // invitation-only business-plan slide deck (own invite-code gate)
 
 // Per-person social cards: a shared /familia?persona=<id> link rewrites the page's
