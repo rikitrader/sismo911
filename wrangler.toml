@@ -49,6 +49,12 @@ id = "2d5be96112724b8dbfaae2723d3a4dd3"
 binding = "PHOTOS"
 id = "dc4674529c1a4dd4b747d8e7e3398d17"
 
+
+# Missing-person photos (browsable gallery).
+[[r2_buckets]]
+binding = "PERSON_PHOTOS"
+bucket_name = "sismo911-person-photos"
+
 [observability]
 enabled = true
 
