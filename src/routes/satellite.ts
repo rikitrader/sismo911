@@ -53,7 +53,11 @@ async function googleSession(env: Env): Promise<string | null> {
 
 // GET /api/sat/config — which imagery layers are available (public).
 satellite.get('/config', async (c) => {
-  const google = Boolean((c.env as any).GOOGLE_MAPS_API_KEY);
+  // google:true only when the key actually creates a Map Tiles session — a key
+  // without Map Tiles API enabled (e.g. a Gemini key) would otherwise advertise
+  // a layer that 404s. The session is KV-cached, so this is cheap.
+  const hasKey = Boolean((c.env as any).GOOGLE_MAPS_API_KEY);
+  const google = hasKey ? Boolean(await googleSession(c.env)) : false;
   c.header('Cache-Control', 'public, max-age=300');
   return c.json({ google, esri: true, gibs: { date: '2026-06-24' }, maxar: await maxarInfo(c.env) });
 });
