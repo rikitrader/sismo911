@@ -9,6 +9,9 @@
   <url><loc>https://sismo911.com/comms</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://sismo911.com/guia</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://sismo911.com/pager</loc><changefreq>hourly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://sismo911.com/movimiento</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://sismo911.com/reportar</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://sismo911.com/canal</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
   <url><loc>https://sismo911.com/blog</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url>
     <loc>https://sismo911.com/blog/terremoto-magnitud-7-5-yumare-venezuela-24-junio-2026</loc>

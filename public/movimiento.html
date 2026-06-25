@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Movimiento — Venezuela se cuida sola | SISMO911</title>
+<meta name="description" content="SISMO911 es el movimiento ciudadano de respuesta al terremoto en Venezuela: mapa colaborativo de daños, búsqueda de personas, canal verificado y ayuda mutua. Datos abiertos de USGS y KoboToolbox. Únete: reporta, busca, ayuda.">
+<meta name="author" content="SISMO911 — Comando Sísmico Nacional">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/movimiento">
+<meta property="og:type" content="website"><meta property="og:site_name" content="SISMO911"><meta property="og:locale" content="es_VE">
+<meta property="og:title" content="El Movimiento — Venezuela se cuida sola | SISMO911">
+<meta property="og:description" content="Movimiento ciudadano de respuesta al terremoto: mapa de daños, búsqueda de personas, canal verificado y ayuda mutua. Únete.">
+<meta property="og:url" content="https://sismo911.com/movimiento">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="El Movimiento — SISMO911"><meta name="twitter:description" content="Venezuela se cuida sola. Reporta, busca, ayuda."><meta name="twitter:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','secondary-fixed':'#ffb3b1','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0',safe:'#2e7d32',warning:'#e57200'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif']}}}}</script>
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"El Movimiento — SISMO911","description":"Movimiento ciudadano de respuesta al terremoto en Venezuela.","url":"https://sismo911.com/movimiento","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/reportar" class="hover:text-white/70">Reportar</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/familia" class="hover:text-white/70">Familia</a><a href="/canal" class="hover:text-white/70">Canal</a><a href="/guia" class="hover:text-white/70">Guía</a><a href="/movimiento" class="text-white">Movimiento</a></nav></div></header>
+
+<!-- Hero -->
+<section class="bg-primary text-white">
+  <div class="mx-auto max-w-4xl px-4 py-14 text-center">
+    <div class="inline-flex items-center gap-2 text-xs font-semibold bg-secondary px-3 py-1 rounded-full mb-4"><span class="h-2 w-2 rounded-full bg-white animate-pulse"></span> RESPUESTA ACTIVA · TERREMOTO M7.5</div>
+    <h1 class="font-display font-black text-4xl sm:text-5xl leading-tight mb-3">Venezuela se cuida sola.</h1>
+    <p class="text-white/80 text-lg max-w-2xl mx-auto mb-8">Cuando las instituciones no llegan, llegamos nosotros. SISMO911 es el movimiento ciudadano que mapea el daño, encuentra a los desaparecidos y coordina la ayuda — en tiempo real, con datos abiertos y verificación comunitaria.</p>
+    <div class="flex flex-wrap justify-center gap-3">
+      <a href="/reportar" class="bg-secondary text-white font-bold rounded-lg px-6 py-3">Reportar un daño</a>
+      <a href="/mapa" class="bg-white text-primary font-bold rounded-lg px-6 py-3">Ver el mapa en vivo</a>
+    </div>
+  </div>
+</section>
+
+<!-- Live counters -->
+<section class="mx-auto max-w-4xl px-4 -mt-8 mb-12">
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="bg-white border border-outline-variant/60 rounded-xl p-4 text-center"><div id="c_total" class="font-display font-extrabold text-3xl text-primary">—</div><div class="text-xs text-on-surface-variant">Reportes en el mapa</div></div>
+    <div class="bg-white border border-outline-variant/60 rounded-xl p-4 text-center"><div id="c_critical" class="font-display font-extrabold text-3xl text-secondary">—</div><div class="text-xs text-on-surface-variant">Críticos (rojo)</div></div>
+    <div class="bg-white border border-outline-variant/60 rounded-xl p-4 text-center"><div id="c_missing" class="font-display font-extrabold text-3xl text-warning">—</div><div class="text-xs text-on-surface-variant">Personas buscadas</div></div>
+    <div class="bg-white border border-outline-variant/60 rounded-xl p-4 text-center"><div id="c_found" class="font-display font-extrabold text-3xl text-safe">—</div><div class="text-xs text-on-surface-variant">Reencontradas</div></div>
+  </div>
+</section>
+
+<!-- How to join -->
+<section class="mx-auto max-w-4xl px-4 mb-12">
+  <h2 class="font-display font-bold text-2xl mb-4 text-center">Cómo unirte al movimiento</h2>
+  <div class="grid sm:grid-cols-3 gap-4">
+    <a href="/reportar" class="block bg-white border border-outline-variant/60 rounded-xl p-5 hover:shadow-md"><div class="text-2xl mb-2">📍</div><b class="font-display block text-primary">Reporta</b><p class="text-sm text-on-surface-variant">Daños, colapsos, fugas, personas atrapadas o puntos de ayuda. Tu ubicación exacta nunca se publica.</p></a>
+    <a href="/familia" class="block bg-white border border-outline-variant/60 rounded-xl p-5 hover:shadow-md"><div class="text-2xl mb-2">🔎</div><b class="font-display block text-primary">Busca y avisa</b><p class="text-sm text-on-surface-variant">Registra o busca personas desaparecidas y marca que estás a salvo.</p></a>
+    <a href="/canal" class="block bg-white border border-outline-variant/60 rounded-xl p-5 hover:shadow-md"><div class="text-2xl mb-2">💬</div><b class="font-display block text-primary">Coordina</b><p class="text-sm text-on-surface-variant">Comparte información verificada y organiza la ayuda en el canal comunitario.</p></a>
+  </div>
+</section>
+
+<!-- Manifesto -->
+<section class="mx-auto max-w-3xl px-4 mb-12">
+  <div class="bg-primary/5 border border-primary/20 rounded-xl p-6">
+    <h2 class="font-display font-bold text-xl text-primary mb-3">Nuestro principio</h2>
+    <p class="text-sm leading-relaxed mb-2">Creemos en la <b>información honesta</b>: distinguimos siempre lo observado, lo analizado y lo incierto. <b>No predecimos terremotos</b> y no reemplazamos a las autoridades de emergencia — las complementamos cuando la gente necesita actuar ya.</p>
+    <p class="text-sm leading-relaxed">Creemos en la <b>privacidad</b>: tu ubicación exacta nunca se comparte. Y en los <b>datos abiertos</b>: cualquiera puede verificar de dónde viene cada cifra.</p>
+  </div>
+</section>
+
+<!-- Data sources transparency -->
+<section class="mx-auto max-w-3xl px-4 mb-16">
+  <h2 class="font-display font-bold text-lg mb-3">De dónde vienen los datos</h2>
+  <div class="grid sm:grid-cols-2 gap-3 text-sm">
+    <div class="bg-white border border-outline-variant/60 rounded-lg p-4"><b>Sismos · USGS</b><p class="text-on-surface-variant">Eventos y PAGER en vivo del U.S. Geological Survey.</p></div>
+    <div class="bg-white border border-outline-variant/60 rounded-lg p-4"><b>Daños · KoboToolbox</b><p class="text-on-surface-variant">Formulario humanitario abierto, integrado con atribución.</p></div>
+    <div class="bg-white border border-outline-variant/60 rounded-lg p-4"><b>Reportes ciudadanos</b><p class="text-on-surface-variant">Enviados por la comunidad y revisados antes de publicarse.</p></div>
+    <div class="bg-white border border-outline-variant/60 rounded-lg p-4"><b>Tsunami · NOAA/PTWC</b><p class="text-on-surface-variant">Estado oficial de alertas del Caribe.</p></div>
+  </div>
+  <p class="text-xs text-on-surface-variant mt-4">SISMO911 produce análisis de inteligencia geológica, no predicciones. Para decisiones de seguridad de vida, sigue a las autoridades oficiales (FUNVISIS, Protección Civil, NOAA/PTWC).</p>
+</section>
+
+<footer class="bg-primary text-white/70"><div class="mx-auto max-w-6xl px-4 py-8 text-sm flex flex-wrap gap-x-6 gap-y-2"><a href="/" class="hover:text-white">Panel</a><a href="/mapa" class="hover:text-white">Mapa</a><a href="/reportar" class="hover:text-white">Reportar</a><a href="/familia" class="hover:text-white">Familia</a><a href="/canal" class="hover:text-white">Canal</a><a href="/blog" class="hover:text-white">Blog</a><span class="ml-auto">© 2026 SISMO911 · sismo911.com</span></div></footer>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const set=(id,v)=>document.getElementById(id).textContent=Number(v||0).toLocaleString('es-VE');
+async function stats(){try{const[r,p]=await Promise.all([fetch('/api/reports/stats').then(x=>x.json()),fetch('/api/persons/stats').then(x=>x.json())]);
+  set('c_total',r.total);set('c_critical',r.critical);set('c_missing',p.missing);set('c_found',p.found);}catch{}}
+stats();setInterval(stats,15000);
+</script>
+</body>
+</html>

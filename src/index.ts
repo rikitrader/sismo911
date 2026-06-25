@@ -10,7 +10,10 @@ import { ops } from './routes/ops';
 import { misc } from './routes/misc';
 import { damage } from './routes/damage';
 import { auth } from './routes/auth';
+import { reports } from './routes/reports';
+import { chat } from './routes/chat';
 import { ingestUsgs } from './ingest/usgs-cron';
+import { ingestKobo } from './ingest/kobo-cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
 
@@ -24,9 +27,15 @@ const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 const ADMIN_WRITE_PREFIXES = ['/api/persons', '/api/contacts', '/api/resources'];
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
+  const method = c.req.method;
   const isAdminPage = path.startsWith('/admin');
-  const isAdminWrite = WRITE_METHODS.has(c.req.method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
-  if (!isAdminPage && !isAdminWrite) return next();
+  const isAdminWrite = WRITE_METHODS.has(method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
+  // Report moderation (approve/reject/delete + review queue) is operator-only.
+  // Citizen submission (POST /api/reports), reactions, comments and reads stay public.
+  const isReportModeration =
+    (path.startsWith('/api/reports') && (method === 'PATCH' || method === 'DELETE')) ||
+    path === '/api/reports/queue';
+  if (!isAdminPage && !isAdminWrite && !isReportModeration) return next();
 
   const user = await getUserFromRequest(c.env, c).catch(() => null);
   const authorized = user && (user.role === 'operator' || user.role === 'admin');
@@ -78,6 +87,8 @@ app.route('/api/auth', auth);
 app.route('/api/alerts', alerts);
 app.route('/api/facilities', facilities);
 app.route('/api/damage', damage);
+app.route('/api/reports', reports);  // citizen damage-report map + comments + reactions + moderation
+app.route('/api/chat', chat);        // community channel
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
 
@@ -86,10 +97,11 @@ app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default {
   fetch: app.fetch,
-  // Cron trigger (every minute) → keep the USGS mirror fresh.
+  // Cron trigger (every minute) → keep the USGS mirror + KoboToolbox damage feed fresh.
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(
-      ingestUsgs(env).catch((e) => console.error('[cron] ingest failed:', e?.message ?? e))
-    );
+    ctx.waitUntil(Promise.allSettled([
+      ingestUsgs(env).catch((e) => console.error('[cron] usgs ingest failed:', e?.message ?? e)),
+      ingestKobo(env).catch((e) => console.error('[cron] kobo ingest failed:', e?.message ?? e)),
+    ]));
   },
 };

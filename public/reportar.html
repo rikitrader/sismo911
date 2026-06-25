@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reportar un daño — SISMO911</title>
+<meta name="description" content="Reporta daños, colapsos, fugas de gas, personas atrapadas o puntos de ayuda tras el terremoto en Venezuela. Tu ubicación exacta nunca se comparte públicamente. Reporte ciudadano colaborativo de SISMO911.">
+<meta name="author" content="SISMO911 — Comando Sísmico Nacional">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/reportar">
+<meta property="og:type" content="website"><meta property="og:site_name" content="SISMO911"><meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Reportar un daño — SISMO911">
+<meta property="og:description" content="Reporta daños, colapsos, personas atrapadas o puntos de ayuda. Tu ubicación exacta nunca se comparte.">
+<meta property="og:url" content="https://sismo911.com/reportar">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Reportar un daño — SISMO911"><meta name="twitter:description" content="Reporte ciudadano colaborativo tras el terremoto en Venezuela."><meta name="twitter:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','secondary-fixed':'#ffb3b1','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0',safe:'#2e7d32',warning:'#e57200'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif']}}}}</script>
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}label{font-size:.8rem;font-weight:600;color:#44474f}input,select,textarea{width:100%;border:1px solid #c4c6d0;border-radius:.5rem;padding:.6rem .7rem;font-size:.95rem;background:#fff}.chip{border:1px solid #c4c6d0;border-radius:9999px;padding:.4rem .8rem;font-size:.85rem;cursor:pointer}.chip.sel{background:#00173a;color:#fff;border-color:#00173a}</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Reportar un daño — SISMO911","description":"Reporte ciudadano colaborativo de daños tras el terremoto en Venezuela.","url":"https://sismo911.com/reportar","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/reportar" class="text-white">Reportar</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/familia" class="hover:text-white/70">Familia</a><a href="/canal" class="hover:text-white/70">Canal</a><a href="/guia" class="hover:text-white/70">Guía</a><a href="/movimiento" class="hover:text-white/70">Movimiento</a></nav></div></header>
+
+<main class="mx-auto max-w-xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Reportar un daño</h1>
+  <p class="text-on-surface-variant text-sm mb-6">Tu reporte ayuda a salvar vidas. Pasa por revisión antes de publicarse. <b>Tu ubicación exacta nunca se comparte</b> — se redondea ~100 m.</p>
+
+  <form id="f" class="space-y-4 bg-white border border-outline-variant/60 rounded-xl p-5">
+    <div>
+      <label>Tipo de reporte *</label>
+      <div id="cats" class="flex flex-wrap gap-2 mt-2"></div>
+      <input type="hidden" id="category" required>
+    </div>
+    <div>
+      <label>Gravedad</label>
+      <div id="sevs" class="flex flex-wrap gap-2 mt-2"></div>
+      <input type="hidden" id="severity">
+    </div>
+    <div><label for="title">Título corto</label><input id="title" maxlength="140" placeholder="Ej: Grietas en edificio Residencias La Paz"></div>
+    <div><label for="description">Descripción *</label><textarea id="description" rows="3" maxlength="2000" placeholder="¿Qué ocurre? ¿Hay personas en riesgo?"></textarea></div>
+    <div class="grid grid-cols-2 gap-3">
+      <div><label for="municipio">Municipio</label><input id="municipio" placeholder="Ej: Libertador"></div>
+      <div><label for="parroquia">Parroquia / sector</label><input id="parroquia" placeholder="Ej: El Valle"></div>
+    </div>
+    <div>
+      <label>Ubicación aproximada</label>
+      <button type="button" id="geo" class="mt-1 w-full border border-outline-variant rounded-lg py-2 text-sm font-semibold text-primary">📍 Usar mi ubicación (aproximada)</button>
+      <p id="geostat" class="text-xs text-on-surface-variant mt-1"></p>
+    </div>
+    <button id="submit" class="w-full bg-secondary text-white font-bold rounded-lg py-3">Enviar reporte</button>
+    <p id="msg" class="text-sm text-center"></p>
+  </form>
+  <p class="text-xs text-on-surface-variant mt-4 text-center">¿Emergencia con vida en riesgo? Usa el <a href="/sos" class="text-secondary underline font-semibold">botón SOS</a> o llama al <b>911</b>.</p>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const CATS=[['collapsed_building','🏚️ Colapso'],['damaged_building','🧱 Daño estructural'],['trapped_people','🆘 Personas atrapadas'],['gas_leak','⛽ Fuga de gas'],['medical_need','➕ Necesidad médica'],['aid_point','🤝 Punto de ayuda'],['water_point','💧 Agua'],['shelter','⛺ Refugio'],['other','📌 Otro']];
+const SEVS=[['rojo','🔴 Crítico'],['naranja','🟠 Grave'],['amarillo','🟡 Leve']];
+const catBox=document.getElementById('cats'),sevBox=document.getElementById('sevs');
+CATS.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=l;b.onclick=()=>{document.querySelectorAll('#cats .chip').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');document.getElementById('category').value=v;};catBox.appendChild(b);});
+SEVS.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=l;b.onclick=()=>{document.querySelectorAll('#sevs .chip').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');document.getElementById('severity').value=v;};sevBox.appendChild(b);});
+let lat=null,lon=null;
+document.getElementById('geo').onclick=()=>{const s=document.getElementById('geostat');s.textContent='Obteniendo ubicación…';navigator.geolocation.getCurrentPosition(p=>{lat=p.coords.latitude;lon=p.coords.longitude;s.textContent='✓ Ubicación capturada (se publicará redondeada).';},()=>{s.textContent='No se pudo obtener ubicación. Indica municipio/parroquia.';});};
+document.getElementById('f').onsubmit=async e=>{e.preventDefault();const msg=document.getElementById('msg'),btn=document.getElementById('submit');
+  const category=document.getElementById('category').value,description=document.getElementById('description').value.trim();
+  if(!category){msg.style.color='#bb0027';msg.textContent='Selecciona un tipo de reporte.';return;}
+  if(!description){msg.style.color='#bb0027';msg.textContent='Agrega una descripción.';return;}
+  btn.disabled=true;btn.textContent='Enviando…';
+  const body={category,severity:document.getElementById('severity').value||null,title:document.getElementById('title').value,description,municipio:document.getElementById('municipio').value,parroquia:document.getElementById('parroquia').value,lat,lon};
+  try{const r=await fetch('/api/reports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json();
+    if(r.ok){msg.style.color='#2e7d32';msg.textContent='✓ '+(d.message||'Reporte recibido. Aparecerá tras revisión.');document.getElementById('f').reset();document.querySelectorAll('.chip').forEach(x=>x.classList.remove('sel'));document.getElementById('category').value='';}
+    else{msg.style.color='#bb0027';msg.textContent=d.error||'Error al enviar.';}
+  }catch{msg.style.color='#bb0027';msg.textContent='Sin conexión. Intenta de nuevo.';}
+  btn.disabled=false;btn.textContent='Enviar reporte';};
+</script>
+</body>
+</html>
