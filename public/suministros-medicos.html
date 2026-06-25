@@ -42,7 +42,7 @@
     <h1 class="font-display font-extrabold text-3xl">Suministros Médicos de Emergencia</h1>
     <button id="csv" class="text-sm font-semibold bg-primary text-white rounded-lg px-3 py-2 hover:bg-primary/90">⬇︎ Exportar CSV</button>
   </div>
-  <p class="text-on-surface-variant mb-5 max-w-3xl">Botiquín de desastre para terremoto en Venezuela. Cantidades de planificación basadas en el <b>WHO Interagency Emergency Health Kit (IEHK 2017)</b> y el <b>OPS Emergency Health Kit</b>, calibradas con tasas de morbilidad de campo. Ajusta población y días para recalcular todo en vivo.</p>
+  <p class="text-on-surface-variant mb-5 max-w-3xl">Botiquín de desastre para terremoto en Venezuela. Cantidades de planificación basadas en el <b>WHO Interagency Emergency Health Kit (IEHK 2017)</b> y el <b>OPS Emergency Health Kit</b>, calibradas con tasas de morbilidad de campo. Ajusta población y días para recalcular todo en vivo. <b>Toca cualquier medicamento</b> para ver su ficha (usos, dosis, efectos y receta).</p>
 
   <!-- Controls -->
   <div class="bg-white border border-outline-variant/60 rounded-xl p-4 mb-6 flex flex-wrap items-end gap-x-6 gap-y-3">
@@ -118,6 +118,24 @@
   </div>
 
   <p class="text-xs text-on-surface-variant mt-5 max-w-3xl">⚠️ <b>Aviso médico-legal:</b> lista de planificación y logística. La adquisición, dosificación y administración corresponde a personal sanitario licenciado. Equivale a 100 Unidades Básicas + 10 Complementarias del IEHK OMS para 100.000 personas / 90 días. Renovar cada ~30 días según consumo real (EWARS). 🔒 = estupefaciente/psicotrópico (custodia y libro de narcóticos). ❄︎ = requiere cadena de frío.</p>
+
+  <!-- Ficha de medicamento -->
+  <div id="drugModal" class="hidden fixed inset-0 z-[60] bg-black/40 p-4 overflow-y-auto" onclick="closeDrug()">
+    <div class="bg-white rounded-2xl max-w-lg w-full mx-auto my-8 p-5 shadow-2xl" onclick="event.stopPropagation()">
+      <div class="flex items-start justify-between gap-3 mb-2">
+        <div><h3 id="dm_name" class="font-display font-extrabold text-xl leading-tight"></h3><div id="dm_cat" class="text-xs text-on-surface-variant mt-0.5"></div></div>
+        <button onclick="closeDrug()" class="text-3xl leading-none text-on-surface-variant hover:text-on-surface -mt-1">×</button>
+      </div>
+      <div id="dm_badges" class="flex flex-wrap gap-2 mb-4"></div>
+      <dl class="space-y-3 text-sm">
+        <div><dt class="font-display font-bold mb-0.5">¿Qué es y para qué se usa?</dt><dd id="dm_uso" class="text-on-surface-variant"></dd></div>
+        <div><dt class="font-display font-bold mb-0.5">Dosis orientativa</dt><dd id="dm_dosis" class="text-on-surface-variant"></dd></div>
+        <div><dt class="font-display font-bold mb-0.5">Efectos secundarios</dt><dd id="dm_efectos" class="text-on-surface-variant"></dd></div>
+      </dl>
+      <a id="dm_link" target="_blank" rel="noopener" class="inline-block mt-4 text-sm font-semibold text-primary underline">Ver ficha completa (MedlinePlus / Vademecum) ↗</a>
+      <p class="text-[11px] text-on-surface-variant mt-4 border-t border-outline-variant/50 pt-3">⚠️ <b>Información de referencia</b> — NO sustituye la indicación de un profesional de salud. La dosificación y administración corresponden a personal sanitario licenciado. Ante una emergencia, busque atención médica.</p>
+    </div>
+  </div>
 </main>
 
 <script>
@@ -289,6 +307,171 @@ const D = [
 ['Insumos / Descartables','Tiras de glucómetro','Tiras glucosa','unidad',200000,'u',0,0],
 ].map(r=>({cat:r[0],dci:r[1],marca:r[2],pres:r[3],base:r[4],unit:r[5],cold:!!r[6],ctrl:!!r[7]}));
 
+const DRUGINFO = {
+  "Lactato de Ringer":{uso:"Solución cristaloide balanceada para reposición de volumen. Choque, deshidratación, quemados, trauma con hemorragia.",dosis:"Uso hospitalario IV. Bolo 20–30 ml/kg en choque; mantenimiento según estado y diuresis.",efectos:"Sobrecarga de líquidos, edema; cautela en hiperpotasemia y hepatopatía (contiene lactato y potasio).",receta:"receta"},
+  "Cloruro de sodio 0.9%":{uso:"Suero fisiológico (cristaloide isotónico). Reposición de volumen, vehículo de fármacos, lavados e irrigación.",dosis:"Uso hospitalario IV. Volumen según déficit, pérdidas y estado hemodinámico.",efectos:"Sobrecarga hídrica, edema, acidosis hiperclorémica con grandes volúmenes.",receta:"receta"},
+  "Dextrosa 5%":{uso:"Solución glucosada isotónica. Aporte de agua libre y energía basal; vehículo de medicamentos.",dosis:"Uso hospitalario IV. Según requerimientos de líquidos y glucosa.",efectos:"Hiperglucemia, hiponatremia dilucional; no repone volumen efectivo de forma sostenida.",receta:"receta"},
+  "Dextrosa 50%":{uso:"Glucosa hipertónica para hipoglucemia severa.",dosis:"Uso hospitalario IV. Adulto: 25–50 ml (12,5–25 g) en bolo lento; repetir según glucemia.",efectos:"Flebitis y necrosis por extravasación (vesicante); hiperglucemia.",receta:"receta"},
+  "Agua estéril inyectable":{uso:"Agua para inyección, diluyente de fármacos liofilizados y reconstitución.",dosis:"Uso hospitalario. Según ficha del fármaco a reconstituir; no administrar sola IV.",efectos:"Hemólisis si se infunde directa sin diluir (hipotónica).",receta:"receta"},
+  "Bicarbonato de sodio 8.4%":{uso:"Alcalinizante. Acidosis metabólica grave, hiperpotasemia, ciertas intoxicaciones (antidepresivos tricíclicos).",dosis:"Uso hospitalario IV. Según déficit de base y pH; 1 mEq/ml.",efectos:"Alcalosis, hipernatremia, hipopotasemia, hipocalcemia; necrosis por extravasación.",receta:"receta"},
+  "Gluconato de calcio 10%":{uso:"Aporte de calcio. Hipocalcemia, hiperpotasemia (estabiliza miocardio), intoxicación por magnesio o calcioantagonistas.",dosis:"Uso hospitalario IV lento. Adulto: 10–20 ml diluidos, monitorizando ECG.",efectos:"Bradicardia, arritmias si se infunde rápido; necrosis por extravasación.",receta:"receta"},
+  "Manitol 20%":{uso:"Diurético osmótico. Edema cerebral, hipertensión intracraneal, presión intraocular elevada.",dosis:"Uso hospitalario IV. Adulto: 0,25–1 g/kg en 20–30 min; usar filtro.",efectos:"Deshidratación, alteraciones electrolíticas, sobrecarga inicial; contraindicado en anuria.",receta:"receta"},
+  "Sales de rehidratación oral":{uso:"SRO de baja osmolaridad (OMS). Reposición hidroelectrolítica en diarrea y deshidratación leve-moderada.",dosis:"Disolver 1 sobre en 1 L de agua potable; reponer según pérdidas, a sorbos frecuentes.",efectos:"Bien tolerado; vómitos si se toma muy rápido. Preparar con agua segura.",receta:"libre"},
+  "Amoxicilina 500 mg":{uso:"Antibiótico betalactámico (aminopenicilina). Infecciones respiratorias, óticas, urinarias, dentales y de piel.",dosis:"Adulto: 500 mg cada 8 h, 7–10 días. Pediátrico por peso.",efectos:"Diarrea, náuseas, erupción; reacción alérgica grave en alérgicos a penicilina.",receta:"receta"},
+  "Amoxicilina+clavulánico 875":{uso:"Aminopenicilina con inhibidor de betalactamasas. Gérmenes resistentes: respiratorias, mordeduras, abdominales, piel.",dosis:"Adulto: 875/125 mg cada 12 h, 7–10 días.",efectos:"Diarrea (frecuente), náuseas, hepatotoxicidad rara; alergia a penicilina.",receta:"receta"},
+  "Ciprofloxacino 500 mg":{uso:"Fluoroquinolona. Infecciones urinarias, gastrointestinales, óseas y por Gram negativos.",dosis:"Adulto: 500 mg cada 12 h, según foco.",efectos:"Náuseas, tendinopatía/rotura tendinosa, prolongación QT, fotosensibilidad; evitar en embarazo y niños.",receta:"receta"},
+  "Metronidazol 500 mg":{uso:"Antibiótico/antiparasitario. Infecciones anaerobias, amebiasis, giardiasis, vaginosis, abscesos.",dosis:"Adulto: 500 mg cada 8 h, 7–10 días.",efectos:"Sabor metálico, náuseas, neuropatía; efecto disulfiram con alcohol (no ingerir alcohol).",receta:"receta"},
+  "Doxiciclina 100 mg":{uso:"Tetraciclina. Leptospirosis, rickettsiosis, infecciones respiratorias/piel, profilaxis de malaria, cólera.",dosis:"Adulto: 100 mg cada 12 h.",efectos:"Fotosensibilidad, esofagitis (tomar con agua, erguido), molestias GI; evitar en embarazo y niños pequeños.",receta:"receta"},
+  "Azitromicina 500 mg":{uso:"Macrólido. Infecciones respiratorias, ITS, piel y tejidos blandos.",dosis:"Adulto: 500 mg/día 3 días, o 500 mg el día 1 y 250 mg días 2–5.",efectos:"Diarrea, náuseas, prolongación QT.",receta:"receta"},
+  "Cotrimoxazol 800/160":{uso:"Trimetoprim-sulfametoxazol. Infecciones urinarias, respiratorias, profilaxis y tratamiento de Pneumocystis.",dosis:"Adulto: 1 tableta (800/160) cada 12 h.",efectos:"Erupción (riesgo de Stevens-Johnson), náuseas, hiperpotasemia, citopenias; alergia a sulfas.",receta:"receta"},
+  "Cefalexina 500 mg":{uso:"Cefalosporina de 1ª generación. Infecciones de piel y tejidos blandos, urinarias, faringoamigdalitis.",dosis:"Adulto: 500 mg cada 6–8 h.",efectos:"Diarrea, náuseas, erupción; precaución en alérgicos a penicilina.",receta:"receta"},
+  "Clindamicina 300 mg":{uso:"Lincosamida. Infecciones por anaerobios y estafilococo, piel, dentales, óseas.",dosis:"Adulto: 300–450 mg cada 6–8 h.",efectos:"Diarrea; riesgo de colitis por C. difficile, sabor metálico.",receta:"receta"},
+  "Amoxicilina pediátrica":{uso:"Suspensión oral de amoxicilina para niños. Infecciones respiratorias, óticas, urinarias y de piel.",dosis:"Pediátrico: 40–90 mg/kg/día divididos cada 8–12 h, según infección.",efectos:"Diarrea, náuseas, erupción; alergia a penicilina.",receta:"receta"},
+  "Ceftriaxona 1 g":{uso:"Cefalosporina de 3ª generación IV/IM. Infecciones graves: neumonía, meningitis, sepsis, abdominales, gonorrea.",dosis:"Uso hospitalario. Adulto: 1–2 g/día IV/IM; meningitis hasta 2 g cada 12 h.",efectos:"Diarrea, erupción, barro biliar; no mezclar con soluciones de calcio.",receta:"receta"},
+  "Cefazolina 1 g":{uso:"Cefalosporina de 1ª generación IV/IM. Profilaxis quirúrgica, infecciones de piel y por estafilococo.",dosis:"Uso hospitalario. Adulto: 1–2 g cada 8 h; profilaxis 2 g preincisión.",efectos:"Erupción, diarrea; precaución en alérgicos a penicilina.",receta:"receta"},
+  "Metronidazol IV 500 mg":{uso:"Metronidazol intravenoso. Infecciones anaerobias graves, abdominales, abscesos, sepsis.",dosis:"Uso hospitalario IV. Adulto: 500 mg cada 8 h.",efectos:"Náuseas, sabor metálico, neuropatía; efecto disulfiram con alcohol.",receta:"receta"},
+  "Gentamicina 80 mg":{uso:"Aminoglucósido. Infecciones graves por Gram negativos, sepsis, en combinación.",dosis:"Uso hospitalario IV/IM. 3–5 mg/kg/día; monitorizar función renal y niveles.",efectos:"Nefrotoxicidad y ototoxicidad (puede ser irreversible), bloqueo neuromuscular.",receta:"receta"},
+  "Amikacina 500 mg":{uso:"Aminoglucósido. Infecciones graves por Gram negativos multirresistentes.",dosis:"Uso hospitalario IV/IM. 15 mg/kg/día; monitorizar función renal y niveles.",efectos:"Nefrotoxicidad, ototoxicidad, bloqueo neuromuscular.",receta:"receta"},
+  "Clindamicina 600 mg IV":{uso:"Clindamicina intravenosa. Infecciones graves por anaerobios y estafilococo, fascitis, intraabdominales.",dosis:"Uso hospitalario IV. Adulto: 600–900 mg cada 8 h.",efectos:"Colitis por C. difficile, diarrea, erupción.",receta:"receta"},
+  "Penicilina cristalina 5 MU":{uso:"Penicilina G sódica IV. Infecciones graves: sífilis, meningitis, gangrena, endocarditis, leptospirosis.",dosis:"Uso hospitalario IV. 2–4 millones UI cada 4 h según indicación.",efectos:"Reacción alérgica grave/anafilaxia, convulsiones a dosis altas, alteraciones electrolíticas.",receta:"receta"},
+  "Ampicilina 1 g":{uso:"Aminopenicilina IV/IM. Infecciones por Listeria, enterococo, sepsis neonatal, en combinación.",dosis:"Uso hospitalario IV. Adulto: 1–2 g cada 4–6 h.",efectos:"Erupción, diarrea, reacción alérgica grave.",receta:"receta"},
+  "Meropenem 1 g":{uso:"Carbapenémico de amplio espectro. Infecciones graves multirresistentes, sepsis, meningitis, intraabdominales.",dosis:"Uso hospitalario IV. Adulto: 1 g cada 8 h; meningitis 2 g cada 8 h.",efectos:"Diarrea, náuseas, convulsiones (raras), erupción.",receta:"receta"},
+  "Vancomicina 500 mg":{uso:"Glucopéptido. Infecciones graves por Gram positivos resistentes (SARM), colitis por C. difficile (vía oral).",dosis:"Uso hospitalario IV. 15–20 mg/kg cada 8–12 h; monitorizar niveles.",efectos:"Nefrotoxicidad, ototoxicidad, 'síndrome del hombre rojo' por infusión rápida.",receta:"receta"},
+  "Paracetamol 500 mg":{uso:"Analgésico y antipirético. Dolor leve-moderado y fiebre.",dosis:"Adulto: 500–1000 mg cada 6–8 h; máximo 3–4 g/día.",efectos:"Seguro a dosis correctas; hepatotoxicidad por sobredosis o con alcohol.",receta:"libre"},
+  "Paracetamol jarabe":{uso:"Paracetamol pediátrico. Dolor y fiebre en niños.",dosis:"Pediátrico: 10–15 mg/kg cada 6 h; máx. 5 dosis/día.",efectos:"Hepatotoxicidad por sobredosis; respetar dosis por peso.",receta:"libre"},
+  "Ibuprofeno 400 mg":{uso:"AINE. Dolor leve-moderado, fiebre, inflamación.",dosis:"Adulto: 400 mg cada 6–8 h; máx. 1200–2400 mg/día con alimentos.",efectos:"Gastritis/úlcera, sangrado GI, daño renal; evitar en deshidratados y embarazo tardío.",receta:"libre"},
+  "Diclofenaco 75 mg":{uso:"AINE inyectable. Dolor agudo moderado-intenso: cólico renal, traumático, postoperatorio.",dosis:"Adulto: 75 mg IM profunda 1–2 veces/día, máx. 150 mg/día, corto plazo.",efectos:"Sangrado GI, daño renal, riesgo cardiovascular; dolor en sitio de inyección.",receta:"receta"},
+  "Ketorolaco 30 mg":{uso:"AINE potente parenteral. Dolor agudo moderado-intenso de corta duración.",dosis:"Uso hospitalario IV/IM. 30 mg cada 6 h; máx. 5 días.",efectos:"Sangrado GI, daño renal; no usar más de 5 días.",receta:"receta"},
+  "Morfina 10 mg/ml":{uso:"Opioide potente. Dolor intenso (trauma, postoperatorio, oncológico), edema pulmonar.",dosis:"Uso hospitalario. 2–10 mg IV/IM/SC titulando; vigilar respiración.",efectos:"Depresión respiratoria, sedación, hipotensión, estreñimiento, dependencia. Antídoto: naloxona.",receta:"controlado"},
+  "Tramadol 50-100 mg":{uso:"Opioide débil. Dolor moderado-intenso.",dosis:"Adulto: 50–100 mg cada 6–8 h; máx. 400 mg/día.",efectos:"Náuseas, mareo, convulsiones, síndrome serotoninérgico; dependencia.",receta:"receta"},
+  "Fentanilo 0.5 mg":{uso:"Opioide sintético potente. Analgesia e inducción anestésica, dolor intenso.",dosis:"Uso hospitalario IV. Microgramos titulados por anestesiología.",efectos:"Depresión respiratoria marcada, rigidez torácica, bradicardia, sedación. Antídoto: naloxona.",receta:"controlado"},
+  "Lidocaína 1% s/epi":{uso:"Anestésico local sin epinefrina. Infiltración y bloqueos; uso en zonas acrales (dedos, nariz, oreja).",dosis:"Uso hospitalario. Máx. ~4,5 mg/kg (≈300 mg) sin epinefrina.",efectos:"Toxicidad sistémica (convulsiones, arritmias) por sobredosis o inyección intravascular.",receta:"receta"},
+  "Lidocaína 2% c/epi":{uso:"Anestésico local con epinefrina. Mayor duración y hemostasia; NO usar en zonas acrales.",dosis:"Uso hospitalario. Máx. ~7 mg/kg (≈500 mg) con epinefrina.",efectos:"Toxicidad sistémica; isquemia local en dedos/apéndices por la epinefrina.",receta:"receta"},
+  "Bupivacaína 0.5%":{uso:"Anestésico local de larga duración. Bloqueos regionales y anestesia raquídea.",dosis:"Uso hospitalario, administrado por anestesiología.",efectos:"Cardiotoxicidad grave por inyección intravascular; convulsiones, hipotensión.",receta:"receta"},
+  "Ketamina 50 mg/ml":{uso:"Anestésico disociativo y analgésico. Inducción anestésica de campo, sedación procedimental, dolor agudo.",dosis:"Uso hospitalario IV/IM titulado por personal entrenado.",efectos:"Alucinaciones/emergencia, hipertensión, taquicardia, hipersalivación, laringoespasmo.",receta:"controlado"},
+  "Propofol 1%":{uso:"Anestésico IV de acción rápida. Inducción y mantenimiento de anestesia, sedación en intubados.",dosis:"Uso hospitalario IV, administrado por anestesiología.",efectos:"Hipotensión, depresión respiratoria, dolor en la inyección; vigilancia avanzada.",receta:"receta"},
+  "Midazolam 5 mg":{uso:"Benzodiacepina de acción corta. Sedación, premedicación, convulsiones, agitación.",dosis:"Uso hospitalario IV/IM titulado; convulsiones también IM/intranasal.",efectos:"Depresión respiratoria, sedación, hipotensión. Antídoto: flumazenil.",receta:"controlado"},
+  "Diazepam 10 mg":{uso:"Benzodiacepina inyectable. Estatus convulsivo, agitación, espasmo muscular, abstinencia alcohólica.",dosis:"Uso hospitalario. 5–10 mg IV lento, repetible; vigilar respiración.",efectos:"Depresión respiratoria, sedación, hipotensión, dependencia.",receta:"controlado"},
+  "Ácido tranexámico 500 mg":{uso:"Antifibrinolítico. Hemorragia traumática (administrar <3 h), postparto, quirúrgica y por sangrado.",dosis:"Uso hospitalario IV. Trauma: 1 g en 10 min y 1 g en 8 h.",efectos:"Náuseas, riesgo trombótico, convulsiones a dosis altas.",receta:"receta"},
+  "Adrenalina 1:1000":{uso:"Adrenalina (epinefrina). Anafilaxia (primera línea), paro cardiaco, broncoespasmo grave.",dosis:"Anafilaxia: 0,3–0,5 mg IM (1:1000) en muslo, repetible cada 5–15 min.",efectos:"Taquicardia, palpitaciones, hipertensión, ansiedad, arritmias.",receta:"receta"},
+  "Toxoide tetánico / Td":{uso:"Vacuna toxoide tetánico-diftérico. Profilaxis y refuerzo tras heridas potencialmente tetanígenas.",dosis:"0,5 ml IM; refuerzo según estado vacunal y tipo de herida.",efectos:"Dolor/eritema local, febrícula, mialgias.",receta:"receta"},
+  "Inmunoglobulina antitetánica":{uso:"Inmunoglobulina antitetánica (TIG). Profilaxis pasiva en heridas de riesgo en no vacunados, y tratamiento del tétanos.",dosis:"Uso hospitalario IM. Profilaxis: 250 UI (500 UI heridas graves), distinto sitio que el toxoide.",efectos:"Dolor local, fiebre; reacción alérgica rara.",receta:"receta"},
+  "Sulfadiazina de plata":{uso:"Antibacteriano tópico para quemaduras. Previene la infección de la herida.",dosis:"Aplicar capa fina sobre la quemadura 1–2 veces/día tras limpieza.",efectos:"Leucopenia transitoria, irritación local; evitar en alergia a sulfas y embarazo a término.",receta:"receta"},
+  "Nitrofurazona":{uso:"Antibacteriano tópico. Quemaduras e infecciones superficiales de piel y heridas.",dosis:"Aplicar sobre la lesión 1–2 veces/día o según curación.",efectos:"Dermatitis de contacto, sensibilización local.",receta:"libre"},
+  "Povidona yodada":{uso:"Antiséptico de amplio espectro. Antisepsia de piel, heridas y campo quirúrgico.",dosis:"Uso tópico; aplicar sobre piel/herida. No en cavidades grandes ni uso prolongado extenso.",efectos:"Irritación, tinción; absorción de yodo en quemados o uso extenso (tiroides).",receta:"libre"},
+  "Clorhexidina 4%":{uso:"Antiséptico. Lavado quirúrgico de manos y antisepsia de piel.",dosis:"Uso tópico/lavado; no usar en oído, ojos ni meninges.",efectos:"Irritación cutánea, dermatitis de contacto; reacción alérgica rara.",receta:"libre"},
+  "Peróxido de hidrógeno":{uso:"Agua oxigenada. Limpieza y desbridamiento superficial de heridas, hemostasia leve.",dosis:"Uso tópico diluido sobre la herida; no en cavidades cerradas.",efectos:"Irritación, retraso de cicatrización con uso repetido; embolia gaseosa a presión en cavidades.",receta:"libre"},
+  "Suero antiofídico polivalente":{uso:"Antiveneno polivalente. Envenenamiento por mordedura de serpiente (Bothrops/Crotalus).",dosis:"Uso hospitalario IV diluido, según gravedad; vigilar anafilaxia.",efectos:"Reacciones alérgicas/anafilaxia, enfermedad del suero. Requiere cadena de frío.",receta:"receta"},
+  "Vitamina K 10 mg":{uso:"Fitomenadiona. Revierte sobreanticoagulación por warfarina, sangrado por déficit de vitamina K.",dosis:"Uso hospitalario. 1–10 mg IV lento/oral según INR y sangrado.",efectos:"Reacción anafilactoide por IV rápida; enrojecimiento.",receta:"receta"},
+  "Atropina 1 mg":{uso:"Anticolinérgico. Bradicardia sintomática, intoxicación por organofosforados, premedicación.",dosis:"Bradicardia: 0,5–1 mg IV cada 3–5 min (máx. 3 mg). Organofosforados: dosis altas tituladas.",efectos:"Taquicardia, boca seca, visión borrosa, retención urinaria, delirio.",receta:"receta"},
+  "Norepinefrina":{uso:"Vasopresor de primera línea en choque séptico y otras hipotensiones graves.",dosis:"Uso hospitalario en infusión IV titulada (preferible vía central), con monitorización.",efectos:"Hipertensión, arritmias, isquemia distal, necrosis por extravasación.",receta:"receta"},
+  "Dopamina":{uso:"Vasopresor/inotrópico. Hipotensión y choque cuando no hay norepinefrina; bradicardia.",dosis:"Uso hospitalario en infusión IV titulada con monitorización.",efectos:"Taquicardia, arritmias, isquemia, necrosis por extravasación.",receta:"receta"},
+  "Dobutamina":{uso:"Inotrópico. Insuficiencia cardiaca aguda y choque cardiogénico con bajo gasto.",dosis:"Uso hospitalario en infusión IV titulada con monitorización.",efectos:"Taquicardia, arritmias, hipotensión, dolor torácico.",receta:"receta"},
+  "Furosemida 20 mg":{uso:"Diurético de asa. Edema pulmonar, insuficiencia cardiaca, sobrecarga de volumen, hipertensión.",dosis:"Adulto: 20–40 mg IV/oral, ajustando según respuesta diurética.",efectos:"Hipopotasemia, deshidratación, hipotensión, ototoxicidad por dosis altas IV.",receta:"receta"},
+  "Amiodarona 150 mg":{uso:"Antiarrítmico. Taquiarritmias ventriculares y supraventriculares, paro por FV/TV sin pulso.",dosis:"Uso hospitalario IV. Paro: 300 mg en bolo; arritmias: 150 mg en 10 min y luego infusión.",efectos:"Hipotensión, bradicardia, flebitis, toxicidad pulmonar/tiroidea/hepática con uso prolongado.",receta:"receta"},
+  "Sulfato de magnesio":{uso:"Eclampsia/preeclampsia grave, torsade de pointes, broncoespasmo grave, hipomagnesemia.",dosis:"Uso hospitalario IV. Eclampsia: 4–6 g de carga y 1–2 g/h; vigilar reflejos y respiración.",efectos:"Hipotensión, depresión respiratoria, pérdida de reflejos, bloqueo cardiaco. Antídoto: gluconato de calcio.",receta:"receta"},
+  "Cloruro de potasio":{uso:"Reposición de potasio en hipopotasemia.",dosis:"Uso hospitalario IV diluido y lento (NUNCA en bolo); oral según déficit.",efectos:"Arritmias fatales por administración rápida o concentrada; flebitis, hiperpotasemia.",receta:"receta"},
+  "Hidrocortisona 100 mg":{uso:"Corticoide IV. Insuficiencia suprarrenal, anafilaxia, asma grave, choque, reacciones alérgicas.",dosis:"Uso hospitalario IV/IM. 100–200 mg según indicación.",efectos:"Hiperglucemia, hipertensión, inmunosupresión, retención de líquidos.",receta:"receta"},
+  "Dexametasona 4 mg":{uso:"Corticoide potente. Edema cerebral, antiemético, reacciones alérgicas, crup, antiinflamatorio.",dosis:"Adulto: 4–8 mg IV/IM/oral según indicación.",efectos:"Hiperglucemia, insomnio, inmunosupresión, hipertensión con uso prolongado.",receta:"receta"},
+  "Metilprednisolona 500 mg":{uso:"Corticoide IV de alta dosis. Pulsos en lesión inflamatoria grave, rechazo, asma severa, anafilaxia.",dosis:"Uso hospitalario IV. Dosis según indicación (incluye pulsos de 250–1000 mg).",efectos:"Hiperglucemia, hipertensión, arritmias por infusión rápida, inmunosupresión.",receta:"receta"},
+  "Enoxaparina":{uso:"Heparina de bajo peso molecular. Profilaxis y tratamiento de trombosis venosa, embolia pulmonar, síndrome coronario.",dosis:"Profilaxis: 40 mg SC/día. Tratamiento: 1 mg/kg SC cada 12 h.",efectos:"Sangrado, hematoma en el sitio, trombocitopenia. Requiere cadena de frío.",receta:"receta"},
+  "Salbutamol inhalador":{uso:"Broncodilatador beta-2 de acción corta (inhalador). Crisis de asma y broncoespasmo, EPOC.",dosis:"2 inhalaciones cada 4–6 h; en crisis hasta 4–8 disparos con espaciador.",efectos:"Temblor, taquicardia, palpitaciones, hipopotasemia.",receta:"receta"},
+  "Salbutamol nebulizar":{uso:"Salbutamol en solución para nebulizar. Broncoespasmo y crisis asmática moderada-grave.",dosis:"2,5–5 mg nebulizados, repetibles según respuesta.",efectos:"Temblor, taquicardia, palpitaciones, hipopotasemia.",receta:"receta"},
+  "Bromuro de ipratropio":{uso:"Broncodilatador anticolinérgico. Crisis de asma/EPOC, combinado con salbutamol.",dosis:"0,5 mg nebulizado cada 6–8 h o 2 inhalaciones cada 6 h.",efectos:"Boca seca, tos, sabor amargo; precaución en glaucoma.",receta:"receta"},
+  "Budesonida inhalada":{uso:"Corticoide inhalado. Tratamiento de control del asma; crup (nebulizada).",dosis:"Según gravedad, 1–2 inhalaciones cada 12 h; enjuagar la boca tras usar.",efectos:"Candidiasis oral, disfonía; bajo efecto sistémico.",receta:"receta"},
+  "Aminofilina":{uso:"Broncodilatador (metilxantina) IV. Broncoespasmo grave refractario.",dosis:"Uso hospitalario IV con monitorización; estrecho margen terapéutico.",efectos:"Taquicardia, arritmias, náuseas, convulsiones por toxicidad.",receta:"receta"},
+  "Metoclopramida 10 mg":{uso:"Antiemético y procinético. Náuseas y vómitos, gastroparesia.",dosis:"Adulto: 10 mg cada 8 h IV/IM/oral; máx. 5 días.",efectos:"Reacciones extrapiramidales/distonía, somnolencia, inquietud.",receta:"receta"},
+  "Ondansetrón 4 mg":{uso:"Antiemético (antagonista 5-HT3). Náuseas y vómitos intensos, postoperatorios o por quimioterapia.",dosis:"Adulto: 4–8 mg IV/oral cada 8 h.",efectos:"Cefalea, estreñimiento, prolongación QT.",receta:"receta"},
+  "Omeprazol 40 mg IV":{uso:"Inhibidor de bomba de protones IV. Hemorragia digestiva alta, úlcera, profilaxis de estrés.",dosis:"Uso hospitalario IV. 40 mg/día; hemorragia: bolo 80 mg e infusión.",efectos:"Cefalea, diarrea; uso prolongado: hipomagnesemia, infecciones GI.",receta:"receta"},
+  "Omeprazol 20 mg":{uso:"Inhibidor de bomba de protones oral. Reflujo, úlcera péptica, gastritis, dispepsia.",dosis:"Adulto: 20–40 mg/día en ayunas.",efectos:"Cefalea, diarrea; uso prolongado: hipomagnesemia, déficit de B12.",receta:"libre"},
+  "Loperamida 2 mg":{uso:"Antidiarreico. Diarrea aguda no infecciosa/no disentérica.",dosis:"Adulto: 4 mg inicial y 2 mg tras cada deposición; máx. 16 mg/día.",efectos:"Estreñimiento, distensión; evitar en diarrea con sangre o fiebre.",receta:"libre"},
+  "Hioscina (butilescopolamina)":{uso:"Antiespasmódico. Cólico abdominal, renal y biliar.",dosis:"Adulto: 20 mg IV/IM, repetible; oral 10–20 mg cada 8 h.",efectos:"Boca seca, taquicardia, visión borrosa, retención urinaria.",receta:"libre"},
+  "Sulfato de zinc 20 mg":{uso:"Suplemento de zinc. Coadyuvante en diarrea infantil (reduce duración y recurrencia).",dosis:"Niños: 20 mg/día (10 mg en <6 meses) por 10–14 días.",efectos:"Náuseas, vómitos, sabor metálico.",receta:"libre"},
+  "Albendazol 400 mg":{uso:"Antiparasitario de amplio espectro. Parásitos intestinales (áscaris, oxiuros, anquilostomas), giardiasis.",dosis:"Adulto/niño >2 a: 400 mg dosis única; repetir en parasitosis específicas.",efectos:"Molestias GI, cefalea; evitar en embarazo.",receta:"libre"},
+  "Ivermectina":{uso:"Antiparasitario. Estrongiloidiasis, escabiosis, pediculosis, oncocercosis.",dosis:"Adulto: 150–200 mcg/kg dosis única, según indicación.",efectos:"Prurito, mareo, molestias GI.",receta:"receta"},
+  "Artemeter-Lumefantrina":{uso:"Antimalárico combinado. Tratamiento de malaria no complicada por P. falciparum.",dosis:"Esquema de 3 días (6 dosis) según peso, con alimento graso.",efectos:"Cefalea, mareo, prolongación QT, molestias GI.",receta:"receta"},
+  "Cloroquina":{uso:"Antimalárico/antiamebiano. Malaria por especies sensibles (P. vivax), amebiasis hepática.",dosis:"Según esquema y peso; toma con alimentos.",efectos:"Náuseas, prurito, retinopatía con uso prolongado, prolongación QT.",receta:"receta"},
+  "Fluconazol 150 mg":{uso:"Antifúngico (azol). Candidiasis vaginal, oral, esofágica; otras micosis.",dosis:"Candidiasis vaginal: 150 mg dosis única; otras según foco.",efectos:"Náuseas, cefalea, hepatotoxicidad, prolongación QT; interacciones.",receta:"receta"},
+  "Nistatina suspensión":{uso:"Antifúngico tópico/oral no absorbible. Candidiasis oral (muguet) y digestiva.",dosis:"Adulto: 4–6 ml cada 6 h, retener en boca antes de tragar.",efectos:"Bien tolerada; náuseas o diarrea ocasional.",receta:"libre"},
+  "Clotrimazol crema":{uso:"Antifúngico tópico. Micosis de piel (tiña, candidiasis cutánea, pie de atleta).",dosis:"Aplicar en la zona 2–3 veces/día, 2–4 semanas.",efectos:"Irritación, ardor o eritema local.",receta:"libre"},
+  "Aciclovir 400 mg":{uso:"Antiviral. Herpes simple, varicela y herpes zóster.",dosis:"Herpes: 400 mg 3 veces/día. Zóster: 800 mg 5 veces/día, 7 días.",efectos:"Náuseas, cefalea; nefrotoxicidad con deshidratación (hidratar bien).",receta:"receta"},
+  "Diazepam 5 mg":{uso:"Benzodiacepina oral. Ansiedad aguda, espasmo muscular, abstinencia alcohólica.",dosis:"Adulto: 2–10 mg cada 8–12 h según indicación; uso breve.",efectos:"Somnolencia, mareo, dependencia, depresión respiratoria con opioides/alcohol.",receta:"controlado"},
+  "Haloperidol":{uso:"Antipsicótico. Agitación psicótica aguda, delirio, psicosis, antiemético.",dosis:"Adulto: 2–5 mg IM/oral, repetible según respuesta.",efectos:"Reacciones extrapiramidales/distonía, prolongación QT, sedación, síndrome neuroléptico maligno.",receta:"receta"},
+  "Fenitoína 100 mg":{uso:"Antiepiléptico. Estatus convulsivo y prevención de crisis.",dosis:"Uso hospitalario IV lento (carga) con monitorización ECG; mantenimiento oral.",efectos:"Hipotensión y arritmias por IV rápida, ataxia, hiperplasia gingival, nistagmo.",receta:"receta"},
+  "Fenobarbital":{uso:"Barbitúrico antiepiléptico. Crisis convulsivas, estatus refractario, abstinencia.",dosis:"Uso hospitalario IV/IM (carga) y mantenimiento oral.",efectos:"Sedación, depresión respiratoria, hipotensión, dependencia.",receta:"controlado"},
+  "Carbamazepina":{uso:"Antiepiléptico y estabilizador del ánimo. Crisis focales, neuralgia del trigémino.",dosis:"Adulto: iniciar 200 mg cada 12 h, titular según respuesta.",efectos:"Mareo, diplopía, hiponatremia, erupción grave (Stevens-Johnson), citopenias.",receta:"receta"},
+  "Amitriptilina":{uso:"Antidepresivo tricíclico. Depresión, dolor neuropático, migraña, insomnio.",dosis:"Adulto: 25–75 mg/noche, titulando.",efectos:"Sedación, boca seca, estreñimiento, arritmias y toxicidad cardiaca en sobredosis.",receta:"receta"},
+  "Fluoxetina":{uso:"Antidepresivo ISRS. Depresión, ansiedad, trastorno de pánico, TOC.",dosis:"Adulto: 20 mg/día por la mañana; ajustar según respuesta.",efectos:"Náuseas, insomnio, disfunción sexual, riesgo de síndrome serotoninérgico.",receta:"receta"},
+  "Oxitocina 10 UI":{uso:"Uterotónico. Prevención y tratamiento de hemorragia postparto, inducción/conducción del parto.",dosis:"Uso hospitalario. Postparto: 10 UI IM o IV diluida en infusión.",efectos:"Hipotensión y taquicardia por IV rápida, contracciones excesivas. Requiere cadena de frío.",receta:"receta"},
+  "Misoprostol 200 mcg":{uso:"Análogo de prostaglandina. Hemorragia postparto, inducción, aborto incompleto, úlcera por AINE.",dosis:"Postparto: 600–800 mcg sublingual/rectal según protocolo.",efectos:"Fiebre, escalofríos, diarrea, contracciones; contraindicado en embarazo que se desea continuar.",receta:"receta"},
+  "Ergometrina":{uso:"Alcaloide ergótico uterotónico. Hemorragia postparto por atonía uterina.",dosis:"Uso hospitalario. 0,2 mg IM, repetible; evitar IV directa.",efectos:"Hipertensión, náuseas, vasoespasmo; contraindicado en preeclampsia/hipertensión. Requiere cadena de frío.",receta:"receta"},
+  "Hierro + ácido fólico":{uso:"Suplemento. Prevención y tratamiento de anemia ferropénica, especialmente en embarazo.",dosis:"1 tableta/día con el estómago vacío o según tolerancia.",efectos:"Estreñimiento, heces oscuras, molestias GI.",receta:"libre"},
+  "Set de parto limpio":{uso:"Kit de parto limpio: hoja, pinzas, lazos de cordón y campo estéril para atención de parto en terreno.",dosis:"—",efectos:"—",receta:"libre"},
+  "Insulina NPH/Regular":{uso:"Insulina (intermedia/rápida). Control de la diabetes, cetoacidosis e hiperglucemia.",dosis:"Uso individualizado SC; regular IV en cetoacidosis (hospitalario), titulada por glucemia.",efectos:"Hipoglucemia, aumento de peso, reacción local. Requiere cadena de frío.",receta:"receta"},
+  "Metformina 850 mg":{uso:"Antidiabético oral (biguanida). Diabetes tipo 2, primera línea.",dosis:"Adulto: 850 mg 1–2 veces/día con comidas, titular.",efectos:"Diarrea, náuseas; acidosis láctica rara (suspender en falla renal/deshidratación).",receta:"receta"},
+  "Glibenclamida 5 mg":{uso:"Antidiabético oral (sulfonilurea). Diabetes tipo 2.",dosis:"Adulto: 2,5–5 mg/día con el desayuno, ajustar.",efectos:"Hipoglucemia (puede ser prolongada), aumento de peso.",receta:"receta"},
+  "Enalapril 20 mg":{uso:"IECA. Hipertensión arterial e insuficiencia cardiaca.",dosis:"Adulto: 5–20 mg/día, ajustar según presión.",efectos:"Tos seca, hiperpotasemia, angioedema, daño renal; contraindicado en embarazo.",receta:"receta"},
+  "Losartán 50 mg":{uso:"Antagonista de receptor de angiotensina (ARA-II). Hipertensión, nefroprotección.",dosis:"Adulto: 50–100 mg/día.",efectos:"Mareo, hiperpotasemia, daño renal; contraindicado en embarazo.",receta:"receta"},
+  "Amlodipino 10 mg":{uso:"Calcioantagonista. Hipertensión arterial y angina.",dosis:"Adulto: 5–10 mg/día.",efectos:"Edema de miembros inferiores, cefalea, rubor, mareo.",receta:"receta"},
+  "Hidroclorotiazida 25 mg":{uso:"Diurético tiazídico. Hipertensión arterial, edemas.",dosis:"Adulto: 12,5–25 mg/día por la mañana.",efectos:"Hipopotasemia, hiponatremia, hiperglucemia, hiperuricemia.",receta:"receta"},
+  "Atenolol 50 mg":{uso:"Betabloqueante. Hipertensión, angina, arritmias.",dosis:"Adulto: 25–100 mg/día.",efectos:"Bradicardia, fatiga, broncoespasmo, manos frías; no suspender bruscamente.",receta:"receta"},
+  "Levotiroxina 100 mcg":{uso:"Hormona tiroidea. Tratamiento del hipotiroidismo.",dosis:"Adulto: dosis individualizada según TSH, en ayunas.",efectos:"Por exceso: palpitaciones, insomnio, pérdida de peso, temblor.",receta:"receta"},
+  "Warfarina 5 mg":{uso:"Anticoagulante oral. Prevención de trombosis y embolia (fibrilación, prótesis valvular, TVP/EP).",dosis:"Adulto: dosis individualizada según INR.",efectos:"Sangrado, interacciones múltiples (alimentos/fármacos), teratógeno. Antídoto: vitamina K.",receta:"receta"},
+  "Sarampión / Triple viral":{uso:"Vacuna SRP (sarampión-rubéola-parotiditis). Prevención de sarampión en campañas y brotes post-desastre.",dosis:"0,5 ml SC según esquema/campaña.",efectos:"Fiebre, exantema leve, dolor local. Requiere cadena de frío.",receta:"receta"},
+  "Hepatitis B":{uso:"Vacuna contra hepatitis B. Prevención de la infección por VHB.",dosis:"Esquema de 3 dosis (0, 1, 6 meses) IM.",efectos:"Dolor local, febrícula. Requiere cadena de frío.",receta:"receta"},
+  "Hepatitis A":{uso:"Vacuna contra hepatitis A. Prevención en zonas con saneamiento comprometido.",dosis:"2 dosis IM separadas 6–12 meses.",efectos:"Dolor local, cefalea, febrícula. Requiere cadena de frío.",receta:"receta"},
+  "Antitífica":{uso:"Vacuna contra fiebre tifoidea. Prevención de tifoidea en desastres con agua contaminada.",dosis:"0,5 ml IM dosis única; refuerzo cada ~3 años.",efectos:"Dolor local, febrícula. Requiere cadena de frío.",receta:"receta"},
+  "Cólera oral":{uso:"Vacuna oral contra el cólera. Prevención en brotes y zonas de riesgo post-desastre.",dosis:"2 dosis orales separadas según producto.",efectos:"Molestias GI leves. Requiere cadena de frío.",receta:"receta"},
+  "Fiebre amarilla":{uso:"Vacuna contra fiebre amarilla. Prevención en zonas endémicas.",dosis:"0,5 ml SC dosis única.",efectos:"Fiebre, mialgias; rara enfermedad viscerotrópica. Requiere cadena de frío.",receta:"receta"},
+  "Antirrábica":{uso:"Vacuna antirrábica. Profilaxis post-exposición tras mordedura de animal sospechoso.",dosis:"Esquema post-exposición IM (varias dosis) ± inmunoglobulina antirrábica.",efectos:"Dolor local, cefalea, febrícula. Requiere cadena de frío.",receta:"receta"},
+  "Naloxona":{uso:"Antagonista opioide. Revierte la depresión respiratoria por sobredosis de opioides.",dosis:"0,4 mg IV/IM/intranasal, repetible cada 2–3 min hasta respuesta.",efectos:"Síndrome de abstinencia agudo, agitación, taquicardia; acción más corta que el opioide (vigilar).",receta:"receta"},
+  "Flumazenil":{uso:"Antagonista de benzodiacepinas. Revierte sedación/sobredosis por benzodiacepinas.",dosis:"Uso hospitalario IV. 0,2 mg, repetible titulando.",efectos:"Convulsiones (en dependientes o con tricíclicos), re-sedación; usar con cautela.",receta:"receta"},
+  "Carbón activado":{uso:"Adsorbente. Descontaminación digestiva en intoxicaciones por vía oral recientes.",dosis:"Adulto: 25–100 g vía oral/SNG; útil dentro de la primera hora.",efectos:"Vómitos, estreñimiento, aspiración; no útil para alcoholes/metales/cáusticos.",receta:"receta"},
+  "Pralidoxima":{uso:"Reactivador de colinesterasa. Antídoto en intoxicación por organofosforados, junto con atropina.",dosis:"Uso hospitalario IV según protocolo.",efectos:"Mareo, visión borrosa, taquicardia, hipertensión.",receta:"receta"},
+  "N-acetilcisteína":{uso:"Antídoto de la intoxicación por paracetamol; también mucolítico.",dosis:"Uso hospitalario IV según protocolo por peso y tiempo de ingesta.",efectos:"Reacción anafilactoide (rubor, broncoespasmo) por IV rápida, náuseas.",receta:"receta"},
+  "Jeringa 5 ml":{uso:"Jeringa desechable estéril de 5 ml para administración de medicamentos y extracciones.",dosis:"—",efectos:"—",receta:"libre"},
+  "Jeringa 10 ml":{uso:"Jeringa desechable estéril de 10 ml para medicación, irrigación y reconstitución.",dosis:"—",efectos:"—",receta:"libre"},
+  "Agujas (varios calibres)":{uso:"Agujas hipodérmicas desechables de distintos calibres para inyección IM/SC/IV y extracción.",dosis:"—",efectos:"—",receta:"libre"},
+  "Catéter IV #18-24":{uso:"Catéteres venosos periféricos (calibres 18–24G) para acceso IV y administración de fluidos/fármacos.",dosis:"—",efectos:"—",receta:"libre"},
+  "Equipo de venoclisis":{uso:"Macrogotero/equipo de infusión para conectar soluciones IV al catéter.",dosis:"—",efectos:"—",receta:"libre"},
+  "Gasas estériles":{uso:"Gasas estériles para curación, cobertura de heridas y control de sangrado.",dosis:"—",efectos:"—",receta:"libre"},
+  "Vendas elásticas":{uso:"Vendas elásticas para compresión, fijación de apósitos y soporte de esguinces.",dosis:"—",efectos:"—",receta:"libre"},
+  "Vendas de yeso":{uso:"Vendas de yeso para inmovilización de fracturas y confección de férulas.",dosis:"—",efectos:"—",receta:"libre"},
+  "Suturas surtidas":{uso:"Material de sutura surtido (absorbible y no absorbible) para cierre de heridas.",dosis:"—",efectos:"—",receta:"libre"},
+  "Guantes de examen":{uso:"Guantes desechables de examen (no estériles) para protección en la atención clínica.",dosis:"—",efectos:"—",receta:"libre"},
+  "Guantes estériles":{uso:"Guantes estériles para procedimientos quirúrgicos y técnicas asépticas.",dosis:"—",efectos:"—",receta:"libre"},
+  "Tapabocas quirúrgico":{uso:"Mascarilla quirúrgica para barrera contra gotas y control de infecciones.",dosis:"—",efectos:"—",receta:"libre"},
+  "Respirador N95":{uso:"Respirador N95 de alta filtración para protección contra aerosoles (TB, polvo, agentes infecciosos).",dosis:"—",efectos:"—",receta:"libre"},
+  "Torniquete (CAT)":{uso:"Torniquete de combate para control rápido de hemorragia exanguinante en extremidades.",dosis:"—",efectos:"—",receta:"libre"},
+  "Collarín cervical":{uso:"Collarín cervical para inmovilización de la columna en sospecha de trauma cervical.",dosis:"—",efectos:"—",receta:"libre"},
+  "Férula / inmovilizador":{uso:"Férula/inmovilizador para estabilizar fracturas y lesiones de extremidades.",dosis:"—",efectos:"—",receta:"libre"},
+  "Sonda Foley":{uso:"Sonda vesical Foley para cateterismo y drenaje de orina.",dosis:"—",efectos:"—",receta:"libre"},
+  "Sonda nasogástrica":{uso:"Sonda nasogástrica para descompresión gástrica, alimentación o administración de carbón/medicación.",dosis:"—",efectos:"—",receta:"libre"},
+  "Bolsa para cadáveres":{uso:"Bolsa para manejo digno y bioseguro de cadáveres en gestión de fallecidos en desastre.",dosis:"—",efectos:"—",receta:"libre"},
+  "Tiras de glucómetro":{uso:"Tiras reactivas para medición de glucosa capilar en glucómetro.",dosis:"—",efectos:"—",receta:"libre"}
+};
+
+function drugLink(dci){
+  const info=DRUGINFO[dci]; if(info&&info.link)return info.link;
+  const term=String(dci).replace(/\s*\d.*$/,'').trim()||dci;
+  return 'https://www.google.com/search?q='+encodeURIComponent(term+' vademecum medlineplus español');
+}
+const RECETA={libre:['Venta libre','#16a34a'],receta:['Requiere receta','#d97706'],controlado:['🔒 Controlado (psicotrópico/estupefaciente)','#dc2626']};
+function openDrug(dci){
+  const d=D.find(x=>x.dci===dci); const info=DRUGINFO[dci]||{};
+  document.getElementById('dm_name').textContent=dci;
+  document.getElementById('dm_cat').textContent=d?d.cat+' · '+d.marca+' · '+d.pres:'';
+  const badges=[]; const r=RECETA[info.receta||'receta']; badges.push(`<span class="px-2 py-0.5 rounded-full text-xs font-bold text-white" style="background:${r[1]}">${esc(r[0])}</span>`);
+  if(d&&d.cold)badges.push('<span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:#e0f2fe;color:#0369a1">❄︎ Cadena de frío</span>');
+  document.getElementById('dm_badges').innerHTML=badges.join('');
+  document.getElementById('dm_uso').textContent=info.uso||'Sin ficha disponible.';
+  document.getElementById('dm_dosis').textContent=info.dosis||'—';
+  document.getElementById('dm_efectos').textContent=info.efectos||'—';
+  const a=document.getElementById('dm_link'); a.href=drugLink(dci);
+  document.getElementById('drugModal').classList.remove('hidden');
+}
+function closeDrug(){document.getElementById('drugModal').classList.add('hidden');}
+
 // ── State ──
 const BASE_PEOPLE=100000, BASE_DAYS=90;
 let people=100000, days=90, sortKey='cat', sortDir=1;
@@ -361,9 +544,9 @@ function rowsView(){
     return (x>y?1:x<y?-1:0)*sortDir;});
   $('#count').textContent=`${list.length} de ${D.length} ítems`;
   $('#rows').innerHTML=list.map(d=>{const dot=CATS[d.cat];return `
-    <tr class="border-t border-outline-variant/40 hover:bg-surface-variant/20">
+    <tr data-dci="${esc(d.dci)}" class="border-t border-outline-variant/40 hover:bg-surface-variant/20 cursor-pointer">
       <td class="px-3 py-2"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full shrink-0" style="background:${dot}"></span><span class="text-xs text-on-surface-variant">${esc(d.cat)}</span></span></td>
-      <td class="px-3 py-2 font-medium">${esc(d.dci)}</td>
+      <td class="px-3 py-2 font-medium">${esc(d.dci)} <span class="text-primary text-[11px] align-middle" title="Ver ficha">ⓘ</span></td>
       <td class="px-3 py-2 text-on-surface-variant">${esc(d.marca)}</td>
       <td class="px-3 py-2 text-on-surface-variant text-xs">${esc(d.pres)}</td>
       <td class="px-3 py-2 text-right font-display font-bold tnum">${fmt(scaled(d))}</td>
@@ -387,6 +570,8 @@ $('#csv').addEventListener('click',()=>{
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`sismo911-botiquin-${fmt(people).replace(/\D/g,'')}-${days}d.csv`;a.click();
 });
+document.getElementById('rows').addEventListener('click',e=>{const tr=e.target.closest('tr[data-dci]');if(tr)openDrug(tr.dataset.dci);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrug();});
 renderAll();
 </script>
 </body>
