@@ -6,6 +6,7 @@ import { persons } from './routes/persons';
 import { contacts } from './routes/contacts';
 import { alerts } from './routes/alerts';
 import { facilities } from './routes/facilities';
+import { shelters } from './routes/shelters';
 import { ops } from './routes/ops';
 import { misc } from './routes/misc';
 import { damage } from './routes/damage';
@@ -84,7 +85,10 @@ app.use('*', async (c, next) => {
     (path.startsWith('/api/sos/') && method === 'PATCH');
   const isDamageReview = path === '/api/damage' && method === 'GET' || path.startsWith('/api/damage/photo/');
   const isManualRefresh = path === '/api/events/refresh';
-  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh) return next();
+  // Shelter-status moderation queue is operator-only; /:id/approve is covered by
+  // the generic endsWith('/approve') rule above. Public GET + crowd POST stay open.
+  const isShelterModeration = path === '/api/shelters/queue';
+  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration) return next();
 
   const user = await getUserFromRequest(c.env, c).catch(() => null);
   // Docket submission only needs a logged-in user (any role); everything else
@@ -141,6 +145,7 @@ app.route('/api/familia', familia);
 app.route('/api/danos-estructurales', damageMap);
 app.route('/api/alerts', alerts);
 app.route('/api/facilities', facilities);
+app.route('/api/shelters', shelters);
 app.route('/api/damage', damage);
 app.route('/api/reports', reports);  // citizen damage-report map + comments + reactions + moderation
 app.route('/api/chat', chat);        // community channel
