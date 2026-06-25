@@ -61,26 +61,35 @@ app.use('*', async (c, next) => {
   const isReportModeration =
     (path.startsWith('/api/reports') && (method === 'PATCH' || method === 'DELETE')) ||
     path === '/api/reports/queue';
-  // Missing-persons moderation: review queue + approve/reject are operator-only.
-  // Public POST (report) stays open; status updates are operator-only.
+  // Missing-persons moderation: review queues + approve/reject are operator-only.
+  // Public POST (report) stays open; status updates are operator-only. The
+  // case-docket approve/reject + pending queue are included here.
   const isPersonModeration =
     path === '/api/persons/queue' ||
+    path === '/api/persons/docket/queue' ||
     (path.startsWith('/api/persons/') && method === 'PATCH') ||
     path.endsWith('/approve') || path.endsWith('/reject');
-  // Operator CRM / case-docket: full-PII case index + per-person tracing docket
-  // (both read and write) are operator-only.
-  const isCaseDocket =
-    path === '/api/persons/cases' ||
-    (path.startsWith('/api/persons/') && path.endsWith('/docket'));
+  // Case docket: the GET index (/api/persons/cases) + per-person docket are
+  // PUBLIC reads (redacted server-side for non-operators). Submitting an update
+  // requires LOGIN (any role) — citizen updates land 'pending' for operator
+  // approval (handled in the route). Approve/reject + queue are operator-only
+  // via isPersonModeration above.
+  const isDocketSubmit = method === 'POST' && /^\/api\/persons\/[^/]+\/docket$/.test(path);
+  // Court-docket internal surface (evidence, tasks, messages, victims, case meta,
+  // audit) is operator/admin-only for ALL methods — this is the confidential
+  // expediente, not public data.
+  const isCaseAdmin = /^\/api\/persons\/[^/]+\/(attachments|tasks|messages|victims|case|audit)(\/|$)/.test(path);
   const isSosTriage =
     path === '/api/sos' && method === 'GET' ||
     (path.startsWith('/api/sos/') && method === 'PATCH');
   const isDamageReview = path === '/api/damage' && method === 'GET' || path.startsWith('/api/damage/photo/');
   const isManualRefresh = path === '/api/events/refresh';
-  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isCaseDocket && !isSosTriage && !isDamageReview && !isManualRefresh) return next();
+  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh) return next();
 
   const user = await getUserFromRequest(c.env, c).catch(() => null);
-  const authorized = user && (user.role === 'operator' || user.role === 'admin');
+  // Docket submission only needs a logged-in user (any role); everything else
+  // here is operator/admin-only.
+  const authorized = isDocketSubmit ? !!user : (user && (user.role === 'operator' || user.role === 'admin'));
   if (authorized && isUnsafe && !isSameSite) return c.json({ error: 'bad_origin' }, 403);
   if (authorized) { c.header('X-User-Role', user!.role); return next(); }
 
