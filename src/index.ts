@@ -11,12 +11,14 @@ import { misc } from './routes/misc';
 import { damage } from './routes/damage';
 import { auth } from './routes/auth';
 import { familia } from './routes/familia';
+import { damageMap } from './routes/damage-map';
 import { reports } from './routes/reports';
 import { chat } from './routes/chat';
 import { acopio } from './routes/acopio';
 import { ingestUsgs } from './ingest/usgs-cron';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
+import { ingestSosDamage } from './ingest/sos-damage';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
 import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
@@ -114,6 +116,7 @@ app.route('/api/persons', persons);
 app.route('/api/contacts', contacts);
 app.route('/api/auth', auth);
 app.route('/api/familia', familia);
+app.route('/api/danos-estructurales', damageMap);
 app.route('/api/alerts', alerts);
 app.route('/api/facilities', facilities);
 app.route('/api/damage', damage);
@@ -145,6 +148,10 @@ export default {
       ]);
       // After events are fresh, announce significant new quakes to the channel.
       await announceQuakes(env).catch((e) => console.error('[cron] quake announce failed:', e?.message ?? e));
+      // Hourly: sync structural-damage reports from sosvenezuela2026 (source of truth).
+      if (new Date(_event.scheduledTime).getUTCMinutes() === 0) {
+        await ingestSosDamage(env).catch((e: any) => console.error('[cron] sos-damage sync failed:', e?.message ?? e));
+      }
     })());
   },
 };
