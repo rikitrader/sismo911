@@ -62,7 +62,35 @@ familia.get('/persons', async (c) => {
      FROM personas ${w} ORDER BY updated_at DESC, id DESC LIMIT ?`
   ).bind(...binds, limit + 1).all<any>();
   const rows = results ?? [];
-  return c.json({ persons: rows.slice(0, limit).map((r) => mapPerson(r, op)), total, nextCursor: nextCursor(rows, limit), limit });
+
+  // Federate operator case files (native `persons` in the main DB) so /familia searches
+  // ALL cases, not just the registry. These are far fewer than the 48k registry, so we
+  // surface them on the first page only; the registry keeps its keyset pagination below.
+  let nativeCases: any[] = []; let nativeTotal = 0;
+  if (!(c.req.query('cursor') || '')) {
+    const nb: string[] = []; const nbinds: unknown[] = [];
+    if (!op) nb.push("review = 'approved'");
+    if (q) { nb.push('(full_name LIKE ? OR last_seen LIKE ?)'); nbinds.push(`%${q}%`, `%${q}%`); }
+    const stq = c.req.query('status') || '';
+    if (['missing', 'found_safe', 'found_deceased', 'unknown'].includes(stq)) { nb.push('status = ?'); nbinds.push(stq); }
+    const nw = nb.length ? 'WHERE ' + nb.join(' AND ') : '';
+    try {
+      nativeTotal = ((await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM persons ${nw}`).bind(...nbinds).first<any>())?.n) ?? 0;
+      const { results: nrows } = await c.env.DB.prepare(
+        `SELECT id, full_name, age, sex, last_seen, status, photo_url, contact_phone, notes, updated_ms
+         FROM persons ${nw} ORDER BY updated_ms DESC LIMIT 24`
+      ).bind(...nbinds).all<any>();
+      nativeCases = (nrows || []).map((r: any) => ({
+        id: r.id, full_name: r.full_name, age: r.age, sex: r.sex,
+        last_seen: r.last_seen, status: r.status || 'unknown', photo_url: r.photo_url || null,
+        contact_phone: op ? (r.contact_phone || null) : (r.contact_phone ? '•••••• (solo operadores)' : null),
+        notes: r.notes, updated_ms: r.updated_ms, kind: 'case',
+      }));
+    } catch (e: any) { console.error('[familia/persons] native-case merge failed:', e?.message ?? e); }
+  }
+
+  const persons = [...nativeCases, ...rows.slice(0, limit).map((r) => mapPerson(r, op))];
+  return c.json({ persons, total: total + nativeTotal, nextCursor: nextCursor(rows, limit), limit });
 });
 
 // GET /api/familia/gallery?cursor=&limit=
@@ -103,10 +131,28 @@ familia.get('/photo/:id', async (c) => {
 
 // GET /api/familia/person/:id  — full public detail for the click-to-open card modal.
 familia.get('/person/:id', async (c) => {
+  const id = c.req.param('id');
+  // Native operator case file (id like "per_xxxxxxxx") lives in the main DB.
+  if (id.startsWith('per_')) {
+    const op = await isOperator(c);
+    const r: any = await c.env.DB.prepare(
+      `SELECT id, full_name, age, last_seen, status, photo_url, contact_phone, notes, review
+       FROM persons WHERE id = ?`
+    ).bind(id).first();
+    if (!r || (!op && r.review !== 'approved')) return c.json({ error: 'not_found' }, 404);
+    c.header('Cache-Control', 'public, max-age=120');
+    return c.json({
+      id: r.id, full_name: r.full_name, age: r.age, last_seen: r.last_seen,
+      since: null, reporter: op ? (r.contact_phone || null) : null, description: r.notes || null,
+      status: r.status || 'unknown', estado: null, found_by: null, kind: 'case',
+      photo_url: r.photo_url || null,
+      share_url: `https://sismo911.com/familia?caso=${r.id}`,
+    });
+  }
   const p: any = await c.env.DESAP.prepare(
     `SELECT id, nombre, edad, ubicacion, fecha, descripcion, contacto, estado, foto, foto_r2, localizado_por, updated_at
      FROM personas WHERE id = ? AND moderation = 'approved'`
-  ).bind(c.req.param('id')).first();
+  ).bind(id).first();
   if (!p) return c.json({ error: 'not_found' }, 404);
   c.header('Cache-Control', 'public, max-age=120');
   return c.json({
