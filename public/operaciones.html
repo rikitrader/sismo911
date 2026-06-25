@@ -104,7 +104,7 @@
 
       <!-- MAP -->
       <section class="bg-white rounded-lg border border-outline-variant/60 p-4 sm:p-5">
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
           <h3 class="font-display font-bold text-on-surface text-[15px]">Mapa operacional — red de transporte</h3>
           <span class="text-[11px] text-on-surface-variant">6 puertos · 6 aeropuertos · 5 corredores · epicentro M7.5</span>
         </div>
@@ -222,10 +222,10 @@ const riskPill=(r)=>{const c=r>50?'bg-secondary/10 text-secondary':r>30?'bg-warn
 function renderRoutes(){
   document.getElementById('routes').innerHTML=ROUTES.map((r,i)=>`
     <div class="route-card bg-white rounded-lg border border-outline-variant/60 p-4" data-i="${i}">
-      <div class="flex items-center gap-2">
-        <span class="pill bg-primary text-white">${r.pri}</span>
-        <span class="font-display font-bold text-on-surface text-[13.5px] leading-tight">${r.nm}</span>
-        <span class="ml-auto">${riskPill(r.risk)}</span>
+      <div class="flex items-start gap-2">
+        <span class="pill bg-primary text-white shrink-0">${r.pri}</span>
+        <span class="font-display font-bold text-on-surface text-[13.5px] leading-tight min-w-0 flex-1">${r.nm}</span>
+        <span class="shrink-0">${riskPill(r.risk)}</span>
       </div>
       <p class="text-on-surface-variant text-[12.5px] mt-2 leading-relaxed">${r.meta}</p>
     </div>`).join('');
