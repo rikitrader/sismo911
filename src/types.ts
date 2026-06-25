@@ -49,6 +49,15 @@ export interface Env {
   // Invitation-only business-plan deck (/plan). Both have safe fallbacks.
   PLAN_INVITE_CODES?: string; // comma-separated valid invite codes
   PLAN_SECRET?: string;       // HMAC signing secret for the access cookie
+  // --- Crossmint donations (card → USDC on Base) ---
+  // All optional: campaigns + the public ledger work without them; only the
+  // "pay now" step is gated on these being present.
+  CROSSMINT_SERVER_KEY?: string;     // sk_<env>_…   (server-side, secret)
+  CROSSMINT_CLIENT_KEY?: string;     // ck_<env>_…   (browser embed, public-safe)
+  CROSSMINT_COLLECTION_ID?: string;  // donation Collection id (from setup script)
+  CROSSMINT_WEBHOOK_SECRET?: string; // whsec_…      (Svix HMAC signing secret)
+  CROSSMINT_ENV?: string;            // 'production' (default) | 'staging'
+  CROSSMINT_CHAIN?: string;          // 'base' (default)
 }
 
 export interface SeismicEvent {

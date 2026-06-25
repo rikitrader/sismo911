@@ -39,6 +39,19 @@ document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logou
       <span class="${rc} text-white text-xs font-bold px-3 py-1 rounded-full">${rl}</span>
     </div>`;
 
+  // Encrypted custodial wallet (Crossmint, Base). Provisioned at signup.
+  const waddr=u.wallet_address;
+  html+=`<div class="bg-white border border-outline-variant/60 rounded-lg p-5 mb-6">
+    <div class="flex items-center justify-between gap-3 mb-1">
+      <h2 class="font-display font-bold text-lg">Mi billetera cifrada</h2>
+      <span class="text-xs bg-primary text-white px-2 py-0.5 rounded-full">Base · USDC</span></div>
+    <p class="text-on-surface-variant text-sm mb-3">Billetera custodia cifrada (las llaves las resguarda Crossmint; nunca se almacenan en SISMO911). Úsala para recibir y enviar apoyo.</p>
+    <div id="wallet">${waddr
+      ? `<code class="block bg-surface-container rounded px-3 py-2 text-xs break-all">${esc(waddr)}</code>`
+      : `<button id="mkwallet" class="bg-primary text-white text-sm font-bold rounded-lg px-4 py-2">Crear mi billetera</button><div id="werr" class="text-secondary text-xs mt-2"></div>`}</div>
+    <a href="/donar" class="inline-block mt-3 text-sm text-primary hover:underline">→ Ver campañas para donar</a>
+  </div>`;
+
   if(u.role==='operator'||u.role==='admin'){
     html+=`<a href="/admin" class="block bg-primary text-white rounded-lg p-5 mb-6 hover:bg-primary-container transition">
       <div class="font-display font-bold text-lg">→ Consola de Operaciones</div>
@@ -53,6 +66,15 @@ document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logou
       <div class="bg-white border border-outline-variant/60 rounded-lg overflow-hidden"><table class="w-full text-sm"><thead class="bg-[#eeeef0] text-left text-xs uppercase text-on-surface-variant font-display"><tr><th class="px-4 py-2">Nombre</th><th class="px-3">Correo</th><th class="px-3">Rol</th></tr></thead><tbody id="users"></tbody></table></div>`;
   }
   document.getElementById('app').innerHTML=html;
+
+  // lazy wallet creation (users created before wallets existed, or failed at signup)
+  const mk=document.getElementById('mkwallet');
+  if(mk) mk.onclick=async()=>{
+    mk.disabled=true; mk.textContent='Creando…';
+    const r=await fetch('/api/auth/wallet',{method:'POST'}); const d=await r.json().catch(()=>({}));
+    if(r.ok&&d.wallet){ document.getElementById('wallet').innerHTML=`<code class="block bg-surface-container rounded px-3 py-2 text-xs break-all">${esc(d.wallet.address)}</code>`; }
+    else { document.getElementById('werr').textContent = d.error==='wallet_not_configured' ? 'Las billeteras se están habilitando. Vuelve pronto.' : 'No se pudo crear la billetera. Intenta más tarde.'; mk.disabled=false; mk.textContent='Crear mi billetera'; }
+  };
 
   // my check-ins (match by name)
   const {checkins=[]}=await fetch('/api/checkins').then(r=>r.json());

@@ -36,11 +36,13 @@ export function setSecurityHeaders(c: Context) {
       "object-src 'none'",
       "frame-ancestors 'none'",
       "form-action 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://static.cloudflareinsights.com https://maps.googleapis.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://esm.sh https://static.cloudflareinsights.com https://maps.googleapis.com https://js.stripe.com https://*.crossmint.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://esm.sh",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://earthquake.usgs.gov https://api.weather.gov https://www.fema.gov https://overpass-api.de https://overpass.kumi.systems https://maps.mail.ru https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://maps.googleapis.com https://maps.gstatic.com",
+      "connect-src 'self' https://earthquake.usgs.gov https://api.weather.gov https://www.fema.gov https://overpass-api.de https://overpass.kumi.systems https://maps.mail.ru https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://esm.sh https://maps.googleapis.com https://maps.gstatic.com https://api.stripe.com https://staging.crossmint.com https://www.crossmint.com https://*.crossmint.com",
+      // Crossmint Embedded Checkout (card → USDC) + its Stripe-Elements iframe.
+      "frame-src 'self' https://*.crossmint.com https://js.stripe.com https://*.stripe.com",
       "worker-src 'self'",
       "manifest-src 'self'",
     ].join('; ')
