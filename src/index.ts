@@ -18,6 +18,7 @@ import { acopio } from './routes/acopio';
 import { admin } from './routes/admin';
 import { dedupePersonas } from './lib/dedupe';
 import { monitor } from './routes/monitor';
+import { aidOrgs } from './routes/aid_orgs';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet } from './lib/sheets-sync';
 import { ingestUsgs } from './ingest/usgs-cron';
@@ -45,7 +46,7 @@ app.use('/api/*', cors({
 // Admin console + curation/management writes require an authenticated operator
 // or admin session. Citizen actions (SOS, check-ins, damage reports) stay open.
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
-const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales', '/api/admin'];
+const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales', '/api/admin', '/api/aid-orgs'];
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   const method = c.req.method;
@@ -130,6 +131,7 @@ app.route('/api/chat', chat);        // community channel
 app.route('/api/acopio', acopio);    // /api/acopio/status — live status for acopio/hospitales/PC
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
 app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET public; refresh gated; apify webhook secret-gated)
+app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directory (GET public; writes operator-gated)
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
 
