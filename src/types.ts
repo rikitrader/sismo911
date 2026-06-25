@@ -6,6 +6,9 @@ export interface Env {
   PERSON_PHOTOS: R2Bucket;
   DESAP: D1Database;
   DESAP_FOTOS: R2Bucket;
+  // Cloudflare native Rate Limiting binding (atomic, per-location, period 60s).
+  // Optional: absent in local/test → burstLimit() fails open.
+  WRITE_BURST_LIMITER?: { limit(opts: { key: string }): Promise<{ success: boolean }> };
   USGS_MINLAT: string;
   USGS_MAXLAT: string;
   USGS_MINLON: string;

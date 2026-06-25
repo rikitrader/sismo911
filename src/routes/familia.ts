@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { getUserFromRequest } from '../lib/auth';
-import { rateLimit, isImageBytes } from '../lib/security';
+import { rateLimit, burstLimit, isImageBytes } from '../lib/security';
 
 // Missing-persons registry (/familia). Reads the 31k `personas` dataset in the
 // DESAP D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
@@ -95,6 +95,8 @@ familia.get('/photo/:id', async (c) => {
 
 // POST /api/familia/persons  — citizen report → personas (photo → DESAP_FOTOS)
 familia.post('/persons', async (c) => {
+  const burst = await burstLimit(c.env, c, 'familia_register');
+  if (burst) return burst;
   const limited = await rateLimit(c.env, c, 'familia_register', 15, 300);
   if (limited) return limited;
   let b: any = {}; let bytes: Uint8Array | null = null; let ctype = 'image/jpeg';

@@ -49,6 +49,15 @@ id = "2d5be96112724b8dbfaae2723d3a4dd3"
 binding = "PHOTOS"
 id = "dc4674529c1a4dd4b747d8e7e3398d17"
 
+# Atomic burst rate limiter (per CF location, 60s window) for abuse-prone public
+# write endpoints (reactions/comments/chat/familia). Closes the read-then-write
+# race in the KV limiter. Life-safety endpoints (SOS, check-ins) deliberately
+# do NOT use this — they fail open.
+[[ratelimits]]
+name = "WRITE_BURST_LIMITER"
+namespace_id = "1101"
+simple = { limit = 30, period = 60 }
+
 
 # Missing-person photos (browsable gallery).
 [[r2_buckets]]

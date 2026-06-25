@@ -74,6 +74,30 @@ export async function rateLimit(
   return null;
 }
 
+/**
+ * Atomic burst limiter backed by Cloudflare's native Rate Limiting binding
+ * (env.WRITE_BURST_LIMITER, period 60s). Unlike rateLimit() — which reads then
+ * writes KV non-atomically and can under-count under a concurrent burst — this
+ * is atomic, so it reliably caps the dangerous case (rapid abuse from one IP).
+ * Use it on public, abuse-prone write endpoints. Returns a 429 Response when the
+ * burst cap is exceeded, else null. If the binding is absent (local/test/older
+ * config) it no-ops (fails open) so behavior degrades to the KV limiter only.
+ *
+ * NOTE: never call this on life-safety endpoints (SOS, "I'm safe"); those must
+ * fail open — a dropped emergency submission is worse than a few extra.
+ */
+export async function burstLimit(env: Env, c: Context, name: string): Promise<Response | null> {
+  const limiter = env.WRITE_BURST_LIMITER;
+  if (!limiter) return null; // binding absent → fail open
+  try {
+    const { success } = await limiter.limit({ key: `${name}:${requestIp(c)}` });
+    if (!success) return c.json({ error: 'rate_limited', retry_after: 60 }, 429);
+  } catch {
+    return null; // limiter error → fail open, never block a write on infra failure
+  }
+  return null;
+}
+
 export function validLatLon(lat: unknown, lon: unknown): lat is number {
   return (
     typeof lat === 'number' &&
