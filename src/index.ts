@@ -13,6 +13,7 @@ import { auth } from './routes/auth';
 import { familia } from './routes/familia';
 import { reports } from './routes/reports';
 import { chat } from './routes/chat';
+import { acopio } from './routes/acopio';
 import { ingestUsgs } from './ingest/usgs-cron';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
@@ -37,7 +38,7 @@ app.use('/api/*', cors({
 // Admin console + curation/management writes require an authenticated operator
 // or admin session. Citizen actions (SOS, check-ins, damage reports) stay open.
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
-const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources'];
+const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio'];
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   const method = c.req.method;
@@ -118,6 +119,7 @@ app.route('/api/facilities', facilities);
 app.route('/api/damage', damage);
 app.route('/api/reports', reports);  // citizen damage-report map + comments + reactions + moderation
 app.route('/api/chat', chat);        // community channel
+app.route('/api/acopio', acopio);    // /api/acopio/status — live status for acopio/hospitales/PC
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
 
