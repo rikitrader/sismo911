@@ -40,6 +40,8 @@
   };
 
   const css = `
+    /* Page content fills the width next to the sidebar (no narrow centered column). */
+    body > main{ max-width:none !important; margin-left:0 !important; margin-right:0 !important; width:auto !important }
     @media(min-width:1024px){ body{ padding-left:16rem !important } #s911-burger{display:none!important} #s911-map-shift{left:16rem!important} }
     #s911-shell{position:fixed;top:0;left:0;bottom:0;width:16rem;background:#fff;border-right:1px solid ${LINE};display:flex;flex-direction:column;z-index:1200;transform:translateX(-100%);transition:transform .2s ease}
     #s911-shell.open{transform:none}
