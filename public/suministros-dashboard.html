@@ -108,6 +108,7 @@
   <!-- Funder pipeline (real) -->
   <h2 class="h text-xl mb-1">Pipeline de financiamiento <span id="fLive" style="font-size:11px;font-weight:800;letter-spacing:.03em;color:#9aa6bd;vertical-align:middle"></span></h2>
   <p class="text-xs mb-2" style="color:#5b6884">Fuentes reales con monto objetivo, probabilidad y valor esperado (ajustado por riesgo). La barra = probabilidad de cierre.</p>
+  <div id="fringwrap" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:6px 0 14px"></div>
   <div class="fsum" id="fsum">
     <div><div class="l">Objetivo total</div><div class="v">$1.16M</div></div>
     <div><div class="l">Esperado (ajustado)</div><div class="v">$421.5K</div></div>
@@ -238,20 +239,46 @@
     if(t.indexOf('in-kind')>=0||t.indexOf('especie')>=0||t.indexOf('gik')>=0) return ['gik','En especie'];
     return ['cash','Efectivo']; }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+  function ring(pct, color){
+    pct=Math.max(0,Math.min(100,pct||0));
+    var r=34, c=2*Math.PI*r, dash=pct/100*c;
+    return '<svg width="84" height="84" viewBox="0 0 84 84" style="flex:0 0 auto">'+
+      '<circle cx="42" cy="42" r="'+r+'" fill="none" stroke="#eef1f7" stroke-width="10"/>'+
+      '<circle cx="42" cy="42" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="10" stroke-linecap="round" '+
+      'stroke-dasharray="'+dash+' '+(c-dash)+'" transform="rotate(-90 42 42)"/>'+
+      '<text x="42" y="47" text-anchor="middle" font-family="Public Sans" font-weight="900" font-size="19" fill="#13284f">'+Math.round(pct)+'%</text></svg>';
+  }
   function renderFunding(d){
     if(!d || !d.ok || !d.funders || !d.funders.length) return;
     var grid=document.getElementById('fgrid'); if(!grid) return;
+    var L=d.live||{raisedTotal:0,raisedCrypto:0,donors:0};
     var html='';
     d.funders.forEach(function(f){
       var b=badgeOf(f.type), pct=Math.round((f.prob||0)*100);
+      var raised=null;
+      if(/gofundme|crowd/i.test(f.name)) raised=L.raisedTotal;
+      else if(/crypto|crossmint/i.test(f.name)) raised=L.raisedCrypto;
+      var raisedLine = (raised==null) ? '' :
+        '<div style="font-size:11.5px;font-weight:700;color:#16a34a;margin-top:3px">● Recaudado '+fmtMoney(raised)+
+        ' <span style="color:#9aa6bd;font-weight:600">de '+fmtMoney(f.target)+' · </span>'+
+        '<a href="/donar" style="color:#dc2626;text-decoration:none">Donar →</a></div>';
       html+='<div class="fcard"><div class="ftop"><div class="fn">'+esc(f.name)+'</div>'+
         '<span class="badge '+b[0]+'">'+b[1]+'</span></div>'+
         '<div class="fmeta"><span>Objetivo '+fmtMoney(f.target)+'</span><span>Prob '+pct+'%</span></div>'+
         '<div class="fbar"><i style="width:'+pct+'%"></i></div>'+
         '<div class="fbot"><div class="fev">'+fmtMoney(f.ev)+' <small>esperado</small></div>'+
-        '<span class="pill">'+esc(f.status||'—')+'</span></div></div>';
+        '<span class="pill">'+esc(f.status||'—')+'</span></div>'+raisedLine+'</div>';
     });
     grid.innerHTML=html;
+    var cov=d.ask?(d.totals.expected/d.ask*100):0;
+    var rw=document.getElementById('fringwrap');
+    if(rw){ rw.innerHTML=ring(cov,'#dc2626')+
+      '<div style="min-width:210px">'+
+      '<div style="font-family:Public Sans;font-weight:800;color:#13284f;font-size:14.5px">Pipeline cubre el '+Math.round(cov)+'% del Año 1</div>'+
+      '<div style="font-size:12.5px;color:#5b6884;margin-top:2px">'+fmtMoney(d.totals.expected)+' esperado de '+fmtMoney(d.ask)+' solicitado</div>'+
+      '<div style="font-size:12.5px;margin-top:7px;color:#16a34a;font-weight:700">● Recaudado en vivo: '+fmtMoney(L.raisedTotal)+
+      ' <span style="color:#9aa6bd;font-weight:600">· '+L.donors+' donante'+(L.donors===1?'':'s')+' · </span>'+
+      '<a href="/donar" style="color:#dc2626;text-decoration:none;font-weight:800">Donar →</a></div></div>'; }
     var fsum=document.getElementById('fsum');
     if(fsum){ fsum.innerHTML=
       '<div><div class="l">Objetivo total</div><div class="v">'+fmtMoney(d.totals.target)+'</div></div>'+
