@@ -46,20 +46,45 @@ async function fetchFunding(env: Env): Promise<Payload | null> {
   return { ok: true, funders, totals: { target, expected }, ask: YEAR1_ASK, gap: Math.max(0, YEAR1_ASK - expected), updated_ms: Date.now() };
 }
 
+/**
+ * Live money actually in the door — paid donations from the crowdfunding
+ * platform (/donar). Computed fresh on every request (cheap) and guarded, so a
+ * missing `donations` table (migration not applied) just yields zeros.
+ */
+async function liveDonations(env: Env): Promise<{ raisedTotal: number; raisedCrypto: number; donors: number }> {
+  try {
+    const row = await env.DB.prepare(
+      `SELECT COALESCE(SUM(amount_usd),0) AS total,
+              COUNT(*) AS donors,
+              COALESCE(SUM(CASE WHEN provider='crossmint' OR currency IN ('USDC','USDC.e','ETH','BTC') THEN amount_usd ELSE 0 END),0) AS crypto
+         FROM donations WHERE status='paid'`
+    ).first<any>();
+    return { raisedTotal: Number(row?.total ?? 0), raisedCrypto: Number(row?.crypto ?? 0), donors: Number(row?.donors ?? 0) };
+  } catch {
+    return { raisedTotal: 0, raisedCrypto: 0, donors: 0 };
+  }
+}
+
 funding.get('/', async (c) => {
   const fresh = c.req.query('fresh') === '1';
+  const live = await liveDonations(c.env); // always fresh
+  let payload: Payload | null = null;
+
   if (!fresh) {
     const cached = await c.env.CACHE.get(CACHE_KEY);
-    if (cached) return c.body(cached, 200, { 'content-type': 'application/json', 'x-cache': 'hit' });
+    if (cached) { try { payload = JSON.parse(cached); } catch { /* refetch below */ } }
   }
-  const data = await fetchFunding(c.env).catch((e) => { console.error('[funding]', e?.message ?? e); return null; });
-  if (data && data.funders.length) {
-    const body = JSON.stringify(data);
-    await c.env.CACHE.put(CACHE_KEY, body, { expirationTtl: TTL }).catch(() => {});
-    return c.body(body, 200, { 'content-type': 'application/json', 'x-cache': 'miss' });
+  if (!payload) {
+    payload = await fetchFunding(c.env).catch((e: any) => { console.error('[funding]', e?.message ?? e); return null; });
+    if (payload && payload.funders.length) {
+      await c.env.CACHE.put(CACHE_KEY, JSON.stringify(payload), { expirationTtl: TTL }).catch(() => {});
+    } else {
+      const stale = await c.env.CACHE.get(CACHE_KEY);
+      if (stale) { try { payload = JSON.parse(stale); } catch { /* unavailable */ } }
+    }
   }
-  // Upstream failed — serve stale cache if we have it, else signal not-ok.
-  const stale = await c.env.CACHE.get(CACHE_KEY);
-  if (stale) return c.body(stale, 200, { 'content-type': 'application/json', 'x-cache': 'stale' });
-  return c.json({ ok: false, funders: [], reason: 'unavailable' }, 200);
+  if (!payload || !payload.funders.length) {
+    return c.json({ ok: false, funders: [], live, reason: 'unavailable' }, 200, { 'Cache-Control': 'no-store' });
+  }
+  return c.json({ ...payload, live }, 200, { 'Cache-Control': 'no-store' });
 });
