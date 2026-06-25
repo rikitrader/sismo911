@@ -48,9 +48,14 @@
 
   // Hide the page's own top header (the old horizontal nav)
   document.querySelectorAll('body > header').forEach((h) => { h.style.display = 'none'; });
-  // Full-screen map page: shift the map right of the sidebar on desktop
-  const map = document.getElementById('map');
-  if (map) { map.id = 'map'; map.style.top = '0'; map.style.left = '0'; map.style.setProperty('left', '0'); map.classList.add('s911-mapfix'); const s = document.createElement('style'); s.textContent = '@media(min-width:1024px){#map{left:16rem!important;top:0!important}}'; document.head.appendChild(s); }
+  // Full-screen map pages opt in with class "s911-fullmap": pin to top:0 (the page header
+  // is hidden above) and shift right of the sidebar on desktop. Inline / in-container maps
+  // (homepage, pager, dashboard, acopio) are left untouched — they ride the body padding-left.
+  if (document.querySelector('.s911-fullmap')) {
+    const s = document.createElement('style');
+    s.textContent = '.s911-fullmap{top:0!important}@media(min-width:1024px){.s911-fullmap{left:16rem!important}}';
+    document.head.appendChild(s);
+  }
 
   const shell = document.createElement('aside');
   shell.id = 's911-shell';
