@@ -63,10 +63,10 @@
         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
         Volver al panel SISMO911
       </a>
-      <button onclick="window.print()" class="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-sm font-semibold">
+      <div class="flex items-center gap-2"><button id="navBtn" aria-label="Abrir menú" class="no-print inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-sm font-semibold">☰ Menú</button><button onclick="window.print()" class="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-sm font-semibold">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
         Imprimir / PDF
-      </button>
+      </button></div>
     </div>
   </div>
 
@@ -349,5 +349,15 @@
   L.marker(EPI, { icon: L.divIcon({ className:'', html:'<div class="epi">★</div>', iconSize:[26,26], iconAnchor:[13,13] }) })
     .addTo(map).bindTooltip('Epicentro · M 7.5 · Yumare', { permanent:false });
 </script>
+
+<div id="navDrawer" class="hidden fixed inset-0 z-[3000] no-print">
+  <div id="navOverlay" class="absolute inset-0 bg-black/50"></div>
+  <nav class="absolute top-0 right-0 h-full w-72 max-w-[82vw] bg-primary text-white shadow-2xl flex flex-col p-5 overflow-y-auto">
+    <div class="flex items-center justify-between mb-2"><b class="font-display tracking-tight">SISMO911</b><button id="navClose" aria-label="Cerrar menú" class="text-2xl leading-none px-2 hover:text-white/70">✕</button></div>
+    <a href="/" class="py-2.5 border-b border-white/10 hover:text-white/70">Panel</a><a href="/mapa" class="py-2.5 border-b border-white/10 hover:text-white/70">Mapa</a><a href="/alertas" class="py-2.5 border-b border-white/10 hover:text-white/70">Alertas</a><a href="/sos" class="py-2.5 border-b border-white/10 text-secondary-fixed font-bold">SOS</a><a href="/personas" class="py-2.5 border-b border-white/10 hover:text-white/70">Personas</a><a href="/familia" class="py-2.5 border-b border-white/10 hover:text-white/70">Familia</a><a href="/recursos" class="py-2.5 border-b border-white/10 hover:text-white/70">Recursos</a><a href="/acopio" class="py-2.5 border-b border-white/10 hover:text-white/70">Acopio</a><a href="/suministros-medicos" class="py-2.5 border-b border-white/10 hover:text-white/70">Botiquín</a><a href="/comms" class="py-2.5 border-b border-white/10 hover:text-white/70">Radio</a><a href="/guia" class="py-2.5 border-b border-white/10 hover:text-white/70">Guía</a><a href="/reportar" class="py-2.5 border-b border-white/10 hover:text-white/70">Reportar</a><a href="/canal" class="py-2.5 border-b border-white/10 hover:text-white/70">Canal</a><a href="/movimiento" class="py-2.5 border-b border-white/10 hover:text-white/70">Movimiento</a><a href="/blog" class="py-2.5 border-b border-white/10 hover:text-white/70">Blog</a><a href="/pager" class="py-2.5 border-b border-white/10 hover:text-white/70">PAGER</a>
+  </nav>
+</div>
+<script>(function(){var d=document.getElementById('navDrawer'),b=document.getElementById('navBtn');if(!d||!b)return;function o(){d.classList.remove('hidden');}function c(){d.classList.add('hidden');}b.onclick=o;document.getElementById('navClose').onclick=c;document.getElementById('navOverlay').onclick=c;document.addEventListener('keydown',function(e){if(e.key==='Escape')c();});})();</script>
+
 </body>
 </html>
