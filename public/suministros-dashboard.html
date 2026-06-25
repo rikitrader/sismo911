@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Suministros — Programa Médico de Emergencia — SISMO911</title>
+<meta name="description" content="Panel de control del programa de suministros médicos de emergencia para Venezuela: KPIs, costos de importación, financiamiento y enlaces a botiquín, equipo, Cruz Roja y red de ayuda.">
+<meta name="author" content="SISMO911 — Comando Sísmico Nacional">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/suministros-dashboard">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Panel de Suministros — SISMO911">
+<meta property="og:description" content="KPIs, costos de importación y financiamiento del programa de suministros médicos de emergencia para Venezuela.">
+<meta property="og:url" content="https://sismo911.com/suministros-dashboard">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Panel de Suministros — SISMO911">
+<meta name="twitter:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>
+  body{background:#f9f9fc}
+  .font-display{font-family:'Public Sans',sans-serif}
+  .tnum{font-variant-numeric:tabular-nums}
+  .navy{color:#13284f}.cred{color:#dc2626}
+  .tile{background:#fff;border:1px solid #e6e9f1;border-radius:14px;padding:16px;box-shadow:0 6px 18px rgba(19,40,79,.05)}
+  .tile .k{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#dc2626}
+  .tile .v{font-family:'Public Sans',sans-serif;font-weight:900;font-size:26px;color:#13284f;line-height:1.05;margin-top:6px}
+  .tile .s{font-size:12px;color:#5b6884;margin-top:4px}
+  .panel{background:#fff;border:1px solid #e6e9f1;border-radius:16px;padding:20px;box-shadow:0 6px 18px rgba(19,40,79,.05)}
+  .h{font-family:'Public Sans',sans-serif;font-weight:800;color:#13284f}
+  .barRow{display:grid;grid-template-columns:170px 1fr 78px;align-items:center;gap:10px;margin:9px 0}
+  .barRow .lab{font-size:12.5px;font-weight:600;color:#13284f}
+  .track{height:18px;border-radius:6px;background:#eef1f7;overflow:hidden}
+  .fill{height:100%;border-radius:6px}
+  .barRow .val{font-size:12.5px;font-weight:800;text-align:right;color:#13284f}
+  .lk{display:block;background:#fff;border:1px solid #e6e9f1;border-left:5px solid #dc2626;border-radius:14px;padding:18px;text-decoration:none;transition:transform .12s,box-shadow .2s}
+  .lk:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(19,40,79,.10)}
+  .lk b{font-family:'Public Sans',sans-serif;font-weight:800;color:#13284f;font-size:16px}
+  .lk span{display:block;font-size:13px;color:#5b6884;margin-top:4px;line-height:1.45}
+  .lk .go{color:#dc2626;font-weight:800;font-size:13px;margin-top:8px;display:inline-block}
+  @media(max-width:640px){.barRow{grid-template-columns:120px 1fr 64px}}
+</style>
+</head>
+<body class="font-sans">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/acopio" class="hover:text-white/70">Acopio</a><a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/suministros-medicos" class="hover:text-white/70">Suministros</a><a href="/herramientas" class="hover:text-white/70">Equipo</a><a href="/red-ayuda" class="hover:text-white/70">Red de Ayuda</a><a href="/contacto" class="hover:text-white/70">Contacto</a></nav></div></header>
+
+<main class="mx-auto max-w-6xl px-4 py-8">
+  <div class="mb-1"><span class="text-xs font-extrabold tracking-widest uppercase cred">Programa de Suministros Médicos</span></div>
+  <h1 class="font-display font-extrabold text-3xl navy">Panel de Control</h1>
+  <p class="mb-6 max-w-3xl" style="color:#5b6884">Centro de mando del programa de stockpile médico de emergencia para Venezuela: importar a un almacén en EE.UU. y desplegar por aire en 24–72h tras un sismo M≥6. KPIs, costos de importación y financiamiento en un solo lugar, con enlace a cada página individual.</p>
+
+  <!-- KPI tiles -->
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+    <div class="tile"><div class="k">Stockpile (landed)</div><div class="v">$214.8K</div><div class="s">Costo en almacén</div></div>
+    <div class="tile"><div class="k">SKUs del botiquín</div><div class="v">40</div><div class="s">3 niveles (IFAK/Trauma/Clínica)</div></div>
+    <div class="tile"><div class="k">Capacidad</div><div class="v">~5,000</div><div class="s">personas / multi-ola</div></div>
+    <div class="tile"><div class="k">Costo / beneficiario</div><div class="v">$8</div><div class="s">por ola desplegada</div></div>
+    <div class="tile"><div class="k">Solicitud Año 1</div><div class="v">$497.9K</div><div class="s">setup + stockpile + 1 año</div></div>
+    <div class="tile"><div class="k">Pipeline fondos</div><div class="v">$421.5K</div><div class="s">ajustado por riesgo</div></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid lg:grid-cols-2 gap-5 mb-8">
+    <section class="panel">
+      <h2 class="h text-lg mb-1">Costo de importación al almacén (landed)</h2>
+      <p class="text-xs mb-3" style="color:#5b6884">Del valor FOB al costo total en almacén en EE.UU. — total $214.8K.</p>
+      <div id="cLanded"></div>
+    </section>
+    <section class="panel">
+      <h2 class="h text-lg mb-1">Pipeline de financiamiento (esperado)</h2>
+      <p class="text-xs mb-3" style="color:#5b6884">Valor ajustado por riesgo por fuente — total ~$421.5K.</p>
+      <div id="cFund"></div>
+    </section>
+    <section class="panel">
+      <h2 class="h text-lg mb-1">Composición del botiquín por nivel</h2>
+      <p class="text-xs mb-3" style="color:#5b6884">SKUs distintos en cada nivel de respuesta.</p>
+      <div id="cTier" class="flex flex-col sm:flex-row items-center gap-5"></div>
+    </section>
+    <section class="panel">
+      <h2 class="h text-lg mb-1">Costo por ola de despliegue a Venezuela</h2>
+      <p class="text-xs mb-3" style="color:#5b6884">Miami → Caracas + última milla — total $48.2K por ola.</p>
+      <div id="cDeploy"></div>
+    </section>
+  </div>
+
+  <!-- Individual pages -->
+  <h2 class="h text-xl mb-1">Páginas del programa</h2>
+  <p class="text-xs mb-4" style="color:#5b6884">Todo el equipo, suministros, Cruz Roja y red de ayuda — cada uno en su página.</p>
+  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <a class="lk" href="/suministros-medicos"><b>💊 Suministros Médicos</b><span>Botiquín completo: medicamentos, sueros, antibióticos y cantidades por población/días.</span><span class="go">Abrir →</span></a>
+    <a class="lk" href="/herramientas"><b>🧰 Herramientas + Cruz Roja</b><span>Equipo de desastre y guía de la Cruz Roja para respuesta en terreno.</span><span class="go">Abrir →</span></a>
+    <a class="lk" href="/red-ayuda"><b>🌐 Red Global de Ayuda</b><span>Organizaciones de ayuda humanitaria y cómo conectarlas a la respuesta.</span><span class="go">Abrir →</span></a>
+    <a class="lk" href="/acopio"><b>📦 Centros de Acopio</b><span>Mapa nacional de acopio, hospitales y Protección Civil.</span><span class="go">Abrir →</span></a>
+  </div>
+
+  <!-- Business plan / model -->
+  <section class="panel mb-10">
+    <h2 class="h text-lg mb-1">Plan de negocio y modelo de costos</h2>
+    <p class="text-sm mb-4" style="color:#5b6884">El plan completo de importación (sourcing, costo landed, despliegue, cumplimiento y financiamiento) con su modelo de 10 pestañas.</p>
+    <div class="flex flex-wrap gap-3">
+      <a href="/plan" class="text-sm font-bold text-white rounded-lg px-4 py-2" style="background:#dc2626">🔒 Plan de Negocio (invitación) →</a>
+      <a href="/suministros-medicos" class="text-sm font-bold rounded-lg px-4 py-2" style="background:#fff;border:1px solid #e6e9f1;color:#13284f">Ver botiquín completo →</a>
+    </div>
+  </section>
+
+  <p class="text-xs mb-6" style="color:#7a8092">Cifras de planificación a junio 2026. Confirmar HTS con broker aduanal y alcance OFAC con asesor legal antes de comprometer capital.</p>
+</main>
+<script src="/app-shell.js" defer></script>
+<script>
+(function(){
+  var NAVY='#13284f', RED='#dc2626', AMBER='#ea580c', GREEN='#16a34a', GOLD='#d97706';
+  function fmt(v,unit){ if(unit==='$') return '$'+(v>=1000?(v/1000).toFixed(1)+'K':v); if(unit==='k$') return '$'+v.toFixed(1)+'K'; return String(v); }
+  // Horizontal bar chart into an element.
+  function bars(id, data, unit, grad){
+    var max=Math.max.apply(null,data.map(function(d){return d.v;}));
+    var html='';
+    data.forEach(function(d){
+      var w=Math.max(2,(d.v/max*100));
+      var color=d.c||grad||('linear-gradient(90deg,'+RED+','+AMBER+')');
+      html+='<div class="barRow"><div class="lab">'+d.l+'</div>'+
+        '<div class="track"><div class="fill" style="width:'+w+'%;background:'+color+'"></div></div>'+
+        '<div class="val">'+fmt(d.v,unit)+'</div></div>';
+    });
+    document.getElementById(id).innerHTML=html;
+  }
+  // Donut chart (SVG) + legend.
+  function donut(id, data){
+    var total=data.reduce(function(a,b){return a+b.v;},0), r=54, c=2*Math.PI*r, off=0, R=70;
+    var seg='';
+    data.forEach(function(d){
+      var frac=d.v/total, len=frac*c;
+      seg+='<circle cx="'+R+'" cy="'+R+'" r="'+r+'" fill="none" stroke="'+d.c+'" stroke-width="22" '+
+        'stroke-dasharray="'+len+' '+(c-len)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 '+R+' '+R+')"/>';
+      off+=len;
+    });
+    var leg='<div class="text-sm" style="color:#13284f">';
+    data.forEach(function(d){
+      leg+='<div style="display:flex;align-items:center;gap:8px;margin:5px 0"><span style="width:12px;height:12px;border-radius:3px;background:'+d.c+';display:inline-block"></span>'+
+        '<b style="font-family:Public Sans">'+d.v+'</b> '+d.l+' <span style="color:#9aa6bd">('+Math.round(d.v/total*100)+'%)</span></div>';
+    });
+    leg+='</div>';
+    document.getElementById(id).innerHTML=
+      '<svg width="'+(2*R)+'" height="'+(2*R)+'" viewBox="0 0 '+(2*R)+' '+(2*R)+'">'+seg+
+      '<text x="'+R+'" y="'+(R-2)+'" text-anchor="middle" font-family="Public Sans" font-weight="900" font-size="26" fill="#13284f">'+total+'</text>'+
+      '<text x="'+R+'" y="'+(R+16)+'" text-anchor="middle" font-family="Inter" font-size="11" fill="#5b6884">SKUs</text></svg>'+leg;
+  }
+
+  bars('cLanded', [
+    {l:'Valor FOB mercancía', v:171.8},
+    {l:'Flete + seguro', v:9.9},
+    {l:'Arancel + aduana (301)', v:6.8},
+    {l:'Broker / FDA / manejo', v:4.9},
+    {l:'Reserva / contingencia', v:21.4}
+  ], 'k$');
+
+  bars('cFund', [
+    {l:'En especie (GIK médico)', v:160, c:'linear-gradient(90deg,#16a34a,#65d08a)'},
+    {l:'Grant institucional (OSF)', v:30},
+    {l:'Diáspora + audiencia', v:75},
+    {l:'Corporativo / farma', v:60},
+    {l:'Crowd + surge post-evento', v:96}
+  ], 'k$');
+
+  donut('cTier', [
+    {l:'T1 IFAK (primera respuesta)', v:16, c:RED},
+    {l:'T2 Trauma (estabilización)', v:11, c:AMBER},
+    {l:'T3 Clínica de campo', v:13, c:NAVY}
+  ]);
+
+  bars('cDeploy', [
+    {l:'Flete aéreo MIA→CCS', v:19.2},
+    {l:'Recargo combustible/seguridad', v:6.6},
+    {l:'Última milla a zona', v:4.5},
+    {l:'Socio NGO + coordinación', v:3.0},
+    {l:'Seguro carga (guerra)', v:1.8},
+    {l:'Aduana VE + INHRR', v:3.0},
+    {l:'Otros + contingencia', v:10.1}
+  ], 'k$');
+})();
+</script>
+</body>
+</html>
