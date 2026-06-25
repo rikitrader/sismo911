@@ -48,16 +48,47 @@ const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','
         <div><label class="lbl">Beneficiario</label><input id="beneficiary" class="fld" maxlength="120" placeholder="Persona u organización"></div>
       </div>
       <div><label class="lbl">Imagen (URL https)</label><input id="image_url" class="fld" maxlength="400" placeholder="https://… (opcional)"></div>
+
+      <div class="border-t border-outline-variant/50 pt-4">
+        <h3 class="font-display font-bold mb-1">Flujo de fondos (transparencia)</h3>
+        <p class="text-xs text-on-surface-variant mb-3">Explica a dónde va el dinero. Se muestra bajo la foto, con KPIs por categoría.</p>
+        <div><label class="lbl">¿Cómo se usarán los fondos?</label><textarea id="fund_use" class="fld" rows="3" maxlength="1200" placeholder="Ej. El 100% va a ayuda directa: rescate, refugio, salud y reunificación familiar…"></textarea></div>
+        <label class="lbl mt-3">Asignación por categoría (etiqueta + %)</label>
+        <div id="alloc" class="space-y-2"></div>
+        <div class="flex items-center justify-between mt-1">
+          <button type="button" id="addAlloc" class="text-sm text-primary hover:underline">+ Agregar categoría</button>
+          <span id="allocSum" class="text-xs text-on-surface-variant">Total: 0%</span>
+        </div>
+      </div>
+
       <button id="go" class="w-full bg-secondary hover:bg-secondary-container text-white font-bold rounded-lg py-3">Crear campaña</button>
       <div id="err" class="text-secondary text-sm"></div>
     </div>`;
   document.getElementById('go').addEventListener('click',create);
+  // allocation row builder
+  const allocBox=document.getElementById('alloc');
+  function sum(){ const t=[...allocBox.querySelectorAll('.a-pct')].reduce((s,i)=>s+(Number(i.value)||0),0); document.getElementById('allocSum').textContent='Total: '+t+'%'; document.getElementById('allocSum').className='text-xs '+(t>100?'text-secondary':'text-on-surface-variant'); }
+  function addRow(label='',pct=''){ const row=document.createElement('div'); row.className='flex gap-2';
+    row.innerHTML=`<input class="fld a-label" maxlength="40" placeholder="Categoría (ej. Rescate)" value="${label}"><input class="fld a-pct" type="number" min="0" max="100" style="max-width:88px" placeholder="%" value="${pct}"><button type="button" class="a-del text-on-surface-variant px-2">✕</button>`;
+    row.querySelector('.a-del').onclick=()=>{row.remove();sum();};
+    row.querySelector('.a-pct').addEventListener('input',sum);
+    allocBox.appendChild(row); sum(); }
+  document.getElementById('addAlloc').onclick=()=>addRow();
+  addRow('Rescate',''); addRow('Refugio',''); // two starter rows
 })();
+
+function readAllocation(){
+  return [...document.querySelectorAll('#alloc .flex')].map(r=>({
+    label:(r.querySelector('.a-label').value||'').trim(),
+    pct:Math.round(Number(r.querySelector('.a-pct').value)||0),
+  })).filter(a=>a.label && a.pct>0);
+}
 
 async function create(){
   const v=id=>document.getElementById(id).value.trim();
   const body={ title:v('title'), summary:v('summary'), story:v('story'), category:v('category'),
-    location:v('location'), goal_usd:Number(v('goal_usd')||0), beneficiary:v('beneficiary'), image_url:v('image_url') };
+    location:v('location'), goal_usd:Number(v('goal_usd')||0), beneficiary:v('beneficiary'), image_url:v('image_url'),
+    fund_use:v('fund_use'), allocation:readAllocation() };
   const err=document.getElementById('err'); err.textContent='';
   if(body.title.length<4){err.textContent='El título es obligatorio (mín. 4 caracteres).';return;}
   const go=document.getElementById('go'); go.disabled=true; go.textContent='Creando…';
