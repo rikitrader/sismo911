@@ -55,6 +55,9 @@ ops.get('/sos', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT * FROM sos_alerts WHERE status != 'resolved' ORDER BY created_ms DESC LIMIT 200`
   ).all();
+  // Operator-only PII (names/phones/coords) — never cache in browsers/proxies.
+  c.header('Cache-Control', 'no-store');
+  c.header('Vary', 'Cookie');
   return c.json({ sos: results ?? [] });
 });
 ops.post('/sos', async (c) => {

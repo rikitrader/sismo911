@@ -52,6 +52,7 @@ export async function storeSignals(env: Env, rows: RawSignal[]): Promise<number>
     const blob = `${r.title ?? ''} ${r.text ?? ''}`.trim();
     const cls = classify(blob);
     if (!cls) continue;
+    if (!/^https?:\/\//i.test(r.url || '')) continue; // only store http(s) links (anti-XSS/anti-junk)
     stmts.push(
       env.DB.prepare(
         `INSERT OR IGNORE INTO social_signals
