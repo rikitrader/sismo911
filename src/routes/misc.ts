@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid, getEvent } from '../lib/db';
 import { estimatePager } from '../lib/pager';
+import { rateLimit, validLatLon } from '../lib/security';
 
 // Heat map, comms directory, web-push, and AI situation reports.
 export const misc = new Hono<{ Bindings: Env }>();
@@ -24,9 +25,14 @@ misc.get('/comms', async (c) => {
 // ---- Web Push (VAPID) ----
 misc.get('/push/vapid', (c) => c.json({ publicKey: c.env.VAPID_PUBLIC_KEY ?? '' }));
 misc.post('/push/subscribe', async (c) => {
+  const limited = await rateLimit(c.env, c, 'push_subscribe', 10, 300);
+  if (limited) return limited;
   const b = await c.req.json().catch(() => null);
   const sub = b?.subscription || b;
   if (!sub?.endpoint || !sub?.keys?.p256dh) return c.json({ error: 'invalid_subscription' }, 400);
+  if (b?.lat != null || b?.lon != null) {
+    if (!validLatLon(Number(b.lat), Number(b.lon))) return c.json({ error: 'bad_lat_lon' }, 400);
+  }
   const id = uid('sub');
   await c.env.DB.prepare(
     `INSERT OR REPLACE INTO push_subs (id,endpoint,p256dh,auth,min_mag,lat,lon,radius_km,created_ms) VALUES (?,?,?,?,?,?,?,?,?)`

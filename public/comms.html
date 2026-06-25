@@ -46,11 +46,12 @@
 
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 fetch('/api/comms').then(r=>r.json()).then(d=>{
   document.getElementById('rows').innerHTML=d.channels.map(c=>`<tr class="border-t border-outline-variant/40">
-    <td class="px-4 py-2.5 font-medium">${c.name}</td><td class="px-3 text-xs">${c.band||''}</td>
-    <td class="px-3 font-mono font-semibold">${c.frequency||''}</td><td class="px-3 text-xs">${c.mode||''}</td>
-    <td class="px-3 text-xs text-on-surface-variant">${c.purpose||''}</td></tr>`).join('');
+    <td class="px-4 py-2.5 font-medium">${esc(c.name)}</td><td class="px-3 text-xs">${esc(c.band||'')}</td>
+    <td class="px-3 font-mono font-semibold">${esc(c.frequency||'')}</td><td class="px-3 text-xs">${esc(c.mode||'')}</td>
+    <td class="px-3 text-xs text-on-surface-variant">${esc(c.purpose||'')}</td></tr>`).join('');
 });
 </script>
 </body>

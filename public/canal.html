@@ -44,7 +44,7 @@
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 const box=document.getElementById('chat');let last=0;
-const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=ms=>new Date(ms).toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
 async function load(){try{const r=await fetch('/api/chat?since='+last);const d=await r.json();if(d.length){const atBottom=box.scrollTop+box.clientHeight>=box.scrollHeight-40;
   d.forEach(m=>{last=Math.max(last,m.created_ms);const el=document.createElement('div');const off=m.role==='official'?'border-l-2 border-secondary pl-2':'';

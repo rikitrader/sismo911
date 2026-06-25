@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
+import { rateLimit } from '../lib/security';
 
 // Community channel — verified-info chat. Public read/write; lightweight guards.
 export const chat = new Hono<{ Bindings: Env }>();
@@ -20,6 +21,8 @@ chat.get('/', async (c) => {
 
 // POST /api/chat  { name, body, channel? }
 chat.post('/', async (c) => {
+  const limited = await rateLimit(c.env, c, 'chat_post', 30, 300);
+  if (limited) return limited;
   const b = await c.req.json().catch(() => null);
   const body = (b?.body ?? '').trim();
   if (!body) return c.json({ error: 'mensaje vacío' }, 400);

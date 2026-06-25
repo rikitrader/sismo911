@@ -84,6 +84,7 @@
 
 <script>
   const api = (p, o) => fetch('/api/' + p, o).then(r => r.json());
+  const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const ago = t => { const s=(Date.now()-t)/1000; if(s<3600)return Math.floor(s/60)+' min'; if(s<86400)return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; };
 
   // Tabs
@@ -104,8 +105,8 @@
     document.getElementById('person-list').innerHTML = persons.length ? persons.map(p=>{
       const [lbl,cls]=STATUS[p.status]||STATUS.unknown;
       return `<div class="px-5 py-3 flex items-start justify-between gap-3">
-        <div><div class="font-semibold">${p.full_name} ${p.age?`<span class="text-on-surface-variant font-normal">· ${p.age}</span>`:''}</div>
-        <div class="text-xs text-on-surface-variant">${p.last_seen||'—'} ${p.contact_phone?`· ☎ ${p.contact_phone}`:''}</div>
+        <div><div class="font-semibold">${esc(p.full_name)} ${p.age?`<span class="text-on-surface-variant font-normal">· ${Number(p.age)}</span>`:''}</div>
+        <div class="text-xs text-on-surface-variant">${esc(p.last_seen||'—')} ${p.contact_phone?`· ☎ ${esc(p.contact_phone)}`:''}</div>
         <div class="text-[11px] text-on-surface-variant mt-0.5">hace ${ago(p.updated_ms)}</div></div>
         <div class="flex items-center gap-2 shrink-0">
           <span class="${cls} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${lbl}</span>
@@ -129,18 +130,18 @@
     const {contacts=[]} = await api('contacts');
     document.getElementById('contact-list').innerHTML = contacts.map(c=>`
       <tr class="border-t border-outline-variant/40">
-        <td class="px-5 py-2.5 font-medium">${c.agency} ${c.is_hotline?'<span class="text-secondary font-bold">●</span>':''}</td>
-        <td class="px-3 text-xs text-on-surface-variant">${c.category}</td>
-        <td class="px-3 text-xs">${c.region||'—'}</td>
-        <td class="px-3 font-mono">${c.phone||'—'}</td>
+        <td class="px-5 py-2.5 font-medium">${esc(c.agency)} ${c.is_hotline?'<span class="text-secondary font-bold">●</span>':''}</td>
+        <td class="px-3 text-xs text-on-surface-variant">${esc(c.category)}</td>
+        <td class="px-3 text-xs">${esc(c.region||'—')}</td>
+        <td class="px-3 font-mono">${esc(c.phone||'—')}</td>
       </tr>`).join('');
   }
 
   // Status
   async function loadStatus(){
     const s = await api('status');
-    const ingest = (s.ingest||[]).map(i=>`<div>USGS · último OK: ${i.last_ok_ms?new Date(i.last_ok_ms).toLocaleTimeString('es-VE'):'—'} · ${i.last_count??0} eventos ${i.last_error?`· <span class="text-secondary">${i.last_error}</span>`:'· <span class="text-safe">ok</span>'}</div>`).join('') || '<div class="text-on-surface-variant">Sin ingesta aún (esperando primer cron).</div>';
-    const soc = (s.social_adapters||[]).map(a=>`<div>${a.platform.padEnd(10)} <span class="${a.configured?'text-safe':'text-warning'}">${a.configured?'CONFIGURADO':'pendiente de credenciales'}</span></div>`).join('');
+    const ingest = (s.ingest||[]).map(i=>`<div>USGS · último OK: ${i.last_ok_ms?new Date(i.last_ok_ms).toLocaleTimeString('es-VE'):'—'} · ${Number(i.last_count??0)} eventos ${i.last_error?`· <span class="text-secondary">${esc(i.last_error)}</span>`:'· <span class="text-safe">ok</span>'}</div>`).join('') || '<div class="text-on-surface-variant">Sin ingesta aún (esperando primer cron).</div>';
+    const soc = (s.social_adapters||[]).map(a=>`<div>${esc(String(a.platform||'').padEnd(10))} <span class="${a.configured?'text-safe':'text-warning'}">${a.configured?'CONFIGURADO':'pendiente de credenciales'}</span></div>`).join('');
     document.getElementById('status-box').innerHTML = '<div class="font-semibold text-on-surface mb-1">USGS</div>'+ingest+'<div class="font-semibold text-on-surface mt-3 mb-1">Adaptadores sociales</div>'+soc;
   }
 

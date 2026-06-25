@@ -345,6 +345,7 @@
   const esPlace = (p) => (p || 'Evento sísmico')
     .replace(/\bof\b/g, 'de').replace(/\bNW\b/g, 'NO').replace(/\bSW\b/g, 'SO')
     .replace(/\bWNW\b/g, 'ONO').replace(/\bWSW\b/g, 'OSO').replace(/\bW\b/g, 'O');
+  const esc = (s) => (s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
   // ---- Map + layer control (street / satellite / NASA GIBS / heat / refugios) ----
   const map = L.map('map', { zoomControl: true, scrollWheelZoom: false, attributionControl: false })
@@ -381,7 +382,7 @@
   fetch('/api/facilities?lat=10.3&lon=-67.0&radius=40000').then(r => r.json()).then(d => {
     (d.facilities || []).forEach(f => L.circleMarker([f.lat, f.lon], {
       radius: 4, color: '#0b2b5b', weight: 1, fillColor: f.type === 'hospital' ? '#2e7d32' : '#445e91', fillOpacity: 1,
-    }).bindTooltip(`${f.name} · ${f.type}`).addTo(facilityLayer));
+    }).bindTooltip(`${esc(f.name)} · ${esc(f.type)}`).addTo(facilityLayer));
   }).catch(() => {});
 
   const feed = document.getElementById('feed');
@@ -402,7 +403,7 @@
         .bindPopup(
           `<div style="font-family:Inter,sans-serif;min-width:170px">
              <div style="font-family:'JetBrains Mono';font-weight:700;color:${HEX[s]};font-size:15px">M ${q.mag.toFixed(1)}</div>
-             <div style="font-weight:600;margin:2px 0 4px">${esPlace(q.place)}</div>
+             <div style="font-weight:600;margin:2px 0 4px">${esc(esPlace(q.place))}</div>
              <div style="font-size:11px;color:#44474f;font-family:'JetBrains Mono'">PROF ${q.depth.toFixed(1)} km · ${q.lat.toFixed(1)}°N ${Math.abs(q.lon).toFixed(1)}°O</div>
              <div style="font-size:11px;color:#747780;margin-top:2px">${timeAgo(q.time)}</div>
            </div>`
@@ -418,7 +419,7 @@
             <span class="${badge} text-white font-mono font-bold text-[11px] px-1.5 py-0.5 rounded shrink-0">M ${q.mag.toFixed(1)}</span>
             <span class="text-[11px] text-on-surface-variant shrink-0 mt-0.5">${timeAgo(q.time)}</span>
           </div>
-          <div class="mt-1.5 font-semibold text-sm text-on-surface leading-snug">${esPlace(q.place)}</div>
+          <div class="mt-1.5 font-semibold text-sm text-on-surface leading-snug">${esc(esPlace(q.place))}</div>
           <div class="mt-1 flex items-center gap-3 text-[11px] text-on-surface-variant font-mono">
             <span>PROF: ${q.depth.toFixed(1)} km</span>
             <span>COORD: ${q.lat.toFixed(1)}°N ${Math.abs(q.lon).toFixed(1)}°O</span>
@@ -540,21 +541,21 @@
   const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => ({ authenticated: false }));
   if (!me.authenticated) return; // keep the "Iniciar sesión" button
   const u = me.user;
-  const initials = (u.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const initials = esc((u.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase());
   const isOp = u.role === 'operator' || u.role === 'admin';
   box.innerHTML = `
     <button id="acctBtn" class="flex items-center gap-2.5 h-11 pl-2 pr-1 rounded-full hover:bg-surface-container transition">
       <div class="text-right leading-tight hidden sm:block">
-        <div class="font-display font-bold text-sm text-on-surface">${u.rank ? u.rank + ' ' : ''}${u.name}</div>
-        <div class="text-[11px] text-on-surface-variant">${u.unit || ROLE[u.role]}</div>
+        <div class="font-display font-bold text-sm text-on-surface">${u.rank ? esc(u.rank) + ' ' : ''}${esc(u.name)}</div>
+        <div class="text-[11px] text-on-surface-variant">${esc(u.unit || ROLE[u.role] || ROLE.citizen)}</div>
       </div>
       <div class="h-9 w-9 rounded-full bg-primary text-white grid place-items-center font-display font-bold text-sm">${initials}</div>
     </button>
     <div id="acctMenu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg border border-outline-variant/60 shadow-lg py-1 z-50">
       <div class="px-4 py-2 border-b border-outline-variant/40">
-        <div class="font-semibold text-sm truncate">${u.name}</div>
-        <div class="text-xs text-on-surface-variant truncate">${u.email}</div>
-        <span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${isOp ? 'bg-secondary text-white' : 'bg-surface-container text-on-surface-variant'}">${ROLE[u.role]}</span>
+        <div class="font-semibold text-sm truncate">${esc(u.name)}</div>
+        <div class="text-xs text-on-surface-variant truncate">${esc(u.email)}</div>
+        <span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${isOp ? 'bg-secondary text-white' : 'bg-surface-container text-on-surface-variant'}">${esc(ROLE[u.role] || ROLE.citizen)}</span>
       </div>
       <a href="/cuenta.html" class="block px-4 py-2 text-sm hover:bg-surface-container">Mi cuenta</a>
       ${isOp ? '<a href="/admin.html" class="block px-4 py-2 text-sm hover:bg-surface-container">Consola de Operaciones</a>' : ''}

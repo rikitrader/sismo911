@@ -11,6 +11,8 @@ export interface Env {
   // Cloudflare Access (defense-in-depth). Enforcement is active only when both set.
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;
+  ALLOWED_ORIGINS?: string;
+  ADMIN_BOOTSTRAP_TOKEN?: string;
   // Web Push
   VAPID_PUBLIC_KEY?: string;
   // Cloudflare Workers AI (situation reports). Optional binding.

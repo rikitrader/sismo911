@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
+import { isImageBytes, rateLimit, validLatLon } from '../lib/security';
 
 export const damage = new Hono<{ Bindings: Env }>();
 
@@ -27,6 +28,8 @@ function parseAssessment(text: string) {
 
 // POST /api/damage — multipart (field "photo") or JSON { imageBase64, lat, lon }
 damage.post('/', async (c) => {
+  const limited = await rateLimit(c.env, c, 'damage_post', 6, 300);
+  if (limited) return limited;
   if (!c.env.AI) return c.json({ error: 'ai_unavailable', hint: 'Workers AI no configurado' }, 503);
 
   let bytes: Uint8Array | null = null;
@@ -48,7 +51,8 @@ damage.post('/', async (c) => {
     const b = await c.req.json().catch(() => null);
     if (b?.imageBase64) {
       const raw = b.imageBase64.replace(/^data:[^;]+;base64,/, '');
-      const bin = atob(raw);
+      let bin = '';
+      try { bin = atob(raw); } catch { return c.json({ error: 'invalid_base64' }, 400); }
       bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       contentType = b.contentType || contentType;
@@ -57,6 +61,9 @@ damage.post('/', async (c) => {
   }
   if (!bytes || !bytes.length) return c.json({ error: 'no_image' }, 400);
   if (bytes.length > 6_000_000) return c.json({ error: 'image_too_large', maxBytes: 6_000_000 }, 413);
+  contentType = ['image/jpeg', 'image/png', 'image/webp'].includes(contentType) ? contentType : 'application/octet-stream';
+  if (!isImageBytes(bytes, contentType)) return c.json({ error: 'unsupported_image_type' }, 415);
+  if ((lat != null || lon != null) && !validLatLon(Number(lat), Number(lon))) return c.json({ error: 'bad_lat_lon' }, 400);
 
   // Run the vision model (image as array of 0-255 bytes per the model schema).
   let raw = '';
@@ -68,7 +75,8 @@ damage.post('/', async (c) => {
     });
     raw = r.response ?? r.description ?? '';
   } catch (e: any) {
-    return c.json({ error: 'ai_failed', detail: String(e?.message ?? e) }, 502);
+    console.error('[damage] ai assessment failed:', e?.message ?? e);
+    return c.json({ error: 'ai_failed' }, 502);
   }
   const parsed = parseAssessment(raw);
 
@@ -79,7 +87,7 @@ damage.post('/', async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO damage_reports (id,photo_key,content_type,severity,summary,hazards,lat,lon,event_id,ai_model,reporter,created_ms)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
-  ).bind(id, photoKey, contentType, parsed.severity, raw, JSON.stringify(parsed.hazards), lat, lon, null, VISION_MODEL, reporter, Date.now()).run();
+  ).bind(id, photoKey, contentType, parsed.severity, raw.slice(0, 4000), JSON.stringify(parsed.hazards), lat, lon, null, VISION_MODEL, reporter ? reporter.slice(0, 120) : null, Date.now()).run();
 
   return c.json({ ok: true, id, photoUrl: `/api/damage/photo/${id}`, severity: parsed.severity, hazards: parsed.hazards, action: parsed.action, summary: raw }, 201);
 });
@@ -98,5 +106,12 @@ damage.get('/photo/:id', async (c) => {
   if (!row) return c.notFound();
   const obj = await c.env.PHOTOS.get(row.photo_key, 'arrayBuffer');
   if (!obj) return c.notFound();
-  return new Response(obj, { headers: { 'Content-Type': row.content_type || 'image/jpeg', 'Cache-Control': 'public, max-age=86400' } });
+  return new Response(obj, {
+    headers: {
+      'Content-Type': row.content_type || 'image/jpeg',
+      'Cache-Control': 'private, max-age=3600',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Disposition': 'inline',
+    },
+  });
 });

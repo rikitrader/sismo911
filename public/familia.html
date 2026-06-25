@@ -50,13 +50,14 @@
 
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ago=t=>{const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';};
 const ST={safe:['A salvo','bg-safe'],need_help:['Necesita ayuda','bg-secondary'],unknown:['Desconocido','bg-warning']};
 async function load(){const {checkins=[]}=await fetch('/api/checkins').then(r=>r.json());
   document.getElementById('count').textContent=checkins.length+' registros';
   document.getElementById('list').innerHTML=checkins.length?checkins.map(c=>{const[l,cl]=ST[c.status]||ST.unknown;
     return `<div class="bg-white border border-outline-variant/60 rounded-lg px-4 py-2.5 flex items-center justify-between">
-      <div><div class="font-semibold text-sm">${c.name}</div>${c.message?`<div class="text-xs text-on-surface-variant">${c.message}</div>`:''}<div class="text-[11px] text-on-surface-variant">hace ${ago(c.created_ms)}</div></div>
+      <div><div class="font-semibold text-sm">${esc(c.name)}</div>${c.message?`<div class="text-xs text-on-surface-variant">${esc(c.message)}</div>`:''}<div class="text-[11px] text-on-surface-variant">hace ${ago(c.created_ms)}</div></div>
       <span class="${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span></div>`;}).join(''):'<p class="text-on-surface-variant text-sm">Sin registros aún.</p>';}
 document.getElementById('form').addEventListener('submit',async e=>{e.preventDefault();
   const status=e.submitter.value; const fd=Object.fromEntries(new FormData(e.target)); fd.status=status;

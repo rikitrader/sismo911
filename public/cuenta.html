@@ -19,6 +19,7 @@
 
 <script>
 const ROLE={citizen:['Ciudadano','bg-safe'],operator:['Operador','bg-warning'],admin:['Administrador','bg-secondary']};
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ago=t=>{if(!t)return '—';const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';};
 document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logout',{method:'POST'});location.href='/login.html';};
 
@@ -26,13 +27,13 @@ document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logou
   const me=await fetch('/api/auth/me').then(r=>r.json());
   if(!me.authenticated){ location.href='/login.html?next=/cuenta.html'; return; }
   const u=me.user; const [rl,rc]=ROLE[u.role]||ROLE.citizen;
-  const initials=(u.name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const initials=esc((u.name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase());
   let html=`
     <div class="bg-white border border-outline-variant/60 rounded-lg p-6 flex items-center gap-4 mb-6">
       <div class="h-16 w-16 rounded-full bg-primary text-white grid place-items-center font-display font-bold text-xl">${initials}</div>
       <div class="flex-1">
-        <div class="font-display font-extrabold text-2xl">${u.rank?u.rank+' ':''}${u.name}</div>
-        <div class="text-on-surface-variant text-sm">${u.email}${u.unit?' · '+u.unit:''}</div>
+        <div class="font-display font-extrabold text-2xl">${u.rank?esc(u.rank)+' ':''}${esc(u.name)}</div>
+        <div class="text-on-surface-variant text-sm">${esc(u.email)}${u.unit?' · '+esc(u.unit):''}</div>
       </div>
       <span class="${rc} text-white text-xs font-bold px-3 py-1 rounded-full">${rl}</span>
     </div>`;
@@ -55,12 +56,12 @@ document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logou
   // my check-ins (match by name)
   const {checkins=[]}=await fetch('/api/checkins').then(r=>r.json());
   const mine=checkins.filter(c=>c.name===u.name);
-  document.getElementById('mine').innerHTML=mine.length?mine.map(c=>`<div class="bg-white border border-outline-variant/60 rounded px-4 py-2 flex justify-between text-sm"><span>${c.status==='safe'?'✅ A salvo':'🆘 Necesita ayuda'} ${c.message?'· '+c.message:''}</span><span class="text-on-surface-variant text-xs">hace ${ago(c.created_ms)}</span></div>`).join(''):'<p class="text-on-surface-variant text-sm">Aún no has registrado tu estado. <a href="/familia.html" class="text-primary underline">Hazlo aquí</a>.</p>';
+  document.getElementById('mine').innerHTML=mine.length?mine.map(c=>`<div class="bg-white border border-outline-variant/60 rounded px-4 py-2 flex justify-between text-sm"><span>${c.status==='safe'?'✅ A salvo':'🆘 Necesita ayuda'} ${c.message?'· '+esc(c.message):''}</span><span class="text-on-surface-variant text-xs">hace ${ago(c.created_ms)}</span></div>`).join(''):'<p class="text-on-surface-variant text-sm">Aún no has registrado tu estado. <a href="/familia.html" class="text-primary underline">Hazlo aquí</a>.</p>';
 
   if(u.role==='admin'){
     const {users=[]}=await fetch('/api/auth/users').then(r=>r.json());
-    document.getElementById('users').innerHTML=users.map(x=>`<tr class="border-t border-outline-variant/40"><td class="px-4 py-2">${x.name}</td><td class="px-3 text-xs">${x.email}</td>
-      <td class="px-3"><select data-id="${x.id}" class="role-sel border border-outline-variant rounded px-2 py-1 text-xs">
+    document.getElementById('users').innerHTML=users.map(x=>`<tr class="border-t border-outline-variant/40"><td class="px-4 py-2">${esc(x.name)}</td><td class="px-3 text-xs">${esc(x.email)}</td>
+      <td class="px-3"><select data-id="${esc(x.id)}" class="role-sel border border-outline-variant rounded px-2 py-1 text-xs">
         ${['citizen','operator','admin'].map(r=>`<option value="${r}" ${x.role===r?'selected':''}>${ROLE[r][0]}</option>`).join('')}</select></td></tr>`).join('');
     document.querySelectorAll('.role-sel').forEach(s=>s.onchange=async()=>{await fetch('/api/auth/users/'+s.dataset.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({role:s.value})});});
   }

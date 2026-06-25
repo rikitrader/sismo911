@@ -71,17 +71,18 @@
 
   // Auth-aware account block
   const ROLE = { citizen: 'Ciudadano', operator: 'Operador', admin: 'Administrador' };
+  const esc = (s) => (s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   fetch('/api/auth/me').then((r) => r.json()).then((d) => {
     const box = document.getElementById('s911-acct');
     if (!d.authenticated) {
       box.innerHTML = `<a href="/login" class="acct" style="display:flex;align-items:center;justify-content:center;gap:8px;background:${NAVY};color:#fff;font:600 13px Inter,sans-serif;padding:10px;border-radius:10px">Iniciar sesión</a>`;
       return;
     }
-    const u = d.user, ini = (u.name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+    const u = d.user, ini = esc((u.name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase());
     const isOp = u.role === 'operator' || u.role === 'admin';
     box.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:6px 4px">
         <div style="width:36px;height:36px;border-radius:50%;background:${NAVY};color:#fff;display:grid;place-items:center;font:700 13px 'Public Sans'">${ini}</div>
-        <div style="line-height:1.1;min-width:0"><div style="font:700 13px Inter;color:${NAVY};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name}</div><div style="font:500 11px Inter;color:${VARIANT}">${ROLE[u.role]}</div></div>
+        <div style="line-height:1.1;min-width:0"><div style="font:700 13px Inter;color:${NAVY};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.name)}</div><div style="font:500 11px Inter;color:${VARIANT}">${esc(ROLE[u.role] || ROLE.citizen)}</div></div>
       </div>
       <div style="display:flex;gap:6px">
         <a href="/cuenta" style="flex:1;text-align:center;font:600 12px Inter;color:${NAVY};border:1px solid ${LINE};border-radius:8px;padding:6px;text-decoration:none">Mi cuenta</a>

@@ -46,15 +46,15 @@ L.control.layers({'Calle':street,'Satélite (Esri)':esri,'Satélite (NASA GIBS)'
 // Citizen damage reports (approved) — colored by severity, labeled by category.
 const SEVHEX={rojo:'#bb0027',naranja:'#e57200',amarillo:'#f2c200'};
 const CATICON={collapsed_building:'🏚️',damaged_building:'🧱',trapped_people:'🆘',gas_leak:'⛽',medical_need:'➕',aid_point:'🤝',water_point:'💧',shelter:'⛺',other:'📌'};
-const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 fetch('/api/reports?limit=800').then(r=>r.json()).then(rows=>{(rows||[]).forEach(x=>{if(x.lat==null||x.lon==null)return;const col=SEVHEX[x.severity]||'#445e91';
   L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:`<div style="font-size:15px;line-height:22px;width:24px;height:24px;text-align:center;border-radius:9999px;background:${col};box-shadow:0 0 0 2px #fff">${CATICON[x.category]||'📌'}</div>`,iconSize:[24,24],iconAnchor:[12,12]})})
-   .bindPopup(`<b>${esc(x.title||x.category)}</b><br>${esc(x.description||'')}<br><span style="color:#666;font-size:11px">${x.source==='kobotoolbox'?'Fuente: KoboToolbox':'Reporte ciudadano'} · ${x.verification}</span><br><a href="/reporte?id=${x.id}" style="color:#00173a;font-weight:600">Ver / comentar →</a>`).addTo(reportes);});});
+   .bindPopup(`<b>${esc(x.title||x.category)}</b><br>${esc(x.description||'')}<br><span style="color:#666;font-size:11px">${x.source==='kobotoolbox'?'Fuente: KoboToolbox':'Reporte ciudadano'} · ${esc(x.verification)}</span><br><a href="/reporte?id=${encodeURIComponent(x.id)}" style="color:#00173a;font-weight:600">Ver / comentar →</a>`).addTo(reportes);});});
 const HEX=m=>m>=4?'#c8102e':m>=2.5?'#e57200':'#2e7d32';
 fetch('/api/events?limit=300').then(r=>r.json()).then(d=>{(d.events||[]).forEach((e,i)=>{const s=Math.max(9,Math.min(34,8+(e.mag-1.5)*6));const rec=i===0;
-  L.marker([e.lat,e.lon],{icon:L.divIcon({className:'',html:`<div class="${rec?'qp':''}" style="position:relative;width:${s}px;height:${s}px;border-radius:9999px;background:${HEX(e.mag)};box-shadow:0 0 0 2px #fff"></div>`,iconSize:[s,s],iconAnchor:[s/2,s/2]})}).bindPopup(`<b>M ${e.mag}</b> · ${e.place}<br>prof ${e.depth_km} km`).addTo(sismos);});});
+  L.marker([e.lat,e.lon],{icon:L.divIcon({className:'',html:`<div class="${rec?'qp':''}" style="position:relative;width:${s}px;height:${s}px;border-radius:9999px;background:${HEX(e.mag)};box-shadow:0 0 0 2px #fff"></div>`,iconSize:[s,s],iconAnchor:[s/2,s/2]})}).bindPopup(`<b>M ${Number(e.mag)}</b> · ${esc(e.place)}<br>prof ${Number(e.depth_km)} km`).addTo(sismos);});});
 fetch('/api/heatmap').then(r=>r.json()).then(d=>{(d.points||[]).forEach(([la,lo,w])=>L.circle([la,lo],{radius:12000+w*60000,stroke:false,fillColor:'#c8102e',fillOpacity:.08+w*.18}).addTo(heat));});
-fetch('/api/facilities?lat=10.3&lon=-67.0&radius=45000').then(r=>r.json()).then(d=>{(d.facilities||[]).forEach(f=>L.circleMarker([f.lat,f.lon],{radius:4,color:'#0b2b5b',weight:1,fillColor:f.type==='hospital'?'#2e7d32':'#445e91',fillOpacity:1}).bindTooltip(`${f.name} · ${f.type}`).addTo(refugios));});
+fetch('/api/facilities?lat=10.3&lon=-67.0&radius=45000').then(r=>r.json()).then(d=>{(d.facilities||[]).forEach(f=>L.circleMarker([f.lat,f.lon],{radius:4,color:'#0b2b5b',weight:1,fillColor:f.type==='hospital'?'#2e7d32':'#445e91',fillOpacity:1}).bindTooltip(`${esc(f.name)} · ${esc(f.type)}`).addTo(refugios));});
 </script>
 </body>
 </html>

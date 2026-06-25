@@ -1,0 +1,22 @@
+{
+  "name": "SISMO911 — Fuerza de Protección Civil",
+  "short_name": "SISMO911",
+  "description": "Monitoreo sísmico nacional de Venezuela en tiempo real: alertas, mapa, SOS, registro familiar y guía de emergencia.",
+  "lang": "es-VE",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#13284f",
+  "theme_color": "#13284f",
+  "categories": ["utilities", "navigation", "government"],
+  "icons": [
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/logo.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Emergencia / SOS", "short_name": "SOS", "url": "/sos", "icons": [{ "src": "/logo.svg", "sizes": "any" }] },
+    { "name": "Mapa sísmico", "short_name": "Mapa", "url": "/mapa" },
+    { "name": "Guía de emergencia", "short_name": "Guía", "url": "/guia" }
+  ]
+}

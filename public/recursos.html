@@ -42,12 +42,13 @@
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 const KIND={water:['💧','Agua'],food:['🥫','Alimentos'],shelter:['🏠','Refugio'],medical:['🏥','Médico'],fuel:['⛽','Combustible'],power:['⚡','Energía']};
 const STAT={available:['Disponible','text-safe'],low:['Bajo','text-warning'],depleted:['Agotado','text-secondary']};
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 fetch('/api/resources').then(r=>r.json()).then(d=>{
   document.getElementById('grid').innerHTML=d.resources.length?d.resources.map(r=>{const[ic,kl]=KIND[r.kind]||['📦',r.kind];const[sl,sc]=STAT[r.status]||STAT.available;
     return `<div class="bg-white border border-outline-variant/60 rounded-lg p-4">
       <div class="flex items-center justify-between"><span class="text-2xl">${ic}</span><span class="text-xs font-bold ${sc}">${sl}</span></div>
-      <div class="font-display font-bold mt-2">${r.label}</div>
-      <div class="text-xs text-on-surface-variant">${kl}${r.region?' · '+r.region:''}${r.quantity&&r.quantity!=='—'?' · '+r.quantity:''}</div></div>`;}).join(''):'<p class="text-on-surface-variant text-sm">Sin recursos cargados.</p>';
+      <div class="font-display font-bold mt-2">${esc(r.label)}</div>
+      <div class="text-xs text-on-surface-variant">${esc(kl)}${r.region?' · '+esc(r.region):''}${r.quantity&&r.quantity!=='—'?' · '+esc(r.quantity):''}</div></div>`;}).join(''):'<p class="text-on-surface-variant text-sm">Sin recursos cargados.</p>';
 });
 </script>
 </body>
