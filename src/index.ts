@@ -19,6 +19,7 @@ import { chat } from './routes/chat';
 import { acopio } from './routes/acopio';
 import { admin } from './routes/admin';
 import { dedupePersonas } from './lib/dedupe';
+import { cleanPersonas } from './lib/clean';
 import { monitor } from './routes/monitor';
 import { aidOrgs } from './routes/aid_orgs';
 import { ingestSocialMonitor } from './ingest/social-monitor';
@@ -162,6 +163,37 @@ app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directo
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
 
+// Per-person social cards: a shared /familia?persona=<id> link rewrites the page's
+// OG/Twitter meta to the person's photo + name, so the preview shows THEM (→ virality).
+app.get('/familia', async (c) => {
+  const assetRes = await c.env.ASSETS.fetch(new Request(new URL('/familia', c.req.url).toString(), c.req.raw));
+  const base = new Response(assetRes.body, assetRes);
+  setSecurityHeaders({ header: (k: string, v: string) => base.headers.set(k, v) } as any);
+  base.headers.set('Cache-Control', 'no-cache, must-revalidate');
+  const id = c.req.query('persona');
+  if (!id) return base;
+  const p = await c.env.DESAP.prepare(
+    `SELECT id, nombre, edad, ubicacion, foto, foto_r2 FROM personas WHERE id = ? AND moderation='approved'`
+  ).bind(id).first<any>().catch(() => null);
+  if (!p) return base;
+  const e = (s: string) => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]!));
+  const title = `🔴 Buscamos a ${p.nombre}${p.edad ? `, ${p.edad} años` : ''} — SISMO911`;
+  const desc = `Última ubicación: ${p.ubicacion || 'Venezuela'}. Ayúdanos a difundir y reunir a esta familia. #SISMO911`;
+  const img = (p.foto_r2 || p.foto) ? `https://sismo911.com/api/familia/photo/${p.id}` : 'https://sismo911.com/og/og-default.png';
+  const url = `https://sismo911.com/familia?persona=${p.id}`;
+  const set = (v: string) => ({ element(el: any) { el.setAttribute('content', v); } });
+  return new HTMLRewriter()
+    .on('title', { element(el) { el.setInnerContent(title); } })
+    .on('meta[property="og:title"]', set(title))
+    .on('meta[property="og:description"]', set(desc))
+    .on('meta[property="og:url"]', set(url))
+    .on('meta[property="og:image"]', set(img))
+    .on('head', { element(el) { el.append(
+      `<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${e(title)}"><meta name="twitter:description" content="${e(desc)}"><meta name="twitter:image" content="${img}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">`,
+      { html: true }); } })
+    .transform(base);
+});
+
 // Anything not under /api and not a static asset → let ASSETS serve (404s handled by CF).
 app.all('*', async (c) => {
   // Serve static assets, but re-apply the security headers — ASSETS.fetch returns
@@ -199,8 +231,13 @@ export default {
       // Hourly: sync structural-damage reports from sosvenezuela2026 (source of truth).
       if (new Date(_event.scheduledTime).getUTCMinutes() === 0) {
         await ingestSosDamage(env).catch((e: any) => console.error('[cron] sos-damage sync failed:', e?.message ?? e));
-        // Hourly: re-ingest the missing-persons (Familia) registry from FAMILIA_SOURCE_URL (no-op if unset).
+        // Hourly: re-ingest the missing-persons (Familia) registry from FAMILIA_SOURCE_URL (no-op if unset),
+        // then CLEAN BEFORE LIVE — flag corrupted/fake rows (→moderation='rejected', hidden from public)
+        // and remove exact-content + same-photo duplicates. Public reads only ever see clean, deduped rows.
         await ingestFamilia(env).catch((e: any) => console.error('[cron] familia sync failed:', e?.message ?? e));
+        await cleanPersonas(env, { apply: true }).catch((e: any) => console.error('[cron] personas clean failed:', e?.message ?? e));
+        await dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 }).catch((e: any) => console.error('[cron] personas dedupe(exact) failed:', e?.message ?? e));
+        await dedupePersonas(env, { mode: 'photo', apply: true, limit: 400 }).catch((e: any) => console.error('[cron] personas dedupe(photo) failed:', e?.message ?? e));
         // Hourly: social/web disaster-signal monitor → D1, then mirror into the Google Sheet.
         await ingestSocialMonitor(env).catch((e: any) => console.error('[cron] social monitor failed:', e?.message ?? e));
         await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));
