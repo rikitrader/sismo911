@@ -35,13 +35,13 @@ async function quakeRef(env: any): Promise<any> {
 
 // Does a case id exist (native persons OR Familia personas)?
 async function caseExists(env: any, id: string): Promise<boolean> {
-  if (isFam(id)) return !!(await env.DESAP.prepare(`SELECT id FROM personas WHERE id = ?`).bind(famKey(id)).first());
+  if (isFam(id)) return !!(await env.DB.prepare(`SELECT id FROM personas WHERE id = ?`).bind(famKey(id)).first());
   return !!(await env.DB.prepare(`SELECT id FROM persons WHERE id = ?`).bind(id).first());
 }
 
 // Build the case "person" object for a Familia record + its metadata overlay.
 async function famPerson(env: any, id: string, op: boolean): Promise<any> {
-  const row: any = await env.DESAP.prepare(`SELECT * FROM personas WHERE id = ?`).bind(famKey(id)).first();
+  const row: any = await env.DB.prepare(`SELECT * FROM personas WHERE id = ?`).bind(famKey(id)).first();
   if (!row) return null;
   const meta: any = await env.DB.prepare(`SELECT priority, incident_type, assigned_to FROM case_meta WHERE person_id = ?`).bind(id).first().catch(() => null);
   const base: any = {
@@ -94,7 +94,7 @@ persons.get('/stats', async (c) => {
   ).first();
   // Federate the Familia (DESAP personas) registry so /personas reflects ALL cases.
   let f: any = {};
-  try { f = await c.env.DESAP.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','fallecido') THEN 1 ELSE 0 END) AS found, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
+  try { f = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','fallecido') THEN 1 ELSE 0 END) AS found, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
   return c.json({
     missing: (row?.missing ?? 0) + (f?.missing ?? 0),
     found: (row?.found ?? 0) + (f?.found ?? 0),
@@ -165,7 +165,7 @@ persons.get('/cases', async (c) => {
   const famLimit = Math.min(limit, 500);
   let famCases: any[] = [];
   try {
-    const { results: famRows } = await c.env.DESAP.prepare(
+    const { results: famRows } = await c.env.DB.prepare(
       `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto, foto_r2, estado, created_at, updated_at
        FROM personas ${fwSql} ORDER BY updated_at DESC, id DESC LIMIT ?`
     ).bind(...fb, famLimit).all<any>();
@@ -196,7 +196,7 @@ persons.get('/cases', async (c) => {
   const merged = [...cases, ...famCases].sort((a, b) => (b.updated_ms || 0) - (a.updated_ms || 0)).slice(0, limit);
 
   let fsum: any = {};
-  try { fsum = await c.env.DESAP.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado='localizado' THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
+  try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado='localizado' THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
   const summary = {
     missing: (sum?.missing || 0) + (fsum?.missing || 0),
     found_safe: (sum?.found_safe || 0) + (fsum?.found_safe || 0),
@@ -221,7 +221,7 @@ persons.get('/docket/queue', async (c) => {
   // Resolve names for Familia-origin pending updates (no row in persons).
   for (const u of updates) {
     if (!u.full_name && isFam(u.person_id)) {
-      const r: any = await c.env.DESAP.prepare(`SELECT nombre FROM personas WHERE id = ?`).bind(famKey(u.person_id)).first().catch(() => null);
+      const r: any = await c.env.DB.prepare(`SELECT nombre FROM personas WHERE id = ?`).bind(famKey(u.person_id)).first().catch(() => null);
       u.full_name = r?.nombre || u.person_id;
     }
   }
@@ -239,7 +239,7 @@ persons.post('/docket/:eid/approve', async (c) => {
   // If the update proposed a status change, apply it to the person now (native
   // persons row, or the Familia personas record for bridged cases).
   if (ev.status_to && ['missing', 'found_safe', 'found_deceased', 'unknown'].includes(ev.status_to)) {
-    if (isFam(ev.person_id)) await c.env.DESAP.prepare(`UPDATE personas SET estado = ?, updated_at = ? WHERE id = ?`).bind(statusToEstado(ev.status_to), Date.now(), famKey(ev.person_id)).run();
+    if (isFam(ev.person_id)) await c.env.DB.prepare(`UPDATE personas SET estado = ?, updated_at = ? WHERE id = ?`).bind(statusToEstado(ev.status_to), Date.now(), famKey(ev.person_id)).run();
     else await c.env.DB.prepare(`UPDATE persons SET status = ?, updated_ms = ? WHERE id = ?`).bind(ev.status_to, Date.now(), ev.person_id).run();
   } else if (!isFam(ev.person_id)) {
     await c.env.DB.prepare(`UPDATE persons SET updated_ms = ? WHERE id = ?`).bind(Date.now(), ev.person_id).run();
@@ -307,7 +307,7 @@ persons.post('/:id/docket', async (c) => {
   const fam = isFam(id);
   let curStatus: string;
   if (fam) {
-    const row = await c.env.DESAP.prepare(`SELECT estado FROM personas WHERE id = ?`).bind(famKey(id)).first<any>();
+    const row = await c.env.DB.prepare(`SELECT estado FROM personas WHERE id = ?`).bind(famKey(id)).first<any>();
     if (!row) return c.json({ error: 'not_found' }, 404);
     curStatus = estadoToStatus(row.estado);
   } else {
@@ -326,7 +326,7 @@ persons.post('/:id/docket', async (c) => {
   // Operators: apply immediately + approved. Citizens: pending, status untouched.
   if (op) {
     if (status_to) {
-      if (fam) await c.env.DESAP.prepare(`UPDATE personas SET estado = ?, updated_at = ? WHERE id = ?`).bind(statusToEstado(status_to), Date.now(), famKey(id)).run();
+      if (fam) await c.env.DB.prepare(`UPDATE personas SET estado = ?, updated_at = ? WHERE id = ?`).bind(statusToEstado(status_to), Date.now(), famKey(id)).run();
       else await c.env.DB.prepare(`UPDATE persons SET status = ?, updated_ms = ? WHERE id = ?`).bind(status_to, Date.now(), id).run();
     } else if (!fam) {
       await c.env.DB.prepare(`UPDATE persons SET updated_ms = ? WHERE id = ?`).bind(Date.now(), id).run();
@@ -524,7 +524,7 @@ persons.get('/search', async (c) => {
   // Federate the Familia registry so a search on /personas covers ALL cases.
   let fam: any[] = [];
   try {
-    const { results: fr } = await c.env.DESAP.prepare(
+    const { results: fr } = await c.env.DB.prepare(
       `SELECT id, nombre, edad, ubicacion, estado, foto, foto_r2, updated_at FROM personas WHERE nombre LIKE ? ORDER BY updated_at DESC LIMIT 60`
     ).bind(like).all<any>();
     fam = (fr || []).map((r: any) => ({
@@ -595,10 +595,10 @@ persons.patch('/:id', async (c) => {
   const id = c.req.param('id');
   // Familia-bridged case: write status to the DESAP personas record.
   if (isFam(id)) {
-    const row = await c.env.DESAP.prepare(`SELECT estado FROM personas WHERE id = ?`).bind(famKey(id)).first<any>();
+    const row = await c.env.DB.prepare(`SELECT estado FROM personas WHERE id = ?`).bind(famKey(id)).first<any>();
     if (!row) return c.json({ error: 'not_found' }, 404);
     const prevStatus = estadoToStatus(row.estado);
-    await c.env.DESAP.prepare(`UPDATE personas SET estado = ?, updated_at = ? WHERE id = ?`).bind(statusToEstado(b.status), Date.now(), famKey(id)).run();
+    await c.env.DB.prepare(`UPDATE personas SET estado = ?, updated_at = ? WHERE id = ?`).bind(statusToEstado(b.status), Date.now(), famKey(id)).run();
     if (prevStatus !== b.status) await logDocket(c, id, 'status_change', { status_from: prevStatus, status_to: b.status, source: 'operator' });
     await audit(c, 'persons.status_update', { id, status: b.status });
     return c.json({ ok: true, changed: 1 });

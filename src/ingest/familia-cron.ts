@@ -67,7 +67,7 @@ export async function ingestFamilia(env: Env): Promise<number> {
       const nombre = pick(o, ['nombre', 'name', 'full_name', 'nombre_completo']);
       if (!nombre) continue;
       const id = rawId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
-      stmts.push(env.DESAP.prepare(
+      stmts.push(env.DB.prepare(
         `INSERT INTO personas (id, nombre, edad, ubicacion, fecha, descripcion, contacto, foto, estado,
             localizado_por, localizado_contacto, localizado_relacion, localizado_nota,
             reportada, reportes, reportada_at, created_at, updated_at, pulled_at)
@@ -96,7 +96,7 @@ export async function ingestFamilia(env: Env): Promise<number> {
     }
 
     let written = 0;
-    for (let i = 0; i < stmts.length; i += 100) { await env.DESAP.batch(stmts.slice(i, i + 100)); written += Math.min(100, stmts.length - i); }
+    for (let i = 0; i < stmts.length; i += 100) { await env.DB.batch(stmts.slice(i, i + 100)); written += Math.min(100, stmts.length - i); }
 
     const next = lastPage >= totalPages ? 1 : lastPage + 1;   // wrap to 1 after a full cycle
     await env.CACHE.put(CURSOR_KEY, String(next)).catch(() => {});
