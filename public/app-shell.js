@@ -56,7 +56,7 @@
   shell.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;padding:0 18px;height:72px;border-bottom:1px solid ${LINE}">
       <img src="/logo.svg" alt="SISMO911" style="width:46px;height:46px">
-      <div style="line-height:1.05"><div style="font:800 17px 'Public Sans',sans-serif;color:${NAVY};letter-spacing:-.01em">SISMO911</div><div style="font:700 9px 'Public Sans',sans-serif;letter-spacing:.05em;color:${VARIANT};text-transform:uppercase">Vigilancia Nacional</div></div>
+      <div style="line-height:1"><div style="font:800 30px 'Public Sans',sans-serif;color:${NAVY};letter-spacing:-.01em">SISMO911</div></div>
     </div>
     <nav style="flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:2px">${NAV.map(item).join('')}</nav>
     <div style="padding:12px;border-top:1px solid ${LINE};display:flex;flex-direction:column;gap:8px">
