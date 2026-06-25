@@ -42,11 +42,20 @@ monitor.get('/stats', async (c) => {
   });
 });
 
+// Constant-time secret check that FAILS CLOSED: an unset env secret (or missing
+// query param) is always rejected — never let `undefined === undefined` open the gate.
+function secretOk(want: string | undefined, got: string | undefined): boolean {
+  if (!want || !got || want.length !== got.length) return false;
+  let diff = 0;
+  for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ got.charCodeAt(i);
+  return diff === 0;
+}
+
 // POST /api/monitor/refresh?secret=… — manual immediate ingest + sheet sync.
 // Secret-gated (same token as the Apify webhook) so it can be triggered by an
 // operator or an external scheduler without an interactive session.
 monitor.post('/refresh', async (c) => {
-  if (c.req.query('secret') !== c.env.MONITOR_WEBHOOK_SECRET) return c.json({ error: 'forbidden' }, 403);
+  if (!secretOk(c.env.MONITOR_WEBHOOK_SECRET, c.req.query('secret'))) return c.json({ error: 'forbidden' }, 403);
   const n = await ingestSocialMonitor(c.env);
   const synced = await syncMonitorSheet(c.env).catch(() => 0);
   return c.json({ ok: true, ingested: n, synced });
@@ -54,11 +63,15 @@ monitor.post('/refresh', async (c) => {
 
 // POST /api/monitor/apify?secret=…&platform=tiktok — Apify run-finished webhook.
 monitor.post('/apify', async (c) => {
-  if (c.req.query('secret') !== c.env.MONITOR_WEBHOOK_SECRET) return c.json({ error: 'forbidden' }, 403);
-  const platform = c.req.query('platform') ?? 'tiktok';
+  if (!secretOk(c.env.MONITOR_WEBHOOK_SECRET, c.req.query('secret'))) return c.json({ error: 'forbidden' }, 403);
+  const platform = c.req.query('platform') === 'instagram' ? 'instagram' : 'tiktok';
   const body = await c.req.json().catch(() => null);
   const datasetId = body?.resource?.defaultDatasetId;
-  if (!datasetId || !c.env.APIFY_TOKEN) return c.json({ error: 'no_dataset' }, 400);
+  // Validate the dataset id (Apify ids are alphanumeric) before interpolating it
+  // into the API URL — prevents SSRF/path-injection via attacker-supplied body.
+  if (!datasetId || typeof datasetId !== 'string' || !/^[a-zA-Z0-9]{1,40}$/.test(datasetId) || !c.env.APIFY_TOKEN) {
+    return c.json({ error: 'no_dataset' }, 400);
+  }
   const res = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${c.env.APIFY_TOKEN}&clean=true&limit=200`);
   const items = await res.json<any[]>().catch(() => []);
   const written = await storeSignals(c.env, fromApifyItems(platform, items));

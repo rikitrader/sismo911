@@ -70,6 +70,7 @@ const CAT={
 const SEVCOL={rojo:'#c8102e',naranja:'#e57200',amarillo:'#ffbc3d'};
 const VERIF={community_confirmed:'Confirmado por comunidad',official_verified:'Verificado oficial',unverified:'Sin verificar'};
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl=u=>{u=(u||'').trim();return /^https?:\/\//i.test(u)?u:'#';};
 const color=r=>{ if(['aid_point','shelter','water_point','medical_need'].includes(r.category))return CAT[r.category]?.[1]||'#0b2b5b'; return SEVCOL[r.severity]||CAT[r.category]?.[1]||'#e57200'; };
 
 const map=L.map('map',{attributionControl:false}).setView([10.3,-66.9],8);
@@ -91,7 +92,7 @@ function render(reports){
        <div style="font-weight:600;margin:2px 0">${esc(r.title||'')}</div>
        <div style="font-size:12px;color:#44474f">${esc(r.description||'')}</div>
        <div style="font-size:11px;color:#747780;margin-top:4px">${esc(r.municipio||'')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}</div>
-       ${r.source_url?`<a href="${r.source_url}" target="_blank" style="font-size:11px;color:#0b2b5b">fuente ↗</a>`:''}</div>`);
+       ${r.source_url?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener" style="font-size:11px;color:#0b2b5b">fuente ↗</a>`:''}</div>`);
   });
   Object.keys(layers).forEach(c=>active.has(c)?layers[c].addTo(map):map.removeLayer(layers[c]));
 }
@@ -123,7 +124,7 @@ function renderList(){
       <div class="font-display font-bold mt-1 leading-snug">${esc(r.title||'(sin título)')}</div>
       <div class="text-xs text-on-surface-variant mt-0.5">${esc(r.description||'')}</div>
       <div class="text-[11px] text-on-surface-variant mt-1">${esc(r.municipio||'—')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}</div>
-      ${r.source_url?`<a href="${esc(r.source_url)}" target="_blank" class="text-[11px] text-primary underline">fuente ↗</a>`:''}
+      ${r.source_url?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener" class="text-[11px] text-primary underline">fuente ↗</a>`:''}
     </div>`).join('') || '<p class="text-on-surface-variant text-sm col-span-full">Sin reportes.</p>';
   document.getElementById('listMore').innerHTML = rows.length>listShown
     ? '<button id="listMoreBtn" class="px-4 py-2 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>' : '';
@@ -178,6 +179,7 @@ fetch('/api/danos-estructurales').then(r=>r.json()).then(d=>{
   const SEVC={critical:'#c70d2e',alert:'#d97706',info:'#475569'};
   const PIC={tiktok:'🎵',instagram:'📸',reddit:'👽',gdelt:'📰',telegram:'✈️',x:'✖️'};
   const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl=u=>{u=(u||'').trim();return /^https?:\/\//i.test(u)?u:'#';};
   const ago=t=>{if(!t)return '';const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+' h';return Math.floor(s/86400)+' d';};
   const P=document.getElementById('msPanel');
   let sev='';
@@ -195,7 +197,7 @@ fetch('/api/danos-estructurales').then(r=>r.json()).then(d=>{
             ${s.city?`<b class="font-display"> ${esc(s.city)}</b> · `:' '}
             <span class="text-on-surface-variant text-[11px]">${ago(s.posted_ms)}</span></div>
           <div class="mt-0.5">${esc((s.title||s.text||'').slice(0,180))}</div>
-          <div class="mt-0.5 text-[11px] text-on-surface-variant">${esc(s.tags||'')}${s.url?` · <a href="${esc(s.url)}" target="_blank" rel="noopener" class="text-primary underline">ver</a>`:''}</div>
+          <div class="mt-0.5 text-[11px] text-on-surface-variant">${esc(s.tags||'')}${s.url?` · <a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener" class="text-primary underline">ver</a>`:''}</div>
         </div>`).join(''):'<div class="p-4 text-sm text-on-surface-variant">Sin señales todavía. El monitor actualiza cada hora.</div>';
     }).catch(()=>{document.getElementById('msList').innerHTML='<div class="p-4 text-sm text-secondary">No se pudo cargar el monitor.</div>';});
   }

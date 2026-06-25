@@ -27,6 +27,7 @@ export function setSecurityHeaders(c: Context) {
   c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
   c.header('Permissions-Policy', 'camera=(), microphone=(), payment=(), usb=(), browsing-topics=()');
+  c.header('Cross-Origin-Opener-Policy', 'same-origin');
   c.header(
     'Content-Security-Policy',
     [
