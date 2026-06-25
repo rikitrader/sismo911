@@ -86,14 +86,14 @@
 
   <!-- ============ SIDEBAR ============ -->
   <aside class="hidden lg:flex w-64 flex-col bg-white border-r border-outline-variant/60 shrink-0">
-    <!-- Emblem / brand -->
-    <div class="flex items-center gap-3 px-5 h-[88px] border-b border-outline-variant/50">
+    <!-- Emblem / brand (clickable → home) -->
+    <a href="/" aria-label="Ir al inicio" class="flex items-center gap-3 px-5 h-[88px] border-b border-outline-variant/50 hover:bg-surface-container-low transition">
       <!-- Institutional seal -->
       <img src="/logo.svg" alt="Fuerza de Protección Civil — SISMO911" class="h-12 w-12 shrink-0" />
       <div class="leading-tight">
         <div class="font-display font-extrabold text-[30px] leading-none text-primary tracking-tight">SISMO911</div>
       </div>
-    </div>
+    </a>
 
     <!-- Nav — duotone navy chips -->
     <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
@@ -174,7 +174,7 @@
       </div>
       <div class="flex items-center gap-2 sm:gap-3">
         <!-- Notifications -->
-        <button class="relative h-10 w-10 grid place-items-center rounded-full text-on-surface-variant hover:bg-surface-container hover:text-primary transition" aria-label="Notificaciones">
+        <button id="notifBtn" class="relative h-10 w-10 grid place-items-center rounded-full text-on-surface-variant hover:bg-surface-container hover:text-primary transition" aria-label="Notificaciones">
           <svg class="h-[21px] w-[21px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 8.5a6 6 0 10-12 0c0 5.5-2 7.5-2.5 8 0 .3.2.5.5.5h16c.3 0 .5-.2.5-.5-.5-.5-2.5-2.5-2.5-8z"/><path stroke-linecap="round" stroke-linejoin="round" d="M10 20a2 2 0 004 0"/></svg>
           <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-secondary ring-2 ring-white"></span>
         </button>
@@ -500,18 +500,18 @@
 
   // ---- Emergency resources ----
   const RES = [
-    { label: 'Manuales de Protocolo', d: 'M9 2h6l3 3v15a1 1 0 01-1 1H7a1 1 0 01-1-1V6l3-4z M9 2v4H6' },
-    { label: 'Estaciones Médicas',    d: 'M12 7v10M7 12h10 M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z' },
-    { label: 'Radio Comunicaciones',  d: 'M4 11a16 16 0 0116 0 M7 14a10 10 0 0110 0 M10 17a5 5 0 014 0 M12 20h.01' },
-    { label: 'Despacho de Patrullas', d: 'M3 13l2-5a2 2 0 012-1.4h8A2 2 0 0120 8l2 5v5a1 1 0 01-1 1h-1a1 1 0 01-1-1v-1H6v1a1 1 0 01-1 1H4a1 1 0 01-1-1v-5z M7 16h.01M17 16h.01' },
+    { label: 'Manuales de Protocolo', href: '/guia',     d: 'M9 2h6l3 3v15a1 1 0 01-1 1H7a1 1 0 01-1-1V6l3-4z M9 2v4H6' },
+    { label: 'Estaciones Médicas',    href: '/acopio',   d: 'M12 7v10M7 12h10 M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z' },
+    { label: 'Radio Comunicaciones',  href: '/comms',    d: 'M4 11a16 16 0 0116 0 M7 14a10 10 0 0110 0 M10 17a5 5 0 014 0 M12 20h.01' },
+    { label: 'Despacho de Patrullas', href: '/sos',      d: 'M3 13l2-5a2 2 0 012-1.4h8A2 2 0 0120 8l2 5v5a1 1 0 01-1 1h-1a1 1 0 01-1-1v-1H6v1a1 1 0 01-1 1H4a1 1 0 01-1-1v-5z M7 16h.01M17 16h.01' },
   ];
   document.getElementById('resources').innerHTML = RES.map(r => `
-    <button class="flex items-center gap-3 p-3.5 rounded-md border border-outline-variant/60 hover:border-primary hover:bg-surface-container-low text-left transition group">
+    <a href="${r.href}" class="flex items-center gap-3 p-3.5 rounded-md border border-outline-variant/60 hover:border-primary hover:bg-surface-container-low text-left transition group">
       <span class="h-9 w-9 grid place-items-center rounded-md bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0">
         <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${r.d}"/></svg>
       </span>
       <span class="font-display font-semibold text-sm text-on-surface leading-tight">${r.label}</span>
-    </button>`).join('');
+    </a>`).join('');
 </script>
 
 <!-- Account menu (auth-aware) -->
@@ -547,6 +547,32 @@
   btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); };
   document.addEventListener('click', () => menu.classList.add('hidden'));
   document.getElementById('logoutBtn').onclick = async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.reload(); };
+})();
+</script>
+
+<!-- Push notifications: bell → request permission → subscribe → confirm -->
+<script>
+(function(){
+  const btn = document.getElementById('notifBtn'); if(!btn) return;
+  const dot = btn.querySelector('span.absolute');
+  const setActive = on => { if(dot) dot.style.background = on ? '#2e7d32' : ''; btn.title = on ? 'Notificaciones activadas' : 'Activar alertas de sismos'; };
+  setActive('Notification' in window && Notification.permission === 'granted');
+  const b64 = s => { const p='='.repeat((4-s.length%4)%4); const b=(s+p).replace(/-/g,'+').replace(/_/g,'/'); const r=atob(b); return Uint8Array.from([...r].map(c=>c.charCodeAt(0))); };
+  btn.addEventListener('click', async () => {
+    if(!('serviceWorker' in navigator) || !('Notification' in window) || !('PushManager' in window)){ alert('Tu navegador no soporta notificaciones push.'); return; }
+    try{
+      const perm = await Notification.requestPermission();
+      if(perm !== 'granted'){ alert('Permite las notificaciones en tu navegador para recibir alertas de sismos.'); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const { publicKey } = await fetch('/api/push/vapid').then(r=>r.json()).catch(()=>({publicKey:''}));
+      if(publicKey){
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:b64(publicKey) }).catch(()=>null);
+        if(sub) await fetch('/api/push/subscribe',{ method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ subscription: sub.toJSON(), min_mag: 3.5 }) }).catch(()=>{});
+      }
+      setActive(true);
+      reg.showNotification('SISMO911 ✓', { body:'Notificaciones activadas. Te avisaremos de sismos relevantes en Venezuela.', icon:'/logo.svg', badge:'/logo.svg' });
+    }catch(e){ alert('No se pudieron activar las notificaciones: ' + (e && e.message || e)); }
+  });
 })();
 </script>
 </body>

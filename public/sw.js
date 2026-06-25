@@ -1,5 +1,5 @@
 // SISMO911 service worker — offline shell + cached emergency guide.
-const CACHE = 'sismo911-v4';
+const CACHE = 'sismo911-v5';
 const PRECACHE = ['/', '/guia.html', '/logo.svg', '/mapa.html', '/sos.html', '/acopio.html', '/acopio-data.json'];
 
 self.addEventListener('install', (e) => {
@@ -28,5 +28,31 @@ self.addEventListener('fetch', (e) => {
         return res;
       })
       .catch(() => caches.match(request).then((hit) => hit || (request.mode === 'navigate' ? caches.match('/guia.html') : undefined)))
+  );
+});
+
+// Incoming push → show a notification.
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data && e.data.text() }; }
+  const title = d.title || 'SISMO911 — Alerta sísmica';
+  const opts = {
+    body: d.body || 'Nuevo evento sísmico detectado en Venezuela.',
+    icon: '/logo.svg', badge: '/logo.svg', vibrate: [120, 60, 120],
+    tag: d.tag || 'sismo', renotify: true,
+    data: { url: d.url || '/mapa' },
+  };
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+
+// Tap a notification → focus/open the relevant page.
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) { if (w.url.includes(url) && 'focus' in w) return w.focus(); }
+      return clients.openWindow(url);
+    })
   );
 });
