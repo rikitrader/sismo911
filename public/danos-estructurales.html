@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Daños Estructurales — SISMO911</title>
-<meta name="description" content="Mapa en vivo de daños estructurales del terremoto en Venezuela: edificios colapsados, dañados, fugas de gas y personas atrapadas. Fuente comunitaria SOS Venezuela 2026.">
+<meta name="description" content="Mapa en vivo de daños estructurales del terremoto en Venezuela: edificios colapsados, dañados, fugas de gas y personas atrapadas. Reporta y comenta ubicaciones.">
 <link rel="canonical" href="https://sismo911.com/danos-estructurales">
 <meta property="og:type" content="website"><meta property="og:site_name" content="SISMO911"><meta property="og:locale" content="es_VE">
 <meta property="og:title" content="Daños Estructurales — Mapa en vivo | SISMO911">
@@ -16,197 +16,375 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="stylesheet" href="/app.css" />
 <style>
-.font-display{font-family:'Public Sans',sans-serif}body{margin:0;font-family:Inter,sans-serif;background:#f9f9fc}
-#map{position:absolute;top:0;bottom:0;left:0;right:0}
-.dmk{border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
-.dmk.pulse::after{content:'';position:absolute;inset:-3px;border-radius:9999px;box-shadow:0 0 0 0 rgba(200,16,46,.6);animation:dp 1.6s infinite}
-@keyframes dp{70%{box-shadow:0 0 0 14px rgba(200,16,46,0)}100%{box-shadow:0 0 0 0 rgba(200,16,46,0)}}
-.leaflet-container{font-family:Inter,sans-serif}
+  :root{--bar:60px}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,sans-serif;background:#f4f5f8;overscroll-behavior:none}
+  .font-display{font-family:'Public Sans',sans-serif}
+  /* layout */
+  #stage{position:fixed;top:56px;left:0;right:0;bottom:0}
+  #map{position:absolute;inset:0;z-index:0;background:#e8eaf0}
+  .leaflet-container{font-family:Inter,sans-serif}
+  .leaflet-top.leaflet-left{margin-top:8px}
+  /* damage markers */
+  .dmk{border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+  .dmk.pulse::after{content:'';position:absolute;inset:-3px;border-radius:9999px;box-shadow:0 0 0 0 rgba(200,16,46,.6);animation:dp 1.6s infinite}
+  @keyframes dp{70%{box-shadow:0 0 0 14px rgba(200,16,46,0)}100%{box-shadow:0 0 0 0 rgba(200,16,46,0)}}
+  /* desktop filter sidebar */
+  #side{position:absolute;top:12px;left:12px;z-index:500;width:288px;max-height:calc(100% - 24px)}
+  /* bottom action bar */
+  #bar{position:fixed;left:0;right:0;bottom:0;z-index:700;height:calc(var(--bar) + env(safe-area-inset-bottom));
+       padding-bottom:env(safe-area-inset-bottom);background:#fff;border-top:1px solid #e3e5ec;
+       display:flex;box-shadow:0 -2px 10px rgba(0,0,0,.06)}
+  #bar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+       font:600 11px 'Public Sans',sans-serif;color:#5a5e6b;background:none;border:0;cursor:pointer;min-height:var(--bar)}
+  #bar button .ic{font-size:19px;line-height:1}
+  #bar button.on{color:#13284f}
+  #bar button.on .ic{transform:translateY(-1px)}
+  #bar .rep .ic{background:#c8102e;color:#fff;border-radius:9999px;width:34px;height:34px;display:grid;place-items:center;margin-top:-2px}
+  /* sheets + overlays */
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:820;background:#fff;border-radius:18px 18px 0 0;
+         box-shadow:0 -8px 30px rgba(0,0,0,.2);max-height:82vh;display:flex;flex-direction:column;
+         transform:translateY(101%);transition:transform .25s ease;padding-bottom:calc(var(--bar) + env(safe-area-inset-bottom))}
+  .sheet.open{transform:translateY(0)}
+  .sheet h2{font:800 17px 'Public Sans',sans-serif;margin:0}
+  .sheet .hd{display:flex;align-items:center;gap:8px;padding:14px 16px 8px}
+  .sheet .bd{overflow-y:auto;padding:4px 16px 16px}
+  .grip{width:40px;height:4px;border-radius:9999px;background:#d4d7e0;margin:8px auto 0}
+  #scrim{position:fixed;inset:0;z-index:810;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .2s}
+  #scrim.on{opacity:1;pointer-events:auto}
+  /* full overlays (list, monitor) */
+  #listView{position:fixed;top:56px;left:0;right:0;bottom:calc(var(--bar) + env(safe-area-inset-bottom));z-index:600;background:#f4f5f8;overflow-y:auto;display:none}
+  #listView.show{display:block}
+  #msPanel{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);z-index:900;background:#fff;display:flex;flex-direction:column;
+           transform:translateX(101%);transition:transform .25s ease;box-shadow:-6px 0 24px rgba(0,0,0,.18)}
+  #msPanel.open{transform:translateX(0)}
+  /* nav drawer */
+  #drawer{position:fixed;top:0;right:0;bottom:0;width:min(300px,86vw);z-index:1100;background:#13284f;color:#fff;
+          transform:translateX(101%);transition:transform .25s ease;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+  #drawer.open{transform:translateX(0)}
+  #drawer a{padding:13px 20px;color:#dfe6f2;text-decoration:none;font:600 15px 'Public Sans',sans-serif;border-bottom:1px solid rgba(255,255,255,.06)}
+  #drawer a:hover,#drawer a.cur{background:rgba(255,255,255,.08);color:#fff}
+  .chip{font-size:12px;border:1px solid #d4d7e0;border-radius:9999px;padding:3px 10px;cursor:pointer;font-weight:600;white-space:nowrap}
+  .chip.on{background:#13284f;color:#fff;border-color:#13284f}
+  .field{width:100%;border:1px solid #cdd1db;border-radius:10px;padding:10px 12px;font-size:14px;margin-top:6px}
+  .lbl{font:700 12px 'Public Sans',sans-serif;color:#3a3e4b;margin-top:12px;display:block}
+  .toast{position:fixed;left:50%;bottom:calc(var(--bar) + 16px);transform:translateX(-50%);z-index:1200;background:#13284f;color:#fff;
+         padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:90vw;text-align:center}
 </style>
 <script src="/app-shell.js" defer></script>
 </head>
 <body class="text-on-surface">
-<header class="bg-primary text-white"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-2"><img src="/logo.svg" class="h-8 w-8"><b class="font-display">SISMO911</b></div></header>
 
-<div class="relative" style="height:calc(100vh - 56px)">
+<!-- ===== Header + menu ===== -->
+<header class="bg-primary text-white fixed top-0 inset-x-0 z-[1000]" style="height:56px">
+  <div class="mx-auto max-w-6xl px-3 h-14 flex items-center gap-2">
+    <a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt=""><b class="font-display">SISMO911</b></a>
+    <span class="text-white/70 text-sm font-display hidden sm:inline">· Daños Estructurales</span>
+    <nav class="ml-auto mr-1 hidden lg:flex items-center gap-x-3 text-[13px] font-medium">
+      <a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="hover:text-white/70">Mapa</a>
+      <a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a>
+      <a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/red-ayuda" class="hover:text-white/70">Red de Ayuda</a>
+      <a href="/danos-estructurales" class="text-white font-bold">Daños</a><a href="/guia" class="hover:text-white/70">Guía</a>
+    </nav>
+    <button id="menuBtn" aria-label="Menú" class="ml-auto lg:hidden grid place-items-center w-10 h-10 rounded-lg hover:bg-white/10 text-2xl leading-none">☰</button>
+  </div>
+</header>
+
+<nav id="drawer" aria-hidden="true">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-white/10">
+    <b class="font-display text-lg">Menú</b><button id="drawerClose" class="text-2xl leading-none" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="overflow-y-auto flex-1">
+    <a href="/" >🏠 Panel</a><a href="/mapa">🗺️ Mapa sísmico</a><a href="/alertas">🔔 Alertas</a>
+    <a href="/sos" style="color:#ffd1d1">🆘 SOS</a><a href="/personas">👤 Personas</a><a href="/familia">👪 Familia</a>
+    <a href="/acopio">🏟️ Acopio</a><a href="/suministros-medicos">💊 Botiquín</a><a href="/recursos">📦 Recursos</a>
+    <a href="/red-ayuda">🌐 Red de Ayuda</a><a href="/danos-estructurales" class="cur">🏚️ Daños estructurales</a>
+    <a href="/comms">📻 Radio</a><a href="/guia">📖 Guía</a><a href="/reportar">✍️ Reportar</a><a href="/contacto">✉️ Contacto</a>
+  </div>
+</nav>
+
+<!-- ===== Map stage ===== -->
+<div id="stage">
   <div id="map"></div>
 
-  <!-- Filter / summary panel -->
-  <div class="absolute top-4 left-4 z-[500] bg-white rounded-xl shadow-lg border border-outline-variant/60 w-72 max-h-[calc(100%-2rem)] overflow-y-auto">
+  <!-- desktop filter sidebar -->
+  <aside id="side" class="hidden lg:flex flex-col bg-white rounded-xl shadow-lg border border-outline-variant/60 overflow-hidden">
     <div class="px-4 py-3 border-b border-outline-variant/50">
       <div class="font-display font-extrabold text-lg">Daños Estructurales</div>
-      <div class="text-[11px] text-on-surface-variant">Fuente: <a href="https://sosvenezuela2026.com" target="_blank" class="underline">SOS Venezuela 2026</a> · mapa comunitario</div>
-      <div class="flex gap-1 mt-2 bg-surface-container rounded-lg p-0.5 text-xs font-display font-semibold">
-        <button id="viewMapa" class="flex-1 py-1.5 rounded-md bg-white shadow text-primary">Mapa</button>
-        <button id="viewLista" class="flex-1 py-1.5 rounded-md text-on-surface-variant">Lista</button>
-      </div>
+      <div class="text-[11px] text-on-surface-variant"><span id="srcMeta">Mapa comunitario</span></div>
     </div>
-    <div id="filters" class="p-2 space-y-1"></div>
-    <div class="px-4 py-2 text-[11px] text-on-surface-variant border-t border-outline-variant/50">⚠️ Coordenadas aproximadas (protección anti-saqueo). Verificación comunitaria — no oficial salvo indicado.</div>
+    <div id="filters" class="p-2 space-y-0.5 overflow-y-auto"></div>
+    <div class="px-4 py-2 text-[11px] text-on-surface-variant border-t border-outline-variant/50">⚠️ Coordenadas aproximadas (protección anti-saqueo). Verificación comunitaria.</div>
+  </aside>
+
+  <div id="loading" class="absolute inset-0 grid place-items-center z-[400] pointer-events-none"><div class="bg-white/90 rounded-lg px-4 py-2 text-sm shadow">Cargando daños…</div></div>
+</div>
+
+<!-- ===== List view ===== -->
+<section id="listView">
+  <div class="mx-auto max-w-5xl p-4">
+    <input id="listSearch" placeholder="Buscar por título, municipio o descripción…" class="field !mt-0">
+    <div id="listCount" class="text-xs text-on-surface-variant my-3"></div>
+    <div id="listGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    <div id="listMore" class="flex justify-center mt-4"></div>
   </div>
+</section>
 
-  <div id="loading" class="absolute inset-0 grid place-items-center z-[400] pointer-events-none"><div class="bg-white/90 rounded-lg px-4 py-2 text-sm">Cargando daños…</div></div>
+<!-- ===== Monitor Social panel ===== -->
+<aside id="msPanel" aria-hidden="true">
+  <header class="bg-primary text-white px-4 py-3 flex items-center gap-2"><b class="font-display flex-1">📡 Monitor Social — en vivo</b><button id="msClose" class="text-xl leading-none" aria-label="Cerrar">✕</button></header>
+  <div class="flex gap-1.5 flex-wrap px-4 py-2 border-b border-outline-variant/50">
+    <span class="chip on" data-sev="">Todo</span><span class="chip" data-sev="critical">🔴 Crítico</span>
+    <span class="chip" data-sev="alert">🟠 Alerta</span><span class="chip" data-sev="info">🟡 Info</span>
+  </div>
+  <div id="msMeta" class="text-[11px] text-on-surface-variant px-4 py-1.5"></div>
+  <div id="msList" class="flex-1 overflow-y-auto px-3 pb-3"><div class="p-4 text-sm text-on-surface-variant">Cargando señales…</div></div>
+</aside>
 
-  <div id="listView" class="hidden absolute inset-0 z-[450] bg-surface overflow-y-auto p-4 lg:pl-[21rem]">
-    <div class="max-w-5xl mb-3"><input id="listSearch" placeholder="Buscar por título, municipio o descripción…" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm"></div>
-    <div id="listCount" class="text-xs text-on-surface-variant mb-3 max-w-5xl"></div>
-    <div id="listGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-5xl"></div>
-    <div id="listMore" class="max-w-5xl flex justify-center mt-4"></div>
+<!-- ===== Filters sheet (mobile) ===== -->
+<div id="scrim"></div>
+<div id="sheetFiltros" class="sheet"><div class="grip"></div>
+  <div class="hd"><h2 class="flex-1">Filtrar capas</h2><button class="sheetX text-2xl leading-none text-on-surface-variant" aria-label="Cerrar">✕</button></div>
+  <div class="bd"><div id="filtersM" class="space-y-0.5"></div></div>
+</div>
+
+<!-- ===== Report sheet (community posting) ===== -->
+<div id="sheetReport" class="sheet"><div class="grip"></div>
+  <div class="hd"><h2 class="flex-1">Reportar una ubicación</h2><button class="sheetX text-2xl leading-none text-on-surface-variant" aria-label="Cerrar">✕</button></div>
+  <div class="bd">
+    <p class="text-xs text-on-surface-variant">Indica dónde hay daños, personas atrapadas o un punto de ayuda. La comunidad podrá verlo y comentar. Se publica tras revisión.</p>
+    <form id="repForm">
+      <label class="lbl">Tipo *</label>
+      <select name="category" class="field" required></select>
+      <label class="lbl">Título *</label>
+      <input name="title" class="field" maxlength="140" placeholder="Ej.: Edificio agrietado en Av. Bolívar" required>
+      <label class="lbl">Descripción</label>
+      <textarea name="description" class="field" rows="2" maxlength="2000" placeholder="Detalles: cuántas personas, accesos, riesgos…"></textarea>
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="lbl">Estado</label><input name="estado" class="field" maxlength="120" placeholder="Ej.: Sucre"></div>
+        <div><label class="lbl">Municipio</label><input name="municipio" class="field" maxlength="120" placeholder="Ej.: Cumaná"></div>
+      </div>
+      <label class="lbl">Ubicación</label>
+      <div class="flex items-center gap-2 mt-1">
+        <button type="button" id="geoBtn" class="chip">📍 Usar mi ubicación</button>
+        <button type="button" id="pickBtn" class="chip">🗺️ Tocar en el mapa</button>
+        <span id="geoMsg" class="text-[11px] text-on-surface-variant"></span>
+      </div>
+      <label class="lbl">Tu nombre (opcional)</label>
+      <input name="reporter" class="field" maxlength="120" placeholder="Anónimo">
+      <button class="w-full mt-4 bg-secondary text-white font-display font-bold py-3 rounded-xl text-sm">Enviar reporte</button>
+      <p id="repMsg" class="text-xs text-center mt-2"></p>
+    </form>
   </div>
 </div>
 
+<!-- ===== Comments modal ===== -->
+<div id="cmModal" class="fixed inset-0 z-[1150] bg-black/45 p-4 overflow-y-auto" style="display:none" >
+  <div class="bg-white rounded-2xl max-w-md w-full mx-auto my-8 flex flex-col max-h-[85vh]" onclick="event.stopPropagation()">
+    <div class="flex items-start justify-between gap-2 p-4 border-b border-outline-variant/50">
+      <div><h3 id="cm_title" class="font-display font-extrabold leading-tight"></h3><div id="cm_sub" class="text-xs text-on-surface-variant"></div></div>
+      <button id="cmClose" class="text-2xl leading-none text-on-surface-variant" aria-label="Cerrar">×</button>
+    </div>
+    <div id="cm_list" class="flex-1 overflow-y-auto p-4 space-y-2 text-sm"></div>
+    <form id="cm_form" class="p-3 border-t border-outline-variant/50 flex gap-2">
+      <input name="body" class="field !mt-0 flex-1" placeholder="Escribe dónde encontrarlos / ayuda…" maxlength="1000" required>
+      <button class="bg-primary text-white font-bold rounded-xl px-4 text-sm">Enviar</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== Bottom action bar ===== -->
+<nav id="bar">
+  <button id="tabMapa" class="on" data-view="mapa"><span class="ic">🗺️</span>Mapa</button>
+  <button id="tabLista" data-view="lista"><span class="ic">📋</span>Lista</button>
+  <button id="tabReport" class="rep"><span class="ic">＋</span>Reportar</button>
+  <button id="tabFiltros"><span class="ic">🎚️</span>Filtros</button>
+  <button id="tabMonitor"><span class="ic">📡</span>Monitor</button>
+</nav>
+
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const $=s=>document.querySelector(s);
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl=u=>{u=(u||'').trim();return /^https?:\/\//i.test(u)?u:'#';};
+const ago=t=>{if(!t)return '';const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+' h';return Math.floor(s/86400)+' d';};
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3200);}
+
 const CAT={
-  collapsed_building:['Edificio colapsado','#c8102e'],
-  damaged_building:['Edificio dañado','#e57200'],
-  trapped_people:['Personas atrapadas','#c8102e'],
-  gas_leak:['Fuga de gas','#e57200'],
-  aid_point:['Punto de ayuda','#0b2b5b'],
-  shelter:['Refugio','#0b2b5b'],
-  water_point:['Punto de agua','#2563eb'],
-  medical_need:['Necesidad médica','#bb0027'],
+  collapsed_building:['Edificio colapsado','#c8102e'], damaged_building:['Edificio dañado','#e57200'],
+  trapped_people:['Personas atrapadas','#c8102e'], gas_leak:['Fuga de gas','#e57200'],
+  aid_point:['Punto de ayuda','#0b2b5b'], shelter:['Refugio','#0b2b5b'],
+  water_point:['Punto de agua','#2563eb'], medical_need:['Necesidad médica','#bb0027'],
 };
 const SEVCOL={rojo:'#c8102e',naranja:'#e57200',amarillo:'#ffbc3d'};
 const VERIF={community_confirmed:'Confirmado por comunidad',official_verified:'Verificado oficial',unverified:'Sin verificar'};
-const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const safeUrl=u=>{u=(u||'').trim();return /^https?:\/\//i.test(u)?u:'#';};
 const color=r=>{ if(['aid_point','shelter','water_point','medical_need'].includes(r.category))return CAT[r.category]?.[1]||'#0b2b5b'; return SEVCOL[r.severity]||CAT[r.category]?.[1]||'#e57200'; };
+const LAT=r=>r.lat, LNG=r=>r.lng??r.lon;
 
-const map=L.map('map',{attributionControl:false}).setView([10.3,-66.9],8);
+// ---- Map ----
+const map=L.map('map',{attributionControl:false,zoomControl:false}).setView([10.3,-66.9],7);
+L.control.zoom({position:'topright'}).addTo(map);
 L.control.attribution({prefix:false}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM, © CARTO · SOS Venezuela 2026',maxZoom:19}).addTo(map);
-const layers={}; let active=new Set(Object.keys(CAT));
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM, © CARTO · SOS Venezuela 2026 + comunidad',maxZoom:19}).addTo(map);
+const layers={}; let active=new Set(Object.keys(CAT)); let ALL=[];
 
-function render(reports){
+function render(){
   Object.values(layers).forEach(l=>l.clearLayers());
-  reports.forEach(r=>{
-    if(!r.lat||!r.lng)return;
-    const cat=r.category||'damaged_building';
+  ALL.forEach(r=>{
+    const lat=LAT(r),lng=LNG(r); if(!lat||!lng)return;
+    const cat=r.category||'damaged_building'; if(!active.has(cat))return;
     if(!layers[cat])layers[cat]=L.layerGroup().addTo(map);
-    const trap=cat==='trapped_people';
-    const size= cat==='collapsed_building'||trap?16:12;
+    const trap=cat==='trapped_people'; const size=cat==='collapsed_building'||trap?16:12;
     const ic=L.divIcon({className:'',html:`<div class="dmk ${trap?'pulse':''}" style="position:relative;width:${size}px;height:${size}px;background:${color(r)}"></div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]});
-    L.marker([r.lat,r.lng],{icon:ic}).addTo(layers[cat]).bindPopup(
-      `<div style="min-width:180px"><div style="font-weight:700;color:${color(r)}">${esc(CAT[cat]?.[0]||cat)}</div>
+    const cm=r.src==='comm'?`<button onclick="openComments('${esc(r.id)}','${esc((r.title||'').replace(/'/g,''))}')" style="font-size:11px;color:#13284f;font-weight:700;margin-top:4px">💬 comentarios</button>`:'';
+    L.marker([lat,lng],{icon:ic}).addTo(layers[cat]).bindPopup(
+      `<div style="min-width:190px"><div style="font-weight:700;color:${color(r)}">${esc(CAT[cat]?.[0]||cat)}</div>
        <div style="font-weight:600;margin:2px 0">${esc(r.title||'')}</div>
        <div style="font-size:12px;color:#44474f">${esc(r.description||'')}</div>
-       <div style="font-size:11px;color:#747780;margin-top:4px">${esc(r.municipio||'')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}</div>
-       ${r.source_url?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener" style="font-size:11px;color:#0b2b5b">fuente ↗</a>`:''}</div>`);
+       <div style="font-size:11px;color:#747780;margin-top:4px">${esc(r.municipio||'')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}${r.src==='comm'?' · comunidad':''}</div>
+       ${r.source_url?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener" style="font-size:11px;color:#0b2b5b">fuente ↗</a>`:''} ${cm}</div>`);
   });
-  Object.keys(layers).forEach(c=>active.has(c)?layers[c].addTo(map):map.removeLayer(layers[c]));
 }
+function applyLayers(){render();}
 
-function buildFilters(counts){
-  const byCat=Object.fromEntries(counts.map(c=>[c.category,c.n]));
-  document.getElementById('filters').innerHTML=Object.entries(CAT).map(([k,[label,col]])=>{
-    const n=byCat[k]||0;
-    return `<label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-container cursor-pointer text-sm">
-      <input type="checkbox" data-cat="${k}" checked class="catbox">
+function counts(){const c={};ALL.forEach(r=>{const k=r.category||'damaged_building';c[k]=(c[k]||0)+1;});return c;}
+function buildFilters(){
+  const byCat=counts();
+  const html=Object.entries(CAT).map(([k,[label,col]])=>`
+    <label class="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-surface-container cursor-pointer text-sm">
+      <input type="checkbox" data-cat="${k}" ${active.has(k)?'checked':''} class="catbox w-4 h-4">
       <span style="width:11px;height:11px;border-radius:9999px;background:${col};display:inline-block;flex:0 0 auto"></span>
-      <span class="flex-1">${label}</span><span class="text-xs text-on-surface-variant font-mono">${n}</span></label>`;
-  }).join('');
-  document.querySelectorAll('.catbox').forEach(b=>b.onchange=()=>{const c=b.dataset.cat; b.checked?active.add(c):active.delete(c); Object.keys(layers).forEach(k=>active.has(k)?layers[k].addTo(map):map.removeLayer(layers[k])); renderList();});
+      <span class="flex-1">${label}</span><span class="text-xs text-on-surface-variant font-mono">${byCat[k]||0}</span></label>`).join('');
+  $('#filters').innerHTML=html; $('#filtersM').innerHTML=html;
+  document.querySelectorAll('.catbox').forEach(b=>b.onchange=()=>{const c=b.dataset.cat;b.checked?active.add(c):active.delete(c);
+    document.querySelectorAll(`.catbox[data-cat="${c}"]`).forEach(o=>o.checked=b.checked);applyLayers();renderList();});
 }
 
-// ---- List view (search + pagination) ----
-let ALL=[]; let listShown=30;
+// ---- List ----
+let listShown=30;
+function listRows(){const term=($('#listSearch').value||'').trim().toLowerCase();
+  return ALL.filter(r=>active.has(r.category||'damaged_building'))
+    .filter(r=>!term||`${r.title||''} ${r.municipio||''} ${r.parroquia||''} ${r.description||''}`.toLowerCase().includes(term));}
 function renderList(){
-  const term=(document.getElementById('listSearch').value||'').trim().toLowerCase();
-  const rows=ALL.filter(r=>active.has(r.category||'damaged_building'))
-    .filter(r=>!term || `${r.title||''} ${r.municipio||''} ${r.parroquia||''} ${r.description||''}`.toLowerCase().includes(term));
-  const page=rows.slice(0,listShown);
-  document.getElementById('listCount').textContent=`${rows.length.toLocaleString('es')} reporte(s)${term?' (filtrado)':''} · mostrando ${page.length}`;
-  document.getElementById('listGrid').innerHTML=page.map(r=>`
-    <div class="bg-white border border-outline-variant/60 rounded-lg p-3">
+  const rows=listRows(),page=rows.slice(0,listShown);
+  $('#listCount').textContent=`${rows.length.toLocaleString('es')} reporte(s) · mostrando ${page.length}`;
+  $('#listGrid').innerHTML=page.map(r=>`
+    <div class="bg-white border border-outline-variant/60 rounded-xl p-3">
       <div class="flex items-center gap-2"><span style="width:10px;height:10px;border-radius:9999px;background:${color(r)};display:inline-block"></span>
-      <span class="text-xs font-bold" style="color:${color(r)}">${esc(CAT[r.category]?.[0]||r.category)}</span></div>
+        <span class="text-xs font-bold" style="color:${color(r)}">${esc(CAT[r.category]?.[0]||r.category)}</span>${r.src==='comm'?'<span class="text-[10px] text-on-surface-variant ml-auto">comunidad</span>':''}</div>
       <div class="font-display font-bold mt-1 leading-snug">${esc(r.title||'(sin título)')}</div>
       <div class="text-xs text-on-surface-variant mt-0.5">${esc(r.description||'')}</div>
       <div class="text-[11px] text-on-surface-variant mt-1">${esc(r.municipio||'—')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}</div>
-      ${r.source_url?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener" class="text-[11px] text-primary underline">fuente ↗</a>`:''}
-    </div>`).join('') || '<p class="text-on-surface-variant text-sm col-span-full">Sin reportes.</p>';
-  document.getElementById('listMore').innerHTML = rows.length>listShown
-    ? '<button id="listMoreBtn" class="px-4 py-2 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>' : '';
-  const mb=document.getElementById('listMoreBtn'); if(mb)mb.onclick=()=>{listShown+=30;renderList();};
+      <div class="flex items-center gap-3 mt-1.5">
+        ${(LAT(r)&&LNG(r))?`<button onclick="goTo(${LAT(r)},${LNG(r)})" class="text-[11px] text-primary font-semibold">📍 ver en mapa</button>`:''}
+        ${r.src==='comm'?`<button onclick="openComments('${esc(r.id)}','${esc((r.title||'').replace(/'/g,''))}')" class="text-[11px] text-primary font-semibold">💬 comentarios</button>`:''}
+        ${r.source_url?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener" class="text-[11px] text-primary underline">fuente ↗</a>`:''}
+      </div>
+    </div>`).join('')||'<p class="text-on-surface-variant text-sm col-span-full">Sin reportes que coincidan.</p>';
+  $('#listMore').innerHTML=rows.length>listShown?'<button id="lmb" class="px-4 py-2 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>':'';
+  const mb=$('#lmb');if(mb)mb.onclick=()=>{listShown+=30;renderList();};
 }
-let lst;document.getElementById('listSearch').addEventListener('input',()=>{clearTimeout(lst);lst=setTimeout(()=>{listShown=30;renderList();},250);});
-const vMapa=document.getElementById('viewMapa'),vLista=document.getElementById('viewLista'),listView=document.getElementById('listView');
-function setView(list){ listView.classList.toggle('hidden',!list);
-  vLista.classList.toggle('bg-white',list);vLista.classList.toggle('shadow',list);vLista.classList.toggle('text-primary',list);vLista.classList.toggle('text-on-surface-variant',!list);
-  vMapa.classList.toggle('bg-white',!list);vMapa.classList.toggle('shadow',!list);vMapa.classList.toggle('text-primary',!list);vMapa.classList.toggle('text-on-surface-variant',list);
-  if(list)renderList(); else map.invalidateSize();}
-vMapa.onclick=()=>setView(false); vLista.onclick=()=>setView(true);
+let lst;$('#listSearch').addEventListener('input',()=>{clearTimeout(lst);lst=setTimeout(()=>{listShown=30;renderList();},220);});
+function goTo(lat,lng){setView('mapa');map.setView([lat,lng],16);}
+window.goTo=goTo;
 
-fetch('/api/danos-estructurales').then(r=>r.json()).then(d=>{
-  document.getElementById('loading').style.display='none';
-  ALL=d.reports||[];
-  buildFilters(d.counts||[]);
-  render(ALL);
-  renderList();
-  if(ALL.length){const g=L.featureGroup(Object.values(layers)); try{map.fitBounds(g.getBounds().pad(0.2));}catch{}}
-}).catch(()=>{document.getElementById('loading').innerHTML='<div class="bg-white rounded-lg px-4 py-2 text-sm text-secondary">No se pudieron cargar los daños.</div>';});
-</script>
+// ---- View / sheet / drawer plumbing ----
+const scrim=$('#scrim');
+function openSheet(id){closeSheets();$(id).classList.add('open');scrim.classList.add('on');}
+function closeSheets(){document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));scrim.classList.remove('on');}
+scrim.onclick=closeSheets;
+document.querySelectorAll('.sheetX').forEach(b=>b.onclick=closeSheets);
+function setView(v){
+  const list=v==='lista'; $('#listView').classList.toggle('show',list);
+  $('#tabMapa').classList.toggle('on',!list); $('#tabLista').classList.toggle('on',list);
+  if(list){listShown=30;renderList();} else {setTimeout(()=>map.invalidateSize(),60);}
+}
+$('#tabMapa').onclick=()=>setView('mapa');
+$('#tabLista').onclick=()=>setView('lista');
+$('#tabFiltros').onclick=()=>openSheet('#sheetFiltros');
+$('#tabReport').onclick=()=>openSheet('#sheetReport');
+// drawer
+const drawer=$('#drawer');
+$('#menuBtn').onclick=()=>{drawer.classList.add('open');scrim.classList.add('on');};
+$('#drawerClose').onclick=()=>{drawer.classList.remove('open');scrim.classList.remove('on');};
+scrim.addEventListener('click',()=>drawer.classList.remove('open'));
+// monitor
+const ms=$('#msPanel');
+$('#tabMonitor').onclick=()=>{ms.classList.add('open');loadMonitor();};
+$('#msClose').onclick=()=>ms.classList.remove('open');
 
-<!-- ===== Monitor Social en vivo (self-contained, no toca el mapa) ===== -->
-<style>
-#msLauncher{position:fixed;right:14px;bottom:16px;z-index:500;background:#13284f;color:#fff;border-radius:999px;padding:.6rem .9rem;font-family:'Public Sans',sans-serif;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;display:flex;align-items:center;gap:.4rem}
-#msLauncher .badge{background:#c70d2e;border-radius:999px;font-size:11px;padding:.05rem .4rem;min-width:18px;text-align:center}
-#msPanel{position:fixed;top:0;right:0;height:100%;width:min(390px,92vw);z-index:501;background:#fff;box-shadow:-6px 0 24px rgba(0,0,0,.18);transform:translateX(100%);transition:transform .2s ease;display:flex;flex-direction:column}
-#msPanel.open{transform:translateX(0)}
-#msPanel header{background:#13284f;color:#fff;padding:.8rem 1rem;display:flex;align-items:center;gap:.5rem}
-#msFilters{display:flex;gap:.3rem;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid #eef0f4}
-.msChip{font-size:12px;border:1px solid #d8dbe2;border-radius:999px;padding:.15rem .6rem;cursor:pointer;font-weight:600}
-.msChip.on{background:#13284f;color:#fff;border-color:#13284f}
-#msList{flex:1;overflow-y:auto;padding:.5rem .75rem}
-.msItem{border-bottom:1px solid #f0f1f5;padding:.55rem .25rem;font-size:13px}
-.msDot{width:8px;height:8px;border-radius:999px;display:inline-block;margin-right:.35rem;vertical-align:middle}
-</style>
-<div id="msLauncher">📡 Monitor Social <span class="badge" id="msCount">·</span></div>
-<aside id="msPanel" aria-hidden="true">
-  <header><b class="font-display flex-1">Monitor Social — en vivo</b><button id="msClose" class="text-white/90 text-lg leading-none">✕</button></header>
-  <div id="msFilters">
-    <span class="msChip on" data-sev="">Todo</span>
-    <span class="msChip" data-sev="critical">🔴 Crítico</span>
-    <span class="msChip" data-sev="alert">🟠 Alerta</span>
-    <span class="msChip" data-sev="info">🟡 Info</span>
-  </div>
-  <div id="msMeta" class="text-[11px] text-on-surface-variant px-4 py-1.5"></div>
-  <div id="msList"><div class="p-4 text-sm text-on-surface-variant">Cargando señales…</div></div>
-</aside>
-<script>
-(function(){
-  const SEVC={critical:'#c70d2e',alert:'#d97706',info:'#475569'};
-  const PIC={tiktok:'🎵',instagram:'📸',reddit:'👽',gdelt:'📰',telegram:'✈️',x:'✖️'};
-  const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const safeUrl=u=>{u=(u||'').trim();return /^https?:\/\//i.test(u)?u:'#';};
-  const ago=t=>{if(!t)return '';const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+' h';return Math.floor(s/86400)+' d';};
-  const P=document.getElementById('msPanel');
-  let sev='';
-  document.getElementById('msLauncher').onclick=()=>{P.classList.add('open');load();};
-  document.getElementById('msClose').onclick=()=>P.classList.remove('open');
-  document.querySelectorAll('.msChip').forEach(ch=>ch.onclick=()=>{document.querySelectorAll('.msChip').forEach(x=>x.classList.remove('on'));ch.classList.add('on');sev=ch.dataset.sev;load();});
-  function load(){
-    const qs=sev?('?severity='+sev+'&limit=120'):'?limit=120';
-    fetch('/api/monitor/signals'+qs).then(r=>r.json()).then(d=>{
-      const sig=d.signals||[];
-      document.getElementById('msList').innerHTML=sig.length?sig.map(s=>`
-        <div class="msItem">
-          <div><span class="msDot" style="background:${SEVC[s.severity]||'#475569'}"></span>
-            <span title="${esc(s.platform)}">${PIC[s.platform]||'•'}</span>
-            ${s.city?`<b class="font-display"> ${esc(s.city)}</b> · `:' '}
-            <span class="text-on-surface-variant text-[11px]">${ago(s.posted_ms)}</span></div>
-          <div class="mt-0.5">${esc((s.title||s.text||'').slice(0,180))}</div>
-          <div class="mt-0.5 text-[11px] text-on-surface-variant">${esc(s.tags||'')}${s.url?` · <a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener" class="text-primary underline">ver</a>`:''}</div>
-        </div>`).join(''):'<div class="p-4 text-sm text-on-surface-variant">Sin señales todavía. El monitor actualiza cada hora.</div>';
-    }).catch(()=>{document.getElementById('msList').innerHTML='<div class="p-4 text-sm text-secondary">No se pudo cargar el monitor.</div>';});
-  }
-  fetch('/api/monitor/stats').then(r=>r.json()).then(d=>{
-    document.getElementById('msCount').textContent=d.total||0;
-    const crit=(d.by_severity||[]).find(x=>x.severity==='critical');
-    document.getElementById('msMeta').textContent=`${d.total||0} señales · ${crit?crit.n:0} críticas · últ. ${d.last_ingest_ms?ago(d.last_ingest_ms)+' atrás':'—'}`;
-  }).catch(()=>{});
-})();
+// ---- Report form ----
+$('#repForm').querySelector('[name=category]').innerHTML='<option value="">Selecciona…</option>'+Object.entries(CAT).map(([k,[l]])=>`<option value="${k}">${l}</option>`).join('');
+let picked=null, picking=false;
+$('#geoBtn').onclick=()=>{const m=$('#geoMsg');m.textContent='Obteniendo…';
+  navigator.geolocation?.getCurrentPosition(p=>{picked=[p.coords.latitude,p.coords.longitude];m.textContent='✓ ubicación capturada';},
+    ()=>{m.textContent='No se pudo obtener la ubicación';},{enableHighAccuracy:true,timeout:8000});};
+$('#pickBtn').onclick=()=>{picking=true;closeSheets();toast('Toca el mapa donde está la ubicación');};
+map.on('click',e=>{if(!picking)return;picked=[e.latlng.lat,e.latlng.lng];picking=false;
+  L.circleMarker(e.latlng,{radius:7,color:'#c8102e'}).addTo(map);openSheet('#sheetReport');$('#geoMsg').textContent='✓ ubicación marcada en el mapa';});
+$('#repForm').onsubmit=async e=>{
+  e.preventDefault();const fd=Object.fromEntries(new FormData(e.target));const msg=$('#repMsg');
+  if(!fd.category){msg.textContent='Selecciona un tipo';msg.className='text-xs text-center mt-2 text-secondary';return;}
+  const body={category:fd.category,title:fd.title,description:fd.description,estado:fd.estado,municipio:fd.municipio,reporter:fd.reporter};
+  if(picked){body.lat=picked[0];body.lon=picked[1];}
+  msg.textContent='Enviando…';msg.className='text-xs text-center mt-2 text-on-surface-variant';
+  try{const r=await fetch('/api/reports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(r.ok){e.target.reset();picked=null;$('#geoMsg').textContent='';closeSheets();toast(d.message||'Reporte recibido. Aparecerá tras revisión.');}
+    else{msg.textContent=d.error||'Error al enviar';msg.className='text-xs text-center mt-2 text-secondary';}
+  }catch{msg.textContent='Sin conexión. Intenta de nuevo.';msg.className='text-xs text-center mt-2 text-secondary';}
+};
+
+// ---- Comments ----
+const cm=$('#cmModal');let cmId=null;
+function openComments(id,title){cmId=id;$('#cm_title').textContent=title||'Reporte';$('#cm_sub').textContent='Comentarios de la comunidad';
+  $('#cm_list').innerHTML='<p class="text-on-surface-variant">Cargando…</p>';cm.style.display='block';
+  fetch('/api/reports/'+encodeURIComponent(id)+'/comments').then(r=>r.json()).then(d=>{
+    const cs=d.comments||d||[];
+    $('#cm_list').innerHTML=(Array.isArray(cs)&&cs.length)?cs.map(c=>`<div class="border-b border-outline-variant/40 pb-2">
+      <div class="font-semibold text-xs">${esc(c.name||'Anónimo')} <span class="text-on-surface-variant font-normal">· ${ago(c.created_ms)}</span></div>
+      <div>${esc(c.body||'')}</div></div>`).join(''):'<p class="text-on-surface-variant">Aún no hay comentarios. Sé el primero en indicar dónde encontrarlos o cómo ayudar.</p>';
+  }).catch(()=>{$('#cm_list').innerHTML='<p class="text-secondary">No se pudieron cargar los comentarios.</p>';});
+}
+window.openComments=openComments;
+$('#cmClose').onclick=()=>cm.style.display='none';
+cm.onclick=()=>cm.style.display='none';
+$('#cm_form').onsubmit=async e=>{e.preventDefault();const inp=e.target.body;const body=inp.value.trim();if(!body||!cmId)return;
+  inp.value='';
+  try{const r=await fetch('/api/reports/'+encodeURIComponent(cmId)+'/comments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body})});
+    if(r.ok)openComments(cmId,$('#cm_title').textContent);else toast('No se pudo enviar el comentario');}catch{toast('Sin conexión');}};
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheets();drawer.classList.remove('open');ms.classList.remove('open');cm.style.display='none';}});
+
+// ---- Monitor Social ----
+const SEVC={critical:'#c70d2e',alert:'#d97706',info:'#475569'},PIC={tiktok:'🎵',instagram:'📸',reddit:'👽',gdelt:'📰',telegram:'✈️',x:'✖️'};
+let msSev='';
+document.querySelectorAll('#msPanel .chip').forEach(ch=>ch.onclick=()=>{document.querySelectorAll('#msPanel .chip').forEach(x=>x.classList.remove('on'));ch.classList.add('on');msSev=ch.dataset.sev;loadMonitor();});
+function loadMonitor(){const qs=msSev?('?severity='+msSev+'&limit=120'):'?limit=120';
+  fetch('/api/monitor/signals'+qs).then(r=>r.json()).then(d=>{const sig=d.signals||[];
+    $('#msList').innerHTML=sig.length?sig.map(s=>`<div class="border-b border-outline-variant/40 py-2 text-sm">
+      <div><span style="width:8px;height:8px;border-radius:999px;display:inline-block;margin-right:5px;background:${SEVC[s.severity]||'#475569'}"></span>
+      ${PIC[s.platform]||'•'} ${s.city?`<b>${esc(s.city)}</b> · `:''}<span class="text-on-surface-variant text-[11px]">${ago(s.posted_ms)}</span></div>
+      <div class="mt-0.5">${esc((s.title||s.text||'').slice(0,180))}</div>
+      <div class="text-[11px] text-on-surface-variant mt-0.5">${esc(s.tags||'')}${s.url?` · <a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener" class="text-primary underline">ver</a>`:''}</div></div>`).join(''):'<div class="p-4 text-sm text-on-surface-variant">Sin señales todavía. El monitor actualiza cada hora.</div>';
+  }).catch(()=>{$('#msList').innerHTML='<div class="p-4 text-sm text-secondary">No se pudo cargar el monitor.</div>';});}
+fetch('/api/monitor/stats').then(r=>r.json()).then(d=>{const crit=(d.by_severity||[]).find(x=>x.severity==='critical');
+  $('#msMeta').textContent=`${d.total||0} señales · ${crit?crit.n:0} críticas · últ. ${d.last_ingest_ms?ago(d.last_ingest_ms)+' atrás':'—'}`;}).catch(()=>{});
+
+// ---- Load data (SOS feed + community reports) ----
+Promise.allSettled([
+  fetch('/api/danos-estructurales').then(r=>r.json()),
+  fetch('/api/reports?status=approved&limit=500').then(r=>r.json()),
+]).then(([sos,comm])=>{
+  $('#loading').style.display='none';
+  const s=(sos.value?.reports||[]).map(r=>({...r,src:'sos'}));
+  const c=(comm.value?.reports||[]).map(r=>({...r,src:'comm'}));
+  ALL=c.concat(s);
+  buildFilters(); applyLayers(); renderList();
+  const pts=ALL.filter(r=>LAT(r)&&LNG(r)).map(r=>[LAT(r),LNG(r)]);
+  if(pts.length){try{map.fitBounds(L.latLngBounds(pts).pad(0.2));}catch{}}
+  $('#srcMeta').innerHTML=`${ALL.length.toLocaleString('es')} reportes · SOS Venezuela 2026 + comunidad`;
+}).catch(()=>{$('#loading').innerHTML='<div class="bg-white rounded-lg px-4 py-2 text-sm text-secondary shadow">No se pudieron cargar los daños.</div>';});
 </script>
 </body>
 </html>
