@@ -4,11 +4,38 @@ import type { Env } from './types';
 import { events } from './routes/events';
 import { persons } from './routes/persons';
 import { contacts } from './routes/contacts';
+import { getCookie } from 'hono/cookie';
 import { ingestUsgs } from './ingest/usgs-cron';
 import { adapterStatus } from './adapters/social';
+import { verifyAccessJwt } from './lib/access';
 
 const app = new Hono<{ Bindings: Env }>();
 app.use('/api/*', cors());
+
+// --- Cloudflare Access gate (defense-in-depth) ---
+// Protects the admin console + all write endpoints. Edge Access is the primary
+// lock; this re-verifies the JWT inside the Worker. No-op until ACCESS_* are set.
+const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+app.use('*', async (c, next) => {
+  const path = new URL(c.req.url).pathname;
+  const isAdmin = path.startsWith('/admin');
+  const isWrite =
+    WRITE_METHODS.has(c.req.method) &&
+    (path.startsWith('/api/persons') || path.startsWith('/api/contacts'));
+  if (!isAdmin && !isWrite) return next();
+
+  const { ACCESS_TEAM_DOMAIN: team, ACCESS_AUD: aud } = c.env;
+  if (!team || !aud) {
+    console.warn('[access] not configured (ACCESS_TEAM_DOMAIN/ACCESS_AUD unset) — allowing', path);
+    return next();
+  }
+  const token = c.req.header('Cf-Access-Jwt-Assertion') || getCookie(c, 'CF_Authorization');
+  if (!token) return c.json({ error: 'unauthorized', hint: 'Cloudflare Access login required' }, 401);
+  const id = await verifyAccessJwt(token, team, aud).catch(() => null);
+  if (!id) return c.json({ error: 'forbidden' }, 403);
+  c.header('X-Access-Email', id.email ?? 'unknown');
+  return next();
+});
 
 // Liveness / readiness for smoke tests + uptime checks.
 app.get('/api/health', (c) => c.json({ ok: true, service: 'sismo911', ts: Date.now() }));

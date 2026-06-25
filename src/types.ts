@@ -7,6 +7,9 @@ export interface Env {
   USGS_MINLON: string;
   USGS_MAXLON: string;
   USGS_WINDOW_DAYS: string;
+  // Cloudflare Access (defense-in-depth). Enforcement is active only when both set.
+  ACCESS_TEAM_DOMAIN?: string;
+  ACCESS_AUD?: string;
 }
 
 export interface SeismicEvent {
