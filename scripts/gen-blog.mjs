@@ -27,7 +27,7 @@ function cover(p) {
   const loc = esc(place(p).slice(0, 32))
   const pl = esc(platLabel(p.plataforma))
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='675' viewBox='0 0 1200 675'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${c}'/><stop offset='.65' stop-color='#00112e'/><stop offset='1' stop-color='#000814'/></linearGradient></defs><rect width='1200' height='675' fill='url(#g)'/><path d='M0 470 L120 470 160 380 200 540 250 300 300 470 1200 470' fill='none' stroke='#bb0027' stroke-width='3' opacity='.55'/><text x='64' y='96' fill='#ffffff' opacity='.7' font-family='Arial,Helvetica,sans-serif' font-size='26' font-weight='700' letter-spacing='3'>SISMO911 · COBERTURA</text><text x='64' y='350' fill='#ffffff' font-family='Arial,Helvetica,sans-serif' font-size='92' font-weight='800'>${loc}</text><text x='64' y='420' fill='#ffd166' font-family='Arial,Helvetica,sans-serif' font-size='34' font-weight='700'>Reporte ciudadano · ${pl}</text><text x='64' y='610' fill='#ffffff' opacity='.6' font-family='Arial,Helvetica,sans-serif' font-size='26'>Terremoto M7.5 · 24 junio 2026 · Venezuela</text></svg>`
-  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg)
+  return 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64')
 }
 const headline = (p, ov) => (ov && ov.headline) || (p.texto && p.texto.length > 22 && p.texto.length < 110 ? p.texto.replace(/\s+/g, ' ') : `Reporte del terremoto en ${place(p)} (${platLabel(p.plataforma)})`)
 const dek = (p, ov) => (ov && ov.metaDesc) || `Reporte ciudadano del terremoto M7.5 del 24 de junio de 2026 desde ${place(p)}.`
@@ -136,7 +136,7 @@ ${HEADER}
   <!-- Featured -->
   <a href="/blog/${FEATURED.slug}" class="group block bg-white border border-outline-variant/60 rounded-2xl overflow-hidden mb-10 hover:shadow-xl transition-shadow">
     <div class="grid md:grid-cols-2">
-      <div class="aspect-[16/10] md:aspect-auto overflow-hidden bg-primary"><img src="${FEATURED.img}" alt="${esc(FEATURED.title)}" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" width="1200" height="630"></div>
+      <div class="aspect-[16/10] md:aspect-auto overflow-hidden bg-primary flex items-center justify-center"><img src="${FEATURED.img}" alt="${esc(FEATURED.title)}" class="w-full h-full object-contain md:object-cover md:object-left" width="1200" height="630"></div>
       <div class="p-6 sm:p-8 flex flex-col justify-center">
         <div class="flex items-center gap-2 text-xs font-bold mb-3"><span class="bg-secondary text-white px-2.5 py-1 rounded-full">${FEATURED.tag}</span><span class="text-on-surface-variant">${FEATURED.date}</span></div>
         <h2 class="font-display font-extrabold text-2xl sm:text-3xl leading-tight text-on-surface mb-3 group-hover:text-primary">${esc(FEATURED.title)}</h2>
