@@ -44,9 +44,12 @@
   <section id="panel-registro" class="hidden">
     <div class="flex flex-wrap items-center gap-3 mb-4">
       <input id="search" placeholder="Buscar por nombre o lugar…" class="flex-1 min-w-[200px] border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
-      <select id="statusFilter" class="border border-outline-variant rounded-lg px-3 py-2.5 text-sm text-on-surface-variant">
-        <option value="">Todos</option><option value="missing">Desaparecidas</option><option value="found_safe">Halladas</option>
-      </select>
+      <div id="statusChips" class="flex flex-wrap gap-2">
+        <button type="button" data-st="" class="fchip border border-primary bg-primary text-white rounded-full px-3.5 py-2 text-sm font-display font-bold">Todos</button>
+        <button type="button" data-st="missing" class="fchip border border-outline-variant rounded-full px-3.5 py-2 text-sm font-display font-bold text-on-surface">🔴 Desaparecidas</button>
+        <button type="button" data-st="found_safe" class="fchip border border-outline-variant rounded-full px-3.5 py-2 text-sm font-display font-bold text-on-surface">🟢 Halladas</button>
+      </div>
+      <select id="statusFilter" class="hidden"><option value="">Todos</option><option value="missing">Desaparecidas</option><option value="found_safe">Halladas</option></select>
       <button id="openRegister" class="bg-secondary text-white font-display font-bold text-sm px-4 py-2.5 rounded-lg">+ Reportar desaparecido</button>
     </div>
     <div id="count" class="text-xs text-on-surface-variant mb-3"></div>
@@ -125,6 +128,11 @@ async function loadPersons(reset){
 }
 let to;document.getElementById('search').addEventListener('input',()=>{clearTimeout(to);to=setTimeout(()=>loadPersons(true),300);});
 document.getElementById('statusFilter').addEventListener('change',()=>loadPersons(true));
+document.querySelectorAll('#statusChips button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#statusChips button').forEach(x=>{x.classList.remove('bg-primary','text-white','border-primary');x.classList.add('border-outline-variant','text-on-surface');});
+  b.classList.remove('border-outline-variant','text-on-surface');b.classList.add('bg-primary','text-white','border-primary');
+  const sf=document.getElementById('statusFilter');sf.value=b.dataset.st;sf.dispatchEvent(new Event('change'));
+});
 
 const modal=document.getElementById('modal');
 document.getElementById('openRegister').onclick=()=>modal.classList.remove('hidden');
