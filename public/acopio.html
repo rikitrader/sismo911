@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centros de Acopio — Mapa Nacional — SISMO911</title>
+<meta name="description" content="Mapa nacional de centros de acopio para emergencias en Venezuela: universidades, estadios y polideportivos en los 24 estados, con dirección y cómo llegar.">
+<meta name="author" content="SISMO911 — Comando Sísmico Nacional">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/acopio">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Centros de Acopio de Venezuela — SISMO911">
+<meta property="og:description" content="Mapa nacional de centros de acopio: universidades, estadios y polideportivos en los 24 estados, con dirección y cómo llegar.">
+<meta property="og:url" content="https://sismo911.com/acopio">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Centros de Acopio de Venezuela — SISMO911">
+<meta name="twitter:description" content="Mapa nacional de centros de acopio en los 24 estados de Venezuela, con dirección y cómo llegar.">
+<meta name="twitter:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/app.css" />
+<style>
+  body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}.tnum{font-variant-numeric:tabular-nums}
+  #map{height:460px;border-radius:.75rem;z-index:0}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Centros de Acopio de Venezuela — SISMO911","description":"Mapa nacional de centros de acopio para emergencias: universidades, estadios y polideportivos en los 24 estados de Venezuela.","url":"https://sismo911.com/acopio","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-[1000]"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/alertas" class="hover:text-white/70">Alertas</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a><a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/acopio" class="text-white">Acopio</a><a href="/suministros-medicos" class="hover:text-white/70">Botiquín</a><a href="/guia" class="hover:text-white/70">Guía</a><a href="/reportar" class="hover:text-white/70">Reportar</a></nav></div></header>
+
+<main class="mx-auto max-w-6xl px-4 py-8">
+  <div class="flex flex-wrap items-end justify-between gap-3 mb-1">
+    <h1 class="font-display font-extrabold text-3xl">Centros de Acopio — Mapa Nacional</h1>
+    <button id="csv" class="text-sm font-semibold bg-primary text-white rounded-lg px-3 py-2 hover:bg-primary/90">⬇︎ Exportar CSV</button>
+  </div>
+  <p class="text-on-surface-variant mb-5 max-w-3xl">Universidades, estadios y polideportivos de los <b>24 estados</b> de Venezuela aptos como centros de acopio y refugio tras un terremoto: grandes superficies techadas, acceso vehicular y estacionamiento. Toca un punto para ver la dirección y cómo llegar.</p>
+
+  <!-- Stat tiles -->
+  <div id="tiles" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
+
+  <!-- Map -->
+  <div id="map" class="mb-3"></div>
+  <div class="flex flex-wrap items-center gap-4 text-xs mb-6">
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full" style="background:#2563eb"></span> Universidad</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full" style="background:#dc2626"></span> Estadio</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full" style="background:#16a34a"></span> Polideportivo / Gimnasio</span>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex flex-wrap items-center gap-3 mb-4">
+    <input id="q" type="search" placeholder="Buscar centro, ciudad o dirección…" class="flex-1 min-w-[220px] rounded-lg border border-outline-variant px-3 py-2 text-sm">
+    <select id="estadoFilter" class="rounded-lg border border-outline-variant px-3 py-2 text-sm"><option value="">Todos los estados</option></select>
+    <select id="tipoFilter" class="rounded-lg border border-outline-variant px-3 py-2 text-sm">
+      <option value="">Todos los tipos</option><option value="universidad">Universidad</option><option value="estadio">Estadio</option><option value="polideportivo">Polideportivo</option>
+    </select>
+    <span id="count" class="text-xs text-on-surface-variant ml-auto"></span>
+  </div>
+
+  <!-- Grouped list -->
+  <div id="list" class="space-y-6"></div>
+
+  <p class="text-xs text-on-surface-variant mt-6 max-w-3xl">⚠️ <b>Aviso:</b> directorio de referencia. Las direcciones y coordenadas son aproximadas a nivel de sede/ciudad y deben <b>verificarse y coordinarse con Protección Civil, la alcaldía y la institución</b> antes de activar un centro. La idoneidad estructural de cada edificio debe evaluarse tras el sismo.</p>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+
+// ── Orden oficial de las 24 entidades federales ──
+const ESTADOS=['Distrito Capital','Amazonas','Anzoátegui','Apure','Aragua','Barinas','Bolívar','Carabobo','Cojedes','Delta Amacuro','Falcón','Guárico','Lara','Mérida','Miranda','Monagas','Nueva Esparta','Portuguesa','Sucre','Táchira','Trujillo','La Guaira','Yaracuy','Zulia'];
+const TIPO={universidad:['#2563eb','🎓','Universidad'],estadio:['#dc2626','🏟️','Estadio'],polideportivo:['#16a34a','🤸','Polideportivo']};
+
+// [estado, ciudad, nombre, tipo, dirección, lat, lon, capacidad]
+const D=[
+['Distrito Capital','Caracas','Universidad Central de Venezuela (UCV)','universidad','Ciudad Universitaria, Plaza Venezuela, Caracas',10.4897,-66.8916,'Alta — Patrimonio UNESCO'],
+['Distrito Capital','Caracas','Estadio Olímpico de la UCV','estadio','Ciudad Universitaria, Los Chaguaramos, Caracas',10.4915,-66.8896,'≈24.000'],
+['Distrito Capital','Caracas','Estadio Universitario de Caracas (béisbol)','estadio','Ciudad Universitaria, Caracas',10.4906,-66.8868,'≈26.000'],
+['Distrito Capital','Caracas','Universidad Católica Andrés Bello (UCAB)','universidad','Av. Teherán, Urb. Montalbán, Caracas',10.4631,-66.9486,'Media'],
+['Distrito Capital','Caracas','Poliedro de Caracas','polideportivo','Av. La Rinconada, El Valle, Caracas',10.4642,-66.9163,'≈12.000'],
+
+['Amazonas','Puerto Ayacucho','UNEFA / UNELLEZ núcleo Amazonas','universidad','Av. Orinoco, Puerto Ayacucho',5.6635,-67.6000,'Media'],
+['Amazonas','Puerto Ayacucho','Polideportivo de Puerto Ayacucho','polideportivo','Av. Aguerrevere, Puerto Ayacucho',5.6600,-67.6300,'Media'],
+
+['Anzoátegui','Barcelona','Universidad de Oriente (UDO) núcleo Anzoátegui','universidad','Av. Argimiro Gabaldón, Barcelona',10.1286,-64.6822,'Alta'],
+['Anzoátegui','Puerto La Cruz','Estadio Alfonso «Chico» Carrasquel','estadio','Av. Intercomunal, Puerto La Cruz',10.2161,-64.6336,'≈18.000'],
+['Anzoátegui','Puerto La Cruz','Estadio José Antonio Anzoátegui','estadio','Complejo Polideportivo, Puerto La Cruz',10.2100,-64.6600,'≈40.000'],
+['Anzoátegui','El Tigre','Universidad Gran Mariscal de Ayacucho (UGMA)','universidad','Av. Las Américas, El Tigre',8.9000,-64.2600,'Media'],
+
+['Apure','San Fernando de Apure','UNELLEZ núcleo Apure','universidad','Av. Caja de Agua, San Fernando de Apure',7.8900,-67.4700,'Media'],
+['Apure','San Fernando de Apure','Polideportivo de San Fernando','polideportivo','Av. Miranda, San Fernando de Apure',7.8850,-67.4650,'Media'],
+
+['Aragua','Maracay','Estadio José Pérez Colmenares','estadio','Av. Las Delicias, Maracay',10.2715,-67.5933,'≈16.000'],
+['Aragua','Turmero','Universidad Bicentenaria de Aragua (UBA)','universidad','San Joaquín de Turmero, Aragua',10.2300,-67.4200,'Media'],
+['Aragua','Maracay','Universidad de Carabobo — Cs. de la Salud (Aragua)','universidad','Av. Bolívar, Maracay',10.2700,-67.6000,'Media'],
+['Aragua','Maracay','Polideportivo Máximo Viloria','polideportivo','Av. Universidad, Maracay',10.2600,-67.6000,'Media'],
+
+['Barinas','Barinas','UNELLEZ — Mesa de Cavacas','universidad','Av. 23 de Enero, Barinas',8.6231,-70.2075,'Media'],
+['Barinas','Barinas','Estadio Agustín Tovar «La Carolina»','estadio','Av. 23 de Enero, Barinas',8.6228,-70.2331,'≈25.000'],
+
+['Bolívar','Ciudad Guayana','Estadio CTE Cachamay','estadio','Av. Guayana, Puerto Ordaz, Ciudad Guayana',10.2925,-62.7236,'≈41.000'],
+['Bolívar','Ciudad Guayana','Universidad Nacional Experimental de Guayana (UNEG)','universidad','Av. Atlántico, Puerto Ordaz',8.2960,-62.7100,'Media'],
+['Bolívar','Ciudad Bolívar','Universidad de Oriente núcleo Bolívar','universidad','La Sabanita, Ciudad Bolívar',8.1300,-63.5400,'Media'],
+['Bolívar','Ciudad Guayana','Polideportivo Hermanas González','polideportivo','Alta Vista, Puerto Ordaz',8.3000,-62.7300,'Media'],
+
+['Carabobo','Naguanagua','Universidad de Carabobo (UC)','universidad','Campus Bárbula, Naguanagua',10.2683,-68.0006,'Alta'],
+['Carabobo','Valencia','Estadio José Bernardo Pérez','estadio','Av. Branger, Valencia',10.1839,-68.0125,'≈16.000'],
+['Carabobo','San Diego','Universidad José Antonio Páez (UJAP)','universidad','Urb. Yuma, San Diego',10.2200,-67.9600,'Media'],
+['Carabobo','Valencia','Polideportivo Misael Delgado','polideportivo','Av. Cedeño, Valencia',10.1900,-68.0000,'Media'],
+
+['Cojedes','San Carlos','UNELLEZ núcleo San Carlos','universidad','Av. Bolívar, San Carlos',9.6600,-68.5800,'Media'],
+['Cojedes','San Carlos','Polideportivo de San Carlos','polideportivo','Av. Sucre, San Carlos',9.6580,-68.5820,'Media'],
+
+['Delta Amacuro','Tucupita','Universidad de Tucupita (UDO/IUTD)','universidad','Calle Tucupita, Tucupita',9.0600,-62.0500,'Media'],
+['Delta Amacuro','Tucupita','Polideportivo de Tucupita','polideportivo','Av. Guasina, Tucupita',9.0620,-62.0480,'Media'],
+
+['Falcón','Coro','Universidad Nacional Experimental Francisco de Miranda (UNEFM)','universidad','Av. Independencia, Santa Ana de Coro',11.4047,-69.6814,'Media'],
+['Falcón','Coro','Complejo Polideportivo de Coro','polideportivo','Sector Sabana Larga, Coro',11.4000,-69.6700,'Media'],
+['Falcón','Punto Fijo','Complejo Polideportivo de Punto Fijo','polideportivo','Av. Bolívar, Punto Fijo',11.7000,-70.2000,'Media'],
+
+['Guárico','San Juan de los Morros','Universidad Rómulo Gallegos (UNERG)','universidad','Av. Rómulo Gallegos, San Juan de los Morros',9.9000,-67.3500,'Media'],
+['Guárico','Calabozo','Polideportivo de Calabozo','polideportivo','Av. 23 de Enero, Calabozo',8.9200,-67.4300,'Media'],
+
+['Lara','Barquisimeto','Universidad Centroccidental Lisandro Alvarado (UCLA)','universidad','Av. Las Industrias, Barquisimeto',10.0731,-69.3225,'Alta'],
+['Lara','Cabudare','Estadio Metropolitano de Lara (Farid Richa)','estadio','Av. Intercomunal, Cabudare',10.0356,-69.2731,'≈45.000'],
+['Lara','Barquisimeto','Estadio Antonio Herrera Gutiérrez','estadio','Av. Florencio Jiménez, Barquisimeto',10.0506,-69.3486,'≈17.000'],
+['Lara','Cabudare','Universidad Fermín Toro','universidad','Av. Las Industrias, Cabudare',10.0300,-69.2600,'Media'],
+
+['Mérida','Mérida','Universidad de Los Andes (ULA)','universidad','Av. 3 Independencia, Mérida',8.5897,-71.1561,'Alta'],
+['Mérida','Mérida','Estadio Metropolitano de Mérida (Guillermo Soto Rosa)','estadio','Av. Andrés Bello, Mérida',8.5625,-71.2086,'≈42.000'],
+['Mérida','Mérida','Polideportivo 5 Águilas Blancas','polideportivo','Av. Las Américas, Mérida',8.6000,-71.1400,'Media'],
+
+['Miranda','Baruta','Universidad Simón Bolívar (USB)','universidad','Valle de Sartenejas, Baruta',10.4083,-66.8786,'Alta'],
+['Miranda','Caracas','Universidad Metropolitana (UNIMET)','universidad','Terrazas del Ávila, Caracas',10.5000,-66.7900,'Media'],
+['Miranda','Guarenas','Polideportivo de Guarenas','polideportivo','Av. Intercomunal Guarenas-Guatire',10.4700,-66.6100,'Media'],
+
+['Monagas','Maturín','Estadio Monumental Simón Bolívar','estadio','Av. Alirio Ugarte Pelayo, Maturín',9.7236,-63.1739,'≈51.000'],
+['Monagas','Maturín','Universidad de Oriente núcleo Monagas','universidad','Av. Universidad, Juanico, Maturín',9.7500,-63.1800,'Media'],
+['Monagas','Maturín','Polideportivo de Maturín','polideportivo','Av. Bolívar, Maturín',9.7500,-63.1700,'Media'],
+
+['Nueva Esparta','Guatamare','Estadio Nueva Esparta','estadio','Av. Jóvito Villalba, Guatamare, Isla de Margarita',10.9628,-63.8589,'≈16.000'],
+['Nueva Esparta','Guatamare','Universidad de Oriente núcleo Nueva Esparta','universidad','Av. Principal, Guatamare',10.9700,-63.8500,'Media'],
+['Nueva Esparta','El Valle','Universidad de Margarita (UNIMAR)','universidad','El Valle del Espíritu Santo, Margarita',10.9900,-63.8600,'Media'],
+
+['Portuguesa','Guanare','UNELLEZ núcleo Guanare','universidad','Mesa de Cavacas, Guanare',9.0436,-69.7486,'Media'],
+['Portuguesa','Acarigua','Estadio José Antonio Páez','estadio','Av. Libertador, Acarigua-Araure',9.5500,-69.2000,'≈20.000'],
+
+['Sucre','Cumaná','Universidad de Oriente (UDO) — Sede Rectoral','universidad','Av. Universidad, Cumaná',10.4536,-64.1758,'Alta'],
+['Sucre','Cumaná','Gimnasio Cubierto de Cumaná','polideportivo','Av. Perimetral, Cumaná',10.4600,-64.1700,'Media'],
+
+['Táchira','San Cristóbal','Universidad Nacional Experimental del Táchira (UNET)','universidad','Av. Universidad, Paramillo, San Cristóbal',7.7669,-72.2236,'Alta'],
+['Táchira','San Cristóbal','Estadio Polideportivo de Pueblo Nuevo','estadio','Av. Universidad, Pueblo Nuevo, San Cristóbal',7.7706,-72.2233,'≈38.000'],
+['Táchira','San Cristóbal','Universidad Católica del Táchira (UCAT)','universidad','Carrera 14, San Cristóbal',7.7600,-72.2200,'Media'],
+
+['Trujillo','Trujillo','Universidad de Los Andes — Núcleo Rafael Rangel (NURR)','universidad','Av. Medina Angarita, Trujillo',9.3700,-70.4300,'Media'],
+['Trujillo','Valera','Universidad Valle del Momboy','universidad','Carvajal, Valera',9.3200,-70.6000,'Media'],
+['Trujillo','Valera','Polideportivo de Valera','polideportivo','Av. Independencia, Valera',9.3180,-70.6020,'Media'],
+
+['La Guaira','Catia La Mar','Universidad Marítima del Caribe','universidad','Av. El Ejército, Catia La Mar',10.6000,-67.0300,'Media'],
+['La Guaira','La Guaira','Polideportivo de La Guaira','polideportivo','Macuto, La Guaira',10.6000,-66.9000,'Media'],
+
+['Yaracuy','San Felipe','Universidad Nacional Experimental del Yaracuy (UNEY)','universidad','Av. La Patria, San Felipe',10.3403,-68.7456,'Media'],
+['Yaracuy','San Felipe','Estadio Florentino Oropeza','estadio','Sector La Manga, San Felipe',10.3300,-68.7400,'≈12.000'],
+
+['Zulia','Maracaibo','Universidad del Zulia (LUZ)','universidad','Av. Goajira, Ciudad Universitaria, Maracaibo',10.6786,-71.6042,'Alta'],
+['Zulia','Maracaibo','Estadio Pachencho Romero','estadio','Av. Universidad, Maracaibo',10.6800,-71.6600,'≈40.000'],
+['Zulia','Maracaibo','Estadio Luis Aparicio El Grande','estadio','Av. 8 Santa Rita, Maracaibo',10.6906,-71.6286,'≈24.000'],
+['Zulia','Maracaibo','Universidad Rafael Urdaneta (URU)','universidad','Av. 2 El Milagro, Maracaibo',10.6900,-71.6200,'Media'],
+].map((r,i)=>({id:i,estado:r[0],ciudad:r[1],nombre:r[2],tipo:r[3],dir:r[4],lat:r[5],lon:r[6],cap:r[7]}));
+
+const $=s=>document.querySelector(s);
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const gmaps=d=>`https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lon}`;
+
+// ── Map ──
+const map=L.map('map',{attributionControl:false,scrollWheelZoom:false}).setView([8.4,-66],6);
+L.control.attribution({prefix:false}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM · © CARTO',maxZoom:19}).addTo(map);
+const markers=L.layerGroup().addTo(map);
+function dot(c){return L.divIcon({className:'',html:`<div style="width:16px;height:16px;border-radius:9999px;background:${c};box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.4)"></div>`,iconSize:[16,16],iconAnchor:[8,8]});}
+
+// ── Tiles ──
+function renderTiles(){
+  const t={u:0,e:0,p:0},est=new Set();
+  D.forEach(d=>{est.add(d.estado);if(d.tipo==='universidad')t.u++;else if(d.tipo==='estadio')t.e++;else t.p++;});
+  const cards=[['Centros totales',D.length,'#13284f'],['Universidades',t.u,'#2563eb'],['Estadios',t.e,'#dc2626'],['Estados cubiertos',est.size+' / 24','#16a34a']];
+  $('#tiles').innerHTML=cards.map(([l,v,c])=>`<div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div class="font-display font-extrabold text-2xl tnum" style="color:${c}">${v}</div><div class="text-sm font-semibold mt-0.5">${l}</div></div>`).join('');
+}
+
+// ── Filter + render ──
+function view(){
+  const q=$('#q').value.trim().toLowerCase(),ef=$('#estadoFilter').value,tf=$('#tipoFilter').value;
+  return D.filter(d=>{
+    if(ef&&d.estado!==ef)return false;if(tf&&d.tipo!==tf)return false;
+    if(q&&!(d.nombre+' '+d.ciudad+' '+d.dir+' '+d.estado).toLowerCase().includes(q))return false;return true;});
+}
+function render(){
+  const list=view();
+  $('#count').textContent=`${list.length} de ${D.length} centros`;
+  // markers
+  markers.clearLayers();const pts=[];
+  list.forEach(d=>{const[c]=TIPO[d.tipo];pts.push([d.lat,d.lon]);
+    L.marker([d.lat,d.lon],{icon:dot(c)}).bindPopup(
+      `<b>${esc(d.nombre)}</b><br>${TIPO[d.tipo][1]} ${TIPO[d.tipo][2]} · ${esc(d.cap)}<br><span style="color:#444">${esc(d.dir)}</span><br>${esc(d.estado)} — ${esc(d.ciudad)}<br><a href="${gmaps(d)}" target="_blank" rel="noopener" style="color:#13284f;font-weight:700">📍 Cómo llegar →</a>`
+    ).addTo(markers);});
+  if(pts.length)map.fitBounds(pts,{padding:[30,30],maxZoom:9});
+  // grouped list
+  const byEst={};list.forEach(d=>{(byEst[d.estado]=byEst[d.estado]||[]).push(d);});
+  $('#list').innerHTML=ESTADOS.filter(e=>byEst[e]).map(e=>{
+    const rows=byEst[e].map(d=>{const[c,ic,lbl]=TIPO[d.tipo];return `
+      <div class="flex items-start gap-3 p-3 border-t border-outline-variant/40">
+        <span class="text-lg leading-6">${ic}</span>
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold">${esc(d.nombre)}</div>
+          <div class="text-xs text-on-surface-variant">${esc(d.dir)} · ${esc(d.ciudad)}</div>
+          <div class="text-xs mt-0.5"><span class="inline-block rounded px-1.5 py-0.5 text-white text-[10px] font-bold" style="background:${c}">${lbl}</span> <span class="text-on-surface-variant">Capacidad: ${esc(d.cap)}</span></div>
+        </div>
+        <a href="${gmaps(d)}" target="_blank" rel="noopener" class="text-xs font-semibold text-primary whitespace-nowrap hover:underline">📍 Cómo llegar</a>
+      </div>`;}).join('');
+    return `<section class="bg-white border border-outline-variant/60 rounded-xl overflow-hidden">
+      <div class="px-4 py-2.5 bg-primary text-white flex items-center justify-between"><b class="font-display">${esc(e)}</b><span class="text-xs text-white/80">${byEst[e].length} centro${byEst[e].length>1?'s':''}</span></div>
+      ${rows}</section>`;
+  }).join('')||'<p class="text-on-surface-variant text-sm">Sin resultados.</p>';
+}
+
+// ── Wiring ──
+$('#estadoFilter').innerHTML='<option value="">Todos los estados</option>'+ESTADOS.map(e=>`<option>${esc(e)}</option>`).join('');
+['#q','#estadoFilter','#tipoFilter'].forEach(s=>$(s).addEventListener('input',render));
+$('#csv').addEventListener('click',()=>{
+  const head=['Estado','Ciudad','Nombre','Tipo','Direccion','Lat','Lon','Capacidad','ComoLlegar'];
+  const lines=[head.join(',')].concat(D.map(d=>[d.estado,d.ciudad,d.nombre,d.tipo,d.dir,d.lat,d.lon,d.cap,gmaps(d)].map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')));
+  const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sismo911-centros-acopio-venezuela.csv';a.click();
+});
+renderTiles();render();
+setTimeout(()=>map.invalidateSize(),200);
+</script>
+</body>
+</html>
