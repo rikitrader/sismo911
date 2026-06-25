@@ -19,7 +19,13 @@ const fmtNum = n => { n = num(n); if (!n) return ''; if (n >= 1e6) return (n / 1
 const fmtDate = iso => { const t = Date.parse(iso); if (Number.isNaN(t)) return '24 jun 2026'; return new Date(t).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Caracas' }) }
 const PLAT = { 'TikTok': '#111827', 'Instagram': '#C13584', 'YouTube': '#FF0000', 'Facebook': '#1877F2', 'X/Twitter': '#111827' }
 const platLabel = p => ({ 'X/Twitter': 'X' }[p] || p)
-const place = p => p.lugar && !/general|desconocida/i.test(p.lugar) ? p.lugar : 'Venezuela'
+const titleCase = s => s.toLowerCase().replace(/\b[\wáéíóúñ]/g, c => c.toUpperCase())
+const place = p => {
+  const l = (p.lugar || '').trim()
+  // reject junk: empty, generic, anything with digits or codes, overly long, non-place chars
+  if (!l || /general|desconocida/i.test(l) || /\d/.test(l) || l.length > 30 || !/^[A-Za-zÁÉÍÓÚÑáéíóúñ .'-]+$/.test(l)) return 'Venezuela'
+  return titleCase(l)
+}
 
 // premium branded SVG cover (data-uri, always works) — used as fallback + card art
 function cover(p) {
