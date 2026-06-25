@@ -55,6 +55,17 @@ id = "dc4674529c1a4dd4b747d8e7e3398d17"
 binding = "PERSON_PHOTOS"
 bucket_name = "sismo911-person-photos"
 
+
+# Missing-persons dataset (31k records) + photos (separate resources).
+[[d1_databases]]
+binding = "DESAP"
+database_name = "desaparecidos-vzla"
+database_id = "b722baa9-00d8-4b66-82ca-fe495eef1851"
+
+[[r2_buckets]]
+binding = "DESAP_FOTOS"
+bucket_name = "desaparecidos-fotos"
+
 [observability]
 enabled = true
 
