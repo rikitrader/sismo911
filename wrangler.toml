@@ -1,0 +1,38 @@
+name = "sismo911"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static frontend (dashboard, PAGER, admin) served directly from the Worker.
+# API routes (/api/*) are not files in ./public, so the Worker handles them.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Poll USGS every minute (Cloudflare cron minimum granularity).
+[triggers]
+crons = ["* * * * *"]
+
+# Relational store: events, missing persons, emergency contacts, citizen reports.
+[[d1_databases]]
+binding = "DB"
+database_name = "sismo911"
+# Local dev uses a local SQLite file keyed by database_name; this id is a
+# placeholder until the remote D1 is created on the target account.
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# Hot cache for the latest normalized USGS GeoJSON + computed PAGER payloads.
+[[kv_namespaces]]
+binding = "CACHE"
+id = "ac8230f9b1d445eca40cf5dcd0296fb8"
+
+[observability]
+enabled = true
+
+[vars]
+# Venezuela bounding box for the USGS FDSN query (min/max lat/lon).
+USGS_MINLAT = "-2"
+USGS_MAXLAT = "16"
+USGS_MINLON = "-76"
+USGS_MAXLON = "-58"
+USGS_WINDOW_DAYS = "30"

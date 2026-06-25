@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMO911 — Comando Sísmico Nacional</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: '#f9f9fc',
+            'surface-dim': '#dadadc',
+            'surface-container-lowest': '#ffffff',
+            'surface-container-low': '#f3f3f6',
+            'surface-container': '#eeeef0',
+            'surface-container-high': '#e8e8ea',
+            'on-surface': '#1a1c1e',
+            'on-surface-variant': '#44474f',
+            outline: '#747780',
+            'outline-variant': '#c4c6d0',
+            primary: '#00173a',
+            'primary-container': '#0b2b5b',
+            'on-primary-container': '#7a94ca',
+            secondary: '#bb0027',
+            'secondary-container': '#e0283c',
+            // alert scale
+            critical: '#c8102e',
+            warning: '#e57200',
+            advisory: '#ffbc3d',
+            safe: '#2e7d32',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            display: ['Public Sans', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          borderRadius: { DEFAULT: '0.25rem', md: '0.375rem', lg: '0.5rem' },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body { background: #f9f9fc; }
+    .font-display { font-family: 'Public Sans', sans-serif; }
+    .label-caps {
+      font-family: 'Public Sans', sans-serif;
+      font-weight: 700; font-size: 12px; line-height: 16px;
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    /* Custom scrollbar for activity feed */
+    .feed::-webkit-scrollbar { width: 6px; }
+    .feed::-webkit-scrollbar-thumb { background: #c4c6d0; border-radius: 9999px; }
+    .feed::-webkit-scrollbar-track { background: transparent; }
+
+    /* Leaflet seismic markers */
+    .quake-marker { border-radius: 9999px; box-shadow: 0 0 0 2px rgba(255,255,255,.9); }
+    .quake-pulse::after {
+      content: ''; position: absolute; inset: 0; border-radius: 9999px;
+      box-shadow: 0 0 0 0 rgba(200,16,46,.55);
+      animation: pulse-ring 1.8s cubic-bezier(.4,0,.6,1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(200,16,46,.55); }
+      70%  { box-shadow: 0 0 0 16px rgba(200,16,46,0); }
+      100% { box-shadow: 0 0 0 0 rgba(200,16,46,0); }
+    }
+    .leaflet-container { background: #eaeef2; font-family: 'Inter', sans-serif; }
+    .live-dot::before {
+      content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 9999px;
+      background: #c8102e; margin-right: 6px; vertical-align: middle;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+    .status-dot { animation: blink 1.8s ease-in-out infinite; }
+  </style>
+</head>
+
+<body class="font-sans text-on-surface antialiased">
+<div class="flex min-h-screen">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="hidden lg:flex w-64 flex-col bg-white border-r border-outline-variant/60 shrink-0">
+    <!-- Emblem / brand -->
+    <div class="flex items-center gap-3 px-5 h-[88px] border-b border-outline-variant/50">
+      <!-- Institutional seal -->
+      <div class="relative h-11 w-11 shrink-0">
+        <svg viewBox="0 0 100 100" class="h-11 w-11">
+          <circle cx="50" cy="50" r="48" fill="#00173a"/>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#7a94ca" stroke-width="1.5"/>
+          <!-- star -->
+          <path d="M50 26 l5.9 18.1 19 0 -15.4 11.2 5.9 18.1 -15.4-11.2 -15.4 11.2 5.9-18.1 -15.4-11.2 19 0z" fill="#bb0027"/>
+          <circle cx="50" cy="50" r="6" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="leading-tight">
+        <div class="font-display font-extrabold text-[17px] text-primary tracking-tight">SISMO911</div>
+        <div class="label-caps text-on-surface-variant text-[9px]">Vigilancia Nacional</div>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="flex-1 px-3 py-4 space-y-1">
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-md bg-primary text-white font-medium text-sm shadow-sm">
+        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12h4l2 7 4-14 2 7h6"/></svg>
+        Feed en Tiempo Real
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
+        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.4 2.7A1 1 0 012 21.8V6.6a1 1 0 01.55-.9L9 2.5m0 17.5l6 3m-6-3V2.5m6 20.5l5.45-2.72a1 1 0 00.55-.9V4.2a1 1 0 00-1.45-.9L15 5.5m0 17.5V5.5m0 0L9 2.5"/></svg>
+        Capas del Mapa
+      </a>
+      <a href="pager.html" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
+        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 4v5c0 4.5-3.1 7.9-8 9-4.9-1.1-8-4.5-8-9V7l8-4z"/></svg>
+        Alerta PAGER
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
+        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 19V5m4 14V9m4 10V3m4 16v-7m4 7V7"/></svg>
+        Estado de Estaciones
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-on-surface-variant hover:bg-surface-container font-medium text-sm transition">
+        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h18v14H3z M3 7l9 6 9-6"/></svg>
+        Contactar Funvisis
+      </a>
+    </nav>
+
+    <!-- CTA + help -->
+    <div class="px-3 pb-4 space-y-3">
+      <button class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-secondary-container text-white font-display font-bold text-sm py-3 rounded-md shadow-sm transition">
+        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z"/></svg>
+        Reportar Temblor
+      </button>
+      <a href="#" class="flex items-center gap-2 px-3 py-2 text-on-surface-variant hover:text-primary text-sm transition">
+        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.5 9a2.5 2.5 0 015 .5c0 1.7-2.5 2-2.5 3.5M12 17h.01"/></svg>
+        Centro de Ayuda
+      </a>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- Top bar -->
+    <header class="flex items-center justify-between h-[72px] px-4 sm:px-8 bg-white border-b border-outline-variant/60">
+      <div class="leading-tight">
+        <div class="label-caps text-on-surface-variant text-[10px]">Estado Actual</div>
+        <div class="flex items-center gap-2 font-display font-bold text-[19px] text-on-surface">
+          <span class="status-dot h-2.5 w-2.5 rounded-full bg-safe"></span>
+          Vigilancia Normal
+        </div>
+      </div>
+      <div class="flex items-center gap-4 sm:gap-5">
+        <button class="relative text-on-surface-variant hover:text-primary transition">
+          <svg class="h-[22px] w-[22px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          <span class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-secondary ring-2 ring-white"></span>
+        </button>
+        <button class="text-on-surface-variant hover:text-primary transition">
+          <svg class="h-[22px] w-[22px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2V21a2 2 0 11-4 0v-.1A1.7 1.7 0 005 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.7 1.7 0 003 13.6H3a2 2 0 110-4h.1A1.7 1.7 0 004.6 5l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H10a1.7 1.7 0 001-1.5V1a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V10a1.7 1.7 0 001.5 1H23a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+        </button>
+        <div class="h-8 w-px bg-outline-variant/60"></div>
+        <div class="flex items-center gap-3">
+          <div class="text-right leading-tight">
+            <div class="font-display font-bold text-sm text-on-surface">Cnel. Mendoza</div>
+            <div class="text-xs text-on-surface-variant">Oficial de Guardia</div>
+          </div>
+          <div class="h-9 w-9 rounded-full bg-primary text-white grid place-items-center font-display font-bold text-sm">CM</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Scroll area -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+      <!-- KPI cards -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <!-- Total events -->
+        <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+          <div class="label-caps text-on-surface-variant">Eventos Totales (24h)</div>
+          <div id="kpi-total" class="mt-3 font-display font-extrabold text-4xl text-on-surface tabular-nums">—</div>
+          <div id="kpi-total-sub" class="mt-2 flex items-center gap-1 text-on-surface-variant text-xs font-semibold">
+            vs. promedio de 30 días
+          </div>
+        </div>
+        <!-- Highest magnitude -->
+        <div class="bg-white rounded-lg border border-outline-variant/60 p-5 border-l-4 border-l-secondary">
+          <div class="label-caps text-on-surface-variant">Magnitud Máxima</div>
+          <div id="kpi-maxmag" class="mt-3 font-display font-extrabold text-4xl text-secondary tabular-nums font-mono">—</div>
+          <div id="kpi-maxloc" class="mt-2 text-xs text-on-surface-variant">—</div>
+        </div>
+        <!-- Stations active -->
+        <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+          <div class="label-caps text-on-surface-variant">Estaciones Activas</div>
+          <div class="mt-3 font-display font-extrabold text-4xl text-on-surface tabular-nums">128<span class="text-outline text-2xl">/130</span></div>
+          <div class="mt-2 flex items-center gap-1 text-safe text-xs font-semibold">
+            <span class="h-1.5 w-1.5 rounded-full bg-safe"></span> 98.4% de actividad
+          </div>
+        </div>
+        <!-- Average depth -->
+        <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+          <div class="label-caps text-on-surface-variant">Profundidad Media</div>
+          <div class="mt-3 font-display font-extrabold text-4xl text-on-surface tabular-nums">15.4<span class="text-outline text-2xl"> km</span></div>
+          <div class="mt-2 text-xs text-on-surface-variant">Dentro del rango normal</div>
+        </div>
+      </section>
+
+      <!-- Map + Activity feed -->
+      <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <!-- Map -->
+        <div class="xl:col-span-2 bg-white rounded-lg border border-outline-variant/60 overflow-hidden flex flex-col">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-outline-variant/50">
+            <h2 class="font-display font-bold text-lg text-on-surface">Mapa Sísmico Nacional</h2>
+            <span class="live-dot label-caps text-secondary bg-secondary/10 px-2.5 py-1 rounded-full">En Vivo</span>
+          </div>
+          <div class="relative flex-1 min-h-[420px]">
+            <div id="map" class="absolute inset-0"></div>
+            <!-- Legend -->
+            <div class="absolute top-4 right-4 z-[500] bg-white/95 backdrop-blur rounded-md border border-outline-variant/60 shadow-sm px-4 py-3 text-xs">
+              <div class="label-caps text-on-surface-variant mb-2">Leyenda</div>
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-critical"></span> Magnitud Alta (&gt;4.0)</div>
+                <div class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-warning"></span> Moderada (2.5 – 4.0)</div>
+                <div class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-safe"></span> Menor (&lt;2.5)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity feed -->
+        <div class="bg-white rounded-lg border border-outline-variant/60 flex flex-col">
+          <div class="px-5 py-4 border-b border-outline-variant/50 flex items-baseline justify-between">
+            <h2 class="font-display font-bold text-lg text-on-surface">Actividad en Tiempo Real</h2>
+            <span id="updated" class="text-[10px] text-on-surface-variant"></span>
+          </div>
+          <div id="feed" class="feed flex-1 overflow-y-auto divide-y divide-outline-variant/50 max-h-[420px]"></div>
+          <button class="m-3 py-2.5 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container label-caps text-[11px] transition">
+            Ver Archivo Histórico
+          </button>
+        </div>
+      </section>
+
+      <!-- Station status + Resources -->
+      <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <!-- Regional station status -->
+        <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-display font-bold text-lg text-on-surface">Estado Regional de Estaciones</h2>
+            <svg class="h-5 w-5 text-outline" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8"/></svg>
+          </div>
+          <div id="stations" class="space-y-4"></div>
+        </div>
+
+        <!-- Emergency resources -->
+        <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-display font-bold text-lg text-on-surface">Acceso a Recursos de Emergencia</h2>
+            <svg class="h-5 w-5 text-outline" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2v4m0 12v4m10-10h-4M6 12H2m15.5-5.5L14.7 9.3M9.3 14.7l-2.8 2.8m11 0l-2.8-2.8M9.3 9.3L6.5 6.5"/></svg>
+          </div>
+          <div class="grid grid-cols-2 gap-3" id="resources"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  // ---- Severity + colors ----
+  const sev = (m) => m >= 4.0 ? 'critical' : m >= 2.5 ? 'warning' : 'safe';
+  const HEX = { critical: '#c8102e', warning: '#e57200', safe: '#2e7d32' };
+
+  // ---- Fallback data (used if USGS is unreachable) ----
+  const FALLBACK = [
+    { mag: 4.2, place: '15km NO de Punto Fijo, Falcón', depth: 15.4, lat: 11.71, lon: -70.20, time: Date.now() - 15*6e4 },
+    { mag: 3.1, place: '5km E de Carúpano, Sucre',       depth: 2.1,  lat: 10.66, lon: -63.24, time: Date.now() - 105*6e4 },
+    { mag: 2.4, place: 'Región de El Vigía, Mérida',     depth: 8.6,  lat: 8.62,  lon: -71.65, time: Date.now() - 252*6e4 },
+    { mag: 1.9, place: 'Cuenca del Lago de Valencia',    depth: 5.8,  lat: 10.17, lon: -67.99, time: Date.now() - 390*6e4 },
+    { mag: 2.9, place: '12km S de Barcelona, Anzoátegui',depth: 11.2, lat: 10.01, lon: -64.70, time: Date.now() - 480*6e4 },
+  ];
+
+  // ---- Helpers ----
+  const timeAgo = (t) => {
+    const s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 60) return 'hace ' + Math.floor(s) + 's';
+    const m = s / 60; if (m < 60) return 'hace ' + Math.floor(m) + ' min';
+    const h = m / 60; if (h < 24) return 'hace ' + Math.floor(h) + 'h ' + Math.round(m % 60) + 'min';
+    return 'hace ' + Math.floor(h / 24) + 'd';
+  };
+  // Light ES touch-up of USGS English place strings
+  const esPlace = (p) => (p || 'Evento sísmico')
+    .replace(/\bof\b/g, 'de').replace(/\bNW\b/g, 'NO').replace(/\bSW\b/g, 'SO')
+    .replace(/\bWNW\b/g, 'ONO').replace(/\bWSW\b/g, 'OSO').replace(/\bW\b/g, 'O');
+
+  // ---- Map ----
+  const map = L.map('map', { zoomControl: true, scrollWheelZoom: false, attributionControl: false })
+    .setView([7.8, -66.2], 6);
+  L.control.attribution({ prefix: false }).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap, © CARTO · datos USGS', maxZoom: 19,
+  }).addTo(map);
+  const markerLayer = L.layerGroup().addTo(map);
+  const feed = document.getElementById('feed');
+
+  // ---- Render markers + feed + KPIs from a quake array ----
+  function render(quakes) {
+    markerLayer.clearLayers();
+    quakes.forEach((q, i) => {
+      const s = sev(q.mag);
+      const size = Math.max(9, Math.min(34, 8 + (q.mag - 1.5) * 6));
+      const recent = i === 0 && (Date.now() - q.time) < 36e5; // newest, < 1h
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="quake-marker ${recent ? 'quake-pulse' : ''}" style="position:relative;width:${size}px;height:${size}px;background:${HEX[s]}"></div>`,
+        iconSize: [size, size], iconAnchor: [size / 2, size / 2],
+      });
+      L.marker([q.lat, q.lon], { icon }).addTo(markerLayer)
+        .bindPopup(
+          `<div style="font-family:Inter,sans-serif;min-width:170px">
+             <div style="font-family:'JetBrains Mono';font-weight:700;color:${HEX[s]};font-size:15px">M ${q.mag.toFixed(1)}</div>
+             <div style="font-weight:600;margin:2px 0 4px">${esPlace(q.place)}</div>
+             <div style="font-size:11px;color:#44474f;font-family:'JetBrains Mono'">PROF ${q.depth.toFixed(1)} km · ${q.lat.toFixed(1)}°N ${Math.abs(q.lon).toFixed(1)}°O</div>
+             <div style="font-size:11px;color:#747780;margin-top:2px">${timeAgo(q.time)}</div>
+           </div>`
+        );
+    });
+
+    feed.innerHTML = quakes.length ? quakes.map((q, i) => {
+      const s = sev(q.mag);
+      const badge = { critical: 'bg-critical', warning: 'bg-warning', safe: 'bg-safe' }[s];
+      return `
+        <div class="px-5 py-3.5 hover:bg-surface-container-low transition cursor-pointer">
+          <div class="flex items-start justify-between gap-3">
+            <span class="${badge} text-white font-mono font-bold text-[11px] px-1.5 py-0.5 rounded shrink-0">M ${q.mag.toFixed(1)}</span>
+            <span class="text-[11px] text-on-surface-variant shrink-0 mt-0.5">${timeAgo(q.time)}</span>
+          </div>
+          <div class="mt-1.5 font-semibold text-sm text-on-surface leading-snug">${esPlace(q.place)}</div>
+          <div class="mt-1 flex items-center gap-3 text-[11px] text-on-surface-variant font-mono">
+            <span>PROF: ${q.depth.toFixed(1)} km</span>
+            <span>COORD: ${q.lat.toFixed(1)}°N ${Math.abs(q.lon).toFixed(1)}°O</span>
+          </div>
+        </div>`;
+    }).join('') : '<div class="px-5 py-8 text-center text-sm text-on-surface-variant">Sin sismos registrados en la región.</div>';
+
+    updateKPIs(quakes);
+  }
+
+  function updateKPIs(quakes) {
+    const now = Date.now();
+    const last24h = quakes.filter(q => now - q.time < 864e5);
+    const total = last24h.length;
+    document.getElementById('kpi-total').textContent = total;
+
+    // 30-day daily average comparison
+    const dailyAvg = quakes.length / 30;
+    const sub = document.getElementById('kpi-total-sub');
+    if (dailyAvg > 0) {
+      const diff = Math.round(((total - dailyAvg) / dailyAvg) * 100);
+      const up = diff >= 0;
+      sub.className = 'mt-2 flex items-center gap-1 text-xs font-semibold ' + (up ? 'text-warning' : 'text-safe');
+      sub.innerHTML = `<svg class="h-3.5 w-3.5 ${up ? '' : 'rotate-180'}" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7 7 7"/></svg> ${Math.abs(diff)}% ${up ? 'sobre' : 'bajo'} el promedio`;
+    }
+
+    // Highest magnitude
+    if (quakes.length) {
+      const max = quakes.reduce((a, b) => b.mag > a.mag ? b : a);
+      document.getElementById('kpi-maxmag').textContent = 'M ' + max.mag.toFixed(1);
+      document.getElementById('kpi-maxloc').textContent = 'Ubicación: ' + esPlace(max.place).split(',').slice(-1)[0].trim();
+    }
+
+    // Average depth
+    if (quakes.length) {
+      const avgD = quakes.reduce((a, b) => a + b.depth, 0) / quakes.length;
+      document.getElementById('kpi-depth').innerHTML = avgD.toFixed(1) + '<span class="text-outline text-2xl"> km</span>';
+    }
+
+    const upd = document.getElementById('updated');
+    if (upd) upd.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ---- Live USGS feed (Venezuela region, last 30 days) ----
+  async function fetchUSGS() {
+    const start = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+    const url = `https://earthquake.usgs.gov/fdsnws/event/1.0/query?format=geojson&starttime=${start}` +
+                `&minlatitude=-2&maxlatitude=16&minlongitude=-76&maxlongitude=-58&orderby=time&limit=300`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('USGS ' + res.status);
+    const json = await res.json();
+    return json.features.map(f => ({
+      mag: f.properties.mag ?? 0,
+      place: f.properties.place || 'Región de Venezuela',
+      depth: f.geometry.coordinates[2] ?? 0,
+      lat: f.geometry.coordinates[1],
+      lon: f.geometry.coordinates[0],
+      time: f.properties.time,
+    })).filter(q => q.mag !== null);
+  }
+
+  async function refresh() {
+    try {
+      const data = await fetchUSGS();
+      render(data.length ? data : FALLBACK);
+    } catch (e) {
+      console.warn('USGS feed unavailable, using fallback:', e.message);
+      render(FALLBACK);
+      const upd = document.getElementById('updated');
+      if (upd) upd.textContent = 'Datos de muestra (sin conexión USGS)';
+    }
+  }
+
+  render(FALLBACK);          // instant paint
+  refresh();                 // then live data
+  setInterval(refresh, 90_000);
+
+  // ---- Regional station status ----
+  const STATIONS = [
+    { name: 'Centro Norte (Caracas)',     status: 'ACTIVA',    pct: 100, ok: true },
+    { name: 'Región Occidental (Maracaibo)', status: 'ACTIVA', pct: 96,  ok: true },
+    { name: 'Cordillera Andina (Mérida)', status: 'DEGRADADA', pct: 58,  ok: false },
+    { name: 'Costa Oriental (Barcelona)', status: 'ACTIVA',    pct: 99,  ok: true },
+  ];
+  document.getElementById('stations').innerHTML = STATIONS.map(st => `
+    <div class="flex items-center justify-between gap-4">
+      <span class="text-sm text-on-surface">${st.name}</span>
+      <div class="flex items-center gap-3 shrink-0">
+        <span class="label-caps text-[10px] ${st.ok ? 'text-safe' : 'text-warning'}">${st.status}</span>
+        <div class="w-24 h-1.5 rounded-full bg-surface-container overflow-hidden">
+          <div class="h-full rounded-full ${st.ok ? 'bg-safe' : 'bg-warning'}" style="width:${st.pct}%"></div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  // ---- Emergency resources ----
+  const RES = [
+    { label: 'Manuales de Protocolo', d: 'M9 2h6l3 3v15a1 1 0 01-1 1H7a1 1 0 01-1-1V6l3-4z M9 2v4H6' },
+    { label: 'Estaciones Médicas',    d: 'M12 7v10M7 12h10 M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z' },
+    { label: 'Radio Comunicaciones',  d: 'M4 11a16 16 0 0116 0 M7 14a10 10 0 0110 0 M10 17a5 5 0 014 0 M12 20h.01' },
+    { label: 'Despacho de Patrullas', d: 'M3 13l2-5a2 2 0 012-1.4h8A2 2 0 0120 8l2 5v5a1 1 0 01-1 1h-1a1 1 0 01-1-1v-1H6v1a1 1 0 01-1 1H4a1 1 0 01-1-1v-5z M7 16h.01M17 16h.01' },
+  ];
+  document.getElementById('resources').innerHTML = RES.map(r => `
+    <button class="flex items-center gap-3 p-3.5 rounded-md border border-outline-variant/60 hover:border-primary hover:bg-surface-container-low text-left transition group">
+      <span class="h-9 w-9 grid place-items-center rounded-md bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white transition shrink-0">
+        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${r.d}"/></svg>
+      </span>
+      <span class="font-display font-semibold text-sm text-on-surface leading-tight">${r.label}</span>
+    </button>`).join('');
+</script>
+</body>
+</html>

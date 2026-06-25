@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PAGER — M 7.5, 23 km SE de Yumare, Venezuela | SISMO911</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: {
+      colors: { primary:'#00173a', secondary:'#bb0027', 'on-surface':'#1a1c1e', 'on-surface-variant':'#44474f', outline:'#747780', 'outline-variant':'#c4c6d0', critical:'#c8102e' },
+      fontFamily: { sans:['Inter','sans-serif'], display:['Public Sans','sans-serif'], mono:['JetBrains Mono','monospace'] },
+    }}};
+  </script>
+
+  <style>
+    body { background:#e2e2e5; }
+    .font-display{font-family:'Public Sans',sans-serif}
+    .paper{ background:#fff; width:100%; max-width:1100px; margin:0 auto; }
+    /* histogram */
+    .hist{ position:relative; height:120px; }
+    .bar{ position:absolute; bottom:0; width:34px; transform:translateX(-50%); background:#c8102e; }
+    .bar.box{ outline:2px solid #1a1c1e; outline-offset:2px; }
+    .barlabel{ position:absolute; top:-16px; left:50%; transform:translateX(-50%); font:700 11px 'Public Sans'; color:#1a1c1e; }
+    .axis-grad{ height:14px; background:linear-gradient(90deg,#2e7d32 0%,#2e7d32 33%,#fff16b 45%,#ffc859 60%,#ff9b4d 72%,#ff5a4d 84%,#c8102e 100%); }
+    table.exp td, table.exp th{ border:1px solid #1a1c1e; padding:5px 6px; text-align:center; }
+    .mmi-cell{ font:800 15px 'Public Sans'; }
+    @media print{ body{background:#fff} .no-print{display:none!important} .paper{max-width:none;box-shadow:none} }
+    .leaflet-container{ background:#cdd6e0; font-family:'Inter',sans-serif; }
+    .epi{ color:#c8102e; font-size:26px; line-height:1; text-shadow:0 0 3px #fff,0 0 3px #fff; }
+    .citylabel{ font:600 10px 'Inter'; color:#1a1c1e; text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 2px #fff; white-space:nowrap; }
+  </style>
+</head>
+
+<body class="font-sans text-on-surface">
+
+  <!-- action bar (not printed) -->
+  <div class="no-print sticky top-0 z-50 bg-primary text-white">
+    <div class="max-w-[1100px] mx-auto flex items-center justify-between px-4 py-2.5">
+      <a href="index.html" class="flex items-center gap-2 text-sm font-medium hover:text-white/80">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        Volver al panel SISMO911
+      </a>
+      <button onclick="window.print()" class="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-sm font-semibold">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+        Imprimir / PDF
+      </button>
+    </div>
+  </div>
+
+  <main class="paper p-6 sm:p-8 my-4 shadow-lg">
+
+    <!-- ===== HEADER ===== -->
+    <header class="border-b-2 border-on-surface pb-2">
+      <div class="flex items-start justify-between gap-4">
+        <!-- USGS + SISMO -->
+        <div class="flex items-center gap-3">
+          <div>
+            <div class="font-display font-black text-2xl tracking-tight text-on-surface leading-none">≋ USGS</div>
+            <div class="text-[10px] italic text-on-surface-variant">science for a changing world</div>
+          </div>
+          <div class="h-9 w-9 shrink-0">
+            <svg viewBox="0 0 100 100" class="h-9 w-9"><circle cx="50" cy="50" r="48" fill="#00173a"/><circle cx="50" cy="50" r="40" fill="none" stroke="#7a94ca" stroke-width="2"/><path d="M50 26 l5.9 18.1 19 0 -15.4 11.2 5.9 18.1 -15.4-11.2 -15.4 11.2 5.9-18.1 -15.4-11.2 19 0z" fill="#bb0027"/><circle cx="50" cy="50" r="6" fill="#fff"/></svg>
+          </div>
+        </div>
+        <!-- alert -->
+        <div class="flex items-center gap-3 text-right">
+          <div class="font-display font-bold text-lg leading-tight">Sacudida<br>Sísmica</div>
+          <div class="h-12 w-12 rounded-full bg-critical shadow"></div>
+          <div class="font-display font-bold text-lg leading-tight text-critical text-left">Alerta<br>Roja</div>
+        </div>
+        <!-- marks -->
+        <div class="flex items-center gap-2">
+          <div class="text-center">
+            <div class="h-9 w-9 rounded-full border-2 border-on-surface-variant grid place-items-center text-[9px] font-bold text-on-surface-variant">GSN</div>
+          </div>
+          <div class="font-display font-extrabold text-lg tracking-wide">ANSS<span class="text-on-surface-variant">〜</span></div>
+        </div>
+      </div>
+
+      <div class="flex items-end justify-between mt-2">
+        <div>
+          <h1 class="font-display font-extrabold text-2xl sm:text-3xl text-on-surface leading-tight">M 7.5, 23 km SE de Yumare, Venezuela</h1>
+          <p class="text-xs text-on-surface-variant mt-1 font-mono">Hora de origen: 2026-06-24 22:05:11 UTC (Mié 18:05:11 local)</p>
+          <p class="text-xs text-on-surface-variant font-mono">Ubicación: 10.4009° N&nbsp; 68.3206° O&nbsp;&nbsp; Profundidad: 10.0 km</p>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="font-display font-extrabold text-xl">PAGER</div>
+          <div class="font-display font-bold text-on-surface-variant">Versión 3</div>
+          <div class="text-[10px] text-on-surface-variant mt-1">Generado: 1 hora, 22 minutos después del sismo</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== FATALITIES / SUMMARY / LOSSES ===== -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-5">
+      <!-- Fatalities -->
+      <div>
+        <h2 class="font-display font-extrabold text-xl mb-3">Víctimas Estimadas</h2>
+        <div class="flex items-end gap-3">
+          <div class="h-12 w-12 rounded-full bg-critical shrink-0 mb-6"></div>
+          <div class="flex-1">
+            <div class="hist" id="hist-fat"></div>
+            <div class="axis-grad"></div>
+            <div class="flex justify-between text-[9px] text-on-surface-variant font-mono mt-0.5"><span>1</span><span>10</span><span>100</span><span>1.000</span><span>10.000</span><span>100.000</span></div>
+            <div class="text-[9px] text-center text-on-surface-variant italic">Fatalidades</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary text -->
+      <div class="text-sm leading-relaxed">
+        <p>Alerta <span class="font-bold text-critical">roja</span> por víctimas y pérdidas económicas asociadas a la sacudida. Es probable un número alto de víctimas y daños extensos; el desastre será de gran alcance. Alertas rojas previas han requerido respuesta nacional o internacional.</p>
+        <p class="mt-3">Las pérdidas económicas estimadas equivalen al <span class="font-bold">2–20% del PIB</span> de Venezuela.</p>
+      </div>
+
+      <!-- Economic Losses -->
+      <div>
+        <h2 class="font-display font-extrabold text-xl mb-3">Pérdidas Económicas Estimadas</h2>
+        <div class="flex items-end gap-3">
+          <div class="h-12 w-12 rounded-full bg-critical shrink-0 mb-6"></div>
+          <div class="flex-1">
+            <div class="hist" id="hist-loss"></div>
+            <div class="axis-grad"></div>
+            <div class="flex justify-between text-[9px] text-on-surface-variant font-mono mt-0.5"><span>1</span><span>10</span><span>100</span><span>1.000</span><span>10.000</span><span>100.000</span></div>
+            <div class="text-[9px] text-center text-on-surface-variant italic">USD (Millones)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== POPULATION EXPOSED ===== -->
+    <section class="mt-6">
+      <h2 class="font-display font-extrabold text-xl mb-2">Población Estimada Expuesta a la Sacudida</h2>
+      <div class="overflow-x-auto">
+        <table class="exp w-full text-xs border-collapse">
+          <tbody>
+            <tr>
+              <td class="font-bold bg-[#eeeef0] w-[170px] text-left leading-tight">POBLACIÓN EXPUESTA<br><span class="font-normal">(k = ×1000)</span></td>
+              <td>—*</td><td>254k*</td><td>9.283k*</td><td>7.967k</td><td>3.963k</td><td>3.571k</td><td>516k</td><td>117k</td><td>0</td>
+            </tr>
+            <tr id="mmi-row">
+              <td class="font-bold bg-[#eeeef0] text-left leading-tight">INTENSIDAD MERCALLI<br>MODIFICADA</td>
+            </tr>
+            <tr>
+              <td class="font-bold bg-[#eeeef0] text-left">SACUDIDA PERCIBIDA</td>
+              <td>No sentida</td><td>Débil</td><td>Leve</td><td>Moderada</td><td>Fuerte</td><td>Muy fuerte</td><td>Severa</td><td>Violenta</td><td>Extrema</td>
+            </tr>
+            <tr>
+              <td class="font-bold bg-[#eeeef0] text-left" rowspan="2">DAÑO<br>POTENCIAL</td>
+            </tr>
+          </tbody>
+        </table>
+        <table class="exp w-full text-xs border-collapse -mt-px">
+          <tbody>
+            <tr>
+              <td class="bg-[#eeeef0] w-[170px] text-left pl-6">Estructuras resistentes</td>
+              <td class="w-[9.2%]">Ninguno</td><td class="w-[9.2%]">Ninguno</td><td class="w-[9.2%]">Ninguno</td><td class="w-[9.2%]">M. leve</td><td class="w-[9.2%]">Leve</td><td class="w-[9.2%]">Moderado</td><td class="w-[9.2%]">Mod./Alto</td><td class="w-[9.2%]">Alto</td><td class="w-[9.2%]">M. alto</td>
+            </tr>
+            <tr>
+              <td class="bg-[#eeeef0] text-left pl-6">Estructuras vulnerables</td>
+              <td>Ninguno</td><td>Ninguno</td><td>Ninguno</td><td>Leve</td><td>Moderado</td><td>Mod./Alto</td><td>Alto</td><td>M. alto</td><td>M. alto</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-[10px] text-on-surface-variant italic mt-1">*La exposición estimada solo incluye la población dentro del área del mapa.</p>
+    </section>
+
+    <!-- ===== MAP + RIGHT COLUMN ===== -->
+    <section class="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-5">
+      <!-- Map -->
+      <div class="lg:col-span-3">
+        <h2 class="font-display font-extrabold text-xl mb-1">Exposición de la Población</h2>
+        <div class="flex items-center gap-1 text-[9px] font-mono mb-1">
+          <span class="text-on-surface-variant mr-1">población por km²:</span>
+          <span class="px-1.5 bg-[#f2f2f2] border border-outline-variant">0</span>
+          <span class="px-1.5 bg-[#d9d9d9]">5</span>
+          <span class="px-1.5 bg-[#b0b0b0]">50</span>
+          <span class="px-1.5 bg-[#878787] text-white">100</span>
+          <span class="px-1.5 bg-[#5e5e5e] text-white">500</span>
+          <span class="px-1.5 bg-[#383838] text-white">1000</span>
+          <span class="px-1.5 bg-[#1a1a1a] text-white">5000</span>
+        </div>
+        <div id="map" class="w-full h-[460px] border border-on-surface"></div>
+      </div>
+
+      <!-- Right column -->
+      <div class="lg:col-span-2 space-y-5">
+        <!-- Structures -->
+        <div>
+          <h3 class="font-display font-extrabold text-lg mb-1">Estructuras</h3>
+          <p class="text-xs leading-relaxed">En general, la población de esta región reside en estructuras vulnerables a la sacudida sísmica, aunque existen estructuras resistentes. Los tipos predominantes son mampostería de ladrillo sin refuerzo y bloques de adobe.</p>
+        </div>
+
+        <!-- Historical -->
+        <div>
+          <h3 class="font-display font-extrabold text-lg mb-1">Sismos Históricos</h3>
+          <table class="w-full text-xs">
+            <thead class="border-b-2 border-on-surface font-display">
+              <tr class="text-left"><th class="py-1">Fecha<br>(UTC)</th><th>Dist.<br>(km)</th><th>Mag.</th><th>Máx.<br>MMI(#)</th><th class="text-right">Muertes<br>sacudida</th></tr>
+            </thead>
+            <tbody class="font-mono" id="hist-body"></tbody>
+          </table>
+          <p class="text-[10px] leading-snug mt-1">Sismos recientes en esta zona han generado peligros secundarios como tsunamis que podrían haber contribuido a las pérdidas.</p>
+        </div>
+
+        <!-- City exposure -->
+        <div>
+          <h3 class="font-display font-extrabold text-lg mb-1">Exposición por Ciudad</h3>
+          <table class="w-full text-xs">
+            <thead class="border-b-2 border-on-surface font-display">
+              <tr class="text-left"><th class="py-1 w-10">MMI</th><th>Ciudad</th><th class="text-right">Población</th></tr>
+            </thead>
+            <tbody id="city-body"></tbody>
+          </table>
+          <p class="text-[9px] text-on-surface-variant mt-1">Las ciudades en negrita aparecen en el mapa. (k = ×1000)</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="mt-6 pt-2 border-t border-on-surface text-[10px] text-on-surface-variant">
+      <p>El contenido PAGER se genera automáticamente y solo considera pérdidas por daño estructural. Las limitaciones de los datos de entrada, las estimaciones de sacudida y los modelos de pérdida pueden añadir incertidumbre.</p>
+      <div class="flex items-center justify-between mt-1 font-mono">
+        <span>https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zp#pager</span>
+        <span class="font-bold text-on-surface">Event ID: us6000t7zp</span>
+      </div>
+    </footer>
+  </main>
+
+<script>
+  // ---- MMI palette (ShakeMap standard) ----
+  const MMI = ['I','II-III','IV','V','VI','VII','VIII','IX','X+'];
+  const MMI_HEX = { 'I':'#ffffff','II-III':'#c2d5f2','IV':'#a3e4f2','V':'#90ee90','VI':'#fff16b','VII':'#ffc859','VIII':'#ff9b4d','IX':'#ff5a4d','X+':'#c8102e' };
+  const MMI_DARK = { 'IX':true,'X+':true };
+
+  // MMI table row cells (colored)
+  const mmiRow = document.getElementById('mmi-row');
+  MMI.forEach(m => {
+    const td = document.createElement('td');
+    td.className = 'mmi-cell';
+    td.style.background = MMI_HEX[m];
+    td.style.color = MMI_DARK[m] ? '#fff' : '#1a1c1e';
+    td.textContent = m;
+    mmiRow.appendChild(td);
+  });
+
+  // ---- Histograms ----
+  function drawHist(id, bars) {
+    const el = document.getElementById(id);
+    const max = Math.max(...bars.map(b => b.pct));
+    bars.forEach(b => {
+      const div = document.createElement('div');
+      div.className = 'bar' + (b.box ? ' box' : '');
+      div.style.left = b.left + '%';
+      div.style.height = (b.pct / max * 100) + '%';
+      div.innerHTML = `<span class="barlabel">${b.pct}%</span>`;
+      el.appendChild(div);
+    });
+  }
+  // Fatalities: 3% @1k, 22% @10k, 44% (mode, boxed), 30% @100k
+  drawHist('hist-fat', [
+    { left: 58, pct: 3 }, { left: 73, pct: 22 }, { left: 86, pct: 44, box: true }, { left: 99, pct: 30 },
+  ]);
+  // Economic losses: 6%, 24%, 39% (boxed), 30%
+  drawHist('hist-loss', [
+    { left: 58, pct: 6 }, { left: 73, pct: 24 }, { left: 86, pct: 39, box: true }, { left: 99, pct: 30 },
+  ]);
+
+  // ---- Historical earthquakes ----
+  const HIST = [
+    { date:'1986-07-18', dist:126, mag:5.4, mmi:'VII', exp:'1k',   deaths:0 },
+    { date:'1975-04-05', dist:152, mag:6.3, mmi:'VIII', exp:'50k', deaths:3 },
+    { date:'1967-07-30', dist:111, mag:6.6, mmi:'VIII', exp:'952k',deaths:240 },
+  ];
+  document.getElementById('hist-body').innerHTML = HIST.map(h => `
+    <tr class="border-b border-outline-variant/50">
+      <td class="py-1">${h.date}</td><td>${h.dist}</td><td>${h.mag}</td>
+      <td><span style="background:${MMI_HEX[h.mmi]};color:${MMI_DARK[h.mmi]?'#fff':'#1a1c1e'}" class="px-1 rounded-sm font-bold">${h.mmi}</span>(${h.exp})</td>
+      <td class="text-right font-bold">${h.deaths}</td>
+    </tr>`).join('');
+
+  // ---- Selected city exposure ----
+  const CITIES = [
+    { mmi:'IX',  name:'Puerto Cabello',      pop:'209k',  lat:10.47, lon:-68.01, big:true },
+    { mmi:'VIII',name:'San Felipe',          pop:'221k',  lat:10.34, lon:-68.74, big:true },
+    { mmi:'VII', name:'Ocumare de la Costa', pop:'7k',    lat:10.45, lon:-67.76 },
+    { mmi:'VII', name:'Los Guayos',          pop:'130k',  lat:10.18, lon:-67.92 },
+    { mmi:'VII', name:'San Diego',           pop:'187k',  lat:10.25, lon:-67.95 },
+    { mmi:'VII', name:'Guacara',             pop:'200k',  lat:10.23, lon:-67.88 },
+    { mmi:'VII', name:'Valencia',            pop:'1.484k',lat:10.16, lon:-68.00, big:true },
+    { mmi:'VII', name:'Tocuyito',            pop:'197k',  lat:10.10, lon:-68.08 },
+    { mmi:'VII', name:'Maracay',             pop:'407k',  lat:10.25, lon:-67.60, big:true },
+    { mmi:'VII', name:'Barquisimeto',        pop:'1.059k',lat:10.07, lon:-69.32, big:true },
+    { mmi:'VI',  name:'Turmero',             pop:'255k',  lat:10.23, lon:-67.47, big:true },
+  ];
+  document.getElementById('city-body').innerHTML = CITIES.map(c => `
+    <tr class="border-b border-outline-variant/40">
+      <td class="py-0.5"><span style="background:${MMI_HEX[c.mmi]};color:${MMI_DARK[c.mmi]?'#fff':'#1a1c1e'}" class="inline-block w-9 text-center font-display font-bold rounded-sm">${c.mmi}</span></td>
+      <td class="${c.big ? 'font-bold' : ''}">${c.name}</td>
+      <td class="text-right font-mono ${c.big ? 'font-bold' : ''}">${c.pop}</td>
+    </tr>`).join('');
+
+  // ---- Population exposure map ----
+  const EPI = [10.4009, -68.3206];
+  const map = L.map('map', { zoomControl: true, scrollWheelZoom: false, attributionControl: false }).setView([10.2, -68.2], 8);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 }).addTo(map);
+
+  // Isoseismal MMI contours (approx radii, km) — largest first so they layer like contours
+  const CONTOURS = [
+    { mmi:'IV',  r:330 }, { mmi:'V', r:230 }, { mmi:'VI', r:155 },
+    { mmi:'VII', r:95 },  { mmi:'VIII', r:52 }, { mmi:'IX', r:26 },
+  ];
+  CONTOURS.forEach(c => {
+    L.circle(EPI, { radius: c.r * 1000, color: MMI_HEX[c.mmi], weight: 1.5, opacity: 0.9, fillColor: MMI_HEX[c.mmi], fillOpacity: 0.18 }).addTo(map);
+  });
+
+  // City markers
+  CITIES.forEach(c => {
+    L.circleMarker([c.lat, c.lon], { radius: c.big ? 4 : 2.5, color:'#1a1c1e', weight:1, fillColor: MMI_HEX[c.mmi], fillOpacity:1 })
+      .addTo(map).bindTooltip(`${c.name} · ${c.pop} · MMI ${c.mmi}`);
+    if (c.big) L.marker([c.lat, c.lon], { icon: L.divIcon({ className:'', html:`<div class="citylabel">${c.name}</div>`, iconSize:[80,12], iconAnchor:[-4,6] }) }).addTo(map);
+  });
+
+  // Epicenter star
+  L.marker(EPI, { icon: L.divIcon({ className:'', html:'<div class="epi">★</div>', iconSize:[26,26], iconAnchor:[13,13] }) })
+    .addTo(map).bindTooltip('Epicentro · M 7.5 · Yumare', { permanent:false });
+</script>
+</body>
+</html>
