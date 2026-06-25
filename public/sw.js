@@ -1,5 +1,5 @@
 // SISMO911 service worker — offline shell + cached emergency guide.
-const CACHE = 'sismo911-v3';
+const CACHE = 'sismo911-v4';
 const PRECACHE = ['/', '/guia.html', '/logo.svg', '/mapa.html', '/sos.html', '/acopio.html', '/acopio-data.json'];
 
 self.addEventListener('install', (e) => {
