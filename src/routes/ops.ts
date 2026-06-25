@@ -3,6 +3,7 @@ import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { rateLimit, validLatLon, blurCoord } from '../lib/security';
 import { audit } from '../lib/audit';
+import { syncSosSheet } from '../lib/sheets-sync';
 
 // Citizen-facing operational endpoints. SOS + check-ins are intentionally PUBLIC
 // (emergencies can't require login). Admin curation/triage is gated separately.
@@ -71,6 +72,8 @@ ops.post('/sos', async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO sos_alerts (id,lat,lon,name,phone,note,status,created_ms,updated_ms) VALUES (?,?,?,?,?,?,?,?,?)`
   ).bind(id, lat, lon, b.name ? String(b.name).slice(0, 80) : null, b.phone ? String(b.phone).slice(0, 40) : null, b.note ? String(b.note).slice(0, 1000) : null, 'active', now, now).run();
+  // Mirror into the Google Sheet immediately (best-effort, never blocks the SOS).
+  c.executionCtx.waitUntil(syncSosSheet(c.env).catch((e: any) => console.error('[sos] sheet sync failed:', e?.message ?? e)));
   return c.json({ ok: true, id }, 201);
 });
 ops.patch('/sos/:id', async (c) => {
@@ -79,5 +82,7 @@ ops.patch('/sos/:id', async (c) => {
   await c.env.DB.prepare(`UPDATE sos_alerts SET status = ?, updated_ms = ? WHERE id = ?`)
     .bind(b.status ?? 'acknowledged', Date.now(), c.req.param('id')).run();
   await audit(c, 'sos.status_update', { id: c.req.param('id'), status: b.status ?? 'acknowledged' });
+  // Reflect the new status (or resolution) in the sheet right away.
+  c.executionCtx.waitUntil(syncSosSheet(c.env).catch((e: any) => console.error('[sos] sheet sync failed:', e?.message ?? e)));
   return c.json({ ok: true });
 });

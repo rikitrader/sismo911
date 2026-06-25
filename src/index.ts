@@ -20,7 +20,7 @@ import { dedupePersonas } from './lib/dedupe';
 import { monitor } from './routes/monitor';
 import { aidOrgs } from './routes/aid_orgs';
 import { ingestSocialMonitor } from './ingest/social-monitor';
-import { syncMonitorSheet } from './lib/sheets-sync';
+import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
 import { ingestUsgs } from './ingest/usgs-cron';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
@@ -177,6 +177,8 @@ export default {
         // Hourly: social/web disaster-signal monitor → D1, then mirror into the Google Sheet.
         await ingestSocialMonitor(env).catch((e: any) => console.error('[cron] social monitor failed:', e?.message ?? e));
         await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));
+        // Safety net: re-mirror the SOS table hourly (live posts/patches sync it immediately).
+        await syncSosSheet(env).catch((e: any) => console.error('[cron] sos sheet sync failed:', e?.message ?? e));
       }
       // Daily 06:23 UTC: auto-remove EXACT duplicate personas (true re-scrapes) +
       // their orphaned R2 photos, in capped batches. Loose/heuristic dedupe stays
