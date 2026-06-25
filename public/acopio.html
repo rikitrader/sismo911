@@ -2,21 +2,21 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Centros de Acopio — Mapa Nacional — SISMO911</title>
-<meta name="description" content="Mapa nacional de centros de acopio para emergencias en Venezuela: universidades, estadios y polideportivos en los 24 estados, con dirección y cómo llegar.">
+<title>Acopio, Hospitales y Protección Civil — Mapa Nacional — SISMO911</title>
+<meta name="description" content="Mapa nacional de centros de acopio (universidades, estadios, polideportivos), hospitales tipo IV y Protección Civil/Bomberos en los 24 estados de Venezuela, con dirección y cómo llegar.">
 <meta name="author" content="SISMO911 — Comando Sísmico Nacional">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="canonical" href="https://sismo911.com/acopio">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SISMO911">
 <meta property="og:locale" content="es_VE">
-<meta property="og:title" content="Centros de Acopio de Venezuela — SISMO911">
-<meta property="og:description" content="Mapa nacional de centros de acopio: universidades, estadios y polideportivos en los 24 estados, con dirección y cómo llegar.">
+<meta property="og:title" content="Acopio, Hospitales y Protección Civil de Venezuela — SISMO911">
+<meta property="og:description" content="Mapa nacional de acopio, hospitales tipo IV y Protección Civil/Bomberos en los 24 estados de Venezuela, con dirección y cómo llegar.">
 <meta property="og:url" content="https://sismo911.com/acopio">
 <meta property="og:image" content="https://sismo911.com/og/og-default.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Centros de Acopio de Venezuela — SISMO911">
+<meta name="twitter:title" content="Acopio, Hospitales y Protección Civil de Venezuela — SISMO911">
 <meta name="twitter:description" content="Mapa nacional de centros de acopio en los 24 estados de Venezuela, con dirección y cómo llegar.">
 <meta name="twitter:image" content="https://sismo911.com/og/og-default.png">
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
@@ -29,7 +29,7 @@
   #map{height:460px;border-radius:.75rem;z-index:0}
 </style>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebPage","name":"Centros de Acopio de Venezuela — SISMO911","description":"Mapa nacional de centros de acopio para emergencias: universidades, estadios y polideportivos en los 24 estados de Venezuela.","url":"https://sismo911.com/acopio","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+{"@context":"https://schema.org","@type":"WebPage","name":"Acopio, Hospitales y Protección Civil de Venezuela — SISMO911","description":"Mapa nacional de acopio, hospitales tipo IV y Protección Civil en los 24 estados de Venezuela.","url":"https://sismo911.com/acopio","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
 </script>
 <script src="/app-shell.js" defer></script>
 </head>
@@ -38,28 +38,24 @@
 
 <main class="mx-auto max-w-6xl px-4 py-8">
   <div class="flex flex-wrap items-end justify-between gap-3 mb-1">
-    <h1 class="font-display font-extrabold text-3xl">Centros de Acopio — Mapa Nacional</h1>
+    <h1 class="font-display font-extrabold text-3xl">Acopio, Hospitales y Protección Civil</h1>
     <button id="csv" class="text-sm font-semibold bg-primary text-white rounded-lg px-3 py-2 hover:bg-primary/90">⬇︎ Exportar CSV</button>
   </div>
-  <p class="text-on-surface-variant mb-5 max-w-3xl">Universidades, estadios y polideportivos de los <b>24 estados</b> de Venezuela aptos como centros de acopio y refugio tras un terremoto: grandes superficies techadas, acceso vehicular y estacionamiento. Toca un punto para ver la dirección y cómo llegar.</p>
+  <p class="text-on-surface-variant mb-5 max-w-3xl">Mapa nacional de respuesta sísmica en los <b>24 estados</b>: centros de acopio/refugio (universidades, estadios, polideportivos), <b>hospitales tipo IV</b> y sedes de <b>Protección Civil y Bomberos</b>. Toca cualquier capa para encenderla o apagarla; toca un punto para ver la dirección y cómo llegar.</p>
 
   <!-- Stat tiles -->
-  <div id="tiles" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
+  <div id="tiles" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5"></div>
 
   <!-- Map -->
   <div id="map" class="mb-3"></div>
-  <div class="flex flex-wrap items-center gap-4 text-xs mb-6">
-    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full" style="background:#2563eb"></span> Universidad</span>
-    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full" style="background:#dc2626"></span> Estadio</span>
-    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full" style="background:#16a34a"></span> Polideportivo / Gimnasio</span>
-  </div>
+  <div id="legend" class="flex flex-wrap items-center gap-2 text-xs mb-6"></div>
 
   <!-- Filters -->
   <div class="flex flex-wrap items-center gap-3 mb-4">
     <input id="q" type="search" placeholder="Buscar centro, ciudad o dirección…" class="flex-1 min-w-[220px] rounded-lg border border-outline-variant px-3 py-2 text-sm">
     <select id="estadoFilter" class="rounded-lg border border-outline-variant px-3 py-2 text-sm"><option value="">Todos los estados</option></select>
     <select id="tipoFilter" class="rounded-lg border border-outline-variant px-3 py-2 text-sm">
-      <option value="">Todos los tipos</option><option value="universidad">Universidad</option><option value="estadio">Estadio</option><option value="polideportivo">Polideportivo</option>
+      <option value="">Todos los tipos</option><option value="universidad">Universidad</option><option value="estadio">Estadio</option><option value="polideportivo">Polideportivo</option><option value="hospital">Hospital</option><option value="proteccion_civil">Protección Civil</option><option value="bomberos">Bomberos</option>
     </select>
     <span id="count" class="text-xs text-on-surface-variant ml-auto"></span>
   </div>
@@ -75,7 +71,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch
 
 // ── Orden oficial de las 24 entidades federales ──
 const ESTADOS=['Distrito Capital','Amazonas','Anzoátegui','Apure','Aragua','Barinas','Bolívar','Carabobo','Cojedes','Delta Amacuro','Falcón','Guárico','Lara','Mérida','Miranda','Monagas','Nueva Esparta','Portuguesa','Sucre','Táchira','Trujillo','La Guaira','Yaracuy','Zulia'];
-const TIPO={universidad:['#2563eb','🎓','Universidad'],estadio:['#dc2626','🏟️','Estadio'],polideportivo:['#16a34a','🤸','Polideportivo']};
+const TIPO={universidad:['#2563eb','🎓','Universidad'],estadio:['#dc2626','🏟️','Estadio'],polideportivo:['#16a34a','🤸','Polideportivo'],hospital:['#0891b2','✚','Hospital'],proteccion_civil:['#ea580c','🚨','Protección Civil'],bomberos:['#b45309','🚒','Bomberos']};
 
 // [estado, ciudad, nombre, tipo, dirección, lat, lon, capacidad]
 const D=[
@@ -172,11 +168,84 @@ const D=[
 ['Zulia','Maracaibo','Estadio Pachencho Romero','estadio','Av. Universidad, Maracaibo',10.6800,-71.6600,'≈40.000'],
 ['Zulia','Maracaibo','Estadio Luis Aparicio El Grande','estadio','Av. 8 Santa Rita, Maracaibo',10.6906,-71.6286,'≈24.000'],
 ['Zulia','Maracaibo','Universidad Rafael Urdaneta (URU)','universidad','Av. 2 El Milagro, Maracaibo',10.6900,-71.6200,'Media'],
+
+// ── Hospitales tipo IV / centinela ──
+['Distrito Capital','Caracas','Hospital Universitario de Caracas (HUC)','hospital','Ciudad Universitaria, Los Chaguaramos, Caracas',10.4910,-66.8910,'Tipo IV'],
+['Distrito Capital','Caracas','Hospital Vargas de Caracas','hospital','Calle Vargas, San José, Caracas',10.5100,-66.9100,'Tipo IV'],
+['Distrito Capital','Caracas','Hospital J.M. de los Ríos (pediátrico)','hospital','San Bernardino, Caracas',10.5080,-66.8900,'Pediátrico IV'],
+['Distrito Capital','Caracas','Hospital Dr. Miguel Pérez Carreño','hospital','Av. Sucre, Catia, Caracas',10.4900,-66.9500,'Tipo IV'],
+['Miranda','Caracas','Hospital Dr. Domingo Luciani','hospital','El Llanito, Caracas',10.4800,-66.8100,'Tipo IV'],
+['Miranda','Los Teques','Hospital Victorino Santaella','hospital','Av. Bicentenaria, Los Teques',10.3400,-67.0400,'Tipo III-IV'],
+['La Guaira','La Guaira','Hospital Dr. José María Vargas (La Guaira)','hospital','Pariata, La Guaira',10.6000,-66.9500,'Tipo III'],
+['Zulia','Maracaibo','Hospital Universitario de Maracaibo (SAHUM)','hospital','Av. Goajira, Maracaibo',10.6800,-71.6300,'Tipo IV'],
+['Zulia','Maracaibo','Hospital General del Sur Dr. Pedro Iturbe','hospital','Av. 17, Maracaibo',10.6100,-71.6200,'Tipo IV'],
+['Carabobo','Valencia','Ciudad Hospitalaria Dr. Enrique Tejera (CHET)','hospital','Av. Michelena, Valencia',10.1800,-68.0000,'Tipo IV'],
+['Carabobo','Naguanagua','Hospital Universitario Dr. Ángel Larralde','hospital','Bárbula, Naguanagua',10.2700,-68.0000,'Tipo IV'],
+['Aragua','Maracay','Hospital Central de Maracay','hospital','Av. Bolívar, Maracay',10.2500,-67.6000,'Tipo IV'],
+['Lara','Barquisimeto','Hospital Central Univ. Dr. Antonio María Pineda','hospital','Av. Andrés Bello, Barquisimeto',10.0600,-69.3300,'Tipo IV'],
+['Anzoátegui','Barcelona','Hospital Universitario Dr. Luis Razetti','hospital','Av. Caracas, Barcelona',10.1300,-64.6900,'Tipo IV'],
+['Bolívar','Ciudad Bolívar','Complejo Hospitalario Ruiz y Páez','hospital','Av. Germania, Ciudad Bolívar',8.1300,-63.5500,'Tipo IV'],
+['Bolívar','Ciudad Guayana','Hospital Dr. Raúl Leoni (Guaiparo)','hospital','San Félix, Ciudad Guayana',8.3700,-62.6500,'Tipo IV'],
+['Táchira','San Cristóbal','Hospital Central de San Cristóbal','hospital','Av. Lucio Oquendo, San Cristóbal',7.7700,-72.2200,'Tipo IV'],
+['Mérida','Mérida','Hospital Universitario de Los Andes (IAHULA)','hospital','Av. 16 de Septiembre, Mérida',8.5900,-71.1600,'Tipo IV'],
+['Falcón','Coro','Hospital Universitario Dr. Alfredo Van Grieken','hospital','Sector Las Eugenias, Coro',11.4000,-69.6800,'Tipo IV'],
+['Nueva Esparta','Porlamar','Hospital Dr. Luis Ortega','hospital','Av. 4 de Mayo, Porlamar',10.9500,-63.8500,'Tipo III-IV'],
+['Sucre','Cumaná','Hospital Univ. Antonio Patricio de Alcalá (HUAPA)','hospital','Av. Perimetral, Cumaná',10.4500,-64.1800,'Tipo IV'],
+['Monagas','Maturín','Hospital Universitario Dr. Manuel Núñez Tovar','hospital','Av. Bicentenario, Maturín',9.7500,-63.1800,'Tipo IV'],
+['Barinas','Barinas','Hospital Dr. Luis Razetti','hospital','Av. 23 de Enero, Barinas',8.6200,-70.2100,'Tipo IV'],
+['Portuguesa','Guanare','Hospital Dr. Miguel Oraá','hospital','Av. 23 de Enero, Guanare',9.0400,-69.7500,'Tipo III-IV'],
+['Trujillo','Valera','Hospital Universitario Dr. Pedro Emilio Carrillo','hospital','Av. Bolívar, Valera',9.3200,-70.6000,'Tipo IV'],
+['Yaracuy','San Felipe','Hospital Central Dr. Plácido Rodríguez Rivero','hospital','Av. La Patria, San Felipe',10.3400,-68.7400,'Tipo IV'],
+['Guárico','San Juan de los Morros','Hospital Dr. Israel Ranuárez Balza','hospital','San Juan de los Morros',9.9000,-67.3500,'Tipo III'],
+['Cojedes','San Carlos','Hospital General de San Carlos','hospital','Av. Bolívar, San Carlos',9.6600,-68.5800,'Tipo III'],
+['Apure','San Fernando de Apure','Hospital Dr. Pablo Acosta Ortiz','hospital','San Fernando de Apure',7.8900,-67.4700,'Tipo III'],
+['Amazonas','Puerto Ayacucho','Hospital Dr. José Gregorio Hernández','hospital','Puerto Ayacucho',5.6600,-67.6000,'Tipo III'],
+['Delta Amacuro','Tucupita','Hospital Dr. Luis Razetti','hospital','Tucupita',9.0600,-62.0500,'Tipo III'],
+
+// ── Protección Civil (sede estadal en la capital) ──
+['Distrito Capital','Caracas','Protección Civil — Coordinación Nacional','proteccion_civil','El Paraíso, Caracas',10.5000,-66.9100,'Nacional'],
+['Amazonas','Puerto Ayacucho','Protección Civil Amazonas','proteccion_civil','Puerto Ayacucho',5.6600,-67.6200,'Estadal'],
+['Anzoátegui','Barcelona','Protección Civil Anzoátegui','proteccion_civil','Barcelona',10.1400,-64.6900,'Estadal'],
+['Apure','San Fernando de Apure','Protección Civil Apure','proteccion_civil','San Fernando de Apure',7.8900,-67.4700,'Estadal'],
+['Aragua','Maracay','Protección Civil Aragua','proteccion_civil','Maracay',10.2500,-67.6000,'Estadal'],
+['Barinas','Barinas','Protección Civil Barinas','proteccion_civil','Barinas',8.6200,-70.2100,'Estadal'],
+['Bolívar','Ciudad Bolívar','Protección Civil Bolívar','proteccion_civil','Ciudad Bolívar',8.1300,-63.5500,'Estadal'],
+['Carabobo','Valencia','Protección Civil Carabobo','proteccion_civil','Valencia',10.1700,-68.0000,'Estadal'],
+['Cojedes','San Carlos','Protección Civil Cojedes','proteccion_civil','San Carlos',9.6600,-68.5800,'Estadal'],
+['Delta Amacuro','Tucupita','Protección Civil Delta Amacuro','proteccion_civil','Tucupita',9.0600,-62.0500,'Estadal'],
+['Falcón','Coro','Protección Civil Falcón','proteccion_civil','Coro',11.4000,-69.6800,'Estadal'],
+['Guárico','San Juan de los Morros','Protección Civil Guárico','proteccion_civil','San Juan de los Morros',9.9000,-67.3500,'Estadal'],
+['Lara','Barquisimeto','Protección Civil Lara','proteccion_civil','Barquisimeto',10.0700,-69.3200,'Estadal'],
+['Mérida','Mérida','Protección Civil Mérida','proteccion_civil','Mérida',8.5900,-71.1500,'Estadal'],
+['Miranda','Los Teques','Protección Civil Miranda','proteccion_civil','Los Teques',10.3400,-67.0400,'Estadal'],
+['Monagas','Maturín','Protección Civil Monagas','proteccion_civil','Maturín',9.7500,-63.1800,'Estadal'],
+['Nueva Esparta','La Asunción','Protección Civil Nueva Esparta','proteccion_civil','La Asunción, Isla de Margarita',11.0300,-63.8600,'Estadal'],
+['Portuguesa','Guanare','Protección Civil Portuguesa','proteccion_civil','Guanare',9.0400,-69.7500,'Estadal'],
+['Sucre','Cumaná','Protección Civil Sucre','proteccion_civil','Cumaná',10.4600,-64.1800,'Estadal'],
+['Táchira','San Cristóbal','Protección Civil Táchira','proteccion_civil','San Cristóbal',7.7700,-72.2200,'Estadal'],
+['Trujillo','Trujillo','Protección Civil Trujillo','proteccion_civil','Trujillo',9.3700,-70.4300,'Estadal'],
+['La Guaira','La Guaira','Protección Civil La Guaira','proteccion_civil','La Guaira',10.6000,-66.9300,'Estadal'],
+['Yaracuy','San Felipe','Protección Civil Yaracuy','proteccion_civil','San Felipe',10.3400,-68.7400,'Estadal'],
+['Zulia','Maracaibo','Protección Civil Zulia','proteccion_civil','Maracaibo',10.6600,-71.6300,'Estadal'],
+
+// ── Cuerpos de Bomberos (estaciones centrales) ──
+['Distrito Capital','Caracas','Cuerpo de Bomberos del Distrito Capital','bomberos','Estación Central, Caracas',10.5060,-66.9140,'Central'],
+['Zulia','Maracaibo','Cuerpo de Bomberos de Maracaibo','bomberos','Av. 5 de Julio, Maracaibo',10.6650,-71.6200,'Central'],
+['Carabobo','Valencia','Cuerpo de Bomberos de Valencia','bomberos','Av. Bolívar, Valencia',10.1800,-68.0050,'Central'],
+['Lara','Barquisimeto','Cuerpo de Bomberos de Lara','bomberos','Av. Vargas, Barquisimeto',10.0650,-69.3300,'Central'],
+['Aragua','Maracay','Cuerpo de Bomberos de Aragua','bomberos','Av. Bolívar, Maracay',10.2500,-67.5950,'Central'],
+['Táchira','San Cristóbal','Cuerpo de Bomberos del Táchira','bomberos','Av. España, San Cristóbal',7.7680,-72.2250,'Central'],
 ].map((r,i)=>({id:i,estado:r[0],ciudad:r[1],nombre:r[2],tipo:r[3],dir:r[4],lat:r[5],lon:r[6],cap:r[7]}));
 
 const $=s=>document.querySelector(s);
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const gmaps=d=>`https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lon}`;
+const hidden=new Set();
+function renderLegend(){
+  $('#legend').innerHTML=Object.entries(TIPO).map(([k,v])=>{const off=hidden.has(k);
+    return `<button data-type="${k}" class="legend-chip flex items-center gap-1.5 rounded-full border bg-white px-3 py-1.5 ${off?'opacity-40 line-through':''}" style="border-color:${v[0]}"><span class="w-3 h-3 rounded-full" style="background:${v[0]}"></span>${v[1]} ${v[2]}</button>`;}).join('');
+  document.querySelectorAll('.legend-chip').forEach(b=>b.onclick=()=>{const k=b.dataset.type;hidden.has(k)?hidden.delete(k):hidden.add(k);renderLegend();render();});
+}
 
 // ── Map ──
 const map=L.map('map',{attributionControl:false,scrollWheelZoom:false}).setView([8.4,-66],6);
@@ -187,16 +256,18 @@ function dot(c){return L.divIcon({className:'',html:`<div style="width:16px;heig
 
 // ── Tiles ──
 function renderTiles(){
-  const t={u:0,e:0,p:0},est=new Set();
-  D.forEach(d=>{est.add(d.estado);if(d.tipo==='universidad')t.u++;else if(d.tipo==='estadio')t.e++;else t.p++;});
-  const cards=[['Centros totales',D.length,'#13284f'],['Universidades',t.u,'#2563eb'],['Estadios',t.e,'#dc2626'],['Estados cubiertos',est.size+' / 24','#16a34a']];
-  $('#tiles').innerHTML=cards.map(([l,v,c])=>`<div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div class="font-display font-extrabold text-2xl tnum" style="color:${c}">${v}</div><div class="text-sm font-semibold mt-0.5">${l}</div></div>`).join('');
+  const t={};Object.keys(TIPO).forEach(k=>t[k]=0);const est=new Set();
+  D.forEach(d=>{est.add(d.estado);t[d.tipo]++;});
+  const acopio=t.universidad+t.estadio+t.polideportivo;
+  const cards=[['Puntos totales',D.length,'#13284f'],['Acopio (univ/estadio/polid.)',acopio,'#2563eb'],['Hospitales',t.hospital,'#0891b2'],['Protección Civil',t.proteccion_civil,'#ea580c'],['Bomberos',t.bomberos,'#b45309'],['Estados',est.size+' / 24','#16a34a']];
+  $('#tiles').innerHTML=cards.map(([l,v,c])=>`<div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div class="font-display font-extrabold text-2xl tnum" style="color:${c}">${v}</div><div class="text-xs font-semibold mt-0.5">${l}</div></div>`).join('');
 }
 
 // ── Filter + render ──
 function view(){
   const q=$('#q').value.trim().toLowerCase(),ef=$('#estadoFilter').value,tf=$('#tipoFilter').value;
   return D.filter(d=>{
+    if(hidden.has(d.tipo))return false;
     if(ef&&d.estado!==ef)return false;if(tf&&d.tipo!==tf)return false;
     if(q&&!(d.nombre+' '+d.ciudad+' '+d.dir+' '+d.estado).toLowerCase().includes(q))return false;return true;});
 }
@@ -238,7 +309,7 @@ $('#csv').addEventListener('click',()=>{
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sismo911-centros-acopio-venezuela.csv';a.click();
 });
-renderTiles();render();
+renderTiles();renderLegend();render();
 setTimeout(()=>map.invalidateSize(),200);
 </script>
 </body>
