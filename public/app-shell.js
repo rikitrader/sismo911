@@ -42,13 +42,21 @@
   const css = `
     /* Page content fills the width next to the sidebar (no narrow centered column). */
     body > main{ max-width:none !important; margin-left:0 !important; margin-right:0 !important; width:auto !important }
-    @media(min-width:1024px){ body{ padding-left:16rem !important } #s911-burger{display:none!important} #s911-map-shift{left:16rem!important} }
+    /* MOBILE (<1024px): fixed top bar with burger + brand; content cleared below it. */
+    body{ padding-top:56px }
+    #s911-topbar{position:fixed;top:0;left:0;right:0;height:56px;z-index:1100;display:flex;align-items:center;gap:10px;padding:0 12px;background:#fff;border-bottom:1px solid ${LINE};box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    #s911-burger{width:40px;height:40px;border-radius:10px;background:${NAVY};color:#fff;display:grid;place-items:center;border:none;flex:0 0 auto;cursor:pointer}
+    #s911-topbar .s911-brand{font:800 20px 'Public Sans',sans-serif;color:${NAVY};letter-spacing:-.01em;text-decoration:none;display:flex;align-items:center;gap:8px}
+    /* DESKTOP (>=1024px): sidebar handles nav; hide the top bar, no top padding. */
+    @media(min-width:1024px){
+      body{ padding-left:16rem !important; padding-top:0 !important }
+      #s911-topbar{ display:none !important }
+    }
     #s911-shell{position:fixed;top:0;left:0;bottom:0;width:16rem;background:#fff;border-right:1px solid ${LINE};display:flex;flex-direction:column;z-index:1200;transform:translateX(-100%);transition:transform .2s ease}
     #s911-shell.open{transform:none}
     @media(min-width:1024px){ #s911-shell{transform:none} }
     #s911-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1199;display:none}
     #s911-back.open{display:block}
-    #s911-burger{position:fixed;top:12px;left:12px;z-index:1100;width:42px;height:42px;border-radius:10px;background:${NAVY};color:#fff;display:grid;place-items:center;border:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}
     #s911-shell a.acct{text-decoration:none}
   `;
   const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
@@ -60,7 +68,8 @@
   // (homepage, pager, dashboard, acopio) are left untouched — they ride the body padding-left.
   if (document.querySelector('.s911-fullmap')) {
     const s = document.createElement('style');
-    s.textContent = '.s911-fullmap{top:0!important}@media(min-width:1024px){.s911-fullmap{left:16rem!important}}';
+    // Mobile: sit below the 56px top bar. Desktop: full height, right of sidebar.
+    s.textContent = '.s911-fullmap{top:56px!important}@media(min-width:1024px){.s911-fullmap{top:0!important;left:16rem!important}}';
     document.head.appendChild(s);
   }
 
@@ -79,11 +88,17 @@
   document.body.appendChild(shell);
 
   const back = document.createElement('div'); back.id = 's911-back'; document.body.appendChild(back);
-  const burger = document.createElement('button'); burger.id = 's911-burger'; burger.setAttribute('aria-label', 'Menú');
-  burger.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:22px;height:22px"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>';
-  document.body.appendChild(burger);
+  // Mobile top bar: burger + brand (hidden on desktop via CSS).
+  const topbar = document.createElement('div'); topbar.id = 's911-topbar';
+  topbar.innerHTML = `
+    <button id="s911-burger" aria-label="Abrir menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:22px;height:22px"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <a href="/" class="s911-brand"><img src="/logo.svg" alt="" style="width:30px;height:30px">SISMO911</a>`;
+  document.body.appendChild(topbar);
+  const burger = topbar.querySelector('#s911-burger');
   const toggle = (open) => { shell.classList.toggle('open', open); back.classList.toggle('open', open); };
   burger.onclick = () => toggle(!shell.classList.contains('open'));
+  // Close the drawer after tapping a nav link (mobile).
+  shell.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => toggle(false)));
   back.onclick = () => toggle(false);
 
   // Auth-aware account block
