@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar sesión — SISMO911</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a','primary-container':'#0b2b5b',secondary:'#bb0027','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0',safe:'#2e7d32'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif']}}}}</script>
+<style>body{background:#13284f}.font-display{font-family:'Public Sans',sans-serif}</style>
+</head>
+<body class="font-sans text-on-surface min-h-screen grid place-items-center px-4">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-6">
+      <img src="/logo.svg" class="h-16 w-16 mx-auto mb-3" alt="SISMO911">
+      <div class="font-display font-extrabold text-2xl text-white">SISMO911</div>
+      <div class="text-xs tracking-widest text-white/60 uppercase">Fuerza de Protección Civil</div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-xl p-6">
+      <div class="flex gap-1 mb-5 bg-surface-container rounded-lg p-1" style="background:#eeeef0">
+        <button data-tab="login" class="tab flex-1 py-2 rounded-md font-display font-semibold text-sm bg-white shadow text-primary">Iniciar sesión</button>
+        <button data-tab="register" class="tab flex-1 py-2 rounded-md font-display font-semibold text-sm text-on-surface-variant">Crear cuenta</button>
+      </div>
+
+      <form id="loginForm" class="space-y-3">
+        <input name="email" type="email" required placeholder="Correo electrónico" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+        <input name="password" type="password" required placeholder="Contraseña" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+        <button class="w-full bg-primary hover:bg-primary-container text-white font-display font-bold py-2.5 rounded-lg">Entrar</button>
+      </form>
+
+      <form id="registerForm" class="space-y-3 hidden">
+        <input name="name" required placeholder="Nombre completo" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+        <input name="email" type="email" required placeholder="Correo electrónico" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+        <input name="password" type="password" required minlength="8" placeholder="Contraseña (mín. 8)" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+        <input name="phone" placeholder="Teléfono (opcional)" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
+        <button class="w-full bg-secondary hover:opacity-90 text-white font-display font-bold py-2.5 rounded-lg">Crear cuenta</button>
+        <p class="text-[11px] text-on-surface-variant text-center">Las cuentas nuevas son de ciudadano. Un administrador puede elevarte a operador.</p>
+      </form>
+
+      <p id="msg" class="text-sm text-center mt-3"></p>
+    </div>
+    <a href="/" class="block text-center text-white/70 hover:text-white text-sm mt-4">← Volver al panel público</a>
+  </div>
+
+<script>
+  const params=new URLSearchParams(location.search); const next=params.get('next')||'/';
+  const tabs=document.querySelectorAll('.tab'), lf=document.getElementById('loginForm'), rf=document.getElementById('registerForm'), msg=document.getElementById('msg');
+  tabs.forEach(t=>t.onclick=()=>{const n=t.dataset.tab;
+    tabs.forEach(x=>{const on=x.dataset.tab===n;x.classList.toggle('bg-white',on);x.classList.toggle('shadow',on);x.classList.toggle('text-primary',on);x.classList.toggle('text-on-surface-variant',!on);});
+    lf.classList.toggle('hidden',n!=='login'); rf.classList.toggle('hidden',n!=='register'); msg.textContent='';});
+  function dest(role){ return (role==='operator'||role==='admin') ? '/admin.html' : (next.startsWith('/login')?'/cuenta.html':next); }
+  async function submit(form,url){ msg.className='text-sm text-center mt-3 text-on-surface-variant'; msg.textContent='…';
+    const body=Object.fromEntries(new FormData(form));
+    const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(r.ok&&d.ok){ msg.className='text-sm text-center mt-3 text-safe'; msg.textContent='Bienvenido'; location.href=dest(d.user.role); }
+    else { msg.className='text-sm text-center mt-3 text-secondary'; msg.textContent={invalid_credentials:'Credenciales inválidas',email_taken:'Ese correo ya está registrado',password_min_8:'La contraseña debe tener 8+ caracteres',email_invalid:'Correo inválido',name_required:'Falta el nombre'}[d.error]||'Error'; }
+  }
+  lf.onsubmit=e=>{e.preventDefault();submit(lf,'/api/auth/login');};
+  rf.onsubmit=e=>{e.preventDefault();submit(rf,'/api/auth/register');};
+  // already logged in? skip
+  fetch('/api/auth/me').then(r=>r.json()).then(d=>{ if(d.authenticated) location.href=dest(d.user.role); });
+</script>
+</body>
+</html>

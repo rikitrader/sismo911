@@ -203,21 +203,23 @@
           Vigilancia Normal
         </div>
       </div>
-      <div class="flex items-center gap-4 sm:gap-5">
-        <button class="relative text-on-surface-variant hover:text-primary transition">
-          <svg class="h-[22px] w-[22px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-          <span class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-secondary ring-2 ring-white"></span>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Notifications -->
+        <button class="relative h-10 w-10 grid place-items-center rounded-full text-on-surface-variant hover:bg-surface-container hover:text-primary transition" aria-label="Notificaciones">
+          <svg class="h-[21px] w-[21px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 8.5a6 6 0 10-12 0c0 5.5-2 7.5-2.5 8 0 .3.2.5.5.5h16c.3 0 .5-.2.5-.5-.5-.5-2.5-2.5-2.5-8z"/><path stroke-linecap="round" stroke-linejoin="round" d="M10 20a2 2 0 004 0"/></svg>
+          <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-secondary ring-2 ring-white"></span>
         </button>
-        <button class="text-on-surface-variant hover:text-primary transition">
-          <svg class="h-[22px] w-[22px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2V21a2 2 0 11-4 0v-.1A1.7 1.7 0 005 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.7 1.7 0 003 13.6H3a2 2 0 110-4h.1A1.7 1.7 0 004.6 5l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H10a1.7 1.7 0 001-1.5V1a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V10a1.7 1.7 0 001.5 1H23a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+        <!-- Settings -->
+        <button class="h-10 w-10 grid place-items-center rounded-full text-on-surface-variant hover:bg-surface-container hover:text-primary transition" aria-label="Configuración">
+          <svg class="h-[21px] w-[21px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6M18.4 18.4l-1.6-1.6M7.2 7.2 5.6 5.6"/></svg>
         </button>
-        <div class="h-8 w-px bg-outline-variant/60"></div>
-        <div class="flex items-center gap-3">
-          <div class="text-right leading-tight">
-            <div class="font-display font-bold text-sm text-on-surface">Cnel. Mendoza</div>
-            <div class="text-xs text-on-surface-variant">Oficial de Guardia</div>
-          </div>
-          <div class="h-9 w-9 rounded-full bg-primary text-white grid place-items-center font-display font-bold text-sm">CM</div>
+        <div class="h-8 w-px bg-outline-variant/60 mx-1"></div>
+        <!-- Account (dynamic) -->
+        <div id="account" class="relative">
+          <a href="/login.html" class="flex items-center gap-2 h-10 px-3 rounded-full bg-primary text-white font-display font-semibold text-sm hover:bg-primary-container transition">
+            <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+            Iniciar sesión
+          </a>
         </div>
       </div>
     </header>
@@ -527,6 +529,42 @@
       </span>
       <span class="font-display font-semibold text-sm text-on-surface leading-tight">${r.label}</span>
     </button>`).join('');
+</script>
+
+<!-- Account menu (auth-aware) -->
+<script>
+(async () => {
+  const ROLE = { citizen: 'Ciudadano', operator: 'Operador', admin: 'Administrador' };
+  const box = document.getElementById('account');
+  if (!box) return;
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => ({ authenticated: false }));
+  if (!me.authenticated) return; // keep the "Iniciar sesión" button
+  const u = me.user;
+  const initials = (u.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const isOp = u.role === 'operator' || u.role === 'admin';
+  box.innerHTML = `
+    <button id="acctBtn" class="flex items-center gap-2.5 h-11 pl-2 pr-1 rounded-full hover:bg-surface-container transition">
+      <div class="text-right leading-tight hidden sm:block">
+        <div class="font-display font-bold text-sm text-on-surface">${u.rank ? u.rank + ' ' : ''}${u.name}</div>
+        <div class="text-[11px] text-on-surface-variant">${u.unit || ROLE[u.role]}</div>
+      </div>
+      <div class="h-9 w-9 rounded-full bg-primary text-white grid place-items-center font-display font-bold text-sm">${initials}</div>
+    </button>
+    <div id="acctMenu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg border border-outline-variant/60 shadow-lg py-1 z-50">
+      <div class="px-4 py-2 border-b border-outline-variant/40">
+        <div class="font-semibold text-sm truncate">${u.name}</div>
+        <div class="text-xs text-on-surface-variant truncate">${u.email}</div>
+        <span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${isOp ? 'bg-secondary text-white' : 'bg-surface-container text-on-surface-variant'}">${ROLE[u.role]}</span>
+      </div>
+      <a href="/cuenta.html" class="block px-4 py-2 text-sm hover:bg-surface-container">Mi cuenta</a>
+      ${isOp ? '<a href="/admin.html" class="block px-4 py-2 text-sm hover:bg-surface-container">Consola de Operaciones</a>' : ''}
+      <button id="logoutBtn" class="block w-full text-left px-4 py-2 text-sm text-secondary hover:bg-surface-container">Cerrar sesión</button>
+    </div>`;
+  const btn = document.getElementById('acctBtn'), menu = document.getElementById('acctMenu');
+  btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); };
+  document.addEventListener('click', () => menu.classList.add('hidden'));
+  document.getElementById('logoutBtn').onclick = async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.reload(); };
+})();
 </script>
 </body>
 </html>

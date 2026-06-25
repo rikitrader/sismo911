@@ -9,37 +9,35 @@ import { facilities } from './routes/facilities';
 import { ops } from './routes/ops';
 import { misc } from './routes/misc';
 import { damage } from './routes/damage';
-import { getCookie } from 'hono/cookie';
+import { auth } from './routes/auth';
 import { ingestUsgs } from './ingest/usgs-cron';
 import { adapterStatus } from './adapters/social';
-import { verifyAccessJwt } from './lib/access';
+import { getUserFromRequest } from './lib/auth';
 
 const app = new Hono<{ Bindings: Env }>();
 app.use('/api/*', cors());
 
-// --- Cloudflare Access gate (defense-in-depth) ---
-// Protects the admin console + all write endpoints. Edge Access is the primary
-// lock; this re-verifies the JWT inside the Worker. No-op until ACCESS_* are set.
+// --- Role-based auth gate ---
+// Admin console + curation/management writes require an authenticated operator
+// or admin session. Citizen actions (SOS, check-ins, damage reports) stay open.
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+const ADMIN_WRITE_PREFIXES = ['/api/persons', '/api/contacts', '/api/resources'];
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
-  const isAdmin = path.startsWith('/admin');
-  const isWrite =
-    WRITE_METHODS.has(c.req.method) &&
-    (path.startsWith('/api/persons') || path.startsWith('/api/contacts'));
-  if (!isAdmin && !isWrite) return next();
+  const isAdminPage = path.startsWith('/admin');
+  const isAdminWrite = WRITE_METHODS.has(c.req.method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
+  if (!isAdminPage && !isAdminWrite) return next();
 
-  const { ACCESS_TEAM_DOMAIN: team, ACCESS_AUD: aud } = c.env;
-  if (!team || !aud) {
-    console.warn('[access] not configured (ACCESS_TEAM_DOMAIN/ACCESS_AUD unset) — allowing', path);
-    return next();
+  const user = await getUserFromRequest(c.env, c).catch(() => null);
+  const authorized = user && (user.role === 'operator' || user.role === 'admin');
+  if (authorized) { c.header('X-User-Role', user!.role); return next(); }
+
+  // Unauthenticated/unauthorized: redirect HTML to login, JSON gets 401.
+  if (isAdminPage) {
+    const next_ = encodeURIComponent(path);
+    return c.redirect(`/login.html?next=${next_}`, 302);
   }
-  const token = c.req.header('Cf-Access-Jwt-Assertion') || getCookie(c, 'CF_Authorization');
-  if (!token) return c.json({ error: 'unauthorized', hint: 'Cloudflare Access login required' }, 401);
-  const id = await verifyAccessJwt(token, team, aud).catch(() => null);
-  if (!id) return c.json({ error: 'forbidden' }, 403);
-  c.header('X-Access-Email', id.email ?? 'unknown');
-  return next();
+  return c.json({ error: 'unauthorized', hint: 'Inicia sesión como operador o admin' }, 401);
 });
 
 // Liveness / readiness for smoke tests + uptime checks.
@@ -76,6 +74,7 @@ app.get('/api/status', async (c) => {
 app.route('/api/events', events);
 app.route('/api/persons', persons);
 app.route('/api/contacts', contacts);
+app.route('/api/auth', auth);
 app.route('/api/alerts', alerts);
 app.route('/api/facilities', facilities);
 app.route('/api/damage', damage);
