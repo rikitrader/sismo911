@@ -28,7 +28,8 @@
 
 <main class="mx-auto max-w-3xl px-4 py-8">
   <h1 class="font-display font-extrabold text-3xl mb-1">Personas desaparecidas</h1>
-  <p class="text-on-surface-variant text-sm mb-5">Busca, reporta y ayuda a reunir familias. Los reportes pasan por revisión. <b>No publiques datos sensibles de menores sin consentimiento.</b></p>
+  <p class="text-on-surface-variant text-sm mb-3">Busca, reporta y ayuda a reunir familias. Los reportes pasan por revisión. <b>No publiques datos sensibles de menores sin consentimiento.</b></p>
+  <a href="/familia?reportar=1&ref=https%3A%2F%2Fsismo911.com%2Fpersonas" class="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-lg p-3 mb-5 hover:bg-secondary/15 transition-colors"><span class="text-xl shrink-0">🔎</span><span class="text-sm text-on-surface"><b class="text-secondary">¿Buscas a un familiar?</b> Abre un <b>caso de búsqueda</b> con foto en Familia →</span></a>
 
   <div class="grid sm:grid-cols-3 gap-3 mb-6">
     <div class="bg-white border border-outline-variant/60 rounded-xl p-4 text-center"><div id="s_missing" class="font-display font-extrabold text-3xl text-warning">—</div><div class="text-xs text-on-surface-variant">Buscadas</div></div>
@@ -69,7 +70,7 @@ async function search(){const q=qi.value.trim();const box=document.getElementByI
   const{persons=[]}=await fetch('/api/persons/search?q='+encodeURIComponent(q)).then(r=>r.json());
   box.innerHTML=persons.length?persons.map(p=>{const[l,cl]=ST[p.status]||ST.unknown;return `<div class="border border-outline-variant/60 rounded-lg px-3 py-2 flex items-center justify-between">
     <div><div class="font-semibold text-sm">${esc(p.full_name)}${p.age?`, ${Number(p.age)}`:''}</div><div class="text-xs text-on-surface-variant">${esc(p.last_seen||'')}</div></div>
-    <div class="flex items-center gap-2"><span class="${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span></div></div>`;}).join(''):'<p class="text-sm text-on-surface-variant">Sin coincidencias.</p>';}
+    <div class="flex items-center gap-2 shrink-0"><span class="${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span><a href="/familia?reportar=1&nombre=${encodeURIComponent(p.full_name||'')}&lugar=${encodeURIComponent(p.last_seen||'')}&ref=${encodeURIComponent('https://sismo911.com/personas')}" class="text-secondary text-xs font-semibold hover:underline whitespace-nowrap" title="Abrir/vincular caso en Familia">🔎 Caso</a></div></div>`;}).join(''):'<p class="text-sm text-on-surface-variant">Sin coincidencias.</p>';}
 document.getElementById('f').onsubmit=async e=>{e.preventDefault();const msg=document.getElementById('msg');const name=document.getElementById('full_name').value.trim();
   if(!name){msg.style.color='#bb0027';msg.textContent='El nombre es obligatorio.';return;}
   const body={full_name:name,age:document.getElementById('age').value||null,sex:document.getElementById('sex').value||null,last_seen:document.getElementById('last_seen').value,contact_phone:document.getElementById('contact_phone').value,notes:document.getElementById('notes').value};
