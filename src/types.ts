@@ -32,6 +32,7 @@ export interface Env {
   APIFY_IG_ACTOR?: string;
   MONITOR_WEBHOOK_SECRET?: string; // shared secret for the Apify webhook
   MONITOR_SHEET_ID?: string;       // Google Sheet to mirror into
+  FUNDING_SHEET_ID?: string;       // Business-plan sheet for the live /api/funding feed
   GOOGLE_REFRESH_TOKEN?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
