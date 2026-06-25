@@ -137,9 +137,11 @@ familia.post('/persons', async (c) => {
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id, String(nombre).slice(0, 120), b.age ? Number(b.age) : null,
-    b.last_seen ? String(b.last_seen).slice(0, 200) : null,
-    b.notes ? String(b.notes).slice(0, 1000) : null,
-    b.contact_phone ? String(b.contact_phone).slice(0, 80) : null,
+    // ubicacion/descripcion/contacto are NOT NULL — coalesce missing to '' (a
+    // null here is a 500: NOT NULL constraint failed).
+    b.last_seen ? String(b.last_seen).slice(0, 200) : '',
+    b.notes ? String(b.notes).slice(0, 1000) : '',
+    b.contact_phone ? String(b.contact_phone).slice(0, 80) : '',
     foto_r2, 'sin-contacto', 'pending', now, now
   ).run();
   // Public submission enters moderation — not shown until an operator approves.
