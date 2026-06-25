@@ -31,6 +31,7 @@
       <button data-tab="persons" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-secondary text-primary">Personas Desaparecidas</button>
       <button data-tab="contacts" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Directorio de Emergencia</button>
       <button data-tab="acopio" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Centros de Acopio</button>
+      <button data-tab="aid" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Red de Ayuda</button>
       <button data-tab="adapters" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Fuentes de Datos</button>
     </div>
   </nav>
@@ -89,6 +90,34 @@
       </div>
     </section>
 
+    <!-- AID ORGS -->
+    <section id="panel-aid" class="hidden space-y-4">
+      <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+        <h2 class="font-display font-bold text-lg mb-1">Red Global de Ayuda — Directorio editable</h2>
+        <p class="text-sm text-on-surface-variant mb-3">ONG, agencias de desastres y equipos USAR que aparecen en <a href="/red-ayuda" class="text-primary underline">/red-ayuda</a>. Edita teléfono, email o web y guarda — el cambio sale en vivo de inmediato.</p>
+        <div class="flex flex-wrap gap-3 items-center">
+          <input id="aid-q" type="search" placeholder="Buscar organización, país…" class="flex-1 min-w-[220px] border border-outline-variant rounded px-3 py-2 text-sm">
+          <select id="aid-rf" class="border border-outline-variant rounded px-3 py-2 text-sm"><option value="">Todas las regiones</option></select>
+          <span id="aid-count" class="text-xs text-on-surface-variant"></span>
+          <button id="aid-new" class="bg-secondary text-white text-sm font-bold rounded px-3 py-2">+ Nueva</button>
+        </div>
+        <form id="aid-form" class="hidden mt-3 grid sm:grid-cols-3 gap-2">
+          <input name="name" placeholder="Nombre*" class="border border-outline-variant rounded px-2 py-1.5 text-sm">
+          <select name="region" class="border border-outline-variant rounded px-2 py-1.5 text-sm"></select>
+          <input name="scope" placeholder="País / Ámbito" class="border border-outline-variant rounded px-2 py-1.5 text-sm">
+          <input name="type" placeholder="Tipo" class="border border-outline-variant rounded px-2 py-1.5 text-sm">
+          <input name="web" placeholder="Web (https://…)" class="border border-outline-variant rounded px-2 py-1.5 text-sm">
+          <input name="phone" placeholder="Teléfono" class="border border-outline-variant rounded px-2 py-1.5 text-sm">
+          <input name="email" placeholder="Email" class="border border-outline-variant rounded px-2 py-1.5 text-sm">
+          <input name="focus" placeholder="Enfoque (1 línea)" class="border border-outline-variant rounded px-2 py-1.5 text-sm sm:col-span-2">
+          <button class="bg-primary text-white text-sm font-bold rounded px-3 py-1.5">Crear</button>
+        </form>
+      </div>
+      <div class="bg-white rounded-lg border border-outline-variant/60 overflow-hidden">
+        <div id="aid-list" class="divide-y divide-outline-variant/40 max-h-[68vh] overflow-y-auto"></div>
+      </div>
+    </section>
+
     <!-- ADAPTERS -->
     <section id="panel-adapters" class="hidden space-y-6">
       <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
@@ -108,11 +137,11 @@
   const tabs = document.querySelectorAll('.tab');
   function show(name){
     tabs.forEach(t=>{const on=t.dataset.tab===name; t.classList.toggle('border-secondary',on); t.classList.toggle('text-primary',on); t.classList.toggle('border-transparent',!on); t.classList.toggle('text-on-surface-variant',!on);});
-    ['persons','contacts','acopio','adapters'].forEach(n=>document.getElementById('panel-'+n).classList.toggle('hidden',n!==name));
-    if(name==='contacts')loadContacts(); if(name==='adapters')loadStatus(); if(name==='acopio')loadAcopio();
+    ['persons','contacts','acopio','aid','adapters'].forEach(n=>document.getElementById('panel-'+n).classList.toggle('hidden',n!==name));
+    if(name==='contacts')loadContacts(); if(name==='adapters')loadStatus(); if(name==='acopio')loadAcopio(); if(name==='aid')loadAid();
   }
   tabs.forEach(t=>t.onclick=()=>show(t.dataset.tab));
-  if(location.hash==='#contacts')show('contacts'); else if(location.hash==='#adapters')show('adapters'); else if(location.hash==='#acopio')show('acopio');
+  if(location.hash==='#contacts')show('contacts'); else if(location.hash==='#adapters')show('adapters'); else if(location.hash==='#acopio')show('acopio'); else if(location.hash==='#aid')show('aid');
 
   // Centros de Acopio — estado en vivo
   const ACST={operativo:['🟢','Operativo','#16a34a'],saturado:['🟠','Saturado','#d97706'],cerrado:['🔴','Cerrado','#dc2626']};
@@ -205,6 +234,56 @@
     const soc = (s.social_adapters||[]).map(a=>`<div>${esc(String(a.platform||'').padEnd(10))} <span class="${a.configured?'text-safe':'text-warning'}">${a.configured?'CONFIGURADO':'pendiente de credenciales'}</span></div>`).join('');
     document.getElementById('status-box').innerHTML = '<div class="font-semibold text-on-surface mb-1">USGS</div>'+ingest+'<div class="font-semibold text-on-surface mt-3 mb-1">Adaptadores sociales</div>'+soc;
   }
+
+  // Red de Ayuda — editable directory (/api/aid-orgs)
+  const AID_REGIONS=['Respondedores Globales','ONU / Intergubernamental','Sismos y Rescate (USAR)','Américas','Europa y Asia Central','África','Medio Oriente y Asia del Sur','Asia Oriental y Pacífico'];
+  let AID=[];
+  async function loadAid(){
+    const rf=document.getElementById('aid-rf');
+    if(rf.options.length<=1)rf.innerHTML='<option value="">Todas las regiones</option>'+AID_REGIONS.map(r=>`<option>${esc(r)}</option>`).join('');
+    const fsel=document.querySelector('#aid-form select[name=region]');
+    if(fsel&&!fsel.options.length)fsel.innerHTML=AID_REGIONS.map(r=>`<option>${esc(r)}</option>`).join('');
+    const {orgs=[]}=await api('aid-orgs'); AID=orgs; drawAid();
+  }
+  function drawAid(){
+    const q=document.getElementById('aid-q').value.trim().toLowerCase(), rf=document.getElementById('aid-rf').value;
+    const list=AID.filter(o=>{ if(rf&&o.region!==rf)return false; if(q&&!((o.name+' '+(o.scope||'')+' '+(o.type||'')).toLowerCase().includes(q)))return false; return true; });
+    document.getElementById('aid-count').textContent=list.length+' de '+AID.length;
+    document.getElementById('aid-list').innerHTML=list.map(o=>`
+      <div class="px-4 py-3" data-id="${esc(o.id)}">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex-1 min-w-[200px]"><div class="font-semibold text-sm">${esc(o.name)}</div>
+            <div class="text-xs text-on-surface-variant">${esc(o.scope||'')} · ${esc(o.region)}</div></div>
+          <input class="ai-web border border-outline-variant rounded px-2 py-1 text-xs w-40" placeholder="Web" value="${esc(o.web||'')}">
+          <input class="ai-phone border border-outline-variant rounded px-2 py-1 text-xs w-36" placeholder="Teléfono" value="${esc(o.phone||'')}">
+          <input class="ai-email border border-outline-variant rounded px-2 py-1 text-xs w-44" placeholder="Email" value="${esc(o.email||'')}">
+          <button class="ai-save bg-primary text-white text-xs font-bold rounded px-3 py-1.5">Guardar</button>
+          <button class="ai-del text-xs text-secondary border border-secondary/40 rounded px-2 py-1.5" title="Eliminar">✕</button>
+          <span class="ai-msg text-xs"></span>
+        </div></div>`).join('') || '<div class="px-5 py-10 text-center text-sm text-on-surface-variant">Sin resultados.</div>';
+    document.querySelectorAll('#aid-list .ai-save').forEach(b=>b.onclick=async()=>{
+      const row=b.closest('[data-id]'), id=row.dataset.id, msg=row.querySelector('.ai-msg'); msg.textContent='…';
+      const body={ web:row.querySelector('.ai-web').value, phone:row.querySelector('.ai-phone').value, email:row.querySelector('.ai-email').value };
+      const r=await api('aid-orgs/'+encodeURIComponent(id),{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+      if(r.ok){ const o=AID.find(x=>x.id===id); if(o)Object.assign(o,body); msg.textContent='✓'; msg.className='ai-msg text-xs text-safe'; setTimeout(()=>msg.textContent='',1200); }
+      else { msg.textContent='Error'; msg.className='ai-msg text-xs text-secondary'; }
+    });
+    document.querySelectorAll('#aid-list .ai-del').forEach(b=>b.onclick=async()=>{
+      const row=b.closest('[data-id]'), id=row.dataset.id; if(!confirm('¿Eliminar esta organización del directorio?'))return;
+      const r=await api('aid-orgs/'+encodeURIComponent(id),{method:'DELETE'});
+      if(r.ok){ AID=AID.filter(x=>x.id!==id); drawAid(); }
+    });
+  }
+  document.getElementById('aid-q').addEventListener('input',drawAid);
+  document.getElementById('aid-rf').addEventListener('change',drawAid);
+  document.getElementById('aid-new').onclick=()=>document.getElementById('aid-form').classList.toggle('hidden');
+  document.getElementById('aid-form').onsubmit=async e=>{
+    e.preventDefault(); const fd=Object.fromEntries(new FormData(e.target));
+    if(!fd.name||!fd.region){ alert('Nombre y región son obligatorios'); return; }
+    const r=await api('aid-orgs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(fd)});
+    if(r.ok){ e.target.reset(); document.getElementById('aid-form').classList.add('hidden'); loadAid(); }
+    else alert('Error: '+(r.error||'desconocido'));
+  };
 
   loadPersons();
 </script>
