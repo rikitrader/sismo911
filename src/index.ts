@@ -10,6 +10,7 @@ import { shelters } from './routes/shelters';
 import { ops } from './routes/ops';
 import { misc } from './routes/misc';
 import { damage } from './routes/damage';
+import { satellite } from './routes/satellite';
 import { auth } from './routes/auth';
 import { familia } from './routes/familia';
 import { damageMap } from './routes/damage-map';
@@ -88,7 +89,10 @@ app.use('*', async (c, next) => {
   // Shelter-status moderation queue is operator-only; /:id/approve is covered by
   // the generic endsWith('/approve') rule above. Public GET + crowd POST stay open.
   const isShelterModeration = path === '/api/shelters/queue';
-  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration) return next();
+  // Satellite GIS: GET config/google/maxar/damage are public reads; analyze +
+  // verification writes are operator-only.
+  const isSatWrite = WRITE_METHODS.has(method) && path.startsWith('/api/sat/');
+  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration && !isSatWrite) return next();
 
   const user = await getUserFromRequest(c.env, c).catch(() => null);
   // Docket submission only needs a logged-in user (any role); everything else
@@ -147,6 +151,7 @@ app.route('/api/alerts', alerts);
 app.route('/api/facilities', facilities);
 app.route('/api/shelters', shelters);
 app.route('/api/damage', damage);
+app.route('/api/sat', satellite);    // satellite/GIS damage analysis (imagery proxy + Workers AI vision)
 app.route('/api/reports', reports);  // citizen damage-report map + comments + reactions + moderation
 app.route('/api/chat', chat);        // community channel
 app.route('/api/acopio', acopio);    // /api/acopio/status — live status for acopio/hospitales/PC
