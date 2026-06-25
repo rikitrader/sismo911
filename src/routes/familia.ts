@@ -4,130 +4,126 @@ import { uid } from '../lib/db';
 import { getUserFromRequest } from '../lib/auth';
 import { rateLimit, isImageBytes } from '../lib/security';
 
-// Missing-persons registry for /familia: keyset (cursor) pagination for 25k+
-// scale, R2-backed photos, browsable gallery, and the shared moderation flow
-// (citizen reports enter review='pending'; only review='approved' shows publicly).
+// Missing-persons registry (/familia). Reads the 31k `personas` dataset in the
+// DESAP D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
+// Keyset/cursor pagination for scale. Phone (`contacto`) redacted for the public.
 export const familia = new Hono<{ Bindings: Env }>();
-
 const DEFAULT_LIMIT = 24;
+
+const estadoToStatus = (e: string) =>
+  e === 'localizado' ? 'found_safe' : e === 'fallecido' ? 'found_deceased' : 'missing';
+const statusToEstado = (s: string) =>
+  s === 'found_safe' ? 'localizado' : s === 'missing' ? 'sin-contacto' : null;
 
 async function isOperator(c: any): Promise<boolean> {
   const me = await getUserFromRequest(c.env, c).catch(() => null);
   return !!me && (me.role === 'operator' || me.role === 'admin');
 }
-const clampLimit = (v: string | undefined, def: number) =>
-  Math.min(60, Math.max(1, Number(v || def) || def));
-// cursor = "<updated_ms>_<id>" → keyset condition for ORDER BY updated_ms DESC, id DESC
+const clampLimit = (v: string | undefined, def: number) => Math.min(60, Math.max(1, Number(v || def) || def));
+// cursor = "<updated_at>_<id>"; most rows share updated_at, so id is the real key
 function cursorClause(cursor: string, where: string[], binds: unknown[]) {
   if (!cursor) return;
   const i = cursor.lastIndexOf('_');
   const ms = Number(cursor.slice(0, i)); const id = cursor.slice(i + 1);
-  if (Number.isFinite(ms) && id) {
-    where.push('(updated_ms < ? OR (updated_ms = ? AND id < ?))');
-    binds.push(ms, ms, id);
-  }
+  if (Number.isFinite(ms) && id) { where.push('(updated_at < ? OR (updated_at = ? AND id < ?))'); binds.push(ms, ms, id); }
 }
 const nextCursor = (rows: any[], limit: number) =>
-  rows.length > limit ? `${rows[limit - 1].updated_ms}_${rows[limit - 1].id}` : null;
+  rows.length > limit ? `${rows[limit - 1].updated_at}_${rows[limit - 1].id}` : null;
 
-// GET /api/familia/persons?q=&status=&cursor=&limit=  — approved registry, keyset paginated
+function mapPerson(p: any, op: boolean) {
+  return {
+    id: p.id, full_name: p.nombre, age: p.edad, sex: null,
+    last_seen: p.ubicacion, status: estadoToStatus(p.estado),
+    photo_url: p.foto_r2 ? `/api/familia/photo/${p.id}` : (p.foto || null),
+    contact_phone: op ? (p.contacto || null) : (p.contacto ? '•••••• (solo operadores)' : null),
+    notes: p.descripcion, updated_ms: p.updated_at,
+  };
+}
+
+// GET /api/familia/persons?q=&status=&cursor=&limit=
 familia.get('/persons', async (c) => {
   const q = (c.req.query('q') || '').trim();
-  const status = c.req.query('status') || '';
   const limit = clampLimit(c.req.query('limit'), DEFAULT_LIMIT);
+  const base: string[] = []; const baseBinds: unknown[] = [];
+  if (q) { base.push('(nombre LIKE ? OR ubicacion LIKE ?)'); baseBinds.push(`%${q}%`, `%${q}%`); }
+  const est = statusToEstado(c.req.query('status') || '');
+  if (est) { base.push('estado = ?'); baseBinds.push(est); }
+  const wBase = base.length ? 'WHERE ' + base.join(' AND ') : '';
 
-  const base = ["review = 'approved'"]; const baseBinds: unknown[] = [];
-  if (q) { base.push('(full_name LIKE ? OR last_seen LIKE ?)'); baseBinds.push(`%${q}%`, `%${q}%`); }
-  if (status) { base.push('status = ?'); baseBinds.push(status); }
-
-  const total = ((await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM persons WHERE ${base.join(' AND ')}`).bind(...baseBinds).first<any>())?.n) ?? 0;
-
+  const total = ((await c.env.DESAP.prepare(`SELECT COUNT(*) AS n FROM personas ${wBase}`).bind(...baseBinds).first<any>())?.n) ?? 0;
   const where = [...base]; const binds = [...baseBinds];
   cursorClause(c.req.query('cursor') || '', where, binds);
-  const { results } = await c.env.DB.prepare(
-    `SELECT id, full_name, age, sex, last_seen, status, photo_url, contact_phone, notes, updated_ms
-     FROM persons WHERE ${where.join(' AND ')} ORDER BY updated_ms DESC, id DESC LIMIT ?`
+  const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
+  const { results } = await c.env.DESAP.prepare(
+    `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto, foto_r2, estado, updated_at
+     FROM personas ${w} ORDER BY updated_at DESC, id DESC LIMIT ?`
   ).bind(...binds, limit + 1).all<any>();
-
-  const rows = results ?? [];
-  const op = await isOperator(c);
-  const persons = rows.slice(0, limit).map((p) =>
-    op ? p : { ...p, contact_phone: p.contact_phone ? '•••••• (solo operadores)' : null }
-  );
-  return c.json({ persons, total, nextCursor: nextCursor(rows, limit), limit });
+  const rows = results ?? []; const op = await isOperator(c);
+  return c.json({ persons: rows.slice(0, limit).map((r) => mapPerson(r, op)), total, nextCursor: nextCursor(rows, limit), limit });
 });
 
-// GET /api/familia/gallery?cursor=&limit=  — approved photos, keyset paginated
+// GET /api/familia/gallery?cursor=&limit=
 familia.get('/gallery', async (c) => {
   const limit = clampLimit(c.req.query('limit'), 30);
-  const total = ((await c.env.DB.prepare(
-    `SELECT COUNT(*) AS n FROM persons WHERE review = 'approved' AND photo_url IS NOT NULL`
-  ).first<any>())?.n) ?? 0;
-
-  const where = ["review = 'approved'", 'photo_url IS NOT NULL']; const binds: unknown[] = [];
+  const total = ((await c.env.DESAP.prepare(`SELECT COUNT(*) AS n FROM personas WHERE foto_r2 IS NOT NULL`).first<any>())?.n) ?? 0;
+  const where = ['foto_r2 IS NOT NULL']; const binds: unknown[] = [];
   cursorClause(c.req.query('cursor') || '', where, binds);
-  const { results } = await c.env.DB.prepare(
-    `SELECT id, full_name, age, status, last_seen, photo_url, updated_ms
-     FROM persons WHERE ${where.join(' AND ')} ORDER BY updated_ms DESC, id DESC LIMIT ?`
+  const { results } = await c.env.DESAP.prepare(
+    `SELECT id, nombre, edad, ubicacion, estado, foto_r2, updated_at FROM personas
+     WHERE ${where.join(' AND ')} ORDER BY updated_at DESC, id DESC LIMIT ?`
   ).bind(...binds, limit + 1).all<any>();
-
   const rows = results ?? [];
-  return c.json({ photos: rows.slice(0, limit), total, nextCursor: nextCursor(rows, limit) });
+  return c.json({
+    photos: rows.slice(0, limit).map((p) => ({ id: p.id, full_name: p.nombre, age: p.edad, status: estadoToStatus(p.estado), last_seen: p.ubicacion, photo_url: `/api/familia/photo/${p.id}` })),
+    total, nextCursor: nextCursor(rows, limit),
+  });
 });
 
-// POST /api/familia/persons  — citizen report (multipart photo → R2) → moderation queue
+// GET /api/familia/photo/:id  — serve from DESAP_FOTOS R2, fall back to the external URL
+familia.get('/photo/:id', async (c) => {
+  const row: any = await c.env.DESAP.prepare(`SELECT foto_r2, foto FROM personas WHERE id = ?`).bind(c.req.param('id')).first();
+  if (!row) return c.notFound();
+  if (row.foto_r2) {
+    const obj = await c.env.DESAP_FOTOS.get(row.foto_r2);
+    if (obj) return new Response(obj.body, {
+      headers: { 'Content-Type': obj.httpMetadata?.contentType || 'image/jpeg', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' },
+    });
+  }
+  if (row.foto) return c.redirect(row.foto, 302);
+  return c.notFound();
+});
+
+// POST /api/familia/persons  — citizen report → personas (photo → DESAP_FOTOS)
 familia.post('/persons', async (c) => {
   const limited = await rateLimit(c.env, c, 'familia_register', 15, 300);
   if (limited) return limited;
-
-  let b: any = {};
-  let bytes: Uint8Array | null = null;
-  let ctype = 'image/jpeg';
+  let b: any = {}; let bytes: Uint8Array | null = null; let ctype = 'image/jpeg';
   if ((c.req.header('content-type') || '').includes('multipart/form-data')) {
     const f = await c.req.formData();
     for (const [k, v] of f.entries()) if (typeof v === 'string') b[k] = v;
     const ph = f.get('photo') as any;
-    if (ph && typeof ph !== 'string' && typeof ph.arrayBuffer === 'function') {
-      bytes = new Uint8Array(await ph.arrayBuffer());
-      ctype = ph.type || ctype;
-    }
-  } else {
-    b = (await c.req.json().catch(() => ({}))) || {};
-  }
-  if (!b.full_name) return c.json({ error: 'full_name_required' }, 400);
+    if (ph && typeof ph !== 'string' && typeof ph.arrayBuffer === 'function') { bytes = new Uint8Array(await ph.arrayBuffer()); ctype = ph.type || ctype; }
+  } else { b = (await c.req.json().catch(() => ({}))) || {}; }
+  const nombre = b.full_name || b.nombre;
+  if (!nombre) return c.json({ error: 'full_name_required' }, 400);
 
-  const id = uid('per');
-  const now = Date.now();
-  let photo_url: string | null = null;
+  const id = uid('pc'); const now = Date.now(); let foto_r2: string | null = null;
   if (bytes && bytes.length) {
     if (bytes.length > 6_000_000) return c.json({ error: 'image_too_large', maxBytes: 6_000_000 }, 413);
     ctype = ['image/jpeg', 'image/png', 'image/webp'].includes(ctype) ? ctype : 'application/octet-stream';
     if (!isImageBytes(bytes, ctype)) return c.json({ error: 'unsupported_image_type' }, 415);
-    await c.env.PERSON_PHOTOS.put(`person/${id}`, bytes, { httpMetadata: { contentType: ctype } });
-    photo_url = `/api/familia/photo/${id}`;
+    foto_r2 = `fotos/${id}.jpg`;
+    await c.env.DESAP_FOTOS.put(foto_r2, bytes, { httpMetadata: { contentType: ctype } });
   }
-  await c.env.DB.prepare(
-    `INSERT INTO persons (id, full_name, age, sex, last_seen, status, contact_phone, notes, photo_url, reported_by, review, created_ms, updated_ms)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+  await c.env.DESAP.prepare(
+    `INSERT INTO personas (id, nombre, edad, ubicacion, descripcion, contacto, foto_r2, estado, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`
   ).bind(
-    id, String(b.full_name).slice(0, 120), b.age ? Number(b.age) : null, b.sex ?? null,
-    b.last_seen ? String(b.last_seen).slice(0, 200) : null, 'missing',
-    b.contact_phone ? String(b.contact_phone).slice(0, 40) : null,
-    b.notes ? String(b.notes).slice(0, 1000) : null, photo_url, b.reported_by ?? null,
-    'pending', now, now
+    id, String(nombre).slice(0, 120), b.age ? Number(b.age) : null,
+    b.last_seen ? String(b.last_seen).slice(0, 200) : null,
+    b.notes ? String(b.notes).slice(0, 1000) : null,
+    b.contact_phone ? String(b.contact_phone).slice(0, 80) : null,
+    foto_r2, 'sin-contacto', now, now
   ).run();
-  return c.json({ ok: true, id, review: 'pending', message: 'Recibido. Aparecerá tras revisión de un operador.' }, 201);
-});
-
-// GET /api/familia/photo/:id  — serve a person photo from R2
-familia.get('/photo/:id', async (c) => {
-  const obj = await c.env.PERSON_PHOTOS.get(`person/${c.req.param('id')}`);
-  if (!obj) return c.notFound();
-  return new Response(obj.body, {
-    headers: {
-      'Content-Type': obj.httpMetadata?.contentType || 'image/jpeg',
-      'Cache-Control': 'public, max-age=86400',
-      'X-Content-Type-Options': 'nosniff',
-    },
-  });
+  return c.json({ ok: true, id }, 201);
 });
