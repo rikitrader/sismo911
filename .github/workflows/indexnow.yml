@@ -1,0 +1,22 @@
+name: IndexNow submit
+# Pushes every live sismo911.com URL to IndexNow (Bing/Yandex/Seznam/Naver/Yep).
+# The script fetches the LIVE sitemaps, so it always reflects currently-published
+# pages — no secrets required (the IndexNow key is public, hosted on the site).
+on:
+  schedule:
+    - cron: '17 6 * * *'   # daily ~06:17 UTC, catches new blog posts within 24h
+  push:
+    branches: [main]
+    paths:
+      - 'public/sitemap.xml'
+      - 'public/sitemap-blog.xml'
+  workflow_dispatch:
+jobs:
+  indexnow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/seo-submit.mjs
