@@ -36,12 +36,21 @@
     <div class="px-4 py-3 border-b border-outline-variant/50">
       <div class="font-display font-extrabold text-lg">Daños Estructurales</div>
       <div class="text-[11px] text-on-surface-variant">Fuente: <a href="https://sosvenezuela2026.com" target="_blank" class="underline">SOS Venezuela 2026</a> · mapa comunitario</div>
+      <div class="flex gap-1 mt-2 bg-surface-container rounded-lg p-0.5 text-xs font-display font-semibold">
+        <button id="viewMapa" class="flex-1 py-1.5 rounded-md bg-white shadow text-primary">Mapa</button>
+        <button id="viewLista" class="flex-1 py-1.5 rounded-md text-on-surface-variant">Lista</button>
+      </div>
     </div>
     <div id="filters" class="p-2 space-y-1"></div>
     <div class="px-4 py-2 text-[11px] text-on-surface-variant border-t border-outline-variant/50">⚠️ Coordenadas aproximadas (protección anti-saqueo). Verificación comunitaria — no oficial salvo indicado.</div>
   </div>
 
   <div id="loading" class="absolute inset-0 grid place-items-center z-[400] pointer-events-none"><div class="bg-white/90 rounded-lg px-4 py-2 text-sm">Cargando daños…</div></div>
+
+  <div id="listView" class="hidden absolute inset-0 z-[450] bg-surface overflow-y-auto p-4 lg:pl-[21rem]">
+    <div id="listCount" class="text-xs text-on-surface-variant mb-3 max-w-5xl"></div>
+    <div id="listGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-5xl"></div>
+  </div>
 </div>
 
 <script>
@@ -94,14 +103,38 @@ function buildFilters(counts){
       <span style="width:11px;height:11px;border-radius:9999px;background:${col};display:inline-block;flex:0 0 auto"></span>
       <span class="flex-1">${label}</span><span class="text-xs text-on-surface-variant font-mono">${n}</span></label>`;
   }).join('');
-  document.querySelectorAll('.catbox').forEach(b=>b.onchange=()=>{const c=b.dataset.cat; b.checked?active.add(c):active.delete(c); Object.keys(layers).forEach(k=>active.has(k)?layers[k].addTo(map):map.removeLayer(layers[k]));});
+  document.querySelectorAll('.catbox').forEach(b=>b.onchange=()=>{const c=b.dataset.cat; b.checked?active.add(c):active.delete(c); Object.keys(layers).forEach(k=>active.has(k)?layers[k].addTo(map):map.removeLayer(layers[k])); renderList();});
 }
+
+// ---- List view ----
+let ALL=[];
+function renderList(){
+  const rows=ALL.filter(r=>active.has(r.category||'damaged_building'));
+  document.getElementById('listCount').textContent=`${rows.length} reporte(s)`;
+  document.getElementById('listGrid').innerHTML=rows.map(r=>`
+    <div class="bg-white border border-outline-variant/60 rounded-lg p-3">
+      <div class="flex items-center gap-2"><span style="width:10px;height:10px;border-radius:9999px;background:${color(r)};display:inline-block"></span>
+      <span class="text-xs font-bold" style="color:${color(r)}">${esc(CAT[r.category]?.[0]||r.category)}</span></div>
+      <div class="font-display font-bold mt-1 leading-snug">${esc(r.title||'(sin título)')}</div>
+      <div class="text-xs text-on-surface-variant mt-0.5">${esc(r.description||'')}</div>
+      <div class="text-[11px] text-on-surface-variant mt-1">${esc(r.municipio||'—')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}</div>
+      ${r.source_url?`<a href="${esc(r.source_url)}" target="_blank" class="text-[11px] text-primary underline">fuente ↗</a>`:''}
+    </div>`).join('') || '<p class="text-on-surface-variant text-sm col-span-full">Sin reportes en estas categorías.</p>';
+}
+const vMapa=document.getElementById('viewMapa'),vLista=document.getElementById('viewLista'),listView=document.getElementById('listView');
+function setView(list){ listView.classList.toggle('hidden',!list);
+  vLista.classList.toggle('bg-white',list);vLista.classList.toggle('shadow',list);vLista.classList.toggle('text-primary',list);vLista.classList.toggle('text-on-surface-variant',!list);
+  vMapa.classList.toggle('bg-white',!list);vMapa.classList.toggle('shadow',!list);vMapa.classList.toggle('text-primary',!list);vMapa.classList.toggle('text-on-surface-variant',list);
+  if(list)renderList(); else map.invalidateSize();}
+vMapa.onclick=()=>setView(false); vLista.onclick=()=>setView(true);
 
 fetch('/api/danos-estructurales').then(r=>r.json()).then(d=>{
   document.getElementById('loading').style.display='none';
+  ALL=d.reports||[];
   buildFilters(d.counts||[]);
-  render(d.reports||[]);
-  if(d.reports&&d.reports.length){const g=L.featureGroup(Object.values(layers)); try{map.fitBounds(g.getBounds().pad(0.2));}catch{}}
+  render(ALL);
+  renderList();
+  if(ALL.length){const g=L.featureGroup(Object.values(layers)); try{map.fitBounds(g.getBounds().pad(0.2));}catch{}}
 }).catch(()=>{document.getElementById('loading').innerHTML='<div class="bg-white rounded-lg px-4 py-2 text-sm text-secondary">No se pudieron cargar los daños.</div>';});
 </script>
 </body>
