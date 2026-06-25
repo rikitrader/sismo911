@@ -3,46 +3,185 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SISMO911 — Consola de Operaciones</title>
+  <title>SISMO911 — Centro Nacional de Coordinación de Respuesta</title>
   <meta name="description" content="Consola de operaciones de SISMO911 (acceso restringido).">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://sismo911.com/admin">
   <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-  <meta name="theme-color" content="#13284f" />
+  <meta name="theme-color" content="#0b1830" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="/app.css" />
-  
-  <style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body{background:#eef0f4}
+    .font-display{font-family:'Public Sans',sans-serif}
+    .mono{font-family:'JetBrains Mono',monospace}
+    /* EOC command theme */
+    .eoc-bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%)}
+    .kpi{background:#fff;border:1px solid #d7dbe4;border-radius:.75rem;padding:1rem 1.1rem;position:relative;overflow:hidden}
+    .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,#13284f)}
+    .kpi .v{font-family:'Public Sans',sans-serif;font-weight:900;font-size:2rem;line-height:1;letter-spacing:-.02em}
+    .kpi .l{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#5a6172;font-weight:700;margin-top:.35rem}
+    .kpi .s{font-size:.72rem;color:#7a8092;margin-top:.15rem}
+    .eyebrow{font-size:.68rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7a8092}
+    .dot{width:.5rem;height:.5rem;border-radius:9999px;display:inline-block}
+    .pulse{animation:pulse 1.6s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    .card{background:#fff;border:1px solid #d7dbe4;border-radius:.75rem}
+    #opmap{height:420px;border-radius:.6rem;z-index:0}
+    .leaflet-container{font:inherit}
+    .feed-row{display:flex;gap:.6rem;padding:.5rem 0;border-top:1px solid #eceef3;font-size:.8rem}
+    table.dt{width:100%;font-size:.8rem}
+    table.dt th{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;text-align:left;padding:.4rem .6rem;background:#f4f6f9}
+    table.dt td{padding:.45rem .6rem;border-top:1px solid #eceef3}
+  </style>
 </head>
 <body class="font-sans text-on-surface">
-  <header class="bg-primary text-white">
-    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+  <!-- ============ EOC COMMAND HEADER ============ -->
+  <header class="eoc-bar text-white">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
       <div class="flex items-center gap-3">
-        <img src="/logo.svg" alt="SISMO911" class="h-10 w-10" />
-        <div><div class="font-display font-extrabold text-lg leading-none">SISMO911</div><div class="text-[10px] tracking-widest text-white/70">CONSOLA DE OPERACIONES</div></div>
+        <img src="/logo.svg" alt="SISMO911" class="h-11 w-11" />
+        <div>
+          <div class="font-display font-extrabold text-lg leading-none">SISMO911</div>
+          <div class="text-[10px] tracking-[0.18em] text-white/60 mt-0.5">CENTRO NACIONAL DE COORDINACIÓN DE RESPUESTA</div>
+        </div>
       </div>
-      <div class="flex items-center gap-4">
-        <a href="/admin-casos" class="text-sm font-medium text-white/90 hover:text-white">Expedientes</a>
-        <a href="index.html" class="text-sm font-medium text-white/90 hover:text-white">← Panel</a>
+      <!-- Readiness / OPCON -->
+      <div class="flex items-center gap-3 px-4 py-1.5 rounded-lg bg-white/5 border border-white/10">
+        <span id="opcon-dot" class="dot pulse" style="background:#16a34a"></span>
+        <div>
+          <div class="text-[9px] tracking-widest text-white/50 leading-none">NIVEL DE ACTIVACIÓN</div>
+          <div id="opcon-label" class="font-display font-bold text-sm leading-tight">— VIGILANCIA</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-5">
+        <div class="text-right">
+          <div class="text-[9px] tracking-widest text-white/50 leading-none">HORA OPERACIONAL (VET)</div>
+          <div id="clock" class="mono font-bold text-sm leading-tight">--:--:--</div>
+        </div>
+        <nav class="flex items-center gap-3 text-sm font-medium text-white/85">
+          <a href="/admin-casos" class="hover:text-white">Expedientes</a>
+          <a href="/" class="hover:text-white">Salir ↗</a>
+        </nav>
       </div>
     </div>
   </header>
 
-  <nav class="bg-white border-b border-outline-variant/60">
-    <div class="max-w-6xl mx-auto px-6 flex gap-1">
-      <button data-tab="persons" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-secondary text-primary">Personas Desaparecidas</button>
-      <button data-tab="contacts" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Directorio de Emergencia</button>
-      <button data-tab="acopio" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Centros de Acopio</button>
-      <button data-tab="mantenimiento" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Mantenimiento</button>
-      <button data-tab="aid" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Red de Ayuda</button>
-      <button data-tab="adapters" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant">Fuentes de Datos</button>
+  <!-- ============ NAV ============ -->
+  <nav class="bg-white border-b border-outline-variant/60 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-6 flex gap-1 overflow-x-auto">
+      <button data-tab="dashboard" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-secondary text-primary whitespace-nowrap">⬡ Panel de Mando</button>
+      <button data-tab="persons" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant whitespace-nowrap">Personas Desaparecidas</button>
+      <button data-tab="contacts" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant whitespace-nowrap">Directorio de Emergencia</button>
+      <button data-tab="acopio" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant whitespace-nowrap">Centros de Acopio</button>
+      <button data-tab="mantenimiento" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant whitespace-nowrap">Mantenimiento</button>
+      <button data-tab="aid" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant whitespace-nowrap">Red de Ayuda</button>
+      <button data-tab="adapters" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant whitespace-nowrap">Fuentes de Datos</button>
     </div>
   </nav>
 
-  <main class="max-w-6xl mx-auto px-6 py-8">
+  <main class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- ============ DASHBOARD (Panel de Mando) ============ -->
+    <section id="panel-dashboard" class="space-y-5">
+      <!-- status strip -->
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <div class="eyebrow">Resumen operacional</div>
+          <h1 class="font-display font-extrabold text-2xl leading-tight">Panel de Mando</h1>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-on-surface-variant">
+          <span id="sync-dot" class="dot" style="background:#16a34a"></span>
+          <span>Última sincronización: <b id="sync-time" class="mono">—</b></span>
+          <button id="refreshBtn" class="ml-2 bg-primary text-white font-semibold rounded-md px-3 py-1.5 text-xs">↻ Actualizar</button>
+        </div>
+      </div>
+
+      <!-- headline incident -->
+      <div id="incident" class="card p-5 flex flex-wrap items-center gap-5">
+        <div class="text-center px-2">
+          <div class="eyebrow">Magnitud</div>
+          <div id="ic-mag" class="font-display font-black text-5xl text-primary leading-none mt-1">—</div>
+        </div>
+        <div class="flex-1 min-w-[220px]">
+          <div class="eyebrow">Evento de referencia</div>
+          <div id="ic-place" class="font-display font-bold text-lg leading-tight">Esperando datos sísmicos…</div>
+          <div id="ic-meta" class="text-sm text-on-surface-variant mt-0.5 mono"></div>
+        </div>
+        <div class="text-center">
+          <div class="eyebrow">Alerta PAGER</div>
+          <div id="ic-alert" class="inline-block mt-1 px-4 py-1.5 rounded-full font-display font-extrabold text-sm text-white" style="background:#94a3b8">—</div>
+        </div>
+        <div class="text-center px-2">
+          <div class="eyebrow">Sentido por</div>
+          <div id="ic-felt" class="font-display font-black text-2xl mt-1">—</div>
+          <div class="text-[11px] text-on-surface-variant">reportes DYFI</div>
+        </div>
+      </div>
+
+      <!-- KPI grid -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="kpi" style="--accent:#e0892a"><div id="k-missing" class="v text-warning">—</div><div class="l">Desaparecidos</div><div id="k-missing-s" class="s"></div></div>
+        <div class="kpi" style="--accent:#16a34a"><div id="k-safe" class="v text-safe">—</div><div class="l">Hallados a salvo</div></div>
+        <div class="kpi" style="--accent:#475569"><div id="k-dead" class="v" style="color:#475569">—</div><div class="l">Fallecidos</div></div>
+        <div class="kpi" style="--accent:#dc2626"><div id="k-sos" class="v text-error">—</div><div class="l">SOS de rescate</div><div id="k-sos-s" class="s"></div></div>
+        <div class="kpi" style="--accent:#ea580c"><div id="k-damage" class="v" style="color:#ea580c">—</div><div class="l">Reportes de daños</div><div id="k-damage-s" class="s"></div></div>
+        <div class="kpi" style="--accent:#0891b2"><div id="k-trapped" class="v" style="color:#0891b2">—</div><div class="l">Personas atrapadas</div></div>
+        <div class="kpi" style="--accent:#16a34a"><div id="k-shelter-op" class="v text-safe">—</div><div class="l">Refugios operativos</div></div>
+        <div class="kpi" style="--accent:#d97706"><div id="k-shelter-sat" class="v" style="color:#d97706">—</div><div class="l">Refugios saturados</div></div>
+        <div class="kpi" style="--accent:#dc2626"><div id="k-shelter-cl" class="v text-error">—</div><div class="l">Refugios cerrados</div></div>
+        <div class="kpi" style="--accent:#13284f"><div id="k-help" class="v text-primary">—</div><div class="l">Solicitan ayuda</div><div class="s">check-ins</div></div>
+        <div class="kpi" style="--accent:#16a34a"><div id="k-aid" class="v" style="color:#1b6e3c">—</div><div class="l">Orgs. de ayuda</div></div>
+        <div class="kpi" style="--accent:#475569"><div id="k-contacts" class="v" style="color:#475569">—</div><div class="l">Contactos oficiales</div></div>
+      </div>
+
+      <!-- charts row -->
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="card p-4"><div class="eyebrow mb-2">Estado de personas</div><div id="ch-persons" class="flex justify-center"></div></div>
+        <div class="card p-4"><div class="eyebrow mb-2">Centros de acopio</div><div id="ch-acopio" class="flex justify-center"></div></div>
+        <div class="card p-4"><div class="eyebrow mb-2">Reportes por severidad</div><div id="ch-reports"></div></div>
+        <div class="card p-4"><div class="eyebrow mb-2">SOS por estado</div><div id="ch-sos"></div></div>
+      </div>
+
+      <!-- map + feeds -->
+      <div class="grid lg:grid-cols-3 gap-3">
+        <div class="card p-4 lg:col-span-2">
+          <div class="flex items-center justify-between mb-2">
+            <div class="eyebrow">Mapa operacional</div>
+            <div class="flex items-center gap-3 text-[11px] text-on-surface-variant">
+              <span><span class="dot" style="background:#dc2626"></span> Sismo</span>
+              <span><span class="dot" style="background:#7c3aed"></span> SOS</span>
+              <span><span class="dot" style="background:#ea580c"></span> Daños</span>
+            </div>
+          </div>
+          <div id="opmap"></div>
+        </div>
+        <div class="card p-4">
+          <div class="eyebrow mb-2">Salud de fuentes de datos</div>
+          <div id="feed-health" class="space-y-1 text-sm"></div>
+          <div class="eyebrow mt-4 mb-1">Sismos recientes</div>
+          <div id="recent-quakes" class="text-sm"></div>
+        </div>
+      </div>
+
+      <!-- recent activity -->
+      <div class="grid lg:grid-cols-2 gap-3">
+        <div class="card p-4">
+          <div class="eyebrow mb-1">SOS activos — prioridad de rescate</div>
+          <div id="sos-table" class="overflow-x-auto"></div>
+        </div>
+        <div class="card p-4">
+          <div class="eyebrow mb-1">Últimos reportes de daños</div>
+          <div id="damage-table" class="overflow-x-auto"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- PERSONS -->
-    <section id="panel-persons" class="space-y-6">
+    <section id="panel-persons" class="hidden space-y-6">
       <div class="grid md:grid-cols-3 gap-6">
         <form id="person-form" class="md:col-span-1 bg-white rounded-lg border border-outline-variant/60 p-5 space-y-3 h-fit">
           <h2 class="font-display font-bold text-lg">Registrar persona</h2>
@@ -107,7 +246,6 @@
       </div>
     </section>
 
-    <!-- ADAPTERS -->
     <!-- AID ORGS -->
     <section id="panel-aid" class="hidden space-y-4">
       <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
@@ -136,6 +274,7 @@
       </div>
     </section>
 
+    <!-- ADAPTERS -->
     <section id="panel-adapters" class="hidden space-y-6">
       <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
         <h2 class="font-display font-bold text-lg mb-1">Estado de Ingesta</h2>
@@ -147,18 +286,176 @@
 
 <script>
   const api = (p, o) => fetch('/api/' + p, o).then(r => r.json());
-  const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const ago = t => { const s=(Date.now()-t)/1000; if(s<3600)return Math.floor(s/60)+' min'; if(s<86400)return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; };
+  const num = n => (n==null?0:Number(n)).toLocaleString('es-VE');
 
-  // Tabs
+  // ===== live clock (Venezuela, UTC-4) =====
+  function tick(){ const d=new Date(Date.now()-4*3600*1000); document.getElementById('clock').textContent=d.toISOString().slice(11,19); }
+  tick(); setInterval(tick,1000);
+
+  // ===== Tabs =====
   const tabs = document.querySelectorAll('.tab');
+  const PANELS=['dashboard','persons','contacts','acopio','mantenimiento','aid','adapters'];
   function show(name){
     tabs.forEach(t=>{const on=t.dataset.tab===name; t.classList.toggle('border-secondary',on); t.classList.toggle('text-primary',on); t.classList.toggle('border-transparent',!on); t.classList.toggle('text-on-surface-variant',!on);});
-    ['persons','contacts','acopio','mantenimiento','aid','adapters'].forEach(n=>document.getElementById('panel-'+n).classList.toggle('hidden',n!==name));
+    PANELS.forEach(n=>document.getElementById('panel-'+n).classList.toggle('hidden',n!==name));
+    if(name==='dashboard')loadDashboard();
+    if(name==='persons')loadPersons();
     if(name==='contacts')loadContacts(); if(name==='adapters')loadStatus(); if(name==='acopio')loadAcopio(); if(name==='aid')loadAid();
   }
   tabs.forEach(t=>t.onclick=()=>show(t.dataset.tab));
-  if(location.hash==='#contacts')show('contacts'); else if(location.hash==='#adapters')show('adapters'); else if(location.hash==='#acopio')show('acopio'); else if(location.hash==='#aid')show('aid');
+
+  // =========================================================
+  //  PANEL DE MANDO (FEMA-style command dashboard)
+  // =========================================================
+  const PAGER={red:['#b91c1c','ROJO'],orange:['#ea580c','NARANJA'],yellow:['#ca8a00','AMARILLO'],green:['#16a34a','VERDE']};
+  // donut chart -> svg string
+  function donut(segs,total){
+    const size=140,r=54,cx=70,cy=70,C=2*Math.PI*r; let off=0;
+    const t=total||segs.reduce((a,s)=>a+s.value,0)||0;
+    const arcs=segs.filter(s=>s.value>0).map(s=>{const frac=t?s.value/t:0;const len=frac*C;const el=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="18" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`;off+=len;return el;}).join('');
+    const legend=segs.map(s=>`<div class="flex items-center gap-1.5 text-xs"><span class="dot" style="background:${s.color}"></span><span class="text-on-surface-variant">${esc(s.label)}</span><b class="ml-auto mono">${num(s.value)}</b></div>`).join('');
+    return `<div class="flex items-center gap-4 w-full"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#eceef3" stroke-width="18"/>${arcs}<text x="${cx}" y="${cy-2}" text-anchor="middle" font-family="Public Sans" font-weight="900" font-size="26" fill="#13284f">${num(t)}</text><text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="9" fill="#7a8092" letter-spacing="1">TOTAL</text></svg><div class="flex-1 space-y-1">${legend||'<div class="text-xs text-on-surface-variant">Sin datos.</div>'}</div></div>`;
+  }
+  // horizontal bars
+  function hbars(items){
+    const max=Math.max(1,...items.map(i=>i.value));
+    return '<div class="space-y-2 pt-1">'+items.map(i=>`<div><div class="flex justify-between text-xs mb-0.5"><span class="text-on-surface-variant">${esc(i.label)}</span><b class="mono">${num(i.value)}</b></div><div class="h-2.5 rounded bg-[#eceef3] overflow-hidden"><div class="h-full rounded" style="width:${Math.round(i.value/max*100)}%;background:${i.color}"></div></div></div>`).join('')+'</div>';
+  }
+
+  let opmap=null, mapLayers=null;
+  function ensureMap(){
+    if(opmap) return;
+    opmap=L.map('opmap',{attributionControl:false,scrollWheelZoom:false}).setView([8.5,-66.5],6);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(opmap);
+    mapLayers=L.layerGroup().addTo(opmap);
+  }
+
+  let dashTimer=null;
+  async function loadDashboard(){
+    if(dashTimer) clearInterval(dashTimer);
+    await refreshDashboard();
+    dashTimer=setInterval(()=>{ if(!document.getElementById('panel-dashboard').classList.contains('hidden')) refreshDashboard(); }, 45000);
+  }
+  document.getElementById('refreshBtn').onclick=()=>refreshDashboard();
+
+  async function refreshDashboard(){
+    const sdot=document.getElementById('sync-dot'); sdot.style.background='#ca8a00';
+    const [cases,sos,dmg,rstats,evs,status,checkins,aid,contacts,acopioData,acopioStatus]=await Promise.all([
+      api('persons/cases').catch(()=>({summary:{}})),
+      api('sos').catch(()=>({sos:[]})),
+      api('damage').catch(()=>({reports:[]})),
+      api('reports/stats').catch(()=>({})),
+      api('events?limit=20').catch(()=>({events:[]})),
+      api('status').catch(()=>({})),
+      api('checkins').catch(()=>({checkins:[]})),
+      api('aid-orgs').catch(()=>({orgs:[]})),
+      api('contacts').catch(()=>({contacts:[]})),
+      fetch('/acopio-data.json').then(r=>r.json()).catch(()=>[]),
+      fetch('/api/acopio/status').then(r=>r.json()).catch(()=>({status:{}})),
+    ]);
+
+    const sum=cases.summary||{};
+    const sosList=sos.sos||[]; const sosActive=sosList.filter(s=>s.status==='active').length; const sosAck=sosList.filter(s=>s.status==='acknowledged').length;
+    const dmgList=dmg.reports||[];
+    const events=evs.events||[];
+    const help=(checkins.checkins||[]).filter(c=>c.status==='need_help').length;
+
+    // acopio status counts (default operativo)
+    const ast=(acopioStatus.status)||{};
+    let acOp=0,acSat=0,acCl=0;
+    (acopioData||[]).forEach(d=>{const s=(ast[d.id]&&ast[d.id].status)||'operativo'; if(s==='saturado')acSat++; else if(s==='cerrado')acCl++; else acOp++;});
+
+    // ---- KPI tiles ----
+    document.getElementById('k-missing').textContent=num(sum.missing);
+    document.getElementById('k-missing-s').textContent=(sum.pending?num(sum.pending)+' pend. revisión':'');
+    document.getElementById('k-safe').textContent=num(sum.found_safe);
+    document.getElementById('k-dead').textContent=num(sum.deceased);
+    document.getElementById('k-sos').textContent=num(sosActive);
+    document.getElementById('k-sos-s').textContent=(sosAck?num(sosAck)+' en atención':'');
+    document.getElementById('k-damage').textContent=num(dmgList.length);
+    document.getElementById('k-damage-s').textContent=(rstats.critical?num(rstats.critical)+' críticos':'');
+    document.getElementById('k-trapped').textContent=num(rstats.trapped||0);
+    document.getElementById('k-shelter-op').textContent=num(acOp);
+    document.getElementById('k-shelter-sat').textContent=num(acSat);
+    document.getElementById('k-shelter-cl').textContent=num(acCl);
+    document.getElementById('k-help').textContent=num(help);
+    document.getElementById('k-aid').textContent=num((aid.orgs||[]).length);
+    document.getElementById('k-contacts').textContent=num((contacts.contacts||[]).length);
+
+    // ---- headline incident ----
+    if(events.length){
+      const ev=events.slice().sort((a,b)=>(b.mag||0)-(a.mag||0))[0];
+      document.getElementById('ic-mag').textContent='M'+(ev.mag!=null?Number(ev.mag).toFixed(1):'?');
+      document.getElementById('ic-place').textContent=ev.place_es||ev.place||'Evento sísmico';
+      document.getElementById('ic-meta').textContent=[ev.time_ms?new Date(ev.time_ms).toLocaleString('es-VE'):'', ev.depth_km!=null?'prof. '+ev.depth_km+' km':'', ev.tsunami?'⚠ TSUNAMI':''].filter(Boolean).join('  ·  ');
+      const al=PAGER[(ev.alert||'').toLowerCase()]; const ae=document.getElementById('ic-alert');
+      ae.textContent=al?al[1]:'SIN DATO'; ae.style.background=al?al[0]:'#94a3b8';
+      document.getElementById('ic-felt').textContent=ev.felt!=null?num(ev.felt):'—';
+      setOpcon(ev,sosActive,sum.missing||0);
+    }
+
+    // ---- charts ----
+    document.getElementById('ch-persons').innerHTML=donut([
+      {label:'Desaparecidos',value:+sum.missing||0,color:'#e0892a'},
+      {label:'A salvo',value:+sum.found_safe||0,color:'#16a34a'},
+      {label:'Fallecidos',value:+sum.deceased||0,color:'#475569'},
+    ]);
+    document.getElementById('ch-acopio').innerHTML=donut([
+      {label:'Operativos',value:acOp,color:'#16a34a'},
+      {label:'Saturados',value:acSat,color:'#d97706'},
+      {label:'Cerrados',value:acCl,color:'#dc2626'},
+    ]);
+    document.getElementById('ch-reports').innerHTML=hbars([
+      {label:'Crítico (rojo)',value:+rstats.critical||0,color:'#dc2626'},
+      {label:'Recursos / puntos',value:+rstats.resources||0,color:'#0891b2'},
+      {label:'Atrapados',value:+rstats.trapped||0,color:'#7c3aed'},
+      {label:'Pendientes revisión',value:+rstats.pending||0,color:'#94a3b8'},
+    ]);
+    document.getElementById('ch-sos').innerHTML=hbars([
+      {label:'Activos',value:sosActive,color:'#dc2626'},
+      {label:'En atención',value:sosAck,color:'#d97706'},
+    ]);
+
+    // ---- map ----
+    ensureMap();
+    mapLayers.clearLayers();
+    events.forEach(ev=>{ if(ev.lat==null||ev.lon==null)return; const r=Math.max(5,(ev.mag||3)*3.2); L.circleMarker([ev.lat,ev.lon],{radius:r,color:'#dc2626',weight:1.5,fillColor:'#ef4444',fillOpacity:.4}).bindPopup(`<b>M${ev.mag} ${esc(ev.place_es||ev.place||'')}</b>`).addTo(mapLayers); });
+    sosList.forEach(s=>{ if(s.lat==null||s.lon==null)return; L.circleMarker([s.lat,s.lon],{radius:5,color:'#7c3aed',weight:1.5,fillColor:'#a855f7',fillOpacity:.8}).bindPopup(`SOS · ${esc(s.status)}${s.note?'<br>'+esc(s.note):''}`).addTo(mapLayers); });
+    dmgList.forEach(d=>{ if(d.lat==null||d.lon==null)return; L.circleMarker([d.lat,d.lon],{radius:4,color:'#ea580c',weight:1,fillColor:'#f97316',fillOpacity:.7}).bindPopup(`Daño · ${esc(d.severity||'')}`).addTo(mapLayers); });
+
+    // ---- feed health ----
+    const ing=(status.ingest||[])[0]||{};
+    const feed=[];
+    feed.push(feedRow('USGS (sismos)', !ing.last_error, ing.last_ok_ms?('OK · '+ago(ing.last_ok_ms)+' · '+num(ing.last_count)+' ev'):'esperando cron'));
+    (status.social_adapters||[]).forEach(a=>feed.push(feedRow(String(a.platform||'').toUpperCase(),a.configured,a.configured?'configurado':'pend. credenciales')));
+    (status.gated||[]).slice(0,4).forEach(g=>feed.push(feedRow(g.label,g.configured,g.configured?'en vivo':'no disponible')));
+    document.getElementById('feed-health').innerHTML=feed.join('');
+
+    // ---- recent quakes list ----
+    document.getElementById('recent-quakes').innerHTML=(events.slice(0,6).map(ev=>`<div class="feed-row"><b class="mono ${(ev.mag||0)>=5?'text-error':''}">M${ev.mag!=null?Number(ev.mag).toFixed(1):'?'}</b><span class="flex-1 truncate">${esc(ev.place_es||ev.place||'—')}</span><span class="text-on-surface-variant text-xs">${ev.time_ms?ago(ev.time_ms):''}</span></div>`).join(''))||'<div class="text-xs text-on-surface-variant py-2">Sin sismos recientes.</div>';
+
+    // ---- SOS table ----
+    document.getElementById('sos-table').innerHTML = sosList.length ? `<table class="dt"><thead><tr><th>Estado</th><th>Nombre</th><th>Nota</th><th>Hace</th></tr></thead><tbody>${sosList.slice(0,8).map(s=>`<tr><td><span class="dot" style="background:${s.status==='active'?'#dc2626':'#d97706'}"></span> ${esc(s.status)}</td><td>${esc(s.name||'—')}</td><td class="truncate max-w-[180px]">${esc(s.note||'—')}</td><td class="text-on-surface-variant">${ago(s.created_ms)}</td></tr>`).join('')}</tbody></table>` : '<div class="text-sm text-on-surface-variant py-4">Sin SOS activos. 🟢</div>';
+
+    // ---- damage table ----
+    document.getElementById('damage-table').innerHTML = dmgList.length ? `<table class="dt"><thead><tr><th>Severidad</th><th>Resumen</th><th>Hace</th></tr></thead><tbody>${dmgList.slice(0,8).map(d=>`<tr><td class="font-semibold">${esc(d.severity||'—')}</td><td class="truncate max-w-[260px]">${esc(d.summary||'—')}</td><td class="text-on-surface-variant">${ago(d.created_ms)}</td></tr>`).join('')}</tbody></table>` : '<div class="text-sm text-on-surface-variant py-4">Sin reportes de daños.</div>';
+
+    document.getElementById('sync-time').textContent=new Date().toLocaleTimeString('es-VE');
+    sdot.style.background='#16a34a';
+  }
+  function feedRow(label,ok,detail){ return `<div class="flex items-center gap-2"><span class="dot" style="background:${ok?'#16a34a':'#cbd5e1'}"></span><span class="flex-1">${esc(label)}</span><span class="text-xs ${ok?'text-safe':'text-on-surface-variant'}">${esc(detail)}</span></div>`; }
+  function setOpcon(ev,sosActive,missing){
+    const a=(ev.alert||'').toLowerCase();
+    let lvl,col;
+    if(a==='red'||sosActive>20){lvl='NIVEL 1 — CRÍTICO';col='#b91c1c';}
+    else if(a==='orange'||(ev.mag||0)>=6||sosActive>0){lvl='NIVEL 2 — RESPUESTA';col='#ea580c';}
+    else if(a==='yellow'||(ev.mag||0)>=4.5||missing>0){lvl='NIVEL 3 — ELEVADO';col='#ca8a00';}
+    else{lvl='NIVEL 4 — VIGILANCIA';col='#16a34a';}
+    document.getElementById('opcon-label').textContent=lvl;
+    document.getElementById('opcon-dot').style.background=col;
+  }
 
   // Centros de Acopio — estado en vivo
   const ACST={operativo:['🟢','Operativo','#16a34a'],saturado:['🟠','Saturado','#d97706'],cerrado:['🔴','Cerrado','#dc2626']};
@@ -316,7 +613,9 @@
     else alert('Error: '+(r.error||'desconocido'));
   };
 
-  loadPersons();
+  // ===== initial route =====
+  const H=location.hash.replace('#','');
+  if(PANELS.includes(H)) show(H); else show('dashboard');
 </script>
 </body>
 </html>
