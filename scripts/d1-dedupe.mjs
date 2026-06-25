@@ -34,16 +34,34 @@ const TABLES = [
   { t: 'checkins',       key: "name, COALESCE(message,''), status",                         order: 'created_ms ASC', sensitive: true },
 ];
 
-function d1(sql) {
+function d1(sql, db = DB) {
   const env = { ...process.env };
   delete env.CLOUDFLARE_API_TOKEN;   // force the gmail OAuth wrangler session
   delete env.CLOUDFLARE_ACCOUNT_ID;
   const out = execSync(
-    `npx wrangler d1 execute ${DB} --remote --json --command ${JSON.stringify(sql)}`,
+    `npx wrangler d1 execute ${db} --remote --json --command ${JSON.stringify(sql)}`,
     { encoding: 'utf8', env, stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 32 * 1024 * 1024 }
   );
   const json = JSON.parse(out);
   return (Array.isArray(json) ? json[0] : json)?.results ?? [];
+}
+
+// The /familia missing-persons registry lives in a SEPARATE D1 database
+// (desaparecidos-vzla) with photos in the DESAP_FOTOS R2 bucket. Row+photo
+// de-duplication there is handled inside the Worker (daily cron + the
+// /admin → Mantenimiento button) because it must delete R2 objects too —
+// here we only REPORT it so this script gives the full picture.
+function reportPersonas() {
+  const exact = d1(
+    `SELECT COUNT(*) AS groups, COALESCE(SUM(n-1),0) AS extra FROM (
+       SELECT COUNT(*) n FROM personas
+       GROUP BY lower(trim(nombre)), coalesce(edad,-1), lower(trim(coalesce(ubicacion,''))),
+                lower(trim(coalesce(descripcion,''))), lower(trim(coalesce(contacto,'')))
+       HAVING n > 1)`,
+    'desaparecidos-vzla'
+  )[0] || { groups: 0, extra: 0 };
+  console.log(`\n▸ personas (DESAP) [fotos duplicadas]: ${exact.groups} grupo(s) exacto(s), ${exact.extra} fila(s) sobrantes`);
+  console.log('    Limpieza: /admin → Mantenimiento (con preview), o el cron diario 06:23 UTC (borra filas + fotos R2).');
 }
 
 let totalDups = 0;
@@ -76,6 +94,8 @@ for (const cfg of TABLES) {
     console.log(`    ✓ eliminadas ${extra} fila(s) duplicada(s) (conservada 1 por grupo)`);
   }
 }
+
+if (SENSITIVE) reportPersonas();
 
 console.log(`\n${'='.repeat(64)}\nTotal de filas sobrantes${APPLY ? ' eliminadas' : ' (sin tocar)'}: ${totalDups}`);
 if (!APPLY && totalDups > 0) console.log('Para eliminar: vuelve a correr con --apply\n');

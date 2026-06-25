@@ -15,6 +15,8 @@ import { damageMap } from './routes/damage-map';
 import { reports } from './routes/reports';
 import { chat } from './routes/chat';
 import { acopio } from './routes/acopio';
+import { admin } from './routes/admin';
+import { dedupePersonas } from './lib/dedupe';
 import { monitor } from './routes/monitor';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet } from './lib/sheets-sync';
@@ -43,7 +45,7 @@ app.use('/api/*', cors({
 // Admin console + curation/management writes require an authenticated operator
 // or admin session. Citizen actions (SOS, check-ins, damage reports) stay open.
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
-const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio'];
+const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales', '/api/admin'];
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   const method = c.req.method;
@@ -126,6 +128,7 @@ app.route('/api/damage', damage);
 app.route('/api/reports', reports);  // citizen damage-report map + comments + reactions + moderation
 app.route('/api/chat', chat);        // community channel
 app.route('/api/acopio', acopio);    // /api/acopio/status — live status for acopio/hospitales/PC
+app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
 app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET public; refresh gated; apify webhook secret-gated)
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
@@ -166,6 +169,14 @@ export default {
         // Hourly: social/web disaster-signal monitor → D1, then mirror into the Google Sheet.
         await ingestSocialMonitor(env).catch((e: any) => console.error('[cron] social monitor failed:', e?.message ?? e));
         await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));
+      }
+      // Daily 06:23 UTC: auto-remove EXACT duplicate personas (true re-scrapes) +
+      // their orphaned R2 photos, in capped batches. Loose/heuristic dedupe stays
+      // operator-only via /api/admin/dedupe-personas.
+      const t = new Date(_event.scheduledTime);
+      if (t.getUTCHours() === 6 && t.getUTCMinutes() === 23) {
+        await dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 })
+          .catch((e: any) => console.error('[cron] personas dedupe failed:', e?.message ?? e));
       }
     })());
   },
