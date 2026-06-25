@@ -14,6 +14,7 @@ import { reports } from './routes/reports';
 import { chat } from './routes/chat';
 import { ingestUsgs } from './ingest/usgs-cron';
 import { ingestKobo } from './ingest/kobo-cron';
+import { announceQuakes } from './ingest/quake-announce';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
 
@@ -24,7 +25,7 @@ app.use('/api/*', cors());
 // Admin console + curation/management writes require an authenticated operator
 // or admin session. Citizen actions (SOS, check-ins, damage reports) stay open.
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
-const ADMIN_WRITE_PREFIXES = ['/api/persons', '/api/contacts', '/api/resources'];
+const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources'];
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   const method = c.req.method;
@@ -35,7 +36,12 @@ app.use('*', async (c, next) => {
   const isReportModeration =
     (path.startsWith('/api/reports') && (method === 'PATCH' || method === 'DELETE')) ||
     path === '/api/reports/queue';
-  if (!isAdminPage && !isAdminWrite && !isReportModeration) return next();
+  // Missing-persons moderation: review queue + approve/reject are operator-only.
+  // Public POST (report) and PATCH (status update) stay open.
+  const isPersonModeration =
+    path === '/api/persons/queue' ||
+    path.endsWith('/approve') || path.endsWith('/reject');
+  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration) return next();
 
   const user = await getUserFromRequest(c.env, c).catch(() => null);
   const authorized = user && (user.role === 'operator' || user.role === 'admin');
@@ -99,9 +105,13 @@ export default {
   fetch: app.fetch,
   // Cron trigger (every minute) → keep the USGS mirror + KoboToolbox damage feed fresh.
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(Promise.allSettled([
-      ingestUsgs(env).catch((e) => console.error('[cron] usgs ingest failed:', e?.message ?? e)),
-      ingestKobo(env).catch((e) => console.error('[cron] kobo ingest failed:', e?.message ?? e)),
-    ]));
+    ctx.waitUntil((async () => {
+      await Promise.allSettled([
+        ingestUsgs(env).catch((e) => console.error('[cron] usgs ingest failed:', e?.message ?? e)),
+        ingestKobo(env).catch((e) => console.error('[cron] kobo ingest failed:', e?.message ?? e)),
+      ]);
+      // After events are fresh, announce significant new quakes to the channel.
+      await announceQuakes(env).catch((e) => console.error('[cron] quake announce failed:', e?.message ?? e));
+    })());
   },
 };

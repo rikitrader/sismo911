@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte — SISMO911</title>
+<meta name="description" content="Detalle de un reporte ciudadano de daño tras el terremoto en Venezuela: ubicación aproximada, comentarios de la comunidad y verificación. SISMO911.">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://sismo911.com/reporte">
+<meta property="og:type" content="article"><meta property="og:site_name" content="SISMO911">
+<meta property="og:title" content="Reporte ciudadano — SISMO911"><meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#00173a',secondary:'#bb0027','on-surface':'#1a1c1e','on-surface-variant':'#44474f','outline-variant':'#c4c6d0',safe:'#2e7d32',warning:'#e57200'},fontFamily:{sans:['Inter','sans-serif'],display:['Public Sans','sans-serif']}}}}</script>
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}input,textarea{width:100%;border:1px solid #c4c6d0;border-radius:.5rem;padding:.5rem .7rem;font-size:.9rem;background:#fff}</style>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/reportar" class="hover:text-white/70">Reportar</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a><a href="/canal" class="hover:text-white/70">Canal</a><a href="/movimiento" class="hover:text-white/70">Movimiento</a></nav></div></header>
+
+<main class="mx-auto max-w-2xl px-4 py-8">
+  <a href="/mapa" class="text-sm text-primary hover:underline">← Volver al mapa</a>
+  <div id="report" class="mt-3"></div>
+
+  <section id="commentsWrap" class="mt-8 hidden">
+    <h2 class="font-display font-bold text-lg mb-3">Comentarios de la comunidad</h2>
+    <div id="comments" class="space-y-2 mb-4"></div>
+    <form id="cf" class="space-y-2">
+      <input id="cname" placeholder="Nombre (opcional)">
+      <textarea id="cbody" rows="2" placeholder="Aporta información verificada…" maxlength="1000"></textarea>
+      <button class="bg-primary text-white font-semibold rounded-lg px-4 py-2 text-sm">Comentar</button>
+    </form>
+    <p class="text-xs text-on-surface-variant mt-2">⚠️ Solo información verificada. No publiques datos personales de terceros.</p>
+  </section>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=ms=>new Date(ms).toLocaleString('es-VE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+const id=new URLSearchParams(location.search).get('id');
+const SEV={rojo:['Crítico','#bb0027'],naranja:['Grave','#e57200'],amarillo:['Leve','#f2c200']};
+const CAT={collapsed_building:'🏚️ Colapso',damaged_building:'🧱 Daño estructural',trapped_people:'🆘 Atrapados',gas_leak:'⛽ Fuga de gas',medical_need:'➕ Necesidad médica',aid_point:'🤝 Punto de ayuda',water_point:'💧 Agua',shelter:'⛺ Refugio',other:'📌 Reporte'};
+async function load(){const box=document.getElementById('report');if(!id){box.innerHTML='<p class="text-sm text-on-surface-variant">Reporte no especificado.</p>';return;}
+  const r=await fetch('/api/reports/'+id);if(!r.ok){box.innerHTML='<p class="text-sm text-on-surface-variant">Reporte no encontrado o aún en revisión.</p>';return;}
+  const x=await r.json();const[sl,sc]=SEV[x.severity]||['',''];
+  box.innerHTML=`<div class="bg-white border border-outline-variant/60 rounded-xl p-5">
+    <div class="flex items-center gap-2 text-xs mb-2">${x.severity?`<span style="background:${sc}" class="text-white font-bold px-2 py-0.5 rounded-full">${sl}</span>`:''}<span class="text-on-surface-variant">${CAT[x.category]||x.category} · ${fmt(x.created_ms)}</span></div>
+    <h1 class="font-display font-extrabold text-2xl mb-1">${esc(x.title||CAT[x.category]||'Reporte')}</h1>
+    <p class="text-sm mb-3">${esc(x.description||'')}</p>
+    <div class="text-xs text-on-surface-variant">${[x.parroquia,x.municipio,x.estado].filter(Boolean).map(esc).join(', ')||'Ubicación aproximada'} · ${x.source==='kobotoolbox'?'Fuente: KoboToolbox':x.source==='usgs'?'Fuente: USGS':'Reporte ciudadano'} · ${esc(x.verification)}</div>
+    <button id="react" class="mt-3 text-sm border border-outline-variant rounded-lg px-3 py-1.5 font-semibold text-primary">👍 Confirmar (${x.reactions_up||0})</button>
+  </div>`;
+  document.getElementById('react').onclick=async ()=>{await fetch('/api/reports/'+id+'/react',{method:'POST'});const b=document.getElementById('react');b.textContent='👍 ¡Gracias!';b.disabled=true;};
+  document.getElementById('commentsWrap').classList.remove('hidden');loadComments();}
+async function loadComments(){const c=await fetch('/api/reports/'+id+'/comments').then(r=>r.json());const box=document.getElementById('comments');
+  box.innerHTML=c.length?c.map(m=>`<div class="bg-white border border-outline-variant/60 rounded-lg px-3 py-2"><div class="text-xs"><b class="text-primary">${esc(m.name||'Anónimo')}</b> <span class="text-on-surface-variant">${fmt(m.created_ms)}</span></div><div class="text-sm">${esc(m.body)}</div></div>`).join(''):'<p class="text-sm text-on-surface-variant">Sé el primero en aportar información.</p>';}
+document.getElementById('cf').onsubmit=async e=>{e.preventDefault();const bi=document.getElementById('cbody'),ni=document.getElementById('cname');const body=bi.value.trim();if(!body)return;
+  await fetch('/api/reports/'+id+'/comments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:ni.value,body})});bi.value='';loadComments();};
+load();
+</script>
+</body>
+</html>

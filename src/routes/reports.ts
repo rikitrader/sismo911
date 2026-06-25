@@ -56,6 +56,18 @@ reports.get('/stats', async (c) => {
   });
 });
 
+// GET /api/reports/:id — single approved report (for the detail page).
+reports.get('/:id', async (c) => {
+  const row = await c.env.DB.prepare(
+    `SELECT id, category, severity, verification, title, description, lat, lon,
+            estado, municipio, parroquia, building_type, people_trapped,
+            source, source_url, image_key, reactions_up, created_ms
+     FROM map_reports WHERE id = ? AND status='approved'`
+  ).bind(c.req.param('id')).first();
+  if (!row) return c.json({ error: 'no encontrado' }, 404);
+  return c.json(row);
+});
+
 // POST /api/reports — citizen submission → moderation queue.
 reports.post('/', async (c) => {
   const b = await c.req.json().catch(() => null);
