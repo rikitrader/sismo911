@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Archivo Histórico de Sismos — SISMO911</title>
+<meta name="description" content="Archivo histórico de sismos en Venezuela: busca y filtra terremotos por magnitud, fecha y lugar. Catálogo sísmico nacional con fuente USGS.">
+<meta name="author" content="SISMO911 — Comando Sísmico Nacional">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/archivo">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Archivo Histórico de Sismos — SISMO911">
+<meta property="og:description" content="Catálogo sísmico de Venezuela: busca y filtra terremotos por magnitud, fecha y lugar.">
+<meta property="og:url" content="https://sismo911.com/archivo">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Archivo Histórico de Sismos — SISMO911">
+<meta name="twitter:description" content="Catálogo sísmico de Venezuela: busca y filtra terremotos por magnitud, fecha y lugar.">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}.tnum{font-variant-numeric:tabular-nums}</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Archivo Histórico de Sismos — SISMO911","description":"Catálogo sísmico de Venezuela: busca y filtra terremotos por magnitud, fecha y lugar.","url":"https://sismo911.com/archivo","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+  <script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/archivo" class="text-white">Archivo</a><a href="/alertas" class="hover:text-white/70">Alertas</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a><a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/guia" class="hover:text-white/70">Guía</a></nav></div></header>
+
+<main class="mx-auto max-w-6xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Archivo Histórico de Sismos</h1>
+  <p class="text-on-surface-variant mb-5 max-w-3xl">Catálogo sísmico de Venezuela. Busca y filtra terremotos por <b>magnitud</b>, <b>fecha</b> y <b>lugar</b>. Fuente: <b>USGS</b> (Servicio Geológico de EE.&nbsp;UU.), actualizado en continuo por SISMO911.</p>
+
+  <!-- Tiles -->
+  <div id="tiles" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
+
+  <!-- Filtros -->
+  <div class="flex flex-wrap items-end gap-3 mb-4">
+    <label class="flex flex-col text-[11px] font-semibold text-on-surface-variant">Magnitud mínima
+      <select id="minMag" class="mt-1 rounded-lg border border-outline-variant px-3 py-2 text-sm bg-white font-normal text-on-surface">
+        <option value="">Todas</option><option value="2.5">≥ 2.5</option><option value="3.5">≥ 3.5</option><option value="4">≥ 4.0</option><option value="5">≥ 5.0</option><option value="6">≥ 6.0</option><option value="7">≥ 7.0</option>
+      </select>
+    </label>
+    <label class="flex flex-col text-[11px] font-semibold text-on-surface-variant">Desde
+      <input id="from" type="date" class="mt-1 rounded-lg border border-outline-variant px-3 py-2 text-sm font-normal text-on-surface">
+    </label>
+    <label class="flex flex-col text-[11px] font-semibold text-on-surface-variant">Hasta
+      <input id="to" type="date" class="mt-1 rounded-lg border border-outline-variant px-3 py-2 text-sm font-normal text-on-surface">
+    </label>
+    <input id="q" type="search" placeholder="Buscar lugar (ej: Yumare, Sucre…)" class="flex-1 min-w-[180px] rounded-lg border border-outline-variant px-3 py-2 text-sm self-stretch mt-auto">
+    <button id="clear" type="button" class="rounded-lg border border-outline-variant px-3 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-variant/40">Limpiar</button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="bg-white border border-outline-variant/60 rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-surface-variant/40 text-on-surface-variant text-[11px] uppercase tracking-wide">
+          <tr><th class="text-left font-bold px-4 py-2.5">Mag</th><th class="text-left font-bold px-4 py-2.5">Fecha y hora (local VE)</th><th class="text-left font-bold px-4 py-2.5">Lugar</th><th class="text-right font-bold px-4 py-2.5">Prof.</th><th class="text-left font-bold px-4 py-2.5 hidden md:table-cell">Coordenadas</th><th class="px-4 py-2.5"></th></tr>
+        </thead>
+        <tbody id="rows" class="divide-y divide-outline-variant/40"></tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between gap-3 px-4 py-3 border-t border-outline-variant/50 text-sm">
+      <span id="count" class="text-xs text-on-surface-variant"></span>
+      <div class="flex items-center gap-2">
+        <button id="prev" class="rounded-md border border-outline-variant px-3 py-1.5 text-xs font-semibold disabled:opacity-40">‹ Anterior</button>
+        <span id="pageInfo" class="text-xs text-on-surface-variant tnum"></span>
+        <button id="next" class="rounded-md border border-outline-variant px-3 py-1.5 text-xs font-semibold disabled:opacity-40">Siguiente ›</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-xs text-on-surface-variant mt-5 max-w-3xl">El archivo crece de forma continua con cada sismo detectado. Datos sísmicos cortesía del <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener" class="text-primary underline">USGS</a>; las magnitudes y profundidades pueden revisarse a medida que se procesan.</p>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const $=s=>document.querySelector(s);
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Magnitude color buckets match the homepage legend.
+const magColor=m=>m==null?'#64748b':m>=4?'#c8102e':m>=2.5?'#e57200':'#2e7d32';
+const fmtDate=t=>{if(!t)return'—';try{return new Date(t).toLocaleString('es-VE',{timeZone:'America/Caracas',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});}catch{return new Date(t).toISOString().slice(0,16).replace('T',' ');}};
+let page=1, totalPages=1, debounce;
+
+function params(){
+  const p=new URLSearchParams({page:String(page),pageSize:'30'});
+  const mm=$('#minMag').value, f=$('#from').value, t=$('#to').value, q=$('#q').value.trim();
+  if(mm)p.set('minMag',mm); if(f)p.set('from',f); if(t)p.set('to',t); if(q)p.set('q',q);
+  return p.toString();
+}
+function tiles(d){
+  const strongest=d.events&&d.events.length?d.events.reduce((a,b)=>(b.mag??0)>(a.mag??0)?b:a):null;
+  const cards=[
+    ['Sismos en el archivo', (d.total??0).toLocaleString('es-VE'), '#13284f'],
+    ['Mostrando', `${d.events?.length||0} / pág.`, '#44474f'],
+    ['Mayor en esta vista', strongest&&strongest.mag!=null?('M '+strongest.mag.toFixed(1)):'—', strongest?magColor(strongest.mag):'#64748b'],
+    ['Página', `${d.page} de ${d.totalPages}`, '#44474f'],
+  ];
+  $('#tiles').innerHTML=cards.map(([l,v,c])=>`<div class="bg-white border border-outline-variant/60 rounded-xl p-4"><div class="font-display font-extrabold text-2xl tnum" style="color:${c}">${esc(v)}</div><div class="text-xs font-semibold mt-0.5">${esc(l)}</div></div>`).join('');
+}
+function rowHtml(e){
+  const mc=magColor(e.mag), place=esc(e.place_es||e.place||'Venezuela');
+  const usgs=e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener" class="text-xs font-semibold text-primary hover:underline whitespace-nowrap">USGS ↗</a>`:'';
+  const coords=(e.lat!=null&&e.lon!=null)?`${e.lat.toFixed(2)}°, ${e.lon.toFixed(2)}°`:'—';
+  const tsu=e.tsunami?' 🌊':'';
+  return `<tr class="hover:bg-surface-variant/20">
+    <td class="px-4 py-2.5"><span class="inline-block rounded text-white text-xs font-extrabold px-2 py-1 tnum" style="background:${mc}">M ${e.mag!=null?e.mag.toFixed(1):'?'}</span></td>
+    <td class="px-4 py-2.5 text-on-surface-variant whitespace-nowrap tnum">${esc(fmtDate(e.time_ms))}</td>
+    <td class="px-4 py-2.5 font-medium">${place}${tsu}</td>
+    <td class="px-4 py-2.5 text-right text-on-surface-variant tnum whitespace-nowrap">${e.depth_km!=null?e.depth_km.toFixed(0)+' km':'—'}</td>
+    <td class="px-4 py-2.5 text-on-surface-variant tnum hidden md:table-cell whitespace-nowrap">${coords}</td>
+    <td class="px-4 py-2.5 text-right">${usgs}</td></tr>`;
+}
+async function load(){
+  $('#rows').innerHTML='<tr><td colspan="6" class="px-4 py-8 text-center text-on-surface-variant text-sm">Cargando archivo…</td></tr>';
+  try{
+    const d=await (await fetch('/api/events/history?'+params())).json();
+    totalPages=d.totalPages||1; page=d.page||1;
+    tiles(d);
+    $('#rows').innerHTML=d.events&&d.events.length?d.events.map(rowHtml).join(''):'<tr><td colspan="6" class="px-4 py-10 text-center text-on-surface-variant text-sm">No hay sismos que coincidan con estos filtros.</td></tr>';
+    $('#count').textContent=`${(d.total??0).toLocaleString('es-VE')} sismo(s) en total`;
+    $('#pageInfo').textContent=`Pág. ${page} / ${totalPages}`;
+    $('#prev').disabled=page<=1; $('#next').disabled=page>=totalPages;
+  }catch{
+    $('#rows').innerHTML='<tr><td colspan="6" class="px-4 py-8 text-center text-secondary text-sm">No se pudo cargar el archivo. Reintenta.</td></tr>';
+  }
+}
+function reload(){page=1;load();}
+['#minMag','#from','#to'].forEach(s=>$(s).addEventListener('change',reload));
+$('#q').addEventListener('input',()=>{clearTimeout(debounce);debounce=setTimeout(reload,350);});
+$('#clear').onclick=()=>{$('#minMag').value='';$('#from').value='';$('#to').value='';$('#q').value='';reload();};
+$('#prev').onclick=()=>{if(page>1){page--;load();window.scrollTo({top:0,behavior:'smooth'});}};
+$('#next').onclick=()=>{if(page<totalPages){page++;load();window.scrollTo({top:0,behavior:'smooth'});}};
+load();
+</script>
+</body>
+</html>

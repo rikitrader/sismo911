@@ -12,6 +12,7 @@
     { label: 'Alertas', href: '/alertas', m: ['/alertas'], d: 'M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z' },
     { label: 'Blog', href: '/blog', m: ['/blog'], d: 'M4 4h16v16H4z M8 8h8M8 12h8M8 16h5' },
     { label: 'Alerta PAGER', href: '/pager', m: ['/pager'], d: 'M12 3l8 4v5c0 4.5-3.1 7.9-8 9-4.9-1.1-8-4.5-8-9V7l8-4z' },
+    { label: 'Archivo Histórico', href: '/archivo', m: ['/archivo'], d: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v3H3zM3 10h18v7a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 14h6' },
     { label: 'Familia / Check-in', href: '/familia', m: ['/familia'], d: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
     { label: 'Personas Desaparecidas', href: '/personas', m: ['/personas'], d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zm12.5 1.5L19 15m0 0l-2.5-2.5M19 15l2.5-2.5M19 15l-2.5 2.5' },
     { label: 'Casos / Expedientes', href: '/casos', m: ['/casos'], d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
