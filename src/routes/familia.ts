@@ -4,6 +4,7 @@ import { uid } from '../lib/db';
 import { getUserFromRequest } from '../lib/auth';
 import { rateLimit, burstLimit, isImageBytes, nameHasSpam, textHasLink, requestIp } from '../lib/security';
 import { audit } from '../lib/audit';
+import { recomputeCaseScore } from '../lib/case-score-sync';
 
 // Missing-persons registry (/familia). Reads the `personas` dataset in the main
 // (sismo911) D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
@@ -172,6 +173,8 @@ familia.post('/:id/localizar', async (c) => {
   await c.env.DB.prepare(
     `UPDATE personas SET estado = 'localizado', localizado_nota = ?, updated_at = ? WHERE id = ?`
   ).bind(String(b?.nota ?? 'Marcada como localizada').slice(0, 300), Date.now(), c.req.param('id')).run();
+  // Autonomous auto-update: found → case re-scores to 'baja' (MENOR) immediately.
+  await recomputeCaseScore(c.env, 'fam-' + c.req.param('id')).catch(() => {});
   return c.json({ ok: true, status: 'found_safe' });
 });
 
