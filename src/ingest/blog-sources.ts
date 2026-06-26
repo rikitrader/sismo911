@@ -34,13 +34,50 @@ async function getJson(url: string, headers: Record<string, string> = {}) {
   return r.json<any>();
 }
 
+// ---- Google News RSS (keyless, datacenter-friendly) — story + link ----
+// The link is a news.google.com redirect that resolves to the article; image is
+// left empty (the UI shows a branded cover). Reliable from a Worker, unlike the
+// keyless social APIs which IP-block / throttle datacenters.
+async function fetchGoogleNews(sinceMs: number): Promise<SourceRecord[]> {
+  const out: SourceRecord[] = [];
+  const seen = new Set<string>();
+  for (const q of QUERY_ES) {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q + ' when:7d')}&hl=es-419&gl=VE&ceid=VE:es-419`;
+    try {
+      const r = await fetch(url, { headers: { 'user-agent': UA } });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const xml = await r.text();
+      for (const block of xml.split('<item>').slice(1)) {
+        const pick = (tag: string) => (block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`)) || [, ''])[1];
+        const strip = (s: string) => s.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, '').trim();
+        const link = strip(pick('link'));
+        const title = strip(pick('title'));
+        const src = strip(pick('source'));
+        const ts = Date.parse(strip(pick('pubDate'))) || Date.now();
+        const id = (block.match(/<guid[^>]*>([\s\S]*?)<\/guid>/) || [, link])[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim() || link;
+        if (!title || !link || seen.has(id) || ts < sinceMs) continue;
+        seen.add(id);
+        out.push({ platform: 'noticia', id, author: src || 'Google News', caption: title, url: link, image: '', video: '', ts, views: 0, likes: 0, comments: 0 });
+      }
+    } catch (e: any) { console.error('[blog-sources] googlenews', q, e?.message ?? e); }
+  }
+  return out;
+}
+
 // ---- GDELT DOC 2.0 (keyless) — news coverage with a share image + link ----
+// Best-effort: throttles hard (429) from shared datacenter IPs, so one retry.
 async function fetchGdelt(sinceMs: number): Promise<SourceRecord[]> {
   const hours = Math.max(1, Math.min(168, Math.ceil((Date.now() - sinceMs) / 3600_000)));
   const q = `(terremoto OR sismo OR temblor OR earthquake) Venezuela`;
   const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q)}` +
     `&mode=artlist&format=json&timespan=${hours}h&maxrecords=75&sort=datedesc`;
-  const j = await getJson(url);
+  let j: any;
+  try { j = await getJson(url); }
+  catch (e: any) {
+    if (!String(e?.message).includes('429')) throw e;
+    await new Promise((r) => setTimeout(r, 5500));
+    j = await getJson(url);
+  }
   const arts: any[] = Array.isArray(j?.articles) ? j.articles : [];
   return arts.map((a) => {
     // seendate is "YYYYMMDDTHHMMSSZ"
@@ -114,8 +151,8 @@ async function fetchBluesky(sinceMs: number): Promise<SourceRecord[]> {
 
 // Fetch all free sources, dedupe by platform:id, newest first.
 export async function fetchBlogSources(env: Env, sinceMs: number): Promise<{ candidates: SourceRecord[]; counts: Record<string, number> }> {
-  const results = await Promise.allSettled([fetchGdelt(sinceMs), fetchYoutube(env, sinceMs), fetchBluesky(sinceMs)]);
-  const names = ['gdelt', 'youtube', 'bluesky'];
+  const results = await Promise.allSettled([fetchGoogleNews(sinceMs), fetchYoutube(env, sinceMs), fetchGdelt(sinceMs), fetchBluesky(sinceMs)]);
+  const names = ['googlenews', 'youtube', 'gdelt', 'bluesky'];
   const counts: Record<string, number> = {};
   const seen = new Set<string>();
   const candidates: SourceRecord[] = [];
