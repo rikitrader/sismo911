@@ -88,8 +88,9 @@ async function fetchVeNews(sinceMs: number): Promise<SourceRecord[]> {
     if (s.status === 'fulfilled') items.push(...s.value);
     else console.error('[blog-sources] venews', VE_FEEDS[i], (s.reason as any)?.message ?? s.reason);
   });
-  // Bounded og:image enrichment for items still missing a poster (≤8 fetches).
-  let budget = 8;
+  // Bounded og:image enrichment for items still missing a poster (≤5 fetches,
+  // keeps the Worker's per-invocation subrequest budget in check).
+  let budget = 5;
   for (const it of items) {
     if (it.image || budget <= 0) continue;
     budget--;
@@ -188,8 +189,11 @@ async function fetchBluesky(sinceMs: number): Promise<SourceRecord[]> {
 
 // Fetch all free sources, dedupe by platform:id, newest first.
 export async function fetchBlogSources(env: Env, sinceMs: number): Promise<{ candidates: SourceRecord[]; counts: Record<string, number> }> {
-  const results = await Promise.allSettled([fetchVeNews(sinceMs), fetchYoutube(env, sinceMs), fetchGdelt(sinceMs), fetchBluesky(sinceMs)]);
-  const names = ['venews', 'youtube', 'gdelt', 'bluesky'];
+  // Bluesky is dropped: its public appview 403s Cloudflare datacenter IPs, so it
+  // only wasted subrequests + spammed errors. VE news + YouTube + GDELT are the
+  // working free sources.
+  const results = await Promise.allSettled([fetchVeNews(sinceMs), fetchYoutube(env, sinceMs), fetchGdelt(sinceMs)]);
+  const names = ['venews', 'youtube', 'gdelt'];
   const counts: Record<string, number> = {};
   const seen = new Set<string>();
   const candidates: SourceRecord[] = [];
