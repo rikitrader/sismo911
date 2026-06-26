@@ -253,6 +253,16 @@
         </div>
         <pre id="dedupe-out" class="text-xs font-mono bg-[#f6f6f8] rounded p-3 whitespace-pre-wrap text-on-surface-variant">Sin ejecutar.</pre>
       </div>
+
+      <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+        <h2 class="font-display font-bold text-lg mb-1">Purga de spam — Personas</h2>
+        <p class="text-sm text-on-surface-variant mb-3">Marca como rechazados los nombres basura/spam y las <b>inundaciones de un mismo nombre</b> (p. ej. «SIMONE BURATTI GAY» repetido cientos de veces), luego <b>borra físicamente</b> todas las filas rechazadas (junto con sus fotos) y elimina duplicados exactos y por foto. <b>Revisa en seco primero.</b> Vuelve a aplicar hasta que «rechazadas» y los duplicados lleguen a 0.</p>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <button id="purge-dry" class="bg-surface-container text-on-surface text-sm font-semibold rounded px-4 py-2 border border-outline-variant">Revisar (en seco)</button>
+          <button id="purge-apply" class="bg-secondary text-white text-sm font-bold rounded px-4 py-2">Purgar spam + duplicados</button>
+        </div>
+        <pre id="purge-out" class="text-xs font-mono bg-[#f6f6f8] rounded p-3 whitespace-pre-wrap text-on-surface-variant">Sin ejecutar.</pre>
+      </div>
     </section>
 
     <!-- AID ORGS -->
@@ -555,6 +565,21 @@
   }
   document.getElementById('dedupe-dry').onclick=()=>dedupe(false);
   document.getElementById('dedupe-apply').onclick=()=>dedupe(true);
+
+  // Mantenimiento — purga de spam + name-floods + duplicados (familia/maintenance)
+  async function purge(apply){
+    const out=document.getElementById('purge-out'); out.textContent='Procesando…';
+    try{
+      const r=await api('familia/maintenance',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({apply})});
+      if(r.error){ out.textContent='Error: '+r.error+(r.hint?(' — '+r.hint):''); return; }
+      const dd=`exactos: ${r.dedupe.exact.applied?r.dedupe.exact.deletedRows+' borrados, '+r.dedupe.exact.remaining+' restantes':r.dedupe.exact.found+' detectados'} · por foto: ${r.dedupe.photo.applied?r.dedupe.photo.deletedRows+' borrados, '+r.dedupe.photo.remaining+' restantes':r.dedupe.photo.found+' detectados'}`;
+      out.textContent = r.apply
+        ? `Spam/basura marcado: ${r.clean.flagged}. Inundaciones de nombre: ${r.floods.flagged} (en ${r.floods.groups} grupos).\nFilas rechazadas purgadas: ${r.purgedRows} (+${r.purgedPhotos} fotos).\nDuplicados — ${dd}.\n${(r.purgedRows>0||r.dedupe.exact.remaining>0||r.dedupe.photo.remaining>0)?'→ Vuelve a pulsar «Purgar» para continuar.':'✓ Sin spam ni duplicados restantes.'}`
+        : `EN SECO — nada borrado.\nSpam/basura: ${r.clean.scanned} · inundaciones: ${r.floods.flagged} en ${r.floods.groups} grupos · rechazadas pendientes de purgar: ${r.rejected}.\nDuplicados — ${dd}.`;
+    }catch(e){ out.textContent='Error: '+(e&&e.message||e); }
+  }
+  document.getElementById('purge-dry').onclick=()=>purge(false);
+  document.getElementById('purge-apply').onclick=()=>purge(true);
 
   // Persons
   const STATUS = { missing:['Desaparecida','bg-secondary'], found_safe:['Hallada a salvo','bg-safe'], found_deceased:['Fallecida','bg-on-surface'], unknown:['Desconocido','bg-warning'] };

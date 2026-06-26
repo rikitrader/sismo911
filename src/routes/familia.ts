@@ -5,6 +5,8 @@ import { getUserFromRequest } from '../lib/auth';
 import { rateLimit, burstLimit, isImageBytes, nameHasSpam, textHasLink, requestIp } from '../lib/security';
 import { audit } from '../lib/audit';
 import { recomputeCaseScore } from '../lib/case-score-sync';
+import { cleanPersonas, cleanNameFloods } from '../lib/clean';
+import { dedupePersonas } from '../lib/dedupe';
 
 // Missing-persons registry (/familia). Reads the `personas` dataset in the main
 // (sismo911) D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
@@ -95,36 +97,24 @@ familia.get('/persons', async (c) => {
   return c.json({ persons, total: total + nativeTotal, nextCursor: nextCursor(rows, limit), limit });
 });
 
-// GET /api/familia/gallery?cursor=&limit=&q=&edo=&lugar=&desde=&hasta=
-// q   → free text on nombre/ubicacion · edo → estado (LIKE ubicacion, freeform) ·
-// lugar → ciudad/edificio (LIKE ubicacion) · desde/hasta → updated_at date range (YYYY-MM-DD).
+// GET /api/familia/gallery?cursor=&limit=
 familia.get('/gallery', async (c) => {
   const limit = clampLimit(c.req.query('limit'), 30);
   // optional ?status=missing → only still-missing (estado='sin-contacto'); default = all approved photos
   const est = statusToEstado(c.req.query('status') || '');
   const base = ['foto_r2 IS NOT NULL', "moderation = 'approved'"]; const baseBinds: unknown[] = [];
   if (est) { base.push('estado = ?'); baseBinds.push(est); }
-  const q = (c.req.query('q') || '').trim();
-  if (q) { base.push('(nombre LIKE ? OR ubicacion LIKE ?)'); baseBinds.push(`%${q}%`, `%${q}%`); }
-  const edo = (c.req.query('edo') || '').trim();
-  if (edo) { base.push('ubicacion LIKE ?'); baseBinds.push(`%${edo}%`); }
-  const lugar = (c.req.query('lugar') || '').trim();
-  if (lugar) { base.push('ubicacion LIKE ?'); baseBinds.push(`%${lugar}%`); }
-  const desde = Date.parse((c.req.query('desde') || '') + 'T00:00:00Z');
-  if (!Number.isNaN(desde)) { base.push('updated_at >= ?'); baseBinds.push(desde); }
-  const hasta = Date.parse((c.req.query('hasta') || '') + 'T23:59:59Z');
-  if (!Number.isNaN(hasta)) { base.push('updated_at <= ?'); baseBinds.push(hasta); }
   const wBase = base.join(' AND ');
   const total = ((await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${wBase}`).bind(...baseBinds).first<any>())?.n) ?? 0;
   const where = [...base]; const binds = [...baseBinds];
   cursorClause(c.req.query('cursor') || '', where, binds);
   const { results } = await c.env.DB.prepare(
-    `SELECT id, nombre, edad, ubicacion, fecha, estado, foto_r2, updated_at FROM personas
+    `SELECT id, nombre, edad, ubicacion, estado, foto_r2, updated_at FROM personas
      WHERE ${where.join(' AND ')} ORDER BY updated_at DESC, id DESC LIMIT ?`
   ).bind(...binds, limit + 1).all<any>();
   const rows = results ?? [];
   return c.json({
-    photos: rows.slice(0, limit).map((p) => ({ id: p.id, full_name: p.nombre, age: p.edad, status: estadoToStatus(p.estado), last_seen: p.ubicacion, fecha: p.fecha || null, updated_at: p.updated_at, photo_url: `/api/familia/photo/${p.id}` })),
+    photos: rows.slice(0, limit).map((p) => ({ id: p.id, full_name: p.nombre, age: p.edad, status: estadoToStatus(p.estado), last_seen: p.ubicacion, photo_url: `/api/familia/photo/${p.id}` })),
     total, nextCursor: nextCursor(rows, limit),
   });
 });
@@ -279,4 +269,46 @@ familia.post('/:id/approve', async (c) => {
     `UPDATE personas SET moderation='approved', updated_at=? WHERE id=? AND moderation='pending'`
   ).bind(Date.now(), c.req.param('id')).run();
   return c.json({ ok: true, approved: r.meta.changes });
+});
+
+// POST /api/familia/maintenance — scan + purge spam/junk + remove duplicates.
+// Operator/admin only (same gate as /queue + /approve). The /api/admin clean and
+// dedupe equivalents only soft-reject; this one PHYSICALLY purges. Steps:
+//   1) flag junk/spam names + name-floods (e.g. "SIMONE BURATTI GAY" ×N) → rejected
+//   2) PHYSICALLY purge every rejected row (confirmed junk, already hidden) + R2 photo
+//   3) remove exact + same-photo duplicates among the survivors
+// Convergent + bounded: re-call until purged/dedupe counts reach 0. apply=false → dry run.
+familia.post('/maintenance', async (c) => {
+  if (!(await isOperator(c))) return c.json({ error: 'unauthorized', hint: 'Inicia sesión como operador o admin' }, 401);
+  const b: any = await c.req.json().catch(() => ({}));
+  const apply = b?.apply !== false; // default: apply
+
+  // 1) flag junk/spam names + name floods → moderation='rejected'
+  const clean = await cleanPersonas(c.env, { apply });
+  const floods = await cleanNameFloods(c.env, { apply, minCount: b?.minCount });
+
+  // 2) physically purge rejected rows + their R2 photos (bounded to stay within
+  //    subrequest limits; one bulk DELETE for the rows, photos best-effort).
+  const PHOTO_CAP = 150;
+  const { results: rejPhotos } = await c.env.DB.prepare(
+    `SELECT foto_r2 FROM personas WHERE moderation='rejected' AND foto_r2 IS NOT NULL LIMIT ?`
+  ).bind(PHOTO_CAP).all<{ foto_r2: string }>();
+  let purgedPhotos = 0;
+  if (apply) for (const r of rejPhotos ?? []) { try { await c.env.DESAP_FOTOS.delete(r.foto_r2); purgedPhotos++; } catch { /* ignore */ } }
+  const rejCount = (await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE moderation='rejected'`).first<{ n: number }>())?.n ?? 0;
+  let purgedRows = 0;
+  if (apply && rejCount > 0) {
+    const res = await c.env.DB.prepare(`DELETE FROM personas WHERE moderation='rejected'`).run();
+    purgedRows = res.meta?.changes ?? rejCount;
+  }
+
+  // 3) remove duplicates among survivors: exact re-scrapes + same-photo reuse are
+  //    auto-safe (loose/namesake merge is operator-only, intentionally skipped).
+  const dedupe = {
+    exact: await dedupePersonas(c.env, { mode: 'exact', apply }),
+    photo: await dedupePersonas(c.env, { mode: 'photo', apply }),
+  };
+
+  if (apply) await audit(c, 'personas.maintenance', { clean, floods, purgedRows, purgedPhotos, dedupe });
+  return c.json({ ok: true, apply, clean, floods, rejected: rejCount, purgedRows, purgedPhotos, dedupe });
 });
