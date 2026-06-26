@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { getUserFromRequest } from '../lib/auth';
-import { rateLimit, burstLimit, isImageBytes, nameHasSpam, textHasLink } from '../lib/security';
+import { rateLimit, burstLimit, isImageBytes, nameHasSpam, textHasLink, requestIp } from '../lib/security';
+import { audit } from '../lib/audit';
 
 // Missing-persons registry (/familia). Reads the `personas` dataset in the main
 // (sismo911) D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
@@ -205,6 +206,7 @@ familia.post('/persons', async (c) => {
   // link/domain in the name, description or contact (blocks injections like
   // "TRUSTEDF57 - infinityhotel.it" before they reach the moderation queue).
   if (nameHasSpam(nombre) || textHasLink(b.notes) || textHasLink(b.contact_phone)) {
+    await audit(c, 'spam_blocked', { ip: requestIp(c), src: 'familia' }).catch(() => {});
     return c.json({ error: 'spam_blocked', hint: 'No incluyas enlaces ni sitios web en el reporte.' }, 400);
   }
 
