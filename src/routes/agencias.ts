@@ -86,7 +86,7 @@ agencias.get('/agencias', (c) => {
   const body = `<main class="mx-auto max-w-6xl px-4 py-8">
     <span class="chip bg-secondary text-white">Gobierno IA · autónomo</span>
     <h1 class="font-display font-extrabold text-3xl mt-2 mb-1">Gobierno IA de Venezuela</h1>
-    <p class="text-on-surface-variant mb-5 max-w-3xl">Un gobierno de emergencias <b>operado por agentes de inteligencia artificial</b>. <b>AI Corp Federal</b> ingiere y coordina los datos de las ${AGENCIAS.length - 1} agencias IA — federales, de los 24 estados y de las ciudades capitales — en un único comando nacional.</p>
+    <p class="text-on-surface-variant mb-5 max-w-3xl">Un gobierno de emergencias <b>operado por agentes de inteligencia artificial</b>. <b>AI Corp Federal</b> ingiere y coordina los datos de las ${AGENCIAS.length - 1} agencias IA — federales, de los 24 estados y de las ciudades capitales — en un único comando nacional. Cada agente opera bajo el <b>Sistema de Comando de Incidentes (SCI)</b> con competencias de gestión de emergencias y nivel de activación, para <b>tomar el control del desastre ASAP</b>.</p>
 
     <a href="/agencias/${e(ax.slug)}" class="card p-5 mb-6 flex items-center gap-4 hover:shadow-lg transition" style="border:1.5px solid #7c3aed;background:linear-gradient(90deg,#faf5ff,#fff)">
       ${avatar(ax, 76)}
@@ -170,13 +170,23 @@ agencias.get('/agencias/:slug', (c) => {
       <div class="card p-4"><dt class="text-xs uppercase tracking-wide text-on-surface-variant font-display font-bold mb-1">Correo del agente</dt><dd class="text-[15px] font-medium break-words"><a href="mailto:${e(a.email)}" class="text-primary hover:underline">${e(a.email)}</a></dd></div>
       ${field(isApex ? 'Rol' : 'Función (FEMA ESF)', isApex ? 'Coordinación Central' : `ESF-${a.esf} · ${e(a.esf_name)}`)}
       ${field('Nivel', e(a.nivel))}
+      ${field('Función SCI / ICS', e(a.ics))}
+      ${field('Fase de emergencia', e(a.phase))}
+      ${field('Nivel de activación', e(a.activacion))}
       ${a.estado !== 'Nacional' ? field('Estado', e(a.estado)) : ''}
       ${a.ciudad ? field('Ciudad / Sede', e(a.ciudad)) : ''}
-      ${a.web ? `<div class="card p-4"><dt class="text-xs uppercase tracking-wide text-on-surface-variant font-display font-bold mb-1">Sitio web oficial</dt><dd class="text-[15px] font-medium break-words"><a href="${e(a.web)}" target="_blank" rel="noopener" class="text-primary hover:underline">${e(a.web.replace(/^https?:\/\//, ''))}</a></dd></div>` : ''}
     </div>
 
-    <div class="card p-5 mb-4"><h3 class="font-display font-bold mb-2">Competencias / skills</h3>
+    <div class="card p-5 mb-4"><h3 class="font-display font-bold mb-2">Competencias / skills (gestión de emergencias)</h3>
       <ul class="list-disc pl-5 space-y-1 text-[15px]">${skills.map((r) => `<li>${e(r)}</li>`).join('')}</ul></div>
+    ${isApex ? `<div class="card p-5 mb-4" style="border:1.5px solid #7c3aed"><h3 class="font-display font-bold mb-2">Protocolo «tomar el control ASAP»</h3>
+      <ol class="list-decimal pl-5 space-y-1 text-[15px]">
+        <li>Detección del evento (FUNVISIS / INAMEH / USGS) → AI Corp Federal activa el COE Nacional.</li>
+        <li>Asignación automática de roles SCI a los 139 agentes según su ESF y nivel de activación.</li>
+        <li>Despliegue inmediato (0–6 h): rescate, salud, seguridad y albergues en los estados afectados.</li>
+        <li>Soporte (0–24 h): logística, transporte, comunicaciones, energía y agua.</li>
+        <li>Síntesis situacional continua → decisiones y reasignación de recursos en tiempo real.</li>
+      </ol></div>` : ''}
 
     ${children.length ? `<div class="mb-4"><h3 class="font-display font-bold mb-2 text-sm uppercase tracking-wide text-on-surface-variant">Coordina (${children.length})</h3>
       <div class="flex flex-wrap gap-2">${children.slice(0, 60).map((p) => `<a href="/agencias/${e(p.slug)}" class="chip bg-surface-container hover:bg-surface-container-high">${e(p.acronym)}</a>`).join('')}</div></div>` : ''}
