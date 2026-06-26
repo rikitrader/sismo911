@@ -96,6 +96,10 @@
   .tri{display:inline-flex;align-items:center;gap:6px;font:800 10.5px Inter;letter-spacing:.04em;padding:4px 9px;border-radius:7px;white-space:nowrap;vertical-align:middle}
   .tri .d{width:7px;height:7px;border-radius:50%}
   .tri + .chipnum{margin-left:6px;vertical-align:middle}
+  /* triage table cell: badge stacked over a big, centered score */
+  .tri-cell{display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center}
+  .tri-score{display:inline-flex;align-items:baseline;justify-content:center;gap:1px;font:800 30px/1 'JetBrains Mono';letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .tri-score .mx{font:700 11px/1 Inter;color:var(--faint);letter-spacing:0}
   .tri-legend{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:2px 0 12px;font:600 11.5px Inter;color:var(--muted)}
   .tri-legend .it{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 9px}
   .tri-legend .it .d{width:8px;height:8px;border-radius:50%}
@@ -316,8 +320,8 @@ const TRIAGE={
 const triageCell=c=>{
   const t=TRIAGE[c.triage]||(c.priority?{immediate:TRIAGE.immediate,media:TRIAGE.delayed,baja:TRIAGE.minor}[c.priority]:null);
   if(!t)return '<span class="sub">—</span>';
-  const sc=(typeof c.score==='number')?`<span class="chipnum" style="background:${t.bg};color:${t.c};border-color:${t.c}33">${c.score}</span>`:'';
-  return `<span class="tri" style="color:${t.c};background:${t.bg}"><span class="d" style="background:${t.c}"></span>${c.triage_label||t.lbl}</span>${sc}`;
+  const sc=(typeof c.score==='number')?`<span class="tri-score" style="color:${t.c}">${c.score}<span class="mx">/100</span></span>`:'';
+  return `<div class="tri-cell"><span class="tri" style="color:${t.c};background:${t.bg}"><span class="d" style="background:${t.c}"></span>${c.triage_label||t.lbl}</span>${sc}</div>`;
 };
 const TYPE={persona_desaparecida:'Persona desaparecida',rescate:'Rescate',evacuacion:'Evacuación',medico:'Atención médica',estructural:'Daño estructural',menor:'Menor de edad'};
 const KIND={report_filed:'Reporte recibido',status_change:'Cambio de estado',sighting:'Avistamiento',contact:'Contacto',note:'Nota',shelter:'Refugio',hospital:'Hospital',morgue:'Morgue',reunified:'Reunificación',review:'Moderación',opened:'Expediente abierto',sismo:'Sismo de referencia'};
