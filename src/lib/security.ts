@@ -156,3 +156,25 @@ export function isImageBytes(bytes: Uint8Array, contentType: string): boolean {
   if (contentType === 'image/webp') return webp;
   return false;
 }
+
+// --- Link / spam-domain detection for public submissions -------------------
+// Citizen missing-person reports never legitimately contain a website link.
+// Blocking links/bare-domains at the door stops promotional link-spam (e.g.
+// the "TRUSTEDF57 - infinityhotel.it" injection) before it can be created.
+const URL_RE = /(https?:\/\/|www\.)/i;
+const DOMAIN_RE = /\b[a-z0-9][a-z0-9-]{1,62}\.(it|com|net|org|info|biz|xyz|ru|cn|top|online|site|click|link|shop|store|vip|live|club|icu|app|io|me|co)\b/i;
+const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+
+/** A NAME field that contains any link or bare domain is spam — names never do. */
+export function nameHasSpam(s: string | null | undefined): boolean {
+  if (!s) return false;
+  return URL_RE.test(s) || DOMAIN_RE.test(s);
+}
+
+/** Free text contains a promotional link/domain. Emails are stripped first so a
+ *  legitimate contact email (maria@gmail.com) doesn't trip the domain check. */
+export function textHasLink(s: string | null | undefined): boolean {
+  if (!s) return false;
+  const noEmail = s.replace(EMAIL_RE, ' ');
+  return URL_RE.test(noEmail) || DOMAIN_RE.test(noEmail);
+}
