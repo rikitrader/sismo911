@@ -87,6 +87,9 @@
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ST={missing:['Buscada','bg-warning'],found_safe:['A salvo','bg-safe'],found_deceased:['Fallecida','bg-on-surface-variant'],unknown:['Sin datos','bg-outline-variant']};
+// Direct link to a person's case page (expediente). /casos federates the citizen
+// registry under a "fam-" id; native operator cases (kind:'case') keep their raw id.
+const caseUrl=p=>'/casos#caso='+encodeURIComponent(p.kind==='case'?p.id:'fam-'+p.id);
 async function stats(){try{const d=await fetch('/api/persons/stats').then(r=>r.json());document.getElementById('s_missing').textContent=d.missing;document.getElementById('s_found').textContent=d.found;document.getElementById('s_total').textContent=d.total;}catch{}}
 document.getElementById('f').onsubmit=async e=>{e.preventDefault();const msg=document.getElementById('msg');const name=document.getElementById('full_name').value.trim();
   if(!name){msg.style.color='#bb0027';msg.textContent='El nombre es obligatorio.';return;}
@@ -100,7 +103,7 @@ let gCur=null;
 async function loadGal(reset){if(reset){gCur=null;document.getElementById('galGrid').innerHTML='';}
   const d=await fetch('/api/familia/gallery?status=missing&limit=24'+(gCur?'&cursor='+encodeURIComponent(gCur):'')).then(r=>r.json()).catch(()=>({photos:[]}));
   document.getElementById('galGrid').insertAdjacentHTML('beforeend',(d.photos||[]).map(p=>{
-    const cs='/familia?persona='+encodeURIComponent(p.id);
+    const cs=caseUrl(p);
     return `<a href="${cs}" class="group block rounded-lg overflow-hidden border border-outline-variant/60 bg-surface-container" title="Abrir expediente de ${esc(p.full_name||'')}">
       <div class="aspect-square overflow-hidden bg-surface-container"><img src="${p.photo_url}" loading="lazy" alt="${esc(p.full_name||'persona desaparecida')}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" onerror="this.closest('a').querySelector('.ph').style.display='flex';this.style.display='none'"><div class="ph w-full h-full items-center justify-center text-3xl text-on-surface-variant" style="display:none">👤</div></div>
       <div class="p-2"><div class="text-xs font-semibold truncate">${esc(p.full_name||'Sin nombre')}${p.age?', '+Number(p.age):''}</div><div class="text-[11px] text-on-surface-variant truncate">${esc(p.last_seen||'')}</div><div class="mt-1 text-[10px] text-secondary font-bold">🗂 Ver expediente →</div></div>
@@ -122,7 +125,7 @@ async function loadAll(reset){
   const qs=new URLSearchParams({limit:'30'}); if(q)qs.set('q',q); if(st)qs.set('status',st); if(aCur)qs.set('cursor',aCur);
   const d=await fetch('/api/familia/persons?'+qs.toString()).then(r=>r.json()).catch(()=>({persons:[]}));
   const html=(d.persons||[]).map(p=>{const[l,cl]=ST[p.status]||ST.unknown;
-    const link='/familia?persona='+encodeURIComponent(p.id);
+    const link=caseUrl(p);
     return `<a href="${link}" class="flex items-center gap-3 py-2.5 hover:bg-surface-container/40 -mx-1 px-1 rounded">
       <div class="w-11 h-11 rounded-lg overflow-hidden bg-surface-container shrink-0">${p.photo_url?`<img src="${p.photo_url}" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentNode.innerHTML='<div class=\\'w-full h-full grid place-items-center text-on-surface-variant\\'>👤</div>'">`:'<div class="w-full h-full grid place-items-center text-on-surface-variant">👤</div>'}</div>
       <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(p.full_name||'Sin nombre')}${p.age?', '+Number(p.age):''}</div><div class="text-xs text-on-surface-variant truncate">${esc(p.last_seen||'')}</div></div>
