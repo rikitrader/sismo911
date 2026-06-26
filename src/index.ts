@@ -36,6 +36,7 @@ import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
 import { ingestSosDamage } from './ingest/sos-damage';
 import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
+import { sweepCaseScores } from './lib/case-score-sync';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
 import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
@@ -266,6 +267,10 @@ export default {
       await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));
       // Safety net: re-mirror the SOS table (live posts/patches sync it immediately).
       await syncSosSheet(env).catch((e: any) => console.error('[cron] sos sheet sync failed:', e?.message ?? e));
+      // Autonomous case re-scoring: re-evaluate active cases against the FEMA-triage
+      // rules so time-based priority (72 h window, cold cases) stays current. Bounded
+      // per tick (native missing + a cursor-walked familia batch).
+      await sweepCaseScores(env).then((r) => console.log('[cron] case-score sweep:', JSON.stringify(r))).catch((e: any) => console.error('[cron] case-score sweep failed:', e?.message ?? e));
     })());
   },
 };
