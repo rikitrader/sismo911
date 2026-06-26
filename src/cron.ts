@@ -89,13 +89,6 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // Safe fuzzy dedup: same normalized name + age + phone (near-zero false merges).
     { name: 'personas-dedupe-fuzzyphone', run: (env) => drain(() => dedupePersonas(env, { mode: 'fuzzyphone', apply: true, limit: 400 })) },
   ],
-  // :35 — RAV registry ingest + lightweight companion tables. Isolated from the
-  // :30 cleanup/mirror group so it has a fresh subrequest budget every hour.
-  '35 * * * *': [
-    { name: 'rav-ingest', run: (env) => ingestRav(env) },
-    { name: 'rav-stats', run: ingestRavStats },
-    { name: 'rav-verified', run: ingestRavVerified },
-  ],
   // :45 — social/web monitor + AI blog (external-fetch heavy) — now isolated, so
   // it always has a full subrequest budget. This is the job that used to fail.
   // RAV photo analysis (vision + content-hash) + the image-content dedupe ride here.
@@ -113,10 +106,14 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   ],
   // :05 — one-time historical-archive bootstrap. Self-disabling via a KV flag
   // (`history:bootstrapped`): on a fresh/empty D1 it runs the full USGS backfill
-  // once; once populated it's a single KV read. Isolated here so the one heavy
-  // bootstrap run gets its own subrequest budget, away from the :00 seismic core.
+  // once; once populated it's a single KV read. RAV rides this existing trigger
+  // to stay away from the :30 cleanup/mirror group without adding a sixth
+  // account-level cron schedule.
   '5 * * * *': [
     { name: 'history-bootstrap', run: bootstrapHistory },
+    { name: 'rav-ingest', run: (env) => ingestRav(env) },
+    { name: 'rav-stats', run: ingestRavStats },
+    { name: 'rav-verified', run: ingestRavVerified },
   ],
 };
 
