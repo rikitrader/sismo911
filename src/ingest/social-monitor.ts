@@ -5,9 +5,15 @@ import { recordIngest } from '../lib/db';
 // Disaster hashtags/terms (Spanish-first) and Venezuelan cities. Matched
 // case-insensitively against each item's title/text to tag + classify it.
 export const TAGS = [
+  // Spanish
   'terremoto', 'sismo', 'temblor', 'réplica', 'replica', 'sosvenezuela', 'sos venezuela',
   'atrapados', 'atrapado', 'derrumbe', 'colapso', 'escombros', 'rescate', 'damnificados',
   'evacuación', 'evacuacion', 'sepultado', 'desaparecidos', 'tsunami', 'deslave',
+  'inundación', 'inundacion', 'incendio', 'emergencia', 'lluvias', 'aluvión', 'aluvion',
+  'protección civil', 'proteccion civil', 'bomberos', 'crecida', 'desbordamiento',
+  // English (foreign coverage of VE disasters)
+  'earthquake', 'quake', 'aftershock', 'collapse', 'trapped', 'rescue', 'flood', 'flooding',
+  'wildfire', 'landslide', 'disaster', 'emergency', 'casualties', 'evacuat',
 ];
 export const CITIES = [
   'Caracas', 'Maracaibo', 'Valencia', 'Barquisimeto', 'Maracay', 'Ciudad Guayana', 'San Cristóbal',
@@ -15,8 +21,8 @@ export const CITIES = [
   'Petare', 'Turmero', 'Ciudad Bolívar', 'Guarenas', 'Punto Fijo', 'Acarigua', 'Coro', 'Carúpano',
   'Guacara', 'El Tigre', 'Valera', 'Trujillo', 'San Fernando', 'La Guaira', 'Porlamar', 'Guanare',
 ];
-const CRITICAL = ['atrapado', 'atrapados', 'derrumbe', 'colapso', 'escombros', 'rescate', 'sepultado', 'sos', 'desaparecid'];
-const ALERT = ['terremoto', 'sismo', 'temblor', 'réplica', 'replica', 'evacuaci', 'damnificados', 'tsunami', 'deslave'];
+const CRITICAL = ['atrapado', 'atrapados', 'derrumbe', 'colapso', 'collapse', 'trapped', 'escombros', 'rescate', 'rescue', 'sepultado', 'buried', 'sos', 'desaparecid', 'casualties', 'muertos', 'fallecidos'];
+const ALERT = ['terremoto', 'sismo', 'temblor', 'earthquake', 'quake', 'aftershock', 'réplica', 'replica', 'evacuaci', 'evacuat', 'damnificados', 'tsunami', 'deslave', 'landslide', 'inundaci', 'flood', 'incendio', 'wildfire', 'emergencia', 'emergency'];
 
 function djb2(s: string): string {
   let h = 5381;
@@ -72,11 +78,18 @@ export async function storeSignals(env: Env, rows: RawSignal[]): Promise<number>
 
 // ---- Free sources (HTTP, no key) -------------------------------------------
 async function fromGdelt(): Promise<RawSignal[]> {
-  const query = `(${TAGS.slice(0, 12).map((t) => `"${t}"`).join(' OR ')}) sourcelang:spanish`;
-  const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&format=json&maxrecords=75&timespan=90min&sort=DateDesc`;
+  // Venezuela-scoped disaster query, Spanish + English coverage, last 3 days.
+  // (A 90-min Spanish-only window stored ~0 signals outside an active event.)
+  const terms = ['terremoto', 'sismo', 'temblor', 'inundación', 'incendio', 'deslave', 'emergencia',
+    'damnificados', 'rescate', 'derrumbe', 'earthquake', 'quake', 'aftershock', 'flood', 'landslide',
+    'collapse', 'rescue', 'wildfire', 'disaster'];
+  const query = `(${terms.join(' OR ')}) Venezuela`;
+  const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&format=json&maxrecords=75&timespan=3d&sort=DateDesc`;
   const res = await fetch(url, { headers: { 'User-Agent': 'sismo911-monitor/1.0' } });
   if (!res.ok) throw new Error(`gdelt ${res.status}`);
-  const data = await res.json<{ articles?: any[] }>().catch(() => ({ articles: [] }));
+  const text = await res.text();
+  let data: { articles?: any[] } = { articles: [] };
+  try { data = text ? JSON.parse(text) : { articles: [] }; } catch { /* GDELT sometimes returns non-JSON on throttle */ }
   return (data.articles ?? []).map((a) => ({
     platform: 'gdelt', title: a.title, text: a.title, url: a.url,
     author: a.domain, lang: a.language,
