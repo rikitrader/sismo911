@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "SISMO911",
+    "slug": "sismo911",
+    "scheme": "sismo911",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sismo911.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SISMO911 usa tu ubicacion para registrar el ultimo lugar visto o un reporte de emergencia cuando tu lo autorizas."
+      }
+    },
+    "android": {
+      "package": "com.sismo911.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#f8fafc"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SISMO911 usa tu ubicacion para registrar el ultimo lugar visto o un reporte de emergencia cuando tu lo autorizas."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#dc2626"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#f8fafc"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBaseUrl": "https://sismo911.com",
+      "eas": {
+        "projectId": "replace-with-eas-project-id"
+      }
+    }
+  }
+}
