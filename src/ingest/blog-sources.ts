@@ -79,16 +79,19 @@ async function fetchGdelt(sinceMs: number): Promise<SourceRecord[]> {
     j = await getJson(url);
   }
   const arts: any[] = Array.isArray(j?.articles) ? j.articles : [];
-  return arts.map((a) => {
-    // seendate is "YYYYMMDDTHHMMSSZ"
-    const m = String(a.seendate || '').match(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
-    const ts = m ? Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`) : Date.now();
-    return {
-      platform: 'noticia', id: a.url || a.title, author: a.domain || '',
-      caption: a.title || '', url: a.url || '', image: a.socialimage || '',
-      video: '', ts, views: 0, likes: 0, comments: 0,
-    } as SourceRecord;
-  }).filter((r) => r.id && r.caption);
+  return arts
+    // Keep Spanish/English so the Spanish field-report writer has a usable source headline.
+    .filter((a) => !a.language || /spanish|english/i.test(a.language))
+    .map((a) => {
+      // seendate is "YYYYMMDDTHHMMSSZ"
+      const m = String(a.seendate || '').match(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+      const ts = m ? Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`) : Date.now();
+      return {
+        platform: 'noticia', id: a.url || a.title, author: a.domain || '',
+        caption: a.title || '', url: a.url || '', image: a.socialimage || '',
+        video: '', ts, views: 0, likes: 0, comments: 0,
+      } as SourceRecord;
+    }).filter((r) => r.id && r.caption);
 }
 
 // ---- YouTube Data API v3 (free key) — real citizen video ----
