@@ -34,6 +34,14 @@ export interface Env {
   GOOGLE_MAPS_API_KEY?: string;
   // External missing-persons (Familia) source for hourly re-ingest. Optional.
   FAMILIA_SOURCE_URL?: string;
+  // redayudavenezuela.com (RAV) — public Supabase REST source (2nd missing-persons
+  // aggregator + verified news + casualty stats). URL/KEY have in-code fallbacks
+  // (the anon key is public); RAV_INGEST_TOKEN gates POST /api/rav/run (falls back
+  // to BLOG_INGEST_TOKEN). RAV_VISION_MODEL overrides the photo-analysis model.
+  RAV_SUPABASE_URL?: string;
+  RAV_SUPABASE_KEY?: string;
+  RAV_INGEST_TOKEN?: string;
+  RAV_VISION_MODEL?: string;
   // Social/web disaster monitor (all optional — features gate on their presence).
   PUBLIC_BASE_URL?: string;
   TELEGRAM_CHANNELS?: string;      // comma-separated public channel handles
