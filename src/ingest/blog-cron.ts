@@ -70,8 +70,10 @@ ${JSON.stringify({ plataforma: rec.platform, autor: rec.author, lugar: rec.place
       max_tokens: 900, temperature: 0.3,
     });
     // Some models return { response }, others OpenAI-style { choices:[{message:{content}}] }.
+    // Use || (not ??): llama-fp8-fast returns response:"" alongside choices, and an
+    // empty string must fall through to the choices content.
     const text = String(
-      resp?.response ?? resp?.choices?.[0]?.message?.content ?? resp?.result?.response ??
+      resp?.response || resp?.choices?.[0]?.message?.content || resp?.result?.response ||
       (typeof resp === 'string' ? resp : ''),
     ).trim();
     const a = text.indexOf('{'), b = text.lastIndexOf('}');
