@@ -41,11 +41,13 @@ function makeDB(opts: { campaign?: any; list?: any[] } = {}) {
   });
   return { prepare: (sql: string) => stmt(sql) } as any;
 }
-const fakeKv = () => {
-  const m = new Map<string, string>();
+const fakeKv = (seed: Record<string, string> = {}) => {
+  const m = new Map<string, string>(Object.entries(seed));
   return { get: async (k: string) => m.get(k) ?? null, put: async (k: string, v: string) => { m.set(k, v); } } as any;
 };
-const baseEnv = (over: any = {}) => ({ DB: makeDB(over.dbOpts), CACHE: fakeKv(), ...over });
+// Default env has the /donar zone REVEALED — the donate/read tests below exercise
+// the open-zone mechanics. The visibility-gate suite uses a hidden (empty-KV) env.
+const baseEnv = (over: any = {}) => ({ DB: makeDB(over.dbOpts), CACHE: fakeKv({ 'zone:donar:public': '1' }), ...over });
 const configuredEnv = (over: any = {}) => baseEnv({
   CROSSMINT_SERVER_KEY: 'sk_staging_test', CROSSMINT_CLIENT_KEY: 'ck_staging_test',
   CROSSMINT_COLLECTION_ID: 'col_1', CROSSMINT_ENV: 'staging', CROSSMINT_CHAIN: 'base', ...over,
@@ -159,5 +161,44 @@ describe('donations route: reads + auth', () => {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Nueva campaña', goal_usd: 100 }),
     }, baseEnv());
     expect(res.status).toBe(401);
+  });
+});
+
+describe('donations route: /donar zone visibility gate', () => {
+  // Empty KV → zone hidden (production default). Caller is anonymous (not admin).
+  const hiddenEnv = (over: any = {}) => baseEnv({ ...over, CACHE: fakeKv() });
+
+  it('GET /donations/zone reports hidden + not manageable for the public', async () => {
+    const res = await donations.request('/donations/zone', {}, hiddenEnv());
+    expect(res.status).toBe(200);
+    const d = await res.json();
+    expect(d.public).toBe(false);
+    expect(d.canManage).toBe(false);
+  });
+  it('hidden: GET /campaigns leaks nothing to the public', async () => {
+    const res = await donations.request('/campaigns', {}, hiddenEnv());
+    expect(res.status).toBe(200);
+    expect((await res.json()).campaigns).toEqual([]);
+  });
+  it('hidden: GET /campaigns/:slug is 404 to the public', async () => {
+    const res = await donations.request('/campaigns/x', {}, hiddenEnv());
+    expect(res.status).toBe(404);
+  });
+  it('hidden: donate is blocked before any other check', async () => {
+    const res = await donations.request('/campaigns/x/donate', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ amount: 25, email: 'a@b.com' }),
+    }, hiddenEnv());
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('zone_hidden');
+  });
+  it('POST /donations/zone (toggle) is forbidden without admin', async () => {
+    const res = await donations.request('/donations/zone', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ public: true }),
+    }, hiddenEnv());
+    expect(res.status).toBe(403);
+  });
+  it('revealed: GET /campaigns lists to anyone', async () => {
+    const res = await donations.request('/campaigns', {}, baseEnv()); // baseEnv seeds zone public
+    expect((await res.json()).campaigns.length).toBeGreaterThan(0);
   });
 });
