@@ -29,6 +29,23 @@ export const SPAM_PHRASES = [
   'simone buratti',
 ];
 
+// Placeholder/test PHRASES a real person-report never carries — matched as a
+// substring (case-insensitive) so multi-word junk like "Prueba, ignorar" or
+// "esto es una prueba" is rejected even though it's long enough + has letters to
+// slip past junkWhere's <3-char / exact-token / no-letter checks. Kept TIGHT to
+// imperatives/markers that cannot occur inside a Venezuelan name — NOT bare
+// "test"/"prueba" (those would hit real surnames like "Testino"/"Pruebas").
+const JUNK_PHRASES = [
+  'ignorar', 'no usar', 'no me usar', 'borrar esto', 'eliminar esto',
+  'esto es una prueba', 'esto es prueba', 'solo prueba', 'lorem ipsum',
+];
+
+// WHERE clause matching a NAME containing a known placeholder/test phrase.
+export function junkPhraseWhere(col = 'nombre'): string {
+  const c = `lower(trim(${col}))`;
+  return JUNK_PHRASES.map((p) => `${c} LIKE '%${p.replace(/'/g, "''")}%'`).map((x) => `(${x})`).join(' OR ');
+}
+
 // TLDs that, appearing as a bare domain inside a NAME, mark it as link-spam.
 // Mirrors DOMAIN_RE in lib/security.ts (nameHasSpam) but as a SQL clause so the
 // cleaner can reject spam already sitting in the DB, not just block it at the door.
@@ -93,7 +110,7 @@ export interface CleanReport { scanned: number; flagged: number; applied: boolea
 // names (e.g. '"><svg/onload=…') that slip past the door via the familia ingest.
 export async function cleanPersonas(env: Env, opts: { apply?: boolean } = {}): Promise<CleanReport> {
   const apply = !!opts.apply;
-  const where = `moderation = 'approved' AND ((${junkWhere('nombre')}) OR (${spamNameWhere('nombre')}) OR (${spamPhraseWhere('nombre')}) OR (${markupNameWhere('nombre')}))`;
+  const where = `moderation = 'approved' AND ((${junkWhere('nombre')}) OR (${junkPhraseWhere('nombre')}) OR (${spamNameWhere('nombre')}) OR (${spamPhraseWhere('nombre')}) OR (${markupNameWhere('nombre')}))`;
   const scanned = (await env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${where}`).first<{ n: number }>())?.n ?? 0;
   if (!apply || scanned === 0) return { scanned, flagged: 0, applied: false };
   await env.DB.prepare(`UPDATE personas SET moderation = 'rejected', updated_at = ? WHERE ${where}`).bind(Date.now()).run();
