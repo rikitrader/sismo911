@@ -98,27 +98,48 @@ export async function recomputeCaseScore(env: Env, id: string, now = Date.now())
  *    whole registry is covered over successive ticks without a CPU spike.
  * Returns { native, familia, changed }.
  */
-export async function sweepCaseScores(env: Env, opts: { famLimit?: number } = {}) {
-  const now = Date.now();
+export async function sweepCaseScores(env: Env, opts: { famLimit?: number; now?: number } = {}) {
+  const now = opts.now ?? Date.now();
   const famLimit = opts.famLimit ?? 300;
   const quake = await quakeRef(env);
-  let changed = 0;
 
-  // --- native active cases ---
+  // Grouped docket stats for a set of person_ids in ONE query (subrequest-frugal).
+  const docketMap = async (ids: string[]) => {
+    const m: Record<string, { c: number; last: number | null }> = {};
+    if (!ids.length) return m;
+    const ph = ids.map(() => '?').join(',');
+    const { results = [] } = await env.DB.prepare(
+      `SELECT person_id, COUNT(*) AS c, MAX(created_ms) AS last FROM person_events
+       WHERE person_id IN (${ph}) GROUP BY person_id`
+    ).bind(...ids).all<any>().catch(() => ({ results: [] as any[] }));
+    for (const r of results) m[r.person_id] = { c: Number(r.c), last: r.last ?? null };
+    return m;
+  };
+
+  // --- native active cases: 1 select + 1 grouped docket query + 1 batched write ---
   const { results: natRows = [] } = await env.DB.prepare(
-    `SELECT id, age, status, incident_type, created_ms, priority FROM persons WHERE status IN ('missing','unknown')`
+    `SELECT id, age, status, incident_type, created_ms, priority FROM persons WHERE status IN ('missing','unknown') LIMIT 800`
   ).all<any>().catch(() => ({ results: [] as any[] }));
-  for (const r of natRows) {
-    const d = await docketStats(env, r.id);
-    const sc = scoreCase({
-      status: r.status, age: r.age ?? null, incidentType: r.incident_type ?? null,
-      createdMs: r.created_ms ?? null, lastActivityMs: d.lastMs, docketCount: d.count,
-      eventMag: quake.mag, eventAlert: quake.alert, now,
-    });
-    if (sc.priority !== r.priority) { await persistPriority(env, r.id, sc.priority).catch(() => {}); changed++; }
+  let natChanged = 0;
+  if (natRows.length) {
+    const dMap = await docketMap(natRows.map((r: any) => r.id));
+    const writes: any[] = [];
+    for (const r of natRows) {
+      const d = dMap[r.id] || { c: 0, last: null };
+      const sc = scoreCase({
+        status: r.status, age: r.age ?? null, incidentType: r.incident_type ?? null,
+        createdMs: r.created_ms ?? null, lastActivityMs: d.last, docketCount: d.c,
+        eventMag: quake.mag, eventAlert: quake.alert, now,
+      });
+      if (sc.priority !== r.priority) {
+        writes.push(env.DB.prepare(`UPDATE persons SET priority = ? WHERE id = ?`).bind(sc.priority, r.id));
+        natChanged++;
+      }
+    }
+    if (writes.length) await env.DB.batch(writes).catch(() => {});
   }
 
-  // --- familia active batch (cursor-walked) ---
+  // --- familia active batch (cursor-walked): grouped reads + ONE batched upsert ---
   const cursorKey = 'casescore:fam:cursor';
   const cursor = (await env.CACHE.get(cursorKey).catch(() => null)) || '';
   const { results: famRows = [] } = await env.DB.prepare(
@@ -127,33 +148,38 @@ export async function sweepCaseScores(env: Env, opts: { famLimit?: number } = {}
      ORDER BY id ASC LIMIT ?`
   ).bind(cursor, famLimit).all<any>().catch(() => ({ results: [] as any[] }));
 
+  let famChanged = 0;
   if (famRows.length) {
-    // One grouped query for docket counts/last-activity across the batch.
     const ids = famRows.map((r: any) => FAM + r.id);
-    const placeholders = ids.map(() => '?').join(',');
-    const { results: dRows = [] } = await env.DB.prepare(
-      `SELECT person_id, COUNT(*) AS c, MAX(created_ms) AS last FROM person_events
-       WHERE person_id IN (${placeholders}) GROUP BY person_id`
-    ).bind(...ids).all<any>().catch(() => ({ results: [] as any[] }));
-    const dMap: Record<string, { c: number; last: number | null }> = {};
-    for (const d of dRows) dMap[d.person_id] = { c: Number(d.c), last: d.last ?? null };
-
-    const metaMap: Record<string, string> = {};
+    const ph = ids.map(() => '?').join(',');
+    const dMap = await docketMap(ids);
+    // One grouped read for BOTH current priority and incident_type (skip-if-unchanged + signal).
+    const meta: Record<string, { priority: string | null; incident: string | null }> = {};
     const { results: mRows = [] } = await env.DB.prepare(
-      `SELECT person_id, incident_type FROM case_meta WHERE person_id IN (${placeholders})`
+      `SELECT person_id, priority, incident_type FROM case_meta WHERE person_id IN (${ph})`
     ).bind(...ids).all<any>().catch(() => ({ results: [] as any[] }));
-    for (const m of mRows) if (m.incident_type) metaMap[m.person_id] = m.incident_type;
+    for (const m of mRows) meta[m.person_id] = { priority: m.priority ?? null, incident: m.incident_type ?? null };
 
+    const ts = Date.now();
+    const writes: any[] = [];
     for (const r of famRows) {
       const id = FAM + r.id;
       const d = dMap[id] || { c: 0, last: null };
+      const cur = meta[id] || { priority: null, incident: null };
       const sc = scoreCase({
-        status: estadoToStatus(r.estado), age: r.edad ?? null, incidentType: metaMap[id] ?? null,
+        status: estadoToStatus(r.estado), age: r.edad ?? null, incidentType: cur.incident,
         createdMs: r.created_at ?? null, lastActivityMs: d.last, docketCount: d.c,
         eventMag: quake.mag, eventAlert: quake.alert, now,
       });
-      if (await persistPriority(env, id, sc.priority).catch(() => false)) changed++;
+      if (sc.priority !== cur.priority) {
+        writes.push(env.DB.prepare(
+          `INSERT INTO case_meta (person_id, priority, updated_ms) VALUES (?,?,?)
+           ON CONFLICT(person_id) DO UPDATE SET priority = excluded.priority, updated_ms = excluded.updated_ms`
+        ).bind(id, sc.priority, ts));
+        famChanged++;
+      }
     }
+    if (writes.length) await env.DB.batch(writes).catch(() => {});
     // Advance / wrap the cursor.
     const lastId = famRows[famRows.length - 1].id;
     await env.CACHE.put(cursorKey, famRows.length < famLimit ? '' : String(lastId)).catch(() => {});
@@ -161,5 +187,5 @@ export async function sweepCaseScores(env: Env, opts: { famLimit?: number } = {}
     await env.CACHE.put(cursorKey, '').catch(() => {}); // reached the end → wrap
   }
 
-  return { native: natRows.length, familia: famRows.length, changed };
+  return { native: natRows.length, familia: famRows.length, changed: natChanged + famChanged };
 }
