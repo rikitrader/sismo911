@@ -49,23 +49,29 @@ function slugify(s: string) {
   return norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56) || 'noticia';
 }
 
-// ---- Workers AI article writer ----
-export async function writeArticle(env: Env, rec: SourceRecord & { place: string }): Promise<{ headline: string; meta_desc: string; body_html: string } | null> {
+// Deterministic headline from the REAL source title — far more specific and
+// accurate than letting a 70b model invent one (it drifts to generic summaries).
+// News captions ARE headlines; YouTube captions are "TITLE. description".
+export function deriveHeadline(rec: SourceRecord): string {
+  let h = rec.platform === 'youtube' ? rec.caption.split(/\.\s|\n/)[0] : rec.caption;
+  h = h.replace(/\s+/g, ' ').replace(/[#|]+\S*/g, '').trim();
+  if (h.length > 95) h = h.slice(0, 92).replace(/\s+\S*$/, '') + '…';
+  return h || 'Reporte ciudadano del terremoto en Venezuela';
+}
+
+// ---- Workers AI article writer (body + meta only; headline is deterministic) ----
+export async function writeArticle(env: Env, rec: SourceRecord & { place: string }, headline: string): Promise<{ meta_desc: string; body_html: string } | null> {
   const ai = env.AI;
   if (!ai) return null;
   const model = env.BLOG_AI_MODEL || DEFAULT_MODEL;
-  const sys = `Eres redactor del medio de emergencia sísmica SISMO911 (Venezuela). Escribes noticias breves en español periodístico, sobrio y verificable. Devuelves SIEMPRE únicamente un objeto JSON válido, sin texto adicional ni fences.`;
-  const user = `Contexto de fondo (NO es la noticia, solo referencia): ${EVENT_FACTS}
+  const sys = `Eres redactor del medio de emergencia sísmica SISMO911 (Venezuela). Escribes el CUERPO de una noticia breve en español periodístico, sobrio y verificable. Devuelves SIEMPRE únicamente un objeto JSON válido, sin texto adicional ni fences.`;
+  const user = `Contexto de fondo (referencia, no inventes datos): ${EVENT_FACTS}
 
-Tu tarea: redactar UNA noticia sobre ESTA publicación específica.
-Reglas IMPORTANTES:
-- El TITULAR debe describir el contenido CONCRETO de esta publicación (qué muestra o dice el video/artículo), NO un resumen genérico del terremoto. PROHIBIDO usar titulares genéricos como "Terremoto de magnitud 7,5 sacude Venezuela".
-- 130-260 palabras; explica el contenido a partir del campo "texto"; cita el texto una vez entre comillas.
-- Menciona los hechos de fondo solo de pasada; el foco es esta publicación. No inventes cifras de víctimas ni datos ausentes del texto.
-- Atribuye a "${rec.author}" en "${rec.platform}". Marca el material como reporte SIN verificación independiente.
-- Cierra con una línea de seguridad: activar una alerta SOS en sismo911.com/sos.
+El TITULAR (ya fijado) es: "${headline}".
+Escribe el cuerpo de la noticia para ese titular, a partir de esta publicación.
+Reglas: 130-240 palabras; desarrolla el contenido a partir del campo "texto" y cítalo una vez entre comillas; menciona los hechos de fondo solo de pasada; no inventes cifras de víctimas ni datos ausentes; atribuye a "${rec.author}" en "${rec.platform}"; marca el material como reporte SIN verificación independiente; cierra con una línea de seguridad para activar una alerta SOS en sismo911.com/sos.
 
-Devuelve SOLO: {"headline":"titular específico de esta publicación","meta_desc":"resumen de 1 frase, <=160 caracteres","body_html":"<p>...</p><p>...</p>"}
+Devuelve SOLO: {"meta_desc":"resumen de 1 frase, <=160 caracteres","body_html":"<p>...</p><p>...</p>"}
 
 Publicación:
 ${JSON.stringify({ plataforma: rec.platform, medio_o_autor: rec.author, lugar: rec.place, texto: rec.caption.slice(0, 700) })}`;
@@ -87,8 +93,8 @@ ${JSON.stringify({ plataforma: rec.platform, medio_o_autor: rec.author, lugar: r
     const a = text.indexOf('{'), b = text.lastIndexOf('}');
     if (a === -1 || b === -1) { console.error('[blog-cron] AI no-json:', JSON.stringify(resp).slice(0, 300)); return null; }
     const obj = JSON.parse(text.slice(a, b + 1));
-    if (!obj.headline || !obj.body_html) { console.error('[blog-cron] AI missing fields:', text.slice(0, 200)); return null; }
-    return { headline: String(obj.headline), meta_desc: String(obj.meta_desc || ''), body_html: String(obj.body_html) };
+    if (!obj.body_html) { console.error('[blog-cron] AI missing body:', text.slice(0, 200)); return null; }
+    return { meta_desc: String(obj.meta_desc || ''), body_html: String(obj.body_html) };
   } catch (e: any) {
     console.error('[blog-cron] writeArticle failed:', e?.message ?? e);
     return null;
@@ -157,12 +163,13 @@ export async function ingestBlog(env: Env, opts: { force?: boolean } = {}): Prom
   let published = 0;
   for (let i = 0; i < fresh.length; i++) {
     const rec = fresh[i];
-    const art = await writeArticle(env, rec);
+    const headline = deriveHeadline(rec);
+    const art = await writeArticle(env, rec, headline);
     if (!art) continue;
     const ok = await upsert(env, {
       source_post_id: rec.source_post_id,
-      slug: slugify(art.headline) + '-' + rec.platform[0] + String(rec.id).replace(/\W+/g, '').slice(-5),
-      headline: art.headline, meta_desc: art.meta_desc, body_html: art.body_html,
+      slug: slugify(headline) + '-' + rec.platform[0] + String(rec.id).replace(/\W+/g, '').slice(-5),
+      headline, meta_desc: art.meta_desc, body_html: art.body_html,
       place: rec.place, lat: rec.lat, lon: rec.lon, platform: rec.platform, author: rec.author,
       source_url: rec.url, image_url: rec.image || '', video_url: rec.video || '',
       featured: i === 0 ? 1 : 0,
