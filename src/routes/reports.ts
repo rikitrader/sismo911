@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { rateLimit, burstLimit, validLatLon } from '../lib/security';
+import { rateLimit, burstLimit, validLatLon, isImageBytes } from '../lib/security';
 import { audit } from '../lib/audit';
 
 // Citizen damage-report map (the "movement" core). PUBLIC reads of APPROVED
@@ -70,31 +70,85 @@ reports.get('/:id', async (c) => {
   return c.json(row);
 });
 
-// POST /api/reports — citizen submission → moderation queue.
+// POST /api/reports — citizen submission → moderation queue. Accepts JSON or
+// multipart/form-data (the latter carries an optional "photo" image field).
 reports.post('/', async (c) => {
   const limited = await rateLimit(c.env, c, 'reports_post', 20, 300);
   if (limited) return limited;
-  const b = await c.req.json().catch(() => null);
+
+  // Read fields from JSON or multipart; only multipart carries a photo.
+  const b: any = {};
+  let photoBytes: Uint8Array | null = null;
+  let photoType = 'image/jpeg';
+  const ct = c.req.header('content-type') || '';
+  if (ct.includes('multipart/form-data')) {
+    const form = await c.req.formData().catch(() => null);
+    if (!form) return c.json({ error: 'form_invalida' }, 400);
+    for (const k of ['category', 'severity', 'title', 'description', 'estado', 'municipio', 'parroquia', 'building_type', 'people_trapped', 'reporter', 'lat', 'lon']) {
+      const v = form.get(k);
+      if (typeof v === 'string' && v !== '') b[k] = v;
+    }
+    const file = form.get('photo') as any;
+    if (file && typeof file !== 'string' && typeof file.arrayBuffer === 'function' && file.size > 0) {
+      photoBytes = new Uint8Array(await file.arrayBuffer());
+      photoType = file.type || photoType;
+    }
+  } else {
+    const j = await c.req.json().catch(() => null);
+    if (j && typeof j === 'object') Object.assign(b, j);
+  }
+
   if (!b?.category || !CATEGORIES.has(b.category)) return c.json({ error: 'categoría inválida' }, 400);
   if (!b?.title && !b?.description) return c.json({ error: 'título o descripción requerido' }, 400);
   if (b.severity && !SEVERITIES.has(b.severity)) return c.json({ error: 'severidad inválida' }, 400);
   const lat = b.lat == null ? null : Number(b.lat);
   const lon = b.lon == null ? null : Number(b.lon);
   if ((lat != null || lon != null) && !validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
+
+  // Validate the photo (if any) before we touch the DB.
+  if (photoBytes) {
+    if (photoBytes.length > 6_000_000) return c.json({ error: 'imagen_muy_grande', maxBytes: 6_000_000 }, 413);
+    photoType = ['image/jpeg', 'image/png', 'image/webp'].includes(photoType) ? photoType : 'application/octet-stream';
+    if (!isImageBytes(photoBytes, photoType)) return c.json({ error: 'tipo_de_imagen_no_soportado' }, 415);
+  }
+
   const now = Date.now();
   const id = uid('rep');
+  let imageKey: string | null = null;
+  if (photoBytes) {
+    imageKey = `report/${id}`;
+    await c.env.PHOTOS.put(imageKey, photoBytes, { metadata: { contentType: photoType } });
+  }
   await c.env.DB.prepare(
     `INSERT INTO map_reports
       (id, category, severity, status, verification, title, description, lat, lon,
-       estado, municipio, parroquia, building_type, people_trapped, source, reporter, created_ms, updated_ms)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       estado, municipio, parroquia, building_type, people_trapped, source, image_key, reporter, created_ms, updated_ms)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id, b.category, b.severity ?? null, 'pending', 'unverified',
     (b.title ?? '').slice(0, 140) || null, (b.description ?? '').slice(0, 2000) || null,
     blur(lat), blur(lon), b.estado ? String(b.estado).slice(0, 120) : null, b.municipio ? String(b.municipio).slice(0, 120) : null, b.parroquia ? String(b.parroquia).slice(0, 120) : null,
-    b.building_type ? String(b.building_type).slice(0, 80) : null, b.people_trapped ?? null, 'citizen', b.reporter ? String(b.reporter).slice(0, 120) : null, now, now
+    b.building_type ? String(b.building_type).slice(0, 80) : null, b.people_trapped ?? null, 'citizen', imageKey, b.reporter ? String(b.reporter).slice(0, 120) : null, now, now
   ).run();
-  return c.json({ ok: true, id, status: 'pending', message: 'Recibido. Aparecerá tras revisión.' }, 201);
+  return c.json({ ok: true, id, status: 'pending', hasPhoto: !!imageKey, message: 'Recibido. Aparecerá tras revisión.' }, 201);
+});
+
+// GET /api/reports/photo/:id — serve an approved report's photo from KV.
+reports.get('/photo/:id', async (c) => {
+  const row: any = await c.env.DB.prepare(
+    `SELECT image_key FROM map_reports WHERE id = ? AND status='approved'`
+  ).bind(c.req.param('id')).first();
+  if (!row?.image_key) return c.notFound();
+  const obj = await c.env.PHOTOS.getWithMetadata<{ contentType?: string }>(row.image_key, 'arrayBuffer');
+  if (!obj.value) return c.notFound();
+  return new Response(obj.value, {
+    headers: {
+      'Content-Type': obj.metadata?.contentType || 'image/jpeg',
+      'Cache-Control': 'public, max-age=3600',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Disposition': 'inline',
+    },
+  });
 });
 
 // POST /api/reports/:id/react — bump support counter (no auth).

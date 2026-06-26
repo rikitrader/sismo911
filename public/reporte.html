@@ -46,6 +46,7 @@ async function load(){const box=document.getElementById('report');if(!id){box.in
   box.innerHTML=`<div class="bg-white border border-outline-variant/60 rounded-xl p-5">
     <div class="flex items-center gap-2 text-xs mb-2">${x.severity?`<span style="background:${sc}" class="text-white font-bold px-2 py-0.5 rounded-full">${sl}</span>`:''}<span class="text-on-surface-variant">${CAT[x.category]||x.category} · ${fmt(x.created_ms)}</span></div>
     <h1 class="font-display font-extrabold text-2xl mb-1">${esc(x.title||CAT[x.category]||'Reporte')}</h1>
+    ${x.image_key?`<img src="/api/reports/photo/${esc(x.id)}" alt="Foto del reporte" loading="lazy" class="w-full rounded-lg border border-outline-variant/60 mb-3">`:''}
     <p class="text-sm mb-3">${esc(x.description||'')}</p>
     <div class="text-xs text-on-surface-variant">${[x.parroquia,x.municipio,x.estado].filter(Boolean).map(esc).join(', ')||'Ubicación aproximada'} · ${x.source==='kobotoolbox'?'Fuente: KoboToolbox':x.source==='usgs'?'Fuente: USGS':'Reporte ciudadano'} · ${esc(x.verification)}</div>
     <button id="react" class="mt-3 text-sm border border-outline-variant rounded-lg px-3 py-1.5 font-semibold text-primary">👍 Confirmar (${x.reactions_up||0})</button>
