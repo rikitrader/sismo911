@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Filter ALL still-missing persons WITH a photo from the existing desaparecidos DB
-(DESAP / desaparecidos-vzla) and emit, per person, a link to the existing DB
-(photo) + a prefilled case link. Writes JSON + pushes a "Desaparecidas (con foto)"
+Filter ALL still-missing persons WITH a photo from the sismo911 personas registry
+(the single source of truth) and emit, per person, a link to the DB photo + a
+prefilled case link. Writes JSON + pushes a "Desaparecidas (con foto)"
 tab to the monitor sheet.
 
   python3 scripts/export-missing-with-photos.py
