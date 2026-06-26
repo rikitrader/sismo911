@@ -5,6 +5,7 @@ import { cleanPersonas } from '../lib/clean';
 import { ingestFamilia } from '../ingest/familia-cron';
 import { backfillUsgsHistory } from '../ingest/usgs-history';
 import { audit } from '../lib/audit';
+import { getUserFromRequest } from '../lib/auth';
 
 export const admin = new Hono<{ Bindings: Env }>();
 
@@ -47,4 +48,31 @@ admin.post('/backfill-history', async (c) => {
   const r = await backfillUsgsHistory(c.env, { years: b?.years, minMag: b?.minMag });
   await audit(c, 'events.backfill', r);
   return c.json(r);
+});
+
+// GET /api/admin/spam-stats — operator alert: blocked-spam counts from the audit
+// log (today / last 7d / total + top offending IP). GET is not write-gated by the
+// index.ts middleware, so it self-gates here.
+admin.get('/spam-stats', async (c) => {
+  const me = await getUserFromRequest(c.env, c).catch(() => null);
+  if (!me || (me.role !== 'operator' && me.role !== 'admin')) return c.json({ error: 'unauthorized' }, 401);
+  const dayMs = 86_400_000, now = Date.now();
+  const todayStart = now - (now % dayMs), wk = now - 7 * dayMs;
+  const count = async (since?: number) => {
+    const sql = since == null
+      ? `SELECT COUNT(*) AS n FROM audit WHERE action='spam_blocked'`
+      : `SELECT COUNT(*) AS n FROM audit WHERE action='spam_blocked' AND created_ms>=?`;
+    const stmt = since == null ? c.env.DB.prepare(sql) : c.env.DB.prepare(sql).bind(since);
+    const r = await stmt.first<any>().catch(() => null);
+    return Number(r?.n ?? 0);
+  };
+  const top = await c.env.DB.prepare(
+    `SELECT json_extract(detail,'$.ip') AS ip, COUNT(*) AS c FROM audit
+      WHERE action='spam_blocked' AND created_ms>=? AND json_extract(detail,'$.ip') IS NOT NULL
+      GROUP BY ip ORDER BY c DESC LIMIT 1`
+  ).bind(wk).first<any>().catch(() => null);
+  return c.json(
+    { today: await count(todayStart), last7d: await count(wk), total: await count(), topIp: top?.ip ?? null },
+    200, { 'Cache-Control': 'no-store' }
+  );
 });

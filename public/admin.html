@@ -658,5 +658,23 @@
   const H=location.hash.replace('#','');
   if(PANELS.includes(H)) show(H); else show('dashboard');
 </script>
+<script>
+  // Tiny operator alert: show a banner if spam submissions were blocked today.
+  (function(){
+    fetch('/api/admin/spam-stats',{credentials:'same-origin'})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(d){
+        if(!d||!d.today) return;
+        var s=(d.today===1?'':'s');
+        var el=document.createElement('div');
+        el.style.cssText='margin:10px 14px;padding:10px 14px;border-radius:10px;background:#fff4e5;border:1px solid #f0b37e;color:#7a4a00;font:600 13px Inter,sans-serif';
+        el.innerHTML='🛡️ <b>'+d.today+'</b> intento'+s+' de spam bloqueado'+s+' hoy'+
+          (d.last7d?' · '+d.last7d+' en 7 días':'')+
+          (d.topIp?' · IP principal '+d.topIp:'');
+        var main=document.querySelector('main')||document.body;
+        main.insertBefore(el, main.firstChild);
+      }).catch(function(){});
+  })();
+</script>
 </body>
 </html>
