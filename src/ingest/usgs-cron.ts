@@ -3,7 +3,11 @@ import { fetchUsgs } from '../lib/usgs';
 import { upsertEvents, recordIngest } from '../lib/db';
 
 const CACHE_KEY = 'usgs:latest';
-const CACHE_TTL = 120; // seconds
+// Track the hourly cron sync (+5 min margin) so the parsed/trimmed snapshot
+// stays warm for the full hour between syncs. The expensive JSON.parse of the
+// global USGS feed then happens ONCE per hour (in the cron), and every public
+// read serves this cached snapshot instead of re-deriving it.
+const CACHE_TTL = 3900; // seconds (65 min)
 
 /**
  * Scheduled ingestion: pull the live USGS feed for Venezuela, cache the
