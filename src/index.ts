@@ -22,22 +22,12 @@ import { funding } from './routes/funding';
 import { plan } from './routes/plan';
 import { desaparecidos } from './routes/desaparecidos';
 import { blog } from './routes/blog';
-import { dedupePersonas } from './lib/dedupe';
-import { cleanPersonas } from './lib/clean';
 import { monitor } from './routes/monitor';
 import { aidOrgs } from './routes/aid_orgs';
 import { donations } from './routes/donations';
 import { botiquin } from './routes/botiquin';
 import { agencias } from './routes/agencias';
-import { ingestSocialMonitor } from './ingest/social-monitor';
-import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
-import { ingestUsgs } from './ingest/usgs-cron';
-import { ingestKobo } from './ingest/kobo-cron';
-import { announceQuakes } from './ingest/quake-announce';
-import { ingestSosDamage } from './ingest/sos-damage';
-import { ingestBlog } from './ingest/blog-cron';
-import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
-import { sweepCaseScores } from './lib/case-score-sync';
+import { runCronGroup } from './cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
 import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
@@ -242,39 +232,11 @@ app.all('*', async (c) => {
 
 export default {
   fetch: app.fetch,
-  // Cron trigger (hourly, "0 * * * *") → every ingest/sync job is parsed once per hour.
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil((async () => {
-      // Keep the USGS mirror + KoboToolbox damage feed fresh, then announce new quakes.
-      await Promise.allSettled([
-        ingestUsgs(env).catch((e) => console.error('[cron] usgs ingest failed:', e?.message ?? e)),
-        ingestKobo(env).catch((e) => console.error('[cron] kobo ingest failed:', e?.message ?? e)),
-      ]);
-      await announceQuakes(env).catch((e) => console.error('[cron] quake announce failed:', e?.message ?? e));
-      // Sync structural-damage reports from sosvenezuela2026 (source of truth).
-      await ingestSosDamage(env).catch((e: any) => console.error('[cron] sos-damage sync failed:', e?.message ?? e));
-      // Re-ingest the missing-persons (Familia) registry from FAMILIA_SOURCE_URL (no-op if unset),
-      // then CLEAN BEFORE LIVE — flag corrupted/fake rows (→moderation='rejected', hidden from public)
-      // and remove exact-content + same-photo duplicates. Public reads only ever see clean, deduped rows.
-      await ingestFamilia(env).catch((e: any) => console.error('[cron] familia sync failed:', e?.message ?? e));
-      await cleanPersonas(env, { apply: true }).catch((e: any) => console.error('[cron] personas clean failed:', e?.message ?? e));
-      await dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 }).catch((e: any) => console.error('[cron] personas dedupe(exact) failed:', e?.message ?? e));
-      await dedupePersonas(env, { mode: 'photo', apply: true, limit: 400 }).catch((e: any) => console.error('[cron] personas dedupe(photo) failed:', e?.message ?? e));
-      // Mirror external missing-person photos into R2 (foto_r2) so they're self-hosted,
-      // not hot-linked. Ported from the decommissioned desaparecidos-vzla-api worker.
-      await mirrorFamiliaPhotos(env).catch((e: any) => console.error('[cron] familia photo mirror failed:', e?.message ?? e));
-      // Social/web disaster-signal monitor → D1, then mirror into the Google Sheet.
-      await ingestSocialMonitor(env).catch((e: any) => console.error('[cron] social monitor failed:', e?.message ?? e));
-      await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));
-      // Safety net: re-mirror the SOS table (live posts/patches sync it immediately).
-      await syncSosSheet(env).catch((e: any) => console.error('[cron] sos sheet sync failed:', e?.message ?? e));
-      // Always-on blog: every ~3h (KV-gated), publish AI-written field reports
-      // from free sources (VE news RSS + YouTube + GDELT). Runs on CF's network.
-      await ingestBlog(env).catch((e: any) => console.error('[cron] blog ingest failed:', e?.message ?? e));
-      // Autonomous case re-scoring: re-evaluate active cases against the FEMA-triage
-      // rules so time-based priority (72 h window, cold cases) stays current. Bounded
-      // per tick (native missing + a cursor-walked familia batch).
-      await sweepCaseScores(env).then((r) => console.log('[cron] case-score sweep:', JSON.stringify(r))).catch((e: any) => console.error('[cron] case-score sweep failed:', e?.message ?? e));
-    })());
+  // Cron triggers are STAGGERED (:00/:15/:30/:45) so each fires its own Worker
+  // invocation with a fresh subrequest budget. Routing + job groups live in
+  // src/cron.ts (CRON_GROUPS). This is what keeps any single invocation from
+  // exhausting the subrequest ceiling and starving the jobs at the tail.
+  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(runCronGroup(event.cron, env));
   },
 };
