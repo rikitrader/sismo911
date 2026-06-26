@@ -221,14 +221,29 @@
   }).catch(() => {});
 
   // The /donar zone is hidden from the public until an admin reveals it. Hide
-  // the nav entry up front (no flash), then reveal only if public or for an
-  // admin. Fail-closed: a fetch error leaves it hidden.
-  const donarLink = shell.querySelector('a[href="/donar"]');
-  if (donarLink) {
-    donarLink.style.display = 'none';
-    fetch('/api/donations/zone').then((r) => r.json()).then((z) => {
-      if (!(z.public || z.canManage)) return;
-      donarLink.style.display = '';
-    }).catch(() => {});
-  }
+  // EVERY link into the zone (/donar, /recaudar, /campana) — the sidebar entry
+  // PLUS any CTA on other pages (suministros-dashboard, cuenta, …), including
+  // links rendered asynchronously after load — and reveal them only if the zone
+  // is public OR the caller is an admin. Fail-closed: default + any fetch error
+  // leaves them hidden (admin-only). Mirrors the page-level donar-zone-gate.js.
+  let DONAR_VISIBLE = false; // hidden until proven public/admin
+  const DONAR_RE = /^\/(donar|recaudar|campana)(?:[\/?#]|$)/;
+  const isDonarLink = (a) => { try { return DONAR_RE.test(new URL(a.getAttribute('href'), location.origin).pathname); } catch (e) { return false; } };
+  const scan = (root) => {
+    const els = root && root.querySelectorAll ? root.querySelectorAll('a[href]') : [];
+    els.forEach((a) => { if (isDonarLink(a)) { a.setAttribute('data-donar-gate', '1'); a.style.display = DONAR_VISIBLE ? '' : 'none'; } });
+  };
+  scan(document);
+  // Catch donar links injected later (e.g. the dashboard's dynamically-built cards).
+  try {
+    new MutationObserver((muts) => { for (const m of muts) m.addedNodes.forEach((n) => { if (n.nodeType === 1) scan(n); }); })
+      .observe(document.documentElement, { childList: true, subtree: true });
+  } catch (e) { /* no MutationObserver → static scan only */ }
+  fetch('/api/donations/zone').then((r) => r.json()).then((z) => {
+    DONAR_VISIBLE = !!(z.public || z.canManage);
+    document.querySelectorAll('a[data-donar-gate="1"]').forEach((a) => { a.style.display = DONAR_VISIBLE ? '' : 'none'; });
+  }).catch(() => {
+    DONAR_VISIBLE = false;
+    document.querySelectorAll('a[data-donar-gate="1"]').forEach((a) => { a.style.display = 'none'; });
+  });
 })();
