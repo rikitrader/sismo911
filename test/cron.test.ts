@@ -49,7 +49,8 @@ describe('cron groups', () => {
       'monitor-sheet',
       'personas-dedupe-fuzzyphone',
     ]);
-    expect(CRON_GROUPS['35 * * * *'].map((j) => j.name)).toEqual([
+    expect(CRON_GROUPS['5 * * * *'].map((j) => j.name)).toEqual([
+      'history-bootstrap',
       'rav-ingest',
       'rav-stats',
       'rav-verified',
