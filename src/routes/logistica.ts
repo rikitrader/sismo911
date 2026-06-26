@@ -87,6 +87,56 @@ export function rankMatches(
   return out.sort((a, b) => a.priority - b.priority || (a.km ?? 1e9) - (b.km ?? 1e9));
 }
 
+// ── Loop closure: applying a confirmed delivery ─────────────────────────────
+// When a shipment is confirmed, goods physically move: origin stock drops,
+// destination stock rises, and the destination's open needs for those
+// commodities are drawn down (oldest/highest-priority first), closing the loop.
+// Pure → unit-tested. Returns the absolute new inventory levels + need mutations.
+export interface ManifestItem { commodity: string; qty: number; unit?: string | null; }
+export interface PlanInvRow { center_id: string; commodity: string; qty: number; unit?: string | null; }
+export interface PlanNeedRow { id: string; commodity: string; qty: number; }
+export interface ConfirmationPlan {
+  inventory: { center_id: string; commodity: string; qty: number; unit: string | null }[];
+  needs: { id: string; qty: number; status: 'open' | 'fulfilled' }[];
+}
+export function planConfirmation(
+  items: ManifestItem[],
+  originId: string,
+  destId: string,
+  inventory: PlanInvRow[],
+  openNeeds: PlanNeedRow[]
+): ConfirmationPlan {
+  const inv = new Map<string, { qty: number; unit: string | null }>();
+  for (const r of inventory) inv.set(`${r.center_id}|${r.commodity}`, { qty: r.qty, unit: r.unit ?? null });
+  // Open needs at the destination, grouped by commodity, consumed in given order.
+  const needsByCommodity = new Map<string, { id: string; qty: number }[]>();
+  for (const n of openNeeds) (needsByCommodity.get(n.commodity) ?? needsByCommodity.set(n.commodity, []).get(n.commodity)!).push({ id: n.id, qty: n.qty });
+
+  const invOut: ConfirmationPlan['inventory'] = [];
+  const needOut: ConfirmationPlan['needs'] = [];
+  for (const it of items) {
+    if (!(it.qty > 0)) continue;
+    const ok = `${originId}|${it.commodity}`, dk = `${destId}|${it.commodity}`;
+    const oCur = inv.get(ok) ?? { qty: 0, unit: it.unit ?? null };
+    const dCur = inv.get(dk) ?? { qty: 0, unit: it.unit ?? null };
+    const oNew = Math.max(0, oCur.qty - it.qty);
+    const dNew = dCur.qty + it.qty;
+    inv.set(ok, { qty: oNew, unit: oCur.unit ?? it.unit ?? null });
+    inv.set(dk, { qty: dNew, unit: dCur.unit ?? it.unit ?? null });
+    invOut.push({ center_id: originId, commodity: it.commodity, qty: oNew, unit: oCur.unit ?? it.unit ?? null });
+    invOut.push({ center_id: destId, commodity: it.commodity, qty: dNew, unit: dCur.unit ?? it.unit ?? null });
+    // Draw down destination open needs for this commodity.
+    let remaining = it.qty;
+    for (const n of needsByCommodity.get(it.commodity) ?? []) {
+      if (remaining <= 0) break;
+      const take = Math.min(remaining, n.qty);
+      n.qty -= take; remaining -= take;
+      needOut.push({ id: n.id, qty: Math.max(0, n.qty), status: n.qty <= 0 ? 'fulfilled' : 'open' });
+    }
+  }
+  return { inventory: invOut, needs: needOut };
+}
+
 // Load center coordinates from the curated catalog (static asset) + approved
 // citizen submissions. One ASSETS subrequest on a user-triggered GET — within budget.
 async function loadCenterGeo(env: Env, req: Request): Promise<Map<string, CenterGeo>> {
@@ -132,6 +182,27 @@ logistica.post('/inventory', async (c) => {
   ).bind(center_id, commodity, qty, unit, Date.now()).run();
   await audit(c, 'acopio.inventory.upsert', { center_id, commodity, qty });
   return c.json({ ok: true, center_id, commodity, qty, unit });
+});
+
+// Bulk inventory upsert (CSV import). Body: { rows: [{center_id, commodity, qty, unit?}] }.
+logistica.post('/inventory/bulk', async (c) => {
+  const b = await c.req.json().catch(() => null);
+  const raw = Array.isArray(b?.rows) ? b.rows : [];
+  if (!raw.length) return c.json({ error: 'rows vacío' }, 400);
+  const now = Date.now();
+  const rows = raw
+    .map((r: any) => ({ center_id: str(r?.center_id, 120), commodity: str(r?.commodity, 40), qty: qtyOf(r?.qty), unit: str(r?.unit, 16) }))
+    .filter((r: any) => r.center_id && r.commodity && COMMODITY_IDS.has(r.commodity) && r.qty != null)
+    .slice(0, 1000);
+  if (!rows.length) return c.json({ error: 'ninguna fila válida (revisa center_id, commodity, qty)' }, 400);
+  await c.env.DB.batch(rows.map((r: any) =>
+    c.env.DB.prepare(
+      `INSERT INTO acopio_inventory (center_id, commodity, qty, unit, updated_ms) VALUES (?,?,?,?,?)
+       ON CONFLICT(center_id, commodity) DO UPDATE SET qty=excluded.qty, unit=excluded.unit, updated_ms=excluded.updated_ms`
+    ).bind(r.center_id, r.commodity, r.qty, r.unit ?? COMMODITY_UNIT[r.commodity] ?? 'u', now)
+  ));
+  await audit(c, 'acopio.inventory.bulk', { count: rows.length });
+  return c.json({ ok: true, imported: rows.length, skipped: raw.length - rows.length });
 });
 
 // ── Needs / requests ─────────────────────────────────────────────────────────
@@ -240,6 +311,9 @@ logistica.post('/shipments', async (c) => {
 });
 
 // Advance a shipment's status and append a chain-of-custody event.
+// On transition INTO 'confirmado' (and only the first time), the delivery is
+// applied: origin stock drops, destination stock rises, and destination open
+// needs are drawn down — closing the supply-chain loop.
 logistica.patch('/shipments/:id', async (c) => {
   const id = c.req.param('id');
   const b = await c.req.json().catch(() => null);
@@ -248,15 +322,44 @@ logistica.patch('/shipments/:id', async (c) => {
   const lat = num(b?.lat), lon = num(b?.lon);
   if ((lat != null || lon != null) && !validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
   const now = Date.now();
-  const r = await c.env.DB.prepare(`UPDATE acopio_shipments SET status = ?, updated_ms = ? WHERE id = ?`)
-    .bind(status, now, id).run();
-  if (!r.meta.changes) return c.json({ error: 'no encontrado' }, 404);
+  const ship = await c.env.DB.prepare(`SELECT status, origin_id, dest_id FROM acopio_shipments WHERE id = ?`).bind(id).first() as any;
+  if (!ship) return c.json({ error: 'no encontrado' }, 404);
+  const firstConfirm = status === 'confirmado' && ship.status !== 'confirmado';
+
   const event = STATUS_EVENT[status] ?? status;
-  await c.env.DB.prepare(
-    `INSERT INTO acopio_custody (id, shipment_id, event, actor, lat, lon, note, at_ms) VALUES (?,?,?,?,?,?,?,?)`
-  ).bind(uid('cus'), id, CUSTODY_EVENTS.includes(event) ? event : 'incidencia', str(b?.actor, 120), lat, lon, str(b?.note, 400), now).run();
-  await audit(c, 'acopio.shipment.advance', { id, status });
-  return c.json({ ok: true, id, status });
+  const writes = [
+    c.env.DB.prepare(`UPDATE acopio_shipments SET status = ?, updated_ms = ? WHERE id = ?`).bind(status, now, id),
+    c.env.DB.prepare(`INSERT INTO acopio_custody (id, shipment_id, event, actor, lat, lon, note, at_ms) VALUES (?,?,?,?,?,?,?,?)`)
+      .bind(uid('cus'), id, CUSTODY_EVENTS.includes(event) ? event : 'incidencia', str(b?.actor, 120), lat, lon, str(b?.note, 400), now),
+  ];
+
+  if (firstConfirm) {
+    const [itemsRes, originInv, destInv, destNeeds] = await Promise.all([
+      c.env.DB.prepare(`SELECT commodity, qty, unit FROM acopio_shipment_items WHERE shipment_id = ?`).bind(id).all(),
+      c.env.DB.prepare(`SELECT center_id, commodity, qty, unit FROM acopio_inventory WHERE center_id = ?`).bind(ship.origin_id).all(),
+      c.env.DB.prepare(`SELECT center_id, commodity, qty, unit FROM acopio_inventory WHERE center_id = ?`).bind(ship.dest_id).all(),
+      c.env.DB.prepare(`SELECT id, commodity, qty FROM acopio_needs WHERE center_id = ? AND status = 'open' ORDER BY priority, created_ms`).bind(ship.dest_id).all(),
+    ]);
+    const plan = planConfirmation(
+      (itemsRes.results ?? []) as unknown as ManifestItem[],
+      ship.origin_id, ship.dest_id,
+      [...(originInv.results ?? []), ...(destInv.results ?? [])] as unknown as PlanInvRow[],
+      (destNeeds.results ?? []) as unknown as PlanNeedRow[]
+    );
+    for (const u of plan.inventory) {
+      writes.push(c.env.DB.prepare(
+        `INSERT INTO acopio_inventory (center_id, commodity, qty, unit, updated_ms) VALUES (?,?,?,?,?)
+         ON CONFLICT(center_id, commodity) DO UPDATE SET qty=excluded.qty, updated_ms=excluded.updated_ms`
+      ).bind(u.center_id, u.commodity, u.qty, u.unit ?? COMMODITY_UNIT[u.commodity] ?? 'u', now));
+    }
+    for (const u of plan.needs) {
+      writes.push(c.env.DB.prepare(`UPDATE acopio_needs SET qty = ?, status = ?, updated_ms = ? WHERE id = ?`).bind(u.qty, u.status, now, u.id));
+    }
+  }
+
+  await c.env.DB.batch(writes);
+  await audit(c, 'acopio.shipment.advance', { id, status, applied: firstConfirm });
+  return c.json({ ok: true, id, status, applied: firstConfirm });
 });
 
 // ── Matching engine: open needs ↔ surplus inventory, ranked by distance ───────
