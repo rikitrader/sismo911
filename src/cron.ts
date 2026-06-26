@@ -33,9 +33,16 @@ export interface CronJob { name: string; run: (env: Env) => Promise<unknown>; }
 // left (`remaining === 0`) or a pass cap is hit, so a backlog actually DRAINS
 // instead of trickling one batch per hour. Safe on the subrequest budget now
 // that R2 deletes are bulk (1 subrequest per ≤1000 keys). Returns a summary.
+// maxPasses is the burst ceiling, NOT the steady-state cost: every pass that
+// finds nothing left early-breaks (remaining===0), so a quiet tick does ~1 pass.
+// It only engages when a RAV-ingest burst leaves a big backlog — at 400 rows/pass
+// the old 6-pass cap (2,400/tick) couldn't outrun the firehose, so same-photo /
+// exact-resubmission duplicates stayed visible on /personas for hours. 16 passes
+// (6,400 rows/tick) drains a typical burst in one tick. Safe on the subrequest
+// budget: each pass is ~1 SELECT + ≤5 chunked D1 DELETEs + 1 BULK R2 delete.
 async function drain(
   run: () => Promise<{ remaining?: number; deletedRows?: number; deletedPhotos?: number }>,
-  maxPasses = 6,
+  maxPasses = 16,
 ): Promise<{ passes: number; deletedRows: number; deletedPhotos: number; remaining: number }> {
   let passes = 0, deletedRows = 0, deletedPhotos = 0, remaining = 0;
   for (; passes < maxPasses; passes++) {
