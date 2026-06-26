@@ -26,7 +26,7 @@ const APPLY = process.argv.includes('--apply');
 const CLEAN = process.argv.includes('--clean');       // also flag junk + dedupe after pull
 const NO_PULL = process.argv.includes('--no-pull');   // clean-only (skip fetching the API)
 const BASE = process.env.FAMILIA_SOURCE_URL || 'https://desaparecidos-terremoto-api.theempire.tech/api/personas';
-const DB = 'desaparecidos-vzla';
+const DB = 'sismo911';   // single source of truth — the DB the live app reads/writes
 const PAGE_SIZE = 100;          // API caps pageSize at 100
 const STMT_ROWS = 50;           // rows per INSERT statement (D1 has a per-statement size cap)
 const STMTS_PER_FILE = 40;      // → 2000 rows per wrangler execute file
@@ -91,8 +91,17 @@ const COLS = [
   'localizado_por', 'localizado_contacto', 'localizado_relacion', 'localizado_nota',
   'reportada', 'reportes', 'reportada_at', 'created_at', 'updated_at', 'pulled_at',
 ];
-// On conflict refresh everything EXCEPT id, created_at, moderation, foto_r2.
-const UPDATE_SET = COLS.filter((c) => c !== 'id' && c !== 'created_at')
+// On conflict refresh bio fields only. NEVER overwrite app-owned status columns —
+// estado / localizado_* / reportada* are set by families through the live app and
+// the upstream scrape doesn't know about them; refreshing them would revert real
+// "found safe / deceased" reports. (moderation + foto_r2 are also app-owned and
+// aren't in COLS, so they're already preserved; id + created_at stay too.)
+const APP_OWNED = new Set([
+  'id', 'created_at',
+  'estado', 'localizado_por', 'localizado_contacto', 'localizado_relacion',
+  'localizado_nota', 'reportada', 'reportada_at',
+]);
+const UPDATE_SET = COLS.filter((c) => !APP_OWNED.has(c))
   .map((c) => `${c}=excluded.${c}`).join(', ');
 
 function rowValues(o, nowIso) {
