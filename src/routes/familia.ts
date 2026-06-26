@@ -292,14 +292,18 @@ familia.post('/maintenance', async (c) => {
   const purge = await purgeRejectedPersonas(c.env, { apply, limit: 400 });
 
   // 3) remove duplicates among survivors: exact re-scrapes + same-photo reuse are
-  //    auto-safe (loose/namesake merge is operator-only, intentionally skipped).
-  const dedupe = {
+  //    auto-safe; fuzzyphone (name+age+phone) is near-zero-risk. fuzzyname
+  //    (name+age ONLY) can merge two distinct same-name+age people, so it is
+  //    OPT-IN via { broad: true } and is NEVER run unattended in the cron.
+  const broad = b?.broad === true;
+  const dedupe: Record<string, unknown> = {
     exact: await dedupePersonas(c.env, { mode: 'exact', apply }),
     photo: await dedupePersonas(c.env, { mode: 'photo', apply }),
     fuzzyphone: await dedupePersonas(c.env, { mode: 'fuzzyphone', apply, limit: 400 }),
   };
+  if (broad) dedupe.fuzzyname = await dedupePersonas(c.env, { mode: 'fuzzyname', apply, limit: 400 });
 
-  if (apply) await audit(c, 'personas.maintenance', { clean, floods, purge, dedupe });
+  if (apply) await audit(c, 'personas.maintenance', { clean, floods, purge, dedupe, broad });
   return c.json({
     ok: true, apply, clean, floods, dedupe,
     rejected: purge.found, purgedRows: purge.deletedRows, purgedPhotos: purge.deletedPhotos, purgeRemaining: purge.remaining,
