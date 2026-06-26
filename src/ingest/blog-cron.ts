@@ -55,15 +55,20 @@ export async function writeArticle(env: Env, rec: SourceRecord & { place: string
   if (!ai) return null;
   const model = env.BLOG_AI_MODEL || DEFAULT_MODEL;
   const sys = `Eres redactor del medio de emergencia sísmica SISMO911 (Venezuela). Escribes noticias breves en español periodístico, sobrio y verificable. Devuelves SIEMPRE únicamente un objeto JSON válido, sin texto adicional ni fences.`;
-  const user = `Contexto del evento: ${EVENT_FACTS}
+  const user = `Contexto de fondo (NO es la noticia, solo referencia): ${EVENT_FACTS}
 
-A partir de esta publicación, redacta UNA noticia.
-Reglas: 130-260 palabras; explica el contenido SOLO a partir del campo "texto"; cítalo una vez entre comillas; entreteje los hechos del evento (magnitud, fecha, zonas) sin inventar cifras de víctimas ni datos que no estén en el texto; atribuye a la plataforma/medio "${rec.author}" en "${rec.platform}"; marca el material como reporte SIN verificación independiente; termina con una línea de seguridad indicando activar una alerta SOS en sismo911.com/sos.
+Tu tarea: redactar UNA noticia sobre ESTA publicación específica.
+Reglas IMPORTANTES:
+- El TITULAR debe describir el contenido CONCRETO de esta publicación (qué muestra o dice el video/artículo), NO un resumen genérico del terremoto. PROHIBIDO usar titulares genéricos como "Terremoto de magnitud 7,5 sacude Venezuela".
+- 130-260 palabras; explica el contenido a partir del campo "texto"; cita el texto una vez entre comillas.
+- Menciona los hechos de fondo solo de pasada; el foco es esta publicación. No inventes cifras de víctimas ni datos ausentes del texto.
+- Atribuye a "${rec.author}" en "${rec.platform}". Marca el material como reporte SIN verificación independiente.
+- Cierra con una línea de seguridad: activar una alerta SOS en sismo911.com/sos.
 
-Devuelve SOLO: {"headline":"...","meta_desc":"resumen de 1 frase, <=160 caracteres","body_html":"<p>...</p><p>...</p>"}
+Devuelve SOLO: {"headline":"titular específico de esta publicación","meta_desc":"resumen de 1 frase, <=160 caracteres","body_html":"<p>...</p><p>...</p>"}
 
 Publicación:
-${JSON.stringify({ plataforma: rec.platform, autor: rec.author, lugar: rec.place, texto: rec.caption.slice(0, 700) })}`;
+${JSON.stringify({ plataforma: rec.platform, medio_o_autor: rec.author, lugar: rec.place, texto: rec.caption.slice(0, 700) })}`;
   try {
     const resp: any = await ai.run(model, {
       messages: [{ role: 'system', content: sys }, { role: 'user', content: user }],
