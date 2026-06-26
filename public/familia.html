@@ -221,6 +221,8 @@ window.openPerson=async function(id){
   const[lbl,col,bg]=PSTAT[p.estado]||PSTAT['sin-contacto'];
   const hero=p.photo_url?`<img src="${p.photo_url}" alt="${esc(p.full_name)}" class="w-full max-h-[380px] object-cover">`:`<div class="w-full grid place-items-center" style="background:${bg};aspect-ratio:16/11"><span class="font-display font-extrabold text-7xl" style="color:${col}">${esc(initials(p.full_name))}</span></div>`;
   const url=p.share_url||('https://sismo911.com/familia?persona='+id);
+  // /casos federates the citizen registry under a "fam-" id; native operator cases (kind:'case') keep their raw id.
+  const docketId=p.kind==='case'?id:'fam-'+id;
   const text=`🔴 BUSCAMOS a ${p.full_name}${p.age?', '+p.age+' años':''}. Última ubicación: ${p.last_seen||'—'}. Ayúdanos a difundir. #SISMO911 #Venezuela`;
   const U=encodeURIComponent(url),T=encodeURIComponent(text);
   const sb=(on,lab)=>`<button onclick="${on}" class="flex items-center gap-2 border border-outline-variant rounded-full px-3.5 py-2 text-sm font-semibold hover:bg-surface-container whitespace-nowrap">${lab}</button>`;
@@ -234,7 +236,7 @@ window.openPerson=async function(id){
         <div class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3"><div class="label-caps text-on-surface-variant text-[10px]">📍 Última ubicación</div><div class="font-semibold mt-0.5">${esc(p.last_seen||'—')}</div></div>
         <div class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3"><div class="label-caps text-on-surface-variant text-[10px]">🗓 ${p.estado==='localizado'?'Localizada':'Sin contacto desde'}</div><div class="font-semibold mt-0.5">${p.estado==='localizado'?esc(p.found_by||'—'):(fmtD(p.since)||'—')}</div></div>
       </div>
-      <a href="/casos#caso=${encodeURIComponent(id)}" class="flex items-center justify-between gap-2 bg-primary/5 border border-primary/20 rounded-lg p-3 mt-2 hover:bg-primary/10 transition-colors">
+      <a href="/casos#caso=${encodeURIComponent(docketId)}" class="flex items-center justify-between gap-2 bg-primary/5 border border-primary/20 rounded-lg p-3 mt-2 hover:bg-primary/10 transition-colors">
         <span class="text-sm font-semibold text-primary">🗂 Ver expediente completo · cronología y prioridad</span>
         <span class="text-primary text-lg leading-none">→</span></a>
       ${p.reporter?`<div class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3 mt-2 text-sm"><span class="label-caps text-on-surface-variant text-[10px]">👥 Reporta</span> ${esc(p.reporter)}</div>`:''}
