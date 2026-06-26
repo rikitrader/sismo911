@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { AGENCIAS, ESF, type Agencia } from '../data/agencias';
+import { AICORP, FLUJO } from '../data/ai_corp';
 
 // Gobierno IA de Venezuela — un gobierno autónomo operado por agentes de IA,
 // coordinado por "AI Corp Federal", TOTALMENTE detached del gobierno real de
@@ -55,6 +56,69 @@ const FOOT = `</body></html>`;
 const NOTE = 'GOBIERNO DE IA AUTÓNOMO Y SIMULADO, totalmente independiente y NO afiliado al gobierno real de Venezuela. Los agentes, nombres, correos y fotos son entidades de IA — no son funcionarios, organismos ni correos oficiales del Estado venezolano.';
 const apex = () => AGENCIAS.find((a) => a.nivel === 'Central IA')!;
 
+// GET /ai-corp — el AI Corp Federal: orquestador + departamentos + flujo + proyectos
+agencias.get('/ai-corp', (c) => {
+  const STEPCOL: Record<string, string> = { 'Detección': '#0369a1', 'Activación': '#e57200', 'Aprobación': '#16a34a', 'Financiamiento': '#d97706', 'Entrega': '#0891b2', 'Asistencia': '#db2777', 'Orquestación': '#7c3aed' };
+  const orch = AICORP[0];
+  const depts = AICORP.slice(1);
+  const pipeline = FLUJO.map((s, i) => `<div style="flex:1;min-width:120px" class="text-center">
+      <div class="mx-auto mb-1" style="width:34px;height:34px;border-radius:50%;background:${STEPCOL[s]};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:'Public Sans'">${i + 1}</div>
+      <div class="text-[12.5px] font-semibold">${e(s)}</div>
+    </div>`).join('<div class="self-start mt-3 text-on-surface-variant">→</div>');
+  const card = (d: typeof AICORP[number]) => `<div class="card p-4 flex items-start gap-3">
+      <span style="width:52px;height:52px;border-radius:14px;overflow:hidden;flex:0 0 auto;background:${STEPCOL[d.step] || '#7c3aed'};display:inline-block"><img src="/agentes/${e(d.slug)}.webp" alt="${e(d.name)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"></span>
+      <div class="min-w-0">
+        <div class="chip" style="background:${STEPCOL[d.step] || '#7c3aed'};color:#fff">${e(d.step)}</div>
+        <div class="font-display font-bold text-[15px] mt-1 leading-tight">${e(d.name)}</div>
+        <div class="text-xs text-on-surface-variant mb-1">${e(d.role)}</div>
+        <div class="text-[12.5px] text-on-surface-variant">${e(d.skills)}</div>
+      </div></div>`;
+  const body = `<main class="mx-auto max-w-6xl px-4 py-8">
+    <nav class="text-sm text-on-surface-variant mb-3"><a href="/agencias" class="text-primary hover:underline">Gobierno IA</a> · <span>AI Corp Federal</span></nav>
+    <span class="chip" style="background:#7c3aed;color:#fff">AI Corp Federal · orquestación</span>
+    <h1 class="font-display font-extrabold text-3xl mt-2 mb-1">AI Corp Federal</h1>
+    <p class="text-on-surface-variant mb-5 max-w-3xl">La corporación de IA que <b>gobierna la emergencia</b>: un <b>orquestador central</b> y sus departamentos detectan, activan, <b>aprueban proyectos</b> y coordinan la <b>entrega y asistencia</b>, en un ciclo continuo sobre las 139 agencias.</p>
+
+    <div class="card p-5 mb-6 flex items-center gap-4" style="border:1.5px solid #7c3aed;background:linear-gradient(90deg,#faf5ff,#fff)">
+      <span style="width:84px;height:84px;border-radius:50%;overflow:hidden;flex:0 0 auto;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"><img src="/agentes/${e(orch.slug)}.webp" alt="${e(orch.name)}" style="width:100%;height:100%;object-fit:cover"></span>
+      <div><div class="chip" style="background:#7c3aed;color:#fff">ORQUESTADOR</div>
+        <div class="font-display font-extrabold text-xl mt-1">${e(orch.name)}</div>
+        <div class="text-on-surface-variant text-sm">${e(orch.skills)}</div></div>
+    </div>
+
+    <h2 class="font-display font-bold text-xl mb-2">Flujo operativo</h2>
+    <div class="card p-4 mb-6"><div class="flex flex-wrap items-start gap-2 justify-between">${pipeline}</div></div>
+
+    <h2 class="font-display font-bold text-xl mb-3">Departamentos del AI Corp</h2>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">${depts.map(card).join('')}</div>
+
+    <h2 class="font-display font-bold text-xl mb-1">Proyectos en el flujo de aprobación</h2>
+    <p class="text-on-surface-variant text-sm mb-3">El <b>Dpto. de Aprobación de Proyectos</b> evalúa las campañas de ayuda para entrega y asistencia. <span id="projsum"></span></p>
+    <div id="projs" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"><p class="text-on-surface-variant text-sm col-span-full">Cargando proyectos…</p></div>
+    <p class="text-xs text-on-surface-variant mt-8 border-t border-outline-variant/50 pt-3">${e(NOTE)}</p>
+  </main>
+  <script>
+  const fmt=n=>'$'+Math.round(Number(n)||0).toLocaleString('en-US');
+  const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  fetch('/api/campaigns').then(r=>r.json()).then(d=>{
+    const cs=d.campaigns||[];
+    document.getElementById('projsum').textContent=cs.length+' proyectos aprobados y en ejecución.';
+    document.getElementById('projs').innerHTML=cs.length?cs.map(c=>{
+      const goal=+c.goal_usd||0,raised=+c.raised_usd||0,pct=goal>0?Math.min(100,Math.round(raised/goal*100)):0;
+      return '<a href="/campana?c='+encodeURIComponent(c.slug)+'" class="card p-4 block hover:shadow-md transition">'
+        +'<div class="flex items-center gap-2 mb-1"><span class="chip" style="background:#16a34a;color:#fff">APROBADO</span><span class="chip" style="background:#0891b2;color:#fff">EN ENTREGA</span></div>'
+        +'<div class="font-display font-bold text-[15px] leading-tight">'+esc(c.title)+'</div>'
+        +'<div class="text-xs text-on-surface-variant mb-2">'+esc(c.category||'')+(c.location?' · '+esc(c.location):'')+'</div>'
+        +'<div style="height:.5rem;border-radius:99px;background:#e2e2e5;overflow:hidden"><span style="display:block;height:100%;width:'+pct+'%;background:#16a34a"></span></div>'
+        +'<div class="text-xs mt-1"><b>'+fmt(raised)+'</b> '+(goal>0?'de '+fmt(goal):'')+' · '+(c.donors_count||0)+' donantes</div></a>';
+    }).join(''):'<p class="text-on-surface-variant text-sm col-span-full">No hay proyectos activos. <a href="/recaudar" class="text-primary underline">Crear uno</a>.</p>';
+  }).catch(()=>{document.getElementById('projs').innerHTML='<p class="text-secondary text-sm col-span-full">No se pudieron cargar los proyectos.</p>';});
+  </script>`;
+  return c.html(head('AI Corp Federal — orquestador, departamentos y flujo | SISMO911',
+    'AI Corp Federal: el orquestador y los departamentos del Gobierno IA de Venezuela que activan el flujo, aprueban proyectos y coordinan entrega y asistencia.',
+    '/ai-corp') + body + FOOT, 200, { 'Cache-Control': 'public, max-age=600' });
+});
+
 // GET /api/agencias — JSON
 agencias.get('/api/agencias', (c) =>
   c.json({ count: AGENCIAS.length, esf: ESF, agencias: AGENCIAS }, 200, { 'Cache-Control': 'public, max-age=3600' }));
@@ -89,14 +153,14 @@ agencias.get('/agencias', (c) => {
     <h1 class="font-display font-extrabold text-3xl mt-2 mb-1">Gobierno IA de Venezuela</h1>
     <p class="text-on-surface-variant mb-5 max-w-3xl">Un gobierno de emergencias <b>operado por agentes de inteligencia artificial</b>. <b>AI Corp Federal</b> ingiere y coordina los datos de las ${AGENCIAS.length - 1} agencias IA — federales, de los 24 estados y de las ciudades capitales — en un único comando nacional. Cada agente opera bajo el <b>Sistema de Comando de Incidentes (SCI)</b> con competencias de gestión de emergencias y nivel de activación, para <b>tomar el control del desastre ASAP</b>.</p>
 
-    <a href="/agencias/${e(ax.slug)}" class="card p-5 mb-6 flex items-center gap-4 hover:shadow-lg transition" style="border:1.5px solid #7c3aed;background:linear-gradient(90deg,#faf5ff,#fff)">
+    <a href="/ai-corp" class="card p-5 mb-6 flex items-center gap-4 hover:shadow-lg transition" style="border:1.5px solid #7c3aed;background:linear-gradient(90deg,#faf5ff,#fff)">
       ${avatar(ax, 76)}
       <div class="min-w-0">
-        <div class="chip" style="background:#7c3aed;color:#fff">CENTRO DE MANDO · AICF</div>
+        <div class="chip" style="background:#7c3aed;color:#fff">CENTRO DE MANDO · AI CORP FEDERAL</div>
         <div class="font-display font-extrabold text-xl mt-1 leading-tight">${e(ax.agency)}</div>
-        <div class="text-on-surface-variant text-sm line-clamp-2">${e(ax.skills)}</div>
+        <div class="text-on-surface-variant text-sm line-clamp-2">Orquestador + departamentos: activa el flujo, aprueba proyectos y coordina entrega y asistencia.</div>
       </div>
-      <span class="ml-auto text-primary font-bold shrink-0 hidden sm:block">Ver centro →</span>
+      <span class="ml-auto text-primary font-bold shrink-0 hidden sm:block">Ver AI Corp →</span>
     </a>
 
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
