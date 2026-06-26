@@ -1,6 +1,6 @@
 import type { Env } from '../types';
 
-export type DedupeMode = 'exact' | 'loose' | 'photo' | 'fuzzyphone';
+export type DedupeMode = 'exact' | 'loose' | 'photo' | 'fuzzyphone' | 'fuzzyname';
 
 // Accent/case/space-insensitive normalized name (Spanish diacritics → ASCII).
 // lower() first, then fold the lowercase accented vowels + ñ/ü. Used so that
@@ -34,6 +34,7 @@ export interface DedupeReport {
 //  loose → same name + location only (may merge namesakes; operator-confirmed use only)
 function partitionFor(mode: DedupeMode): string {
   if (mode === 'photo') return `lower(trim(foto))`;
+  if (mode === 'fuzzyname') return `${normNameSql('nombre')}, coalesce(edad,-1)`;
   if (mode === 'fuzzyphone') return `${normNameSql('nombre')}, coalesce(edad,-1), ${normPhoneSql('contacto')}`;
   return mode === 'loose'
     ? `lower(trim(nombre)), lower(trim(coalesce(ubicacion,'')))`
@@ -50,19 +51,29 @@ export async function dedupePersonas(
   opts: { mode?: DedupeMode; apply?: boolean; limit?: number } = {}
 ): Promise<DedupeReport> {
   const mode: DedupeMode = opts.mode === 'loose' ? 'loose' : opts.mode === 'photo' ? 'photo'
-    : opts.mode === 'fuzzyphone' ? 'fuzzyphone' : 'exact';
+    : opts.mode === 'fuzzyphone' ? 'fuzzyphone' : opts.mode === 'fuzzyname' ? 'fuzzyname' : 'exact';
   const apply = !!opts.apply;
   const limit = Math.min(Math.max(opts.limit ?? 300, 1), 400);
   // photo mode must only group rows that actually have a photo, or it would
-  // collapse every photoless row into one bogus group. fuzzyphone likewise needs
-  // a real phone (≥7 digits) or every phoneless row would merge by name+age alone.
+  // collapse every photoless row into one bogus group. fuzzyphone needs a real
+  // phone (≥7 digits). fuzzyname groups by name+age alone — scope it to a real
+  // first+last name (a space, ≥5 chars) so single-token names don't over-merge.
   const scope = mode === 'photo' ? `WHERE trim(coalesce(foto,'')) != ''`
     : mode === 'fuzzyphone' ? `WHERE length(${normPhoneSql('contacto')}) >= 7`
+    : mode === 'fuzzyname' ? `WHERE length(${normNameSql('nombre')}) >= 5 AND instr(trim(nombre), ' ') > 0`
     : ``;
+  // Keeper = the most COMPLETE row (most non-empty fields), then has-R2-photo,
+  // then newest, then smallest id. Deleting the sparser duplicates preserves info.
+  const completeness = `(
+      (CASE WHEN trim(coalesce(foto_r2,'')) != '' OR trim(coalesce(foto,'')) != '' THEN 1 ELSE 0 END) +
+      (CASE WHEN trim(coalesce(contacto,'')) != '' THEN 1 ELSE 0 END) +
+      (CASE WHEN trim(coalesce(descripcion,'')) != '' THEN 1 ELSE 0 END) +
+      (CASE WHEN trim(coalesce(ubicacion,'')) != '' THEN 1 ELSE 0 END)
+    )`;
   const sql = `SELECT id, foto_r2 FROM (
       SELECT id, foto_r2, ROW_NUMBER() OVER (
         PARTITION BY ${partitionFor(mode)}
-        ORDER BY (CASE WHEN foto_r2 IS NOT NULL THEN 0 ELSE 1 END), updated_at DESC, id ASC
+        ORDER BY ${completeness} DESC, (CASE WHEN foto_r2 IS NOT NULL THEN 0 ELSE 1 END), updated_at DESC, id ASC
       ) AS rn FROM personas ${scope}
     ) WHERE rn > 1`;
   const { results } = await env.DB.prepare(sql).all<{ id: string; foto_r2: string | null }>();
