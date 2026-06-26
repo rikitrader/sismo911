@@ -45,13 +45,13 @@
     ] },
   ];
 
-  // Contacto lives outside the groups as its own flashing call-to-action button.
-  const NAV_CONTACTO = { label: 'Contacto', href: '/contacto', m: ['/contacto'], flash: true, d: 'M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.81.36 1.6.7 2.34a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0122 16.92z' };
+  // Contacto lives outside the groups as its own static call-to-action button.
+  const NAV_CONTACTO = { label: 'Contacto', href: '/contacto', m: ['/contacto'], cta: true, d: 'M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.81.36 1.6.7 2.34a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0122 16.92z' };
 
   // Admin console stays pinned at the bottom of the nav list.
   const NAV_ADMIN = { label: 'Consola', href: '/admin', m: ['/admin'], d: 'M12 3l8 3.5v5c0 4-3 7-8 9-5-2-8-5-8-9v-5z M9.5 12l2 2 3.5-4' };
 
-  const NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0', GOLD = '#c9a227', ORANGE = '#ea580c';
+  const NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0', GOLD = '#c9a227', CTARED = '#d62828';
   const path = (location.pathname.replace(/\.html$/, '') || '/');
   const active = (it) => it.m.some((x) => x === '/' ? path === '/' : (path === x || path.startsWith(x + '/')));
 
@@ -77,12 +77,12 @@
       <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
-    if (it.flash) {
-      // Solid orange flashing call-to-action (CTA conversion color) — gentle glow + label blink to draw the eye.
+    if (it.cta) {
+      // Solid red call-to-action (CTA conversion color), static — no animation.
       const on2 = active(it);
-      return `<a href="${it.href}" class="s911-flash" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${ORANGE};color:#fff;box-shadow:0 1px 3px rgba(234,88,12,.4)${on2 ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${CTARED};color:#fff;box-shadow:0 1px 3px rgba(214,40,40,.4)${on2 ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
       <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.20);color:#fff">${icon(it.d)}</span>
-      <span class="s911-flash-label">${it.label}</span></a>`;
+      ${it.label}</a>`;
     }
     return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;font:600 13.5px Inter,sans-serif;text-decoration:none;${on ? 'background:rgba(0,23,58,.06);color:' + NAVY : 'color:' + VARIANT}" onmouseover="if(!${on})this.style.background='#eeeef0'" onmouseout="if(!${on})this.style.background='transparent'">
       <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;${on ? 'background:' + NAVY + ';color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)' : 'background:rgba(0,23,58,.10);color:' + NAVY}">${icon(it.d)}</span>
@@ -131,17 +131,8 @@
       70%{box-shadow:0 0 0 10px rgba(187,0,39,0)}
       100%{box-shadow:0 0 0 0 rgba(187,0,39,0)}
     }
-    /* Orange flashing call-to-action (Contacto): glowing ring + soft label blink. */
-    #s911-shell a.s911-flash{position:relative;animation:s911-flash-pulse 1.6s ease-in-out infinite}
-    #s911-shell a.s911-flash .s911-flash-label{animation:s911-flash-blink 1.6s ease-in-out infinite}
-    @keyframes s911-flash-pulse{
-      0%{box-shadow:0 0 0 0 rgba(234,88,12,.55)}
-      70%{box-shadow:0 0 0 9px rgba(234,88,12,0)}
-      100%{box-shadow:0 0 0 0 rgba(234,88,12,0)}
-    }
-    @keyframes s911-flash-blink{ 0%,100%{opacity:1} 50%{opacity:.55} }
     @media(prefers-reduced-motion:reduce){
-      #s911-shell a.s911-flash,#s911-shell a.s911-flash .s911-flash-label,#s911-shell a.s911-alarm{animation:none}
+      #s911-shell a.s911-alarm{animation:none}
     }
     /* Collapsible nav groups (accordion). */
     #s911-shell .s911-ghead{width:100%;display:flex;align-items:center;gap:12px;padding:8px 10px;border:none;border-radius:10px;background:transparent;font:700 13px Inter,sans-serif;color:${VARIANT};cursor:pointer;transition:background .12s}
