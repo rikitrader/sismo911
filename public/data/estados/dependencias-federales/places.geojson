@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","id":"node/2612608301","properties":{"name":"Gran Roque","place":"town","population":"1499"},"geometry":{"type":"Point","coordinates":[-66.67656,11.94786]}},{"type":"Feature","id":"node/5451265232","properties":{"name":"Testigo Iguana","place":"village"},"geometry":{"type":"Point","coordinates":[-63.13275,11.35909]}}]}
