@@ -69,13 +69,16 @@ ${JSON.stringify({ plataforma: rec.platform, autor: rec.author, lugar: rec.place
       messages: [{ role: 'system', content: sys }, { role: 'user', content: user }],
       max_tokens: 900, temperature: 0.3,
     });
-    // Some models return { response }, others OpenAI-style { choices:[{message:{content}}] }.
-    // Use || (not ??): llama-fp8-fast returns response:"" alongside choices, and an
-    // empty string must fall through to the choices content.
-    const text = String(
-      resp?.response || resp?.choices?.[0]?.message?.content || resp?.result?.response ||
-      (typeof resp === 'string' ? resp : ''),
-    ).trim();
+    // The model returns BOTH a plain-text `response` (no JSON) AND OpenAI-style
+    // `choices[0].message.content` (the JSON). Pick whichever candidate actually
+    // contains a brace, so we never grab the brace-less plain-text version.
+    const cands = [
+      resp?.choices?.[0]?.message?.content,
+      resp?.response,
+      resp?.result?.response,
+      typeof resp === 'string' ? resp : '',
+    ].filter((x) => typeof x === 'string') as string[];
+    const text = (cands.find((x) => x.includes('{')) || cands[0] || '').trim();
     const a = text.indexOf('{'), b = text.lastIndexOf('}');
     if (a === -1 || b === -1) { console.error('[blog-cron] AI no-json:', JSON.stringify(resp).slice(0, 300)); return null; }
     const obj = JSON.parse(text.slice(a, b + 1));
