@@ -83,6 +83,17 @@ events.post('/backfill-run', async (c) => {
   const tok = (c.req.header('authorization') || '').replace(/^Bearer\s+/i, '');
   if (!c.env.BLOG_INGEST_TOKEN || tok !== c.env.BLOG_INGEST_TOKEN) return c.json({ error: 'unauthorized' }, 401);
   const b: any = await c.req.json().catch(() => ({}));
+  // KV runtime self-test: write a key from the Worker and read it back
+  // immediately, then again so the caller can tell a genuine write failure from
+  // eventual-consistency lag. Diagnoses why the CACHE namespace stays empty.
+  if (b?.kvtest) {
+    const key = `diag:kv-selftest`;
+    const val = `worker-${Date.now()}`;
+    let putError: string | null = null;
+    try { await c.env.CACHE.put(key, val); } catch (e: any) { putError = String(e?.message ?? e); }
+    const immediate = await c.env.CACHE.get(key).catch((e: any) => `GET_ERR:${e?.message ?? e}`);
+    return c.json({ ok: true, kvtest: true, wrote: val, putError, immediateReadback: immediate, match: immediate === val });
+  }
   try {
     const r = await backfillUsgsHistory(c.env, { years: b?.years, minMag: b?.minMag });
     return c.json({ ok: true, ...r });
