@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { rateLimit, burstLimit, validLatLon, isImageBytes } from '../lib/security';
+import { rateLimit, burstLimit, validLatLon, isImageBytes, nameHasSpam, textHasLink } from '../lib/security';
 import { audit } from '../lib/audit';
 
 // Citizen damage-report map (the "movement" core). PUBLIC reads of APPROVED
@@ -101,24 +101,35 @@ reports.post('/', async (c) => {
   if (!b?.category || !CATEGORIES.has(b.category)) return c.json({ error: 'categoría inválida' }, 400);
   if (!b?.title && !b?.description) return c.json({ error: 'título o descripción requerido' }, 400);
   if (b.severity && !SEVERITIES.has(b.severity)) return c.json({ error: 'severidad inválida' }, 400);
+  // Spam guard at the door: a reporter name or title that is a link/domain, or a
+  // description carrying a promotional link, is rejected (mirrors persons/familia).
+  if (nameHasSpam(b.reporter) || nameHasSpam(b.title) || textHasLink(b.description)) {
+    return c.json({ error: 'contenido_no_permitido', hint: 'No incluyas enlaces ni dominios.' }, 422);
+  }
   const lat = b.lat == null ? null : Number(b.lat);
   const lon = b.lon == null ? null : Number(b.lon);
   if ((lat != null || lon != null) && !validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
 
   // Validate the photo (if any) before we touch the DB.
+  let imageKey: string | null = null;
   if (photoBytes) {
     if (photoBytes.length > 6_000_000) return c.json({ error: 'imagen_muy_grande', maxBytes: 6_000_000 }, 413);
     photoType = ['image/jpeg', 'image/png', 'image/webp'].includes(photoType) ? photoType : 'application/octet-stream';
     if (!isImageBytes(photoBytes, photoType)) return c.json({ error: 'tipo_de_imagen_no_soportado' }, 415);
+    // Content-address the photo by its SHA-256 so identical bytes share one KV
+    // blob (storage dedup) and let us detect re-submissions of the same image.
+    const digest = await crypto.subtle.digest('SHA-256', photoBytes);
+    const hash = [...new Uint8Array(digest)].map((x) => x.toString(16).padStart(2, '0')).join('');
+    imageKey = `report/${hash}`;
+    const dup = await c.env.DB.prepare(
+      `SELECT 1 FROM map_reports WHERE image_key = ? AND created_ms > ? LIMIT 1`
+    ).bind(imageKey, Date.now() - 24 * 60 * 60 * 1000).first();
+    if (dup) return c.json({ error: 'foto_duplicada', hint: 'Esta foto ya fue enviada recientemente.' }, 409);
+    await c.env.PHOTOS.put(imageKey, photoBytes, { metadata: { contentType: photoType } });
   }
 
   const now = Date.now();
   const id = uid('rep');
-  let imageKey: string | null = null;
-  if (photoBytes) {
-    imageKey = `report/${id}`;
-    await c.env.PHOTOS.put(imageKey, photoBytes, { metadata: { contentType: photoType } });
-  }
   await c.env.DB.prepare(
     `INSERT INTO map_reports
       (id, category, severity, status, verification, title, description, lat, lon,
