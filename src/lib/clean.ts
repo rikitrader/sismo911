@@ -20,6 +20,14 @@ const JUNK_NAMES = [
   'xxx', 'xxxx', 'aaa', 'aaaa', 'ninguno', 'ninguna', '.', '..', '...', '-', '--',
 ];
 
+// Known spam phrases that bots have flooded the missing-persons form with. A real
+// missing-person report never carries these as a name. Matched as a substring
+// (case-insensitive) so every variant is caught, including the lone flood-keeper
+// that the namesake-safe flood cleaner intentionally leaves behind.
+export const SPAM_PHRASES = [
+  'simone buratti',
+];
+
 // TLDs that, appearing as a bare domain inside a NAME, mark it as link-spam.
 // Mirrors DOMAIN_RE in lib/security.ts (nameHasSpam) but as a SQL clause so the
 // cleaner can reject spam already sitting in the DB, not just block it at the door.
@@ -41,6 +49,14 @@ export function spamNameWhere(col = 'nombre'): string {
   ].map((x) => `(${x})`).join(' OR ');
 }
 
+// WHERE clause matching a NAME that contains a known spam phrase (substring,
+// case-insensitive). Unlike the flood cleaner this has no count threshold, so the
+// single approved keeper of a spam-name flood is caught too.
+export function spamPhraseWhere(col = 'nombre'): string {
+  const c = `lower(trim(${col}))`;
+  return SPAM_PHRASES.map((p) => `${c} LIKE '%${p.replace(/'/g, "''")}%'`).map((x) => `(${x})`).join(' OR ');
+}
+
 // WHERE clause (without leading WHERE) that matches a junk/corrupted row.
 export function junkWhere(col = 'nombre'): string {
   const list = JUNK_NAMES.map((n) => `'${n.replace(/'/g, "''")}'`).join(', ');
@@ -60,7 +76,7 @@ export interface CleanReport { scanned: number; flagged: number; applied: boolea
 // spam names (e.g. "TRUSTEDF57 - infinityhotel.it") that slipped past the door.
 export async function cleanPersonas(env: Env, opts: { apply?: boolean } = {}): Promise<CleanReport> {
   const apply = !!opts.apply;
-  const where = `moderation = 'approved' AND ((${junkWhere('nombre')}) OR (${spamNameWhere('nombre')}))`;
+  const where = `moderation = 'approved' AND ((${junkWhere('nombre')}) OR (${spamNameWhere('nombre')}) OR (${spamPhraseWhere('nombre')}))`;
   const scanned = (await env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${where}`).first<{ n: number }>())?.n ?? 0;
   if (!apply || scanned === 0) return { scanned, flagged: 0, applied: false };
   await env.DB.prepare(`UPDATE personas SET moderation = 'rejected', updated_at = ? WHERE ${where}`).bind(Date.now()).run();
