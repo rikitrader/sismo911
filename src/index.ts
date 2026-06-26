@@ -17,6 +17,7 @@ import { damageMap } from './routes/damage-map';
 import { reports } from './routes/reports';
 import { chat } from './routes/chat';
 import { acopio } from './routes/acopio';
+import { logistica } from './routes/logistica';
 import { admin } from './routes/admin';
 import { funding } from './routes/funding';
 import { plan } from './routes/plan';
@@ -181,6 +182,7 @@ app.route('/api/sat', satellite);    // satellite/GIS damage analysis (imagery p
 app.route('/api/reports', reports);  // citizen damage-report map + comments + reactions + moderation
 app.route('/api/chat', chat);        // community channel
 app.route('/api/acopio', acopio);    // /api/acopio/status — live status for acopio/hospitales/PC
+app.route('/api/acopio', logistica); // /api/acopio/{inventory,needs,shipments,match,dashboard} — FEMA-style logistics (GET public, writes operator-gated)
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
 app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET public; refresh gated; apify webhook secret-gated)
 app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directory (GET public; writes operator-gated)
