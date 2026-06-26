@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SISMO911 — every-3h disaster→blog autopost orchestrator.
 //
-//   launchd (every 3h) → THIS → scrape Apify (rolling cutoff) → geolocate →
+//   launchd (every 3h) → THIS → GET /api/blog/sources (rolling cutoff) → geolocate →
 //   dedupe vs D1 → write one Spanish field report per NEW post via `claude -p`
 //   → embed source video + poster → POST /api/admin/blog/ingest → live /blog.
 //
@@ -10,11 +10,14 @@
 // Dependency-free (Node 18+ fetch). Article-writing reuses the local `claude`
 // CLI auth — no API key needed.
 //
+// Sources (GDELT/YouTube/Bluesky) are fetched by the Worker on Cloudflare's
+// clean network via GET /api/blog/sources — this Mac's DNS is poisoned for
+// several of those hosts, so the cron never fetches them directly.
+//
 // Env:
-//   APIFY_TOKEN        (or ~/.apify-tokens/apify.env)      — required
-//   BLOG_INGEST_TOKEN  — required (matches the Worker secret)
+//   BLOG_INGEST_TOKEN  — required (reads /api/blog/sources + posts to ingest)
 //   BASE_URL           — default https://sismo911.com
-//   MAX_NEW            — max new articles per run (default 8; protects Apify $)
+//   MAX_NEW            — max new articles per run (default 8)
 //   WINDOW_HOURS       — fallback lookback if no prior run (default 6)
 //   CLAUDE_MODEL       — optional `claude -p --model` override
 //   DRY_RUN=1          — scrape + write, skip the ingest POST
@@ -33,20 +36,9 @@ const MAX_NEW = Number(process.env.MAX_NEW || 8);
 const WINDOW_HOURS = Number(process.env.WINDOW_HOURS || 6);
 const DRY = process.env.DRY_RUN === '1';
 
-function loadApifyToken() {
-  if (process.env.APIFY_TOKEN) return process.env.APIFY_TOKEN;
-  try {
-    const txt = readFileSync(join(HOME, '.apify-tokens/apify.env'), 'utf8');
-    const m = txt.match(/APIFY_TOKEN\s*=\s*(\S+)/);
-    if (m) return m[1];
-  } catch { /* ignore */ }
-  return null;
-}
-const APIFY = loadApifyToken();
 const INGEST = process.env.BLOG_INGEST_TOKEN;
 
 const log = (...a) => console.log(`[${new Date().toISOString()}]`, ...a);
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------------- state (rolling cutoff) ----------------
 function loadState() {
@@ -74,69 +66,24 @@ function geolocate(caption) {
 }
 function titleCase(s) { return String(s).replace(/\b\w/g, (c) => c.toUpperCase()); }
 
-// ---------------- Apify (REST, no SDK) ----------------
-async function runActor(actor, input) {
-  if (!APIFY) throw new Error('no APIFY_TOKEN');
-  // Apify REST identifies actors as owner~actor (tilde), not owner/actor.
-  const actorId = actor.replace('/', '~');
-  const start = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY}`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input),
-  }).then((r) => r.json());
-  const runId = start?.data?.id;
-  const dsId = start?.data?.defaultDatasetId;
-  if (!runId) throw new Error(`actor ${actor} did not start: ${JSON.stringify(start).slice(0, 200)}`);
-  for (let i = 0; i < 40; i++) {
-    await sleep(6000);
-    const st = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY}`).then((r) => r.json());
-    const s = st?.data?.status;
-    if (s === 'SUCCEEDED') break;
-    if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(s)) throw new Error(`actor ${actor} ${s}`);
-  }
-  const items = await fetch(`https://api.apify.com/v2/datasets/${dsId}/items?token=${APIFY}&clean=true&format=json`).then((r) => r.json());
-  return Array.isArray(items) ? items : [];
-}
-
-const KW = ['terremoto venezuela', 'sismo venezuela', 'temblor venezuela'];
-const TAGS = ['terremotovenezuela', 'sismovenezuela', 'temblorvenezuela'];
-
-function tsOf(v) { const n = typeof v === 'number' ? (v < 2e12 ? v * 1000 : v) : Date.parse(v); return Number.isFinite(n) ? n : 0; }
-
+// ---------------- free sources (fetched by the Worker on CF's clean network) ----------------
+// This host Mac has poisoned local DNS for several external API hosts, so the
+// cron does NOT fetch GDELT/YouTube/Bluesky directly — it asks the Worker
+// (GET /api/blog/sources) to do it from Cloudflare's network and return
+// normalized candidates. anyOk=false only when the endpoint itself is
+// unreachable (don't advance the cutoff in that case).
 async function scrape(cutoffMs) {
-  const out = [];
-  let anyOk = false;
-  const sinceDate = new Date(cutoffMs).toISOString().slice(0, 10);
-  const tasks = [
-    ['clockworks/tiktok-scraper', { searchQueries: KW, hashtags: TAGS, resultsPerPage: 12, oldestPostDateUnified: sinceDate }, (it) => ({
-      platform: 'tiktok', id: it.id || it.videoMeta?.id || it.webVideoUrl,
-      author: it.authorMeta?.name || it.authorMeta?.nickName || '', caption: it.text || '',
-      url: it.webVideoUrl || '', image: it.videoMeta?.coverUrl || it.covers?.default || '',
-      video: it.webVideoUrl || '', ts: tsOf(it.createTimeISO || it.createTime),
-      views: it.playCount || 0, likes: it.diggCount || 0, comments: it.commentCount || 0,
-    })],
-    ['apify/instagram-hashtag-scraper', { hashtags: TAGS, resultsLimit: 18 }, (it) => ({
-      platform: 'instagram', id: it.id || it.shortCode,
-      author: it.ownerUsername || '', caption: it.caption || '',
-      url: it.url || (it.shortCode ? `https://www.instagram.com/p/${it.shortCode}/` : ''),
-      image: it.displayUrl || '', video: it.videoUrl || (it.type === 'Video' ? it.url : ''),
-      ts: tsOf(it.timestamp), views: it.videoViewCount || 0, likes: it.likesCount || 0, comments: it.commentsCount || 0,
-    })],
-    ['streamers/youtube-scraper', { searchKeywords: KW.join(', '), maxResults: 12, dateFilter: 'week' }, (it) => ({
-      platform: 'youtube', id: it.id || it.videoId,
-      author: it.channelName || '', caption: `${it.title || ''}. ${it.text || it.description || ''}`,
-      url: it.url || (it.id ? `https://www.youtube.com/watch?v=${it.id}` : ''),
-      image: it.thumbnailUrl || '', video: it.url || (it.id ? `https://www.youtube.com/watch?v=${it.id}` : ''),
-      ts: tsOf(it.date || it.uploadDate), views: it.viewCount || 0, likes: it.likes || 0, comments: it.commentsCount || 0,
-    })],
-  ];
-  for (const [actor, input, map] of tasks) {
-    try {
-      const items = await runActor(actor, input);
-      anyOk = true;
-      log(`  ${actor}: ${items.length} items`);
-      for (const it of items) { const r = map(it); if (r.id && r.caption) out.push(r); }
-    } catch (e) { log(`  ${actor} FAILED: ${e.message}`); }
+  const url = `${BASE}/api/blog/sources?since=${cutoffMs}`;
+  try {
+    const res = await fetch(url, { headers: { authorization: `Bearer ${INGEST}` } });
+    if (!res.ok) { log(`  /api/blog/sources HTTP ${res.status}`); return { posts: [], anyOk: false }; }
+    const j = await res.json();
+    log(`  sources counts: ${JSON.stringify(j.counts)} → ${j.candidates?.length || 0} candidates`);
+    return { posts: j.candidates || [], anyOk: true };
+  } catch (e) {
+    log(`  /api/blog/sources FAILED: ${e.message}`);
+    return { posts: [], anyOk: false };
   }
-  return { posts: out, anyOk };
 }
 
 // ---------------- article writing via `claude -p` ----------------
@@ -181,8 +128,7 @@ function slugify(s) {
 
 // ---------------- main ----------------
 (async () => {
-  if (!APIFY) { log('FATAL: no APIFY_TOKEN'); process.exit(1); }
-  if (!INGEST && !DRY) { log('FATAL: no BLOG_INGEST_TOKEN (set DRY_RUN=1 to test scrape only)'); process.exit(1); }
+  if (!INGEST) { log('FATAL: no BLOG_INGEST_TOKEN (required to read /api/blog/sources and ingest)'); process.exit(1); }
 
   const state = loadState();
   const cutoff = state.lastRun ? Date.parse(state.lastRun) : Date.now() - WINDOW_HOURS * 3600_000;
@@ -198,7 +144,7 @@ function slugify(s) {
 
   const { posts: scraped, anyOk } = await scrape(cutoff);
   log(`scraped ${scraped.length} raw posts (scrape ok: ${anyOk})`);
-  if (!anyOk) { log('ABORT: every actor failed (e.g. Apify quota) — NOT advancing cutoff so the window retries next run'); return; }
+  if (!anyOk) { log('ABORT: /api/blog/sources unreachable — NOT advancing cutoff so the window retries next run'); return; }
 
   // normalize + geolocate + dedupe + cutoff filter
   const seen = new Set();
