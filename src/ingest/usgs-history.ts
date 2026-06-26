@@ -76,42 +76,31 @@ export async function backfillUsgsHistory(env: Env, opts: { years?: number; minM
   return { years, minMag, fetched, written, failedYears };
 }
 
-// One-time bootstrap (cron). On a FRESH/empty D1 the historical archive is
-// blank until someone hits the manual trigger; this auto-populates it once.
-// Runs in its own staggered cron invocation ('5 * * * *') so it gets a full
-// subrequest budget. Idempotent + self-disabling via a KV flag:
-//   - flag already set            → no-op (1 KV read)
-//   - D1 already has the archive  → just set the flag (no fetch needed)
-//   - otherwise                   → run the full backfill, set flag on success
-const BOOTSTRAP_KEY = 'history:bootstrapped';
+// One-time bootstrap (cron). On a FRESH/empty D1 the historical archive is blank
+// until someone hits the manual trigger; this auto-populates it once. Runs in its
+// own staggered cron invocation ('5 * * * *') so it gets a full subrequest budget.
+//
+// GUARD = the D1 row count, NOT a KV flag. The `events` count is the truest "is
+// this a fresh DB?" signal and gives the one-time property for free: once the
+// backfill has run, count ≥ threshold forever → it never backfills again, and the
+// upsert is idempotent if two ticks ever overlap. (We deliberately do NOT depend
+// on KV here: on this deployment Worker-side KV writes were observed not to
+// persist — the CACHE namespace stayed empty — so a KV flag would silently never
+// latch. The COUNT(*) is one cheap indexed read per :05 tick.) Each run is logged
+// to ingest_log so every tick is observable.
 const FRESH_THRESHOLD = 500; // events already present ⇒ treat as populated
 
 export async function bootstrapHistory(env: Env): Promise<Record<string, unknown>> {
-  // Latch the KV flag and record the outcome to ingest_log so EVERY :05 tick is
-  // observable (otherwise the no-op/already-populated branches leave no trace and
-  // a swallowed KV-put failure is invisible). Returns whether the flag is set.
-  const latch = async (note: string, count: number): Promise<boolean> => {
-    let ok = true;
-    try { await env.CACHE.put(BOOTSTRAP_KEY, String(Date.now())); }
-    catch (e: any) { ok = false; note = `${note};kv-put-failed:${e?.message ?? e}`; }
-    await recordIngest(env, 'history-bootstrap', ok, count, note).catch(() => {});
-    return ok;
-  };
-
-  if (await env.CACHE.get(BOOTSTRAP_KEY).catch(() => null)) {
-    await recordIngest(env, 'history-bootstrap', true, 0, 'skip:already-bootstrapped').catch(() => {});
-    return { skipped: 'already-bootstrapped' };
-  }
-
   const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM events').first<{ n: number }>().catch(() => null);
   const count = Number(row?.n ?? 0);
+
   if (count >= FRESH_THRESHOLD) {
-    const latched = await latch('skip:already-populated', count);
-    return { skipped: 'already-populated', count, latched };
+    await recordIngest(env, 'history-bootstrap', true, count, 'skip:already-populated').catch(() => {});
+    return { skipped: 'already-populated', count };
   }
 
   const report = await backfillUsgsHistory(env, { years: 60, minMag: 0 });
-  // Only latch the flag on a clean run so a partial/failed fetch retries next tick.
-  const latched = report.failedYears.length === 0 ? await latch('bootstrapped', report.written) : false;
-  return { bootstrapped: true, priorCount: count, latched, ...report };
+  await recordIngest(env, 'history-bootstrap', report.failedYears.length === 0, report.written,
+    `bootstrapped:${report.written}${report.failedYears.length ? `;failedSpans:${report.failedYears.length}` : ''}`).catch(() => {});
+  return { bootstrapped: true, priorCount: count, ...report };
 }
