@@ -58,6 +58,12 @@
     </div>
     <div><label for="title">Título corto</label><input id="title" maxlength="140" placeholder="Ej: Grietas en edificio Residencias La Paz"></div>
     <div><label for="description">Descripción *</label><textarea id="description" rows="3" maxlength="2000" placeholder="¿Qué ocurre? ¿Hay personas en riesgo?"></textarea></div>
+    <div>
+      <label for="photo">Foto (opcional)</label>
+      <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment">
+      <img id="preview" class="hidden mt-2 rounded-lg max-h-48 w-auto border border-outline-variant" alt="Vista previa">
+      <p class="text-xs text-on-surface-variant mt-1">JPG, PNG o WebP · máx. 6 MB. La foto se publica solo tras revisión.</p>
+    </div>
     <div class="grid grid-cols-2 gap-3">
       <div><label for="municipio">Municipio</label><input id="municipio" placeholder="Ej: Libertador"></div>
       <div><label for="parroquia">Parroquia / sector</label><input id="parroquia" placeholder="Ej: El Valle"></div>
@@ -112,14 +118,26 @@ CATS.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';
 SEVS.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=l;b.onclick=()=>{document.querySelectorAll('#sevs .chip').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');document.getElementById('severity').value=v;};sevBox.appendChild(b);});
 let lat=null,lon=null;
 document.getElementById('geo').onclick=()=>{const s=document.getElementById('geostat');s.textContent='Obteniendo ubicación…';navigator.geolocation.getCurrentPosition(p=>{lat=p.coords.latitude;lon=p.coords.longitude;s.textContent='✓ Ubicación capturada (se publicará redondeada).';},()=>{s.textContent='No se pudo obtener ubicación. Indica municipio/parroquia.';});};
+const photoInput=document.getElementById('photo'),preview=document.getElementById('preview');
+photoInput.onchange=()=>{const f=photoInput.files&&photoInput.files[0];const msg=document.getElementById('msg');
+  if(!f){preview.classList.add('hidden');return;}
+  if(f.size>6_000_000){msg.style.color='#bb0027';msg.textContent='La foto supera 6 MB. Elige una más liviana.';photoInput.value='';preview.classList.add('hidden');return;}
+  preview.src=URL.createObjectURL(f);preview.classList.remove('hidden');};
 document.getElementById('f').onsubmit=async e=>{e.preventDefault();const msg=document.getElementById('msg'),btn=document.getElementById('submit');
   const category=document.getElementById('category').value,description=document.getElementById('description').value.trim();
   if(!category){msg.style.color='#bb0027';msg.textContent='Selecciona un tipo de reporte.';return;}
   if(!description){msg.style.color='#bb0027';msg.textContent='Agrega una descripción.';return;}
   btn.disabled=true;btn.textContent='Enviando…';
-  const body={category,severity:document.getElementById('severity').value||null,title:document.getElementById('title').value,description,municipio:document.getElementById('municipio').value,parroquia:document.getElementById('parroquia').value,lat,lon};
-  try{const r=await fetch('/api/reports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json();
-    if(r.ok){msg.style.color='#2e7d32';msg.textContent='✓ '+(d.message||'Reporte recibido. Aparecerá tras revisión.');document.getElementById('f').reset();document.querySelectorAll('.chip').forEach(x=>x.classList.remove('sel'));document.getElementById('category').value='';}
+  const fd=new FormData();
+  fd.append('category',category);fd.append('description',description);
+  const sev=document.getElementById('severity').value;if(sev)fd.append('severity',sev);
+  const title=document.getElementById('title').value;if(title)fd.append('title',title);
+  const muni=document.getElementById('municipio').value;if(muni)fd.append('municipio',muni);
+  const parr=document.getElementById('parroquia').value;if(parr)fd.append('parroquia',parr);
+  if(lat!=null)fd.append('lat',lat);if(lon!=null)fd.append('lon',lon);
+  const f=photoInput.files&&photoInput.files[0];if(f)fd.append('photo',f);
+  try{const r=await fetch('/api/reports',{method:'POST',body:fd});const d=await r.json();
+    if(r.ok){msg.style.color='#2e7d32';msg.textContent='✓ '+(d.message||'Reporte recibido. Aparecerá tras revisión.');document.getElementById('f').reset();document.querySelectorAll('.chip').forEach(x=>x.classList.remove('sel'));document.getElementById('category').value='';preview.classList.add('hidden');}
     else{msg.style.color='#bb0027';msg.textContent=d.error||'Error al enviar.';}
   }catch{msg.style.color='#bb0027';msg.textContent='Sin conexión. Intenta de nuevo.';}
   btn.disabled=false;btn.textContent='Enviar reporte';};
