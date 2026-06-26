@@ -1,23 +1,27 @@
 name: Deploy (Cloudflare)
 on:
   push:
+    branches: [main]        # every merge to main re-asserts the full main → prevents stale-worktree overwrites
     tags: ['v*.*.*']
   workflow_dispatch:
+# Serialize prod deploys so concurrent merges can't race; the newest main wins.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: prod
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 10 }
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - name: Apply migrations + deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          pnpm db:migrate:remote
-          pnpm deploy
+          npm run db:migrate:remote
+          npm run deploy
