@@ -1,4 +1,5 @@
 import type { Env } from '../types';
+import { chunk } from '../lib/sql';
 
 // Photo-analysis enrichment pass for `personas` (RAV + any photo-bearing row).
 //
@@ -46,6 +47,48 @@ function mergeTags(tagsJson: string | null, photoFlag: string): string {
   tags = tags.filter((t) => !t.startsWith('photo:'));
   tags.push(`photo:${photoFlag}`);
   return JSON.stringify([...new Set(tags)]);
+}
+
+// AI-free content-hash backfill so the dedupePersonas `phash` mode can actually
+// run. analyzeRavPhotos welds photo_phash to the slow Workers-AI vision call on a
+// single `photo_caption IS NULL` queue (24/tick), so populating ~58k photos would
+// take MONTHS and the phash dedupe stays a no-op. This pass hashes ONLY rows that
+// already have a reliable R2 mirror — bytes are always available, so there's no
+// dead-URL handling, no AI, no quota: R2 get + SHA-256 + a batched UPDATE. It
+// never writes a sentinel into photo_phash (the dedupe groups by it, so a sentinel
+// would collapse every failed row into one bogus duplicate group) — failures just
+// leave the row NULL to retry. Query-driven + idempotent; the cron grinds it down.
+// Leaves photo_caption untouched, so the vision queue is unaffected.
+export async function backfillPhashes(
+  env: Env,
+  batch = 250,
+): Promise<{ scanned: number; hashed: number; failed: number; remaining: number }> {
+  if (!env.DESAP_FOTOS) return { scanned: 0, hashed: 0, failed: 0, remaining: 0 };
+  const lim = Math.min(Math.max(batch, 1), 400);
+  const phashPending = `(photo_phash IS NULL OR trim(photo_phash) = '') AND trim(coalesce(foto_r2,'')) <> ''`;
+  const { results } = await env.DB.prepare(
+    `SELECT id, foto_r2 FROM personas WHERE ${phashPending} ORDER BY updated_at DESC LIMIT ?`,
+  ).bind(lim).all<{ id: string; foto_r2: string }>();
+  const rows = results ?? [];
+  let failed = 0;
+  const updates: D1PreparedStatement[] = [];
+  for (const row of rows) {
+    try {
+      const o = await env.DESAP_FOTOS.get(row.foto_r2);
+      const buf = o ? new Uint8Array(await o.arrayBuffer()) : null;
+      if (!buf || !buf.length) { failed++; continue; }
+      const phash = await sha256Hex(buf);
+      updates.push(env.DB.prepare(`UPDATE personas SET photo_phash = ? WHERE id = ?`).bind(phash, row.id));
+    } catch (e: any) { failed++; console.warn('[phash-backfill] failed', row.id, e?.message ?? e); }
+  }
+  // Batch the writes (≤50/statement-group) so N hashes cost a few D1 subrequests,
+  // not N — keeps the cron tick well under the Worker subrequest budget.
+  for (const part of chunk(updates, 50)) await env.DB.batch(part);
+  const remaining = (await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM personas WHERE ${phashPending}`,
+  ).first<{ n: number }>())?.n ?? 0;
+  console.log(`[phash-backfill] scanned ${rows.length}: hashed ${updates.length}, failed ${failed}, remaining ${remaining}`);
+  return { scanned: rows.length, hashed: updates.length, failed, remaining };
 }
 
 export interface RavPhotoResult { scanned: number; analyzed: number; hashed: number; failed: number; }
