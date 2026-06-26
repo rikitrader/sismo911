@@ -176,6 +176,10 @@ app.route('/plan', plan);  // invitation-only business-plan slide deck (own invi
 // Per-person social cards: a shared /familia?persona=<id> link rewrites the page's
 // OG/Twitter meta to the person's photo + name, so the preview shows THEM (→ virality).
 app.get('/familia', async (c) => {
+  // Legacy "open a search case" deep-links (/familia?reportar=1&lugar=…&ref=…) now
+  // re-flow to the unified /reportar form — the Familia/Check-in page has been
+  // retired in favour of the DESAPARECIDOS (/personas) + Reportar flow.
+  if (c.req.query('reportar')) return c.redirect('/reportar', 302);
   const assetRes = await c.env.ASSETS.fetch(new Request(new URL('/familia', c.req.url).toString(), c.req.raw));
   const base = new Response(assetRes.body, assetRes);
   setSecurityHeaders({ header: (k: string, v: string) => base.headers.set(k, v) } as any);
