@@ -29,7 +29,7 @@
   .tnum{font-variant-numeric:tabular-nums}
   /* Command map: the centerpiece. Framed like a situational display. */
   #acopioMap{height:520px;border-radius:14px;z-index:0;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 12px 30px -12px rgba(0,23,58,.45);border:1px solid #c4c6d0}
-  @media(max-width:640px){#acopioMap{height:380px}}
+  @media(max-width:640px){#acopioMap{height:360px}.cmd-band h1{font-size:1.6rem;line-height:1.15}}
   /* Command header band — navy with a faint topographic grid. */
   .cmd-band{background:linear-gradient(180deg,#00173a 0%,#001a44 100%);color:#fff;position:relative;overflow:hidden}
   .cmd-band::after{content:"";position:absolute;inset:0;opacity:.10;pointer-events:none;
@@ -58,7 +58,7 @@
         <h1 class="font-display font-extrabold text-3xl sm:text-4xl leading-tight">Acopio, Hospitales y Protección Civil</h1>
         <p class="text-white/75 mt-2 max-w-2xl text-sm sm:text-[15px]">Mapa nacional de respuesta sísmica: centros de acopio/refugio (universidades, estadios, polideportivos), <b class="text-white">hospitales tipo IV</b> y sedes de <b class="text-white">Protección Civil y Bomberos</b>. Toca una capa para encenderla; toca un punto para dirección, llamar o cómo llegar.</p>
       </div>
-      <div class="flex flex-col gap-2 shrink-0">
+      <div class="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
         <a href="/logistica" class="inline-flex items-center justify-center gap-2 bg-[#c9a227] text-[#00173a] font-extrabold rounded-lg px-4 py-2.5 text-sm hover:brightness-105">⬡ Centro de Comando Logístico →</a>
         <button id="csv" class="inline-flex items-center justify-center gap-2 bg-white/10 ring-1 ring-white/25 text-white font-semibold rounded-lg px-4 py-2.5 text-sm hover:bg-white/20">⬇︎ Exportar CSV</button>
       </div>

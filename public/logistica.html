@@ -15,6 +15,15 @@
   .tnum{font-variant-numeric:tabular-nums}
   .mono{font-family:'JetBrains Mono',monospace}
   #netMap{height:420px;border-radius:14px;z-index:0;border:1px solid #c4c6d0;box-shadow:0 12px 30px -12px rgba(0,23,58,.4)}
+  /* Section tabs scroll horizontally on small screens instead of wrapping. */
+  .segbar{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .segbar::-webkit-scrollbar{display:none}
+  .seg{white-space:nowrap;flex:0 0 auto}
+  @media(max-width:640px){
+    #netMap{height:300px}
+    .cmd-band h1{font-size:1.6rem;line-height:1.15}
+    .kpi{padding:11px 12px}
+  }
   .cmd-band{background:linear-gradient(180deg,#00173a 0%,#001a44 100%);color:#fff;position:relative;overflow:hidden}
   .cmd-band::after{content:"";position:absolute;inset:0;opacity:.10;pointer-events:none;
     background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:34px 34px}
@@ -43,11 +52,11 @@
         <h1 class="font-display font-extrabold text-3xl sm:text-4xl leading-tight">Centro de Comando Logístico</h1>
         <p class="text-white/75 mt-2 max-w-2xl text-sm">Inventario por insumo, necesidades priorizadas, coincidencias de despacho por cercanía, envíos con <b class="text-white">cadena de custodia</b> y panel de mando de la red nacional de centros de acopio.</p>
       </div>
-      <div class="flex flex-col items-end gap-2 shrink-0">
+      <div class="flex flex-col items-start sm:items-end gap-2 shrink-0 w-full sm:w-auto">
         <span id="rolebadge" class="pill" style="background:#44474f">· · ·</span>
-        <div class="flex gap-2">
-          <a href="/acopio" class="inline-flex items-center gap-1.5 bg-white/10 ring-1 ring-white/25 text-white font-semibold rounded-lg px-3 py-2 text-sm hover:bg-white/20">← Mapa de acopio</a>
-          <button id="refresh" class="inline-flex items-center gap-1.5 bg-[#c9a227] text-[#00173a] font-extrabold rounded-lg px-3 py-2 text-sm hover:brightness-105">↻ Actualizar</button>
+        <div class="flex gap-2 w-full sm:w-auto">
+          <a href="/acopio" class="inline-flex flex-1 sm:flex-none items-center justify-center gap-1.5 bg-white/10 ring-1 ring-white/25 text-white font-semibold rounded-lg px-3 py-2 text-sm hover:bg-white/20">← Mapa de acopio</a>
+          <button id="refresh" class="inline-flex flex-1 sm:flex-none items-center justify-center gap-1.5 bg-[#c9a227] text-[#00173a] font-extrabold rounded-lg px-3 py-2 text-sm hover:brightness-105">↻ Actualizar</button>
         </div>
         <span id="updated" class="text-[11px] text-white/55 mono"></span>
       </div>
@@ -75,8 +84,8 @@
     </div>
   </div>
 
-  <!-- Section tabs -->
-  <div class="flex flex-wrap gap-1.5 mb-4 bg-white border border-outline-variant/60 rounded-xl p-1.5 w-fit">
+  <!-- Section tabs (horizontally scrollable on mobile) -->
+  <div class="segbar mb-4 bg-white border border-outline-variant/60 rounded-xl p-1.5 w-full lg:w-fit">
     <button class="seg on" data-tab="needs">Necesidades</button>
     <button class="seg" data-tab="match">Coincidencias / Despacho</button>
     <button class="seg" data-tab="ships">Envíos &amp; Custodia</button>
@@ -264,14 +273,14 @@ function renderNeeds(){
 function renderMatches(){
   $('#matchcount').textContent=`${MATCHES.length} sugerencias`;
   $('#matchlist').innerHTML=MATCHES.length?MATCHES.map(s=>{const m=COM[s.commodity]||['📦',s.commodity,'u','#64748b'];const p=PRI[s.priority]||PRI[3];
-    return `<div class="flex items-center gap-3 p-3 border-t border-outline-variant/40">
+    return `<div class="flex flex-wrap items-center gap-x-3 gap-y-2 p-3 border-t border-outline-variant/40">
       <span class="text-lg">${m[0]}</span>
-      <div class="flex-1 min-w-0 text-sm">
+      <div class="flex-1 min-w-0 text-sm" style="min-width:160px">
         <div><b>${esc(s.origin_name)}</b> <span class="text-on-surface-variant">→</span> <b>${esc(s.dest_name)}</b></div>
         <div class="text-xs text-on-surface-variant">${m[1]} · necesita <b class="mono">${fmt(s.qty_needed)}</b>, disponible <b class="mono">${fmt(s.qty_available)} ${m[2]}</b>${s.km!=null?` · <span class="mono">${fmt(s.km)} km</span>`:''}</div>
       </div>
       <span class="pill" style="background:${p[1]}">${p[0]}</span>
-      ${IS_OP?`<button class="text-xs font-bold bg-primary text-white rounded-lg px-2.5 py-1.5" data-dispatch='${esc(JSON.stringify({o:s.origin_id,d:s.dest_id,c:s.commodity,q:Math.min(s.qty_needed,s.qty_available)}))}'>🚚 Crear envío</button>`:''}
+      ${IS_OP?`<button class="text-xs font-bold bg-primary text-white rounded-lg px-2.5 py-1.5 ml-auto" data-dispatch='${esc(JSON.stringify({o:s.origin_id,d:s.dest_id,c:s.commodity,q:Math.min(s.qty_needed,s.qty_available)}))}'>🚚 Crear envío</button>`:''}
     </div>`;}).join(''):'<p class="p-4 text-sm text-on-surface-variant">Sin coincidencias. Carga inventario y registra necesidades para activar el motor.</p>';
   if(IS_OP)document.querySelectorAll('[data-dispatch]').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.dispatch);prefillShip(d);});
 }
