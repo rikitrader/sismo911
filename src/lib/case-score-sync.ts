@@ -18,6 +18,7 @@
 
 import type { Env } from '../types';
 import { scoreCase, type CaseSignals, type Priority } from './case-score';
+import { queryByIds } from './sql';
 
 const FAM = 'fam-';
 const isFam = (id: string) => id.startsWith(FAM);
@@ -103,15 +104,16 @@ export async function sweepCaseScores(env: Env, opts: { famLimit?: number; now?:
   const famLimit = opts.famLimit ?? 300;
   const quake = await quakeRef(env);
 
-  // Grouped docket stats for a set of person_ids in ONE query (subrequest-frugal).
+  // Grouped docket stats for a set of person_ids. Chunked under the D1 param cap:
+  // a single IN(...) over 100s of ids used to silently 500 (swallowed by .catch),
+  // zeroing every docket count past ~100 ids and corrupting their scores.
   const docketMap = async (ids: string[]) => {
     const m: Record<string, { c: number; last: number | null }> = {};
     if (!ids.length) return m;
-    const ph = ids.map(() => '?').join(',');
-    const { results = [] } = await env.DB.prepare(
+    const results = await queryByIds<any>(env.DB, ids, (ph) =>
       `SELECT person_id, COUNT(*) AS c, MAX(created_ms) AS last FROM person_events
        WHERE person_id IN (${ph}) GROUP BY person_id`
-    ).bind(...ids).all<any>().catch(() => ({ results: [] as any[] }));
+    ).catch(() => [] as any[]);
     for (const r of results) m[r.person_id] = { c: Number(r.c), last: r.last ?? null };
     return m;
   };
@@ -151,13 +153,13 @@ export async function sweepCaseScores(env: Env, opts: { famLimit?: number; now?:
   let famChanged = 0;
   if (famRows.length) {
     const ids = famRows.map((r: any) => FAM + r.id);
-    const ph = ids.map(() => '?').join(',');
     const dMap = await docketMap(ids);
     // One grouped read for BOTH current priority and incident_type (skip-if-unchanged + signal).
+    // Chunked under the D1 param cap (same silent-500 hazard as docketMap).
     const meta: Record<string, { priority: string | null; incident: string | null }> = {};
-    const { results: mRows = [] } = await env.DB.prepare(
+    const mRows = await queryByIds<any>(env.DB, ids, (ph) =>
       `SELECT person_id, priority, incident_type FROM case_meta WHERE person_id IN (${ph})`
-    ).bind(...ids).all<any>().catch(() => ({ results: [] as any[] }));
+    ).catch(() => [] as any[]);
     for (const m of mRows) meta[m.person_id] = { priority: m.priority ?? null, incident: m.incident_type ?? null };
 
     const ts = Date.now();
