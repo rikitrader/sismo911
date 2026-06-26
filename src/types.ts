@@ -16,6 +16,9 @@ export interface Env {
   ACCESS_AUD?: string;
   ALLOWED_ORIGINS?: string;
   ADMIN_BOOTSTRAP_TOKEN?: string;
+  // Shared secret the local every-3h blog cron uses to POST new posts to
+  // /api/admin/blog/ingest. Set via `wrangler secret put BLOG_INGEST_TOKEN`.
+  BLOG_INGEST_TOKEN?: string;
   // Web Push
   VAPID_PUBLIC_KEY?: string;
   // Cloudflare Workers AI (situation reports). Optional binding.
