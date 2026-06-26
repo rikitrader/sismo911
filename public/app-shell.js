@@ -10,7 +10,7 @@
   const NAV_PINNED = [
     { label: 'Personas Desaparecidas', href: '/personas', m: ['/personas'], alarm: true, d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zm12.5 1.5L19 15m0 0l-2.5-2.5M19 15l2.5-2.5M19 15l-2.5 2.5' },
     { label: 'Casos / Expedientes', href: '/casos', m: ['/casos'], solid: true, d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
-    { label: 'Terremotos EN-VIVO', href: '/', m: ['/'], d: 'M3 12h4l2 7 4-14 2 7h6' },
+    { label: 'Terremotos EN-VIVO', href: '/', m: ['/'], gold: true, d: 'M3 12h4l2 7 4-14 2 7h6' },
   ];
 
   // The rest collapse into a few accordion groups so the sidebar stays short.
@@ -36,20 +36,22 @@
       { label: 'Herramientas + Cruz Roja', href: '/herramientas', m: ['/herramientas'], d: 'M14.7 6.3a4 4 0 00-5.4 5.4l-5 5a1.5 1.5 0 002 2l5-5a4 4 0 005.4-5.4l-2.3 2.3-2-2 2.3-2.3z' },
       { label: 'Recursos', href: '/recursos', m: ['/recursos'], d: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v14M4 7v10l8 4' },
       { label: 'Red Global de Ayuda', href: '/red-ayuda', m: ['/red-ayuda'], d: 'M12 21a9 9 0 100-18 9 9 0 000 18zm0-18c2.6 2.7 2.6 15.3 0 18M3 12h18' },
-      { label: 'Donar / Recaudar', href: '/donar', m: ['/donar', '/campana', '/recaudar'], d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z' },
+      { label: 'Donar', href: '/donar', m: ['/donar', '/campana', '/recaudar'], d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z' },
     ] },
     { label: 'Información', d: 'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13', items: [
       { label: 'Noticias', href: '/blog', m: ['/blog'], d: 'M4 4h16v16H4z M8 8h8M8 12h8M8 16h5' },
       { label: 'Radio', href: '/comms', m: ['/comms'], d: 'M4 11a16 16 0 0116 0M7 14a10 10 0 0110 0M10 17a5 5 0 014 0M12 20h.01' },
       { label: 'Guía', href: '/guia', m: ['/guia'], d: 'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13' },
-      { label: 'Contacto', href: '/contacto', m: ['/contacto'], d: 'M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.81.36 1.6.7 2.34a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0122 16.92z' },
     ] },
   ];
+
+  // Contacto lives outside the groups as its own flashing call-to-action button.
+  const NAV_CONTACTO = { label: 'Contacto', href: '/contacto', m: ['/contacto'], flash: true, d: 'M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.81.36 1.6.7 2.34a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0122 16.92z' };
 
   // Admin console stays pinned at the bottom of the nav list.
   const NAV_ADMIN = { label: 'Consola', href: '/admin', m: ['/admin'], d: 'M12 3l8 3.5v5c0 4-3 7-8 9-5-2-8-5-8-9v-5z M9.5 12l2 2 3.5-4' };
 
-  const NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0';
+  const NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0', GOLD = '#c9a227', GREEN = '#1f9d57';
   const path = (location.pathname.replace(/\.html$/, '') || '/');
   const active = (it) => it.m.some((x) => x === '/' ? path === '/' : (path === x || path.startsWith(x + '/')));
 
@@ -68,6 +70,19 @@
       return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${NAVY};color:#fff;box-shadow:0 1px 3px rgba(0,23,58,.4)">
       <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.18);color:#fff">${icon(it.d)}</span>
       ${it.label}</a>`;
+    }
+    if (it.gold) {
+      // Solid Venezuela-flag gold feature button with navy text/icon (the flag's yellow+blue pairing).
+      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${GOLD};color:${NAVY};box-shadow:0 1px 3px rgba(201,162,39,.45)">
+      <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
+      ${it.label}</a>`;
+    }
+    if (it.flash) {
+      // Solid green flashing call-to-action — gentle glow + label blink to draw the eye.
+      const on2 = active(it);
+      return `<a href="${it.href}" class="s911-flash" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${GREEN};color:#fff;box-shadow:0 1px 3px rgba(31,157,87,.4)${on2 ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.20);color:#fff">${icon(it.d)}</span>
+      <span class="s911-flash-label">${it.label}</span></a>`;
     }
     return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;font:600 13.5px Inter,sans-serif;text-decoration:none;${on ? 'background:rgba(0,23,58,.06);color:' + NAVY : 'color:' + VARIANT}" onmouseover="if(!${on})this.style.background='#eeeef0'" onmouseout="if(!${on})this.style.background='transparent'">
       <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;${on ? 'background:' + NAVY + ';color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)' : 'background:rgba(0,23,58,.10);color:' + NAVY}">${icon(it.d)}</span>
@@ -116,6 +131,18 @@
       70%{box-shadow:0 0 0 10px rgba(187,0,39,0)}
       100%{box-shadow:0 0 0 0 rgba(187,0,39,0)}
     }
+    /* Green flashing call-to-action (Contacto): glowing ring + soft label blink. */
+    #s911-shell a.s911-flash{position:relative;animation:s911-flash-pulse 1.6s ease-in-out infinite}
+    #s911-shell a.s911-flash .s911-flash-label{animation:s911-flash-blink 1.6s ease-in-out infinite}
+    @keyframes s911-flash-pulse{
+      0%{box-shadow:0 0 0 0 rgba(31,157,87,.55)}
+      70%{box-shadow:0 0 0 9px rgba(31,157,87,0)}
+      100%{box-shadow:0 0 0 0 rgba(31,157,87,0)}
+    }
+    @keyframes s911-flash-blink{ 0%,100%{opacity:1} 50%{opacity:.55} }
+    @media(prefers-reduced-motion:reduce){
+      #s911-shell a.s911-flash,#s911-shell a.s911-flash .s911-flash-label,#s911-shell a.s911-alarm{animation:none}
+    }
     /* Collapsible nav groups (accordion). */
     #s911-shell .s911-ghead{width:100%;display:flex;align-items:center;gap:12px;padding:8px 10px;border:none;border-radius:10px;background:transparent;font:700 13px Inter,sans-serif;color:${VARIANT};cursor:pointer;transition:background .12s}
     #s911-shell .s911-ghead:hover{background:#eeeef0}
@@ -145,7 +172,7 @@
       <img src="/logo.svg" alt="SISMO911" style="width:46px;height:46px">
       <div style="line-height:1"><div style="font:800 30px 'Public Sans',sans-serif;color:${NAVY};letter-spacing:-.01em">SISMO911</div></div>
     </div>
-    <nav style="flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:2px">${NAV_PINNED.map(item).join('')}<div style="height:6px"></div>${NAV_GROUPS.map(group).join('')}<div style="height:6px"></div>${item(NAV_ADMIN)}</nav>
+    <nav style="flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:2px">${NAV_PINNED.map(item).join('')}<div style="height:6px"></div>${NAV_GROUPS.map(group).join('')}<div style="height:6px"></div>${item(NAV_CONTACTO)}${item(NAV_ADMIN)}</nav>
     <div style="padding:12px;border-top:1px solid ${LINE};display:flex;flex-direction:column;gap:8px">
       <a href="/sos" style="display:flex;align-items:center;justify-content:center;gap:8px;background:${SECONDARY};color:#fff;font:800 13.5px 'Public Sans',sans-serif;padding:11px;border-radius:10px;text-decoration:none">⚠ Emergencia / SOS</a>
       <div id="s911-acct"></div>
@@ -195,21 +222,14 @@
   }).catch(() => {});
 
   // The /donar zone is hidden from the public until an admin reveals it. Hide
-  // the nav entry up front (no flash), then reveal only if public, or for an
-  // admin (with an "Oculto" pill). Fail-closed: a fetch error leaves it hidden.
+  // the nav entry up front (no flash), then reveal only if public or for an
+  // admin. Fail-closed: a fetch error leaves it hidden.
   const donarLink = shell.querySelector('a[href="/donar"]');
   if (donarLink) {
     donarLink.style.display = 'none';
     fetch('/api/donations/zone').then((r) => r.json()).then((z) => {
       if (!(z.public || z.canManage)) return;
       donarLink.style.display = '';
-      if (!z.public && z.canManage && !donarLink.querySelector('.s911-hidden-pill')) {
-        const pill = document.createElement('span');
-        pill.className = 's911-hidden-pill';
-        pill.textContent = 'Oculto';
-        pill.style.cssText = 'margin-left:auto;font:800 9px Inter,sans-serif;letter-spacing:.06em;text-transform:uppercase;background:rgba(0,23,58,.12);color:' + NAVY + ';border-radius:6px;padding:2px 6px';
-        donarLink.appendChild(pill);
-      }
     }).catch(() => {});
   }
 })();
