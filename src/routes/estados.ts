@@ -106,7 +106,11 @@ estados.get('/estado/:slug', (c) => {
     <div id="map" class="card"></div>
     <aside class="space-y-4">
       <div class="card p-4">
-        <h2 class="font-display font-bold text-primary text-sm mb-2">Capas</h2>
+        <h2 class="font-display font-bold text-primary text-sm mb-2">Mapa base</h2>
+        <label class="lyr"><input type="radio" name="base" value="calle" checked><span class="sw" style="background:#cdd3dc"></span> Calle</label>
+        <label class="lyr"><input type="radio" name="base" value="aereo"><span class="sw" style="background:#3f6212"></span> Aéreo (satélite)</label>
+        <label class="lyr" id="baseGoogleRow" style="display:none"><input type="radio" name="base" value="google"><span class="sw" style="background:#1f6f3f"></span> Aéreo (Google)</label>
+        <h2 class="font-display font-bold text-primary text-sm mt-3 mb-2">Capas</h2>
         <label class="lyr"><input type="checkbox" id="l_bound" checked><span class="sw" style="height:3px;background:#00173a;border:1px dashed #00173a"></span> Límite estatal</label>
         <label class="lyr"><input type="checkbox" id="l_muni" checked><span class="sw" style="background:#7a94ca"></span> Municipios</label>
         ${isLG ? `<label class="lyr"><input type="checkbox" id="l_parr"><span class="sw" style="background:#0891b2"></span> Parroquias (11)</label>` : ''}
@@ -158,6 +162,17 @@ estados.get('/estado/:slug', (c) => {
       <div class="scroll"><table class="dt"><thead><tr><th>Poblado</th><th>Tipo</th><th>Población</th></tr></thead><tbody id="popBody"><tr><td colspan="3" class="text-on-surface-variant">Cargando…</td></tr></tbody></table></div>
     </section>
   </div>
+
+  <!-- Fotos de edificios (de los reportes con imagen) -->
+  <section class="card p-4 mt-4">
+    <div class="flex items-baseline justify-between flex-wrap gap-2 mb-2">
+      <h2 class="font-display font-bold text-primary">Fotos de edificios <span id="fotoN" class="text-on-surface-variant font-normal text-[13px]"></span></h2>
+      <span class="text-[11px] text-on-surface-variant">Imágenes adjuntas a los reportes (sosvenezuela2026.com + prensa).</span>
+    </div>
+    <div id="fotoGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+      <div class="text-[13px] text-on-surface-variant col-span-full">Cargando…</div>
+    </div>
+  </section>
   ${isLG ? `<p class="text-[11px] text-on-surface-variant mt-3">La capa “Deslave 1999 (ref.)” marca localidades documentadas como las más afectadas por la Tragedia de Vargas (dic. 1999); son referencias históricas de comunidad, no extensiones de flujo topografiadas.</p>` : ''}
   <p class="text-[11px] text-on-surface-variant mt-2">GIS: OpenStreetMap (ODbL). Sismos: USGS (dominio público) vía SISMO911. Daños: sosvenezuela2026.com.</p>
 </main>
@@ -172,7 +187,24 @@ function inState(lon,lat){if(lon==null||lat==null)return false;if(!BG)return lon
 const ge=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=n=>{const v=parseInt(String(n).replace(/\\D/g,''));return isFinite(v)&&v>0?v.toLocaleString('es-VE'):'—';};
 const map=L.map('map',{preferCanvas:true}).setView(CEN,9);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
+// Base layers: calle (CARTO) + aéreo (Esri World Imagery, free) + aéreo Google
+// (vía proxy /api/sat/google, sólo si hay clave). Etiquetas Esri sobre el aéreo.
+const baseCalle=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19});
+const baseAereo=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics',maxZoom:19});
+const aereoLabels=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,opacity:.9});
+let baseGoogle=null; // set if /api/sat/config reports google:true
+const BASES={calle:baseCalle,aereo:baseAereo};
+let curBase=baseCalle.addTo(map);
+function setBase(key){
+  const nb=BASES[key]||baseCalle;
+  if(nb!==curBase){map.removeLayer(curBase);nb.addTo(map);curBase=nb;curBase.bringToBack();}
+  if(key==='calle')map.removeLayer(aereoLabels); else aereoLabels.addTo(map);
+}
+fetch('/api/sat/config').then(r=>r.json()).then(cfg=>{ if(cfg&&cfg.google){
+  baseGoogle=L.tileLayer('/api/sat/google/{z}/{x}/{y}',{attribution:'Imagery &copy; Google',maxZoom:21});
+  BASES.google=baseGoogle;
+  const row=document.getElementById('baseGoogleRow'); if(row)row.style.display='';
+}}).catch(()=>{});
 const LY={};
 const base='/data/estados/'+SLUG+'/';
 const roadStyle=h=>({motorway:{color:'#c8102e',weight:3},trunk:{color:'#e57200',weight:2.4},primary:{color:'#d97706',weight:2},secondary:{color:'#5b6b82',weight:1.5},tertiary:{color:'#8a96a8',weight:1.1}}[h]||{color:'#b6bdc8',weight:.8});
@@ -224,12 +256,23 @@ Promise.all([fetch('/api/events?limit=300').then(r=>r.json()),bgReady]).then(([d
 LY.damage=L.layerGroup().addTo(map);
 const dColor=c=>c==='collapsed_building'?'#c8102e':c==='damaged_building'?'#d97706':'#7c1d1d';
 const sevColor=s=>({rojo:'#c8102e',amarillo:'#d97706',verde:'#16a34a'}[s]||'#7c1d1d');
+const imgUrl=u=>!u?null:(u.indexOf('http')===0?u:u[0]==='/'?'https://sosvenezuela2026.com'+u:u);
 Promise.all([fetch('/api/danos-estructurales').then(r=>r.json()),bgReady]).then(([d])=>{
   const all=(d.reports||[]).filter(x=>inState(x.lng,x.lat));
-  all.forEach(x=>{L.circleMarker([x.lat,x.lng],{radius:x.category==='collapsed_building'?7:5,color:'#fff',weight:1,fillColor:dColor(x.category),fillOpacity:.85})
-    .addTo(LY.damage).bindPopup('<b>'+ge(x.title||'(sin nombre)')+'</b><br>'+ge(x.category==='collapsed_building'?'Colapsado':x.category==='damaged_building'?'Dañado':x.category)+
+  all.forEach(x=>{const iu=imgUrl(x.image_url);
+    L.circleMarker([x.lat,x.lng],{radius:x.category==='collapsed_building'?7:5,color:'#fff',weight:1,fillColor:dColor(x.category),fillOpacity:.85})
+    .addTo(LY.damage).bindPopup('<div style="max-width:220px">'+(iu?'<img src="'+ge(iu)+'" style="width:100%;max-height:130px;object-fit:cover;border-radius:6px;margin-bottom:5px" loading="lazy" onerror="this.remove()">':'')+
+    '<b>'+ge(x.title||'(sin nombre)')+'</b><br>'+ge(x.category==='collapsed_building'?'Colapsado':x.category==='damaged_building'?'Dañado':x.category)+
     (x.municipio?' · '+ge(x.municipio):'')+(x.parroquia?' / '+ge(x.parroquia):'')+(x.people_trapped?'<br>Atrapados: '+x.people_trapped:'')+
-    (x.source_url?'<br><a href="'+ge(x.source_url)+'" target="_blank" rel="noopener">fuente ↗</a>':''));});
+    (x.source_url?'<br><a href="'+ge(x.source_url)+'" target="_blank" rel="noopener">fuente ↗</a>':'')+'</div>');});
+  // Galería de fotos (reportes con imagen)
+  const ph=all.map(x=>({u:imgUrl(x.image_url),t:x.title,c:x.category,s:x.source_url})).filter(p=>p.u);
+  const fg=document.getElementById('fotoGrid');
+  document.getElementById('fotoN').textContent='('+ph.length+')';
+  fg.innerHTML = ph.length? ph.map(p=>'<a class="ftile block relative aspect-square overflow-hidden rounded-lg bg-surface-container" href="'+ge(p.s||p.u)+'" target="_blank" rel="noopener" title="'+ge(p.t||'')+'">'+
+    '<img src="'+ge(p.u)+'" loading="lazy" class="w-full h-full object-cover" onerror="this.closest(\\'.ftile\\').remove()">'+
+    '<span class="absolute bottom-0 inset-x-0 text-[10px] text-white px-1.5 py-1 leading-tight" style="background:linear-gradient(transparent,rgba(0,0,0,.75))">'+ge((p.t||'').slice(0,46))+'</span></a>').join('')
+    : '<div class="text-[13px] text-on-surface-variant col-span-full">Aún no hay fotos adjuntas a los reportes de este estado.</div>';
   const col=all.filter(x=>x.category==='collapsed_building'), dam=all.filter(x=>x.category==='damaged_building');
   document.getElementById('colN').textContent='('+col.length+')';
   document.getElementById('damN').textContent='('+dam.length+')';
@@ -237,7 +280,8 @@ Promise.all([fetch('/api/danos-estructurales').then(r=>r.json()),bgReady]).then(
   document.getElementById('damBody').innerHTML = dam.length? dam.map(x=>'<tr><td>'+ge(x.title||'—')+'</td><td>'+ge(x.municipio||'—')+'</td><td>'+ge(x.parroquia||'—')+'</td><td><span class="sev" style="background:'+sevColor(x.severity)+'"></span>'+ge(x.severity||'')+'</td></tr>').join('') : '<tr><td colspan=4 class="text-on-surface-variant">Sin edificios dañados reportados.</td></tr>';
   STAT.col=col.length; STAT.dam=dam.length; renderStat();
 }).catch(()=>{const m='<tr><td colspan=4 class="text-on-surface-variant">No se pudo cargar el feed de daños.</td></tr>';
-  document.getElementById('colBody').innerHTML=m; document.getElementById('damBody').innerHTML=m;});
+  document.getElementById('colBody').innerHTML=m; document.getElementById('damBody').innerHTML=m;
+  document.getElementById('fotoGrid').innerHTML='<div class="text-[13px] text-on-surface-variant col-span-full">No se pudo cargar el feed de fotos.</div>';});
 
 // Stats strip
 const STAT={muni:${st.municipios},places:${st.places},quakes:0,col:0,dam:0,big:{mag:0}};
@@ -261,6 +305,8 @@ geo('/data/laguaira/extra/deslave-localities.geojson','des',{on:false,pointToLay
 const ids={l_bound:'bound',l_muni:'muni',l_roads:'roads',l_places:'places',l_quakes:'quakes',l_damage:'damage'${isLG ? ",l_parr:'parr',l_viad:'viad',l_fac:'fac',l_quebr:'quebr',l_des:'des'" : ''}};
 Object.keys(ids).forEach(id=>{const el=document.getElementById(id);if(!el)return;
   el.addEventListener('change',ev=>{const ly=LY[ids[id]];if(!ly)return;ev.target.checked?ly.addTo(map):map.removeLayer(ly);});});
+// Base-map switch
+document.querySelectorAll('input[name=base]').forEach(r=>r.addEventListener('change',e=>{if(e.target.checked)setBase(e.target.value);}));
 </script>${FOOT}`;
   return c.html(html);
 });
