@@ -96,3 +96,26 @@ export function passwordChangedEmail(name: string): EmailMsg {
   const text = `${hi}\n\nTu contraseña de SISMO911 fue cambiada y tus sesiones se cerraron. Si no fuiste tú, restablécela: https://sismo911.com/login`;
   return { subject: 'Tu contraseña fue cambiada — SISMO911', html, text };
 }
+
+// Confirmation sent to a citizen after a damage report is received (status=pending).
+export function reportReceivedEmail(opts: { name?: string; refId: string; categoryLabel: string; place?: string }): EmailMsg {
+  const hi = opts.name ? `Hola ${opts.name},` : 'Hola,';
+  const ref = opts.refId.toUpperCase();
+  const placeLine = opts.place ? `<tr><td style="padding:4px 0;color:#6b7280">Ubicación</td><td style="padding:4px 0;text-align:right;font-weight:600">${opts.place}</td></tr>` : '';
+  const html = layout('Tu reporte fue recibido — SISMO911',
+    h2('✓ Reporte recibido') +
+    p(hi) +
+    p('Gracias por reportar. Tu reporte ciudadano fue recibido y está <b>en revisión por un operador</b> del Comando Sísmico Nacional. Una vez verificado, se publicará en el mapa de emergencia.') +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;font-size:14px">
+       <tr><td colspan="2" style="background:#13284f;color:#fff;padding:10px 14px;font-weight:700;letter-spacing:.04em">COMPROBANTE DE REPORTE</td></tr>
+       <tr><td style="padding:10px 14px 4px;color:#6b7280">N.º de referencia</td><td style="padding:10px 14px 4px;text-align:right;font-weight:800;color:#13284f;font-family:monospace">${ref}</td></tr>
+       <tr><td style="padding:4px 14px;color:#6b7280">Tipo</td><td style="padding:4px 14px;text-align:right;font-weight:600">${opts.categoryLabel}</td></tr>
+       ${placeLine ? placeLine.replace(/padding:4px 0/g, 'padding:4px 14px') : ''}
+       <tr><td style="padding:4px 14px 12px;color:#6b7280">Estado</td><td style="padding:4px 14px 12px;text-align:right;font-weight:700;color:#9a6400">En revisión</td></tr>
+     </table>` +
+    p('<b>Qué sigue:</b> un operador verifica tu reporte. Si necesitas atención inmediata con vida en riesgo, no esperes — usa el botón SOS o llama al <b>911</b>.') +
+    `<p style="margin:0 0 20px">${button('https://sismo911.com/mapa', 'Ver el mapa de emergencia')}</p>` +
+    p('Guarda tu número de referencia por si necesitas dar seguimiento. Tu ubicación exacta nunca se publica: se redondea a ~100 m.'));
+  const text = `${hi}\n\nTu reporte ciudadano fue recibido y está en revisión por un operador de SISMO911.\n\nN.º de referencia: ${ref}\nTipo: ${opts.categoryLabel}${opts.place ? `\nUbicación: ${opts.place}` : ''}\nEstado: En revisión\n\n¿Vida en riesgo? Usa el botón SOS o llama al 911.\nMapa de emergencia: https://sismo911.com/mapa`;
+  return { subject: `Reporte recibido (${ref}) — SISMO911`, html, text };
+}
