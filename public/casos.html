@@ -51,6 +51,21 @@
   .search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:#aebfdd}
   .search .kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font:600 11px 'JetBrains Mono';color:#aebfdd;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:2px 6px}
 
+  /* ---- Docket pager (Fortune-500 CRM style) ---- */
+  .pager{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .pager .info{font:600 12.5px Inter;color:var(--muted)}
+  .pager .info b{color:var(--ink);font-weight:800}
+  .pgnav{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+  .pgbtn{min-width:34px;height:34px;padding:0 9px;display:inline-grid;place-items:center;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;font:700 13px Inter;cursor:pointer;box-shadow:var(--shadow);transition:background .12s,border-color .12s}
+  .pgbtn:hover:not(:disabled){background:#eef2fb;border-color:#9db4e6}
+  .pgbtn.cur{background:var(--navy);border-color:var(--navy);color:#fff;cursor:default}
+  .pgbtn:disabled{opacity:.4;cursor:not-allowed}
+  .pgbtn.ell{border:0;background:none;box-shadow:none;cursor:default;min-width:18px;color:var(--muted)}
+  .pgjump{display:flex;align-items:center;gap:6px;font:600 12.5px Inter;color:var(--muted)}
+  .pgjump input{width:64px;height:34px;border:1px solid var(--line);border-radius:9px;padding:0 8px;font:700 13px Inter;color:var(--ink);text-align:center;outline:none;background:var(--panel)}
+  .pgjump input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,95,208,.13)}
+  @media(max-width:560px){.pager{justify-content:center}.pager .info{order:3;width:100%;text-align:center}}
+
   /* ---- KPI tiles ---- */
   .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:14px}
   @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}}
@@ -251,6 +266,12 @@
         <tbody id="rows"></tbody>
       </table></div>
     </div>
+
+    <div id="pager" class="pager" style="display:none">
+      <div class="info" id="pgInfo"></div>
+      <div class="pgnav" id="pgNav"></div>
+      <div class="pgjump">Ir a <input id="pgInput" type="number" min="1" inputmode="numeric" aria-label="Ir a página"> <button class="pgbtn" id="pgGo" type="button">Ir</button></div>
+    </div>
   </section>
 
   <!-- ======================= INDIVIDUAL CASE VIEW ======================= -->
@@ -301,6 +322,7 @@ const $=s=>document.querySelector(s);
 const api=(p,o)=>fetch('/api/'+p,Object.assign({credentials:'same-origin'},o));
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 let AUTH={authenticated:false}, OP=false, ALL=[], CUR=null;
+let PAGE=1, PAGES=1, TOTAL=0; const PAGESIZE=500;
 
 const ST={
   missing:{es:'Desaparecida',fg:'#b45309',bg:'#fef3c7',d:'#e57200'},
@@ -370,7 +392,7 @@ function sortCases(list){
 function renderRows(){
   const list=sortCases(ALL);
   const tb=$('#rows');
-  if(!list.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><div class="ic">🗂️</div><div style="margin-top:6px;font-weight:600">No hay expedientes que coincidan.</div></div></td></tr>';$('#count').textContent='';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><div class="ic">🗂️</div><div style="margin-top:6px;font-weight:600">No hay expedientes que coincidan.</div></div></td></tr>';$('#count').textContent='0 expedientes';return;}
   tb.innerHTML=list.map(c=>{
     const sismo=c.event_time?`<div class="nm" style="font-size:12.5px">${esc(c.event_place||c.event_place_en||'Sismo')}${c.event_mag?` · <span class="mono">M${c.event_mag}</span>`:''}</div><div class="sub">${fmtD(c.event_time)}</div>`:'<span class="sub">—</span>';
     const dc=c.docket_count||0, ev=c.evidence_count||0;
@@ -387,7 +409,8 @@ function renderRows(){
       <td><div class="nm" style="font-size:12.5px;font-weight:600">${fmtD(c.created_ms)}</div><div class="sub">${days(c.created_ms)} d abierto</div></td>
       <td><span class="openhint">Abrir →</span></td>
     </tr>`;}).join('');
-  $('#count').textContent=`${list.length} expediente${list.length===1?'':'s'}`;
+  const shown=TOTAL||list.length;
+  $('#count').textContent=`${shown.toLocaleString('es')} expediente${shown===1?'':'s'}`;
   tb.querySelectorAll('tr[data-id]').forEach(r=>r.addEventListener('click',()=>openCase(r.dataset.id)));
 }
 async function load(){
@@ -396,10 +419,12 @@ async function load(){
   if($('#q').value.trim())p.set('q',$('#q').value.trim());
   if($('#f_status').value)p.set('status',$('#f_status').value);
   if(OP&&$('#f_prio').value)p.set('priority',$('#f_prio').value);
+  p.set('sort',$('#f_sort').value);
+  p.set('page',PAGE); p.set('limit',PAGESIZE);
   let data={};
   try{ data=await (await api('persons/cases?'+p.toString())).json(); }catch{ data={cases:[],summary:{}}; }
-  const {cases=[],summary={},operator=false}=data;
-  OP=!!operator; ALL=cases;
+  const {cases=[],summary={},operator=false,page=1,pages=1,total=0}=data;
+  OP=!!operator; ALL=cases; PAGE=page; PAGES=pages; TOTAL=total;
   $('#s_missing').textContent=(summary.missing??0).toLocaleString('es');
   $('#s_safe').textContent=(summary.found_safe??0).toLocaleString('es');
   $('#s_dead').textContent=(summary.deceased??0).toLocaleString('es');
@@ -408,7 +433,30 @@ async function load(){
   $('#s_act').textContent=cases.filter(c=>(c.last_activity_ms||0)>=since).length.toLocaleString('es');
   if(OP){$('#f_prio').style.display='';$('#kpiPend').style.display='';$('#s_pend').textContent=(summary.pending??0).toLocaleString('es');}
   renderRows();
+  renderPager();
 }
+// Fortune-500 docket pager: First/Prev, windowed page numbers with ellipsis,
+// Next/Last, and a jump-to-page box. The whole 52k+ registry is reachable.
+function pageList(cur,pages){
+  const set=new Set([1,pages]);
+  for(let i=cur-2;i<=cur+2;i++) if(i>=1&&i<=pages) set.add(i);
+  const sorted=[...set].sort((a,b)=>a-b); const out=[]; let prev=0;
+  sorted.forEach(n=>{ if(prev&&n-prev>1) out.push(0); out.push(n); prev=n; });
+  return out;
+}
+function renderPager(){
+  $('#pager').style.display=(TOTAL>PAGESIZE)?'':'none';
+  const from=TOTAL?((PAGE-1)*PAGESIZE+1):0, to=Math.min(PAGE*PAGESIZE,TOTAL);
+  $('#pgInfo').innerHTML=TOTAL?`Mostrando <b>${from.toLocaleString('es')}</b>–<b>${to.toLocaleString('es')}</b> de <b>${TOTAL.toLocaleString('es')}</b> expedientes`:'';
+  $('#pgInput').max=PAGES; $('#pgInput').placeholder=PAGE+' / '+PAGES;
+  const btn=(label,pg,o={})=>o.ell?'<span class="pgbtn ell">…</span>':`<button type="button" class="pgbtn${o.cur?' cur':''}" ${o.dis?'disabled':''} data-pg="${pg}" title="${o.title||''}">${label}</button>`;
+  let html=btn('«',1,{dis:PAGE<=1,title:'Primera'})+btn('‹',PAGE-1,{dis:PAGE<=1,title:'Anterior'});
+  pageList(PAGE,PAGES).forEach(n=>{ html+= n===0 ? btn('',0,{ell:true}) : btn(n.toLocaleString('es'),n,{cur:n===PAGE}); });
+  html+=btn('›',PAGE+1,{dis:PAGE>=PAGES,title:'Siguiente'})+btn('»',PAGES,{dis:PAGE>=PAGES,title:'Última'});
+  $('#pgNav').innerHTML=html;
+  $('#pgNav').querySelectorAll('button[data-pg]').forEach(b=>b.addEventListener('click',()=>goPage(+b.dataset.pg)));
+}
+function goPage(n){ n=Math.max(1,Math.min(PAGES,n||1)); if(n===PAGE)return; PAGE=n; window.scrollTo({top:0,behavior:'smooth'}); load(); }
 
 /* ---------------- INDIVIDUAL CASE FILE ---------------- */
 function showList(){$('#caseView').classList.remove('show');$('#listView').style.display='';window.scrollTo(0,0);}
@@ -634,10 +682,13 @@ window.addEventListener('popstate',()=>{
   if(m)openCase(decodeURIComponent(m[1]),true); else showList();
 });
 let t;const deb=fn=>{clearTimeout(t);t=setTimeout(fn,300);};
-$('#q').addEventListener('input',()=>deb(load));
-$('#f_status').addEventListener('change',load);
-$('#f_prio').addEventListener('change',load);
-$('#f_sort').addEventListener('change',renderRows);
+const reload=()=>{PAGE=1;load();};   // any new search/filter/sort jumps back to page 1
+$('#q').addEventListener('input',()=>deb(reload));
+$('#f_status').addEventListener('change',reload);
+$('#f_prio').addEventListener('change',reload);
+$('#f_sort').addEventListener('change',reload);   // sort is applied server-side across the whole registry
+$('#pgGo').addEventListener('click',()=>goPage(+$('#pgInput').value));
+$('#pgInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();goPage(+$('#pgInput').value);}});
 document.addEventListener('keydown',e=>{
   if(e.key==='/'&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='TEXTAREA'&&!$('#caseView').classList.contains('show')){e.preventDefault();$('#q').focus();}
   if(e.key==='Escape'&&$('#caseView').classList.contains('show')){history.pushState({},'','/casos');showList();}
