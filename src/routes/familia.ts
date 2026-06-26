@@ -7,6 +7,7 @@ import { audit } from '../lib/audit';
 import { recomputeCaseScore } from '../lib/case-score-sync';
 import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from '../lib/clean';
 import { dedupePersonas } from '../lib/dedupe';
+import { queryByIds, deleteByIds, deletePhotos } from '../lib/sql';
 
 // Missing-persons registry (/familia). Reads the `personas` dataset in the main
 // (sismo911) D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
@@ -288,20 +289,11 @@ familia.post('/delete-ids', async (c) => {
   const b: any = await c.req.json().catch(() => ({}));
   const ids: string[] = Array.isArray(b?.ids) ? b.ids.filter((x: any) => typeof x === 'string').slice(0, 500) : [];
   if (!ids.length) return c.json({ error: 'no_ids' }, 400);
-  // D1 caps bound params at ~100/query, so chunk both the photo lookup AND the
-  // deletes at 40. Delete R2 photos (best-effort) before dropping the rows.
-  let deletedPhotos = 0;
-  let deletedRows = 0;
-  for (let i = 0; i < ids.length; i += 40) {
-    const chunk = ids.slice(i, i + 40);
-    const ph = chunk.map(() => '?').join(',');
-    const { results } = await c.env.DB.prepare(
-      `SELECT foto_r2 FROM personas WHERE foto_r2 IS NOT NULL AND id IN (${ph})`
-    ).bind(...chunk).all<{ foto_r2: string }>();
-    for (const r of results ?? []) { try { await c.env.DESAP_FOTOS.delete(r.foto_r2); deletedPhotos++; } catch { /* ignore */ } }
-    const res = await c.env.DB.prepare(`DELETE FROM personas WHERE id IN (${ph})`).bind(...chunk).run();
-    deletedRows += res.meta?.changes ?? 0;
-  }
+  // Param-safe (chunked under the D1 cap) + R2 bulk-delete. Photos first, then rows.
+  const photoRows = await queryByIds<{ foto_r2: string }>(c.env.DB, ids, (ph) =>
+    `SELECT foto_r2 FROM personas WHERE foto_r2 IS NOT NULL AND id IN (${ph})`);
+  const deletedPhotos = await deletePhotos(c.env.DESAP_FOTOS, photoRows.map((r) => r.foto_r2));
+  const deletedRows = await deleteByIds(c.env.DB, 'personas', ids);
   await audit(c, 'personas.deleteIds', { requested: ids.length, deletedRows, deletedPhotos });
   return c.json({ ok: true, requested: ids.length, deletedRows, deletedPhotos });
 });

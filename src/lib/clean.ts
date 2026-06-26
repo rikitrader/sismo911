@@ -1,4 +1,5 @@
 import type { Env } from '../types';
+import { deleteByIds, deletePhotos } from './sql';
 
 // Corruption / fake-data cleaner for the DESAP `personas` registry.
 //
@@ -119,17 +120,8 @@ export async function purgeRejectedPersonas(
     `SELECT id, foto_r2 FROM personas WHERE moderation='rejected' LIMIT ?`
   ).bind(limit).all<{ id: string; foto_r2: string | null }>();
   const batch = results ?? [];
-  let deletedPhotos = 0;
-  for (const r of batch) {
-    if (r.foto_r2) { try { await env.DESAP_FOTOS.delete(r.foto_r2); deletedPhotos++; } catch { /* ignore */ } }
-  }
-  let deletedRows = 0;
-  const ids = batch.map((r) => r.id);
-  for (let i = 0; i < ids.length; i += 40) {
-    const chunk = ids.slice(i, i + 40);
-    await env.DB.prepare(`DELETE FROM personas WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).run();
-    deletedRows += chunk.length;
-  }
+  const deletedPhotos = await deletePhotos(env.DESAP_FOTOS, batch.map((r) => r.foto_r2));
+  const deletedRows = await deleteByIds(env.DB, 'personas', batch.map((r) => r.id));
   return { found, deletedRows, deletedPhotos, remaining: found - deletedRows, applied: true };
 }
 
@@ -210,14 +202,13 @@ export async function purgeMarkupAbuse(
 
   if (!apply) return { personas, persons, map_reports, testRow, applied: false };
 
-  // Free R2 photos for the matched personas before deleting their rows.
+  // Free R2 photos for the matched personas before deleting their rows (bulk R2
+  // delete — 1 subrequest per ≤1000 keys instead of one per photo).
   if (personas > 0) {
     const { results } = await env.DB.prepare(
       `SELECT foto_r2 FROM personas WHERE ${personasWhere} AND foto_r2 IS NOT NULL`
     ).all<{ foto_r2: string }>();
-    for (const r of results ?? []) {
-      try { await env.DESAP_FOTOS.delete(r.foto_r2); } catch { /* ignore */ }
-    }
+    await deletePhotos(env.DESAP_FOTOS, (results ?? []).map((r) => r.foto_r2));
   }
 
   await env.DB.prepare(`DELETE FROM personas WHERE ${personasWhere}`).run();
