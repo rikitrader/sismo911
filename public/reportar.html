@@ -28,6 +28,11 @@
   
   .wrap{max-width:560px;margin:0 auto;padding:18px 16px calc(120px + env(safe-area-inset-bottom))}
   @media(min-width:640px){.wrap{padding:32px 16px 48px}}
+  /* app-shell.js injects `body > main{max-width:none!important}` so full-bleed
+     pages (maps, dashboards) fill the area. This wizard is a centered narrow
+     column, so reassert its width with higher specificity (beats the override
+     regardless of stylesheet order). */
+  body > main.wrap{max-width:560px!important;margin-left:auto!important;margin-right:auto!important;width:auto!important}
 
   /* ---- Intro ---- */
   .eyebrow{font:800 11px/1 'Public Sans';letter-spacing:.16em;text-transform:uppercase;color:var(--red)}
@@ -98,6 +103,9 @@
 
   /* ---- Sticky action bar (mobile) ---- */
   .bar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:linear-gradient(to top,var(--bg) 70%,rgba(244,246,251,0));padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;justify-content:center}
+  /* On desktop the sidebar occupies the left 16rem; offset the fixed bar so its
+     centered CTA lines up under the form column instead of the whole viewport. */
+  @media(min-width:1024px){.bar{left:16rem}}
   .bar .inner{width:100%;max-width:560px}
   .cta{width:100%;border:0;border-radius:14px;padding:16px;font:800 16px 'Public Sans';color:#fff;background:var(--red);cursor:pointer;min-height:56px;box-shadow:0 6px 18px -6px rgba(187,0,39,.5);transition:filter .12s,opacity .12s}
   .cta:hover{filter:brightness(1.05)}
@@ -284,7 +292,7 @@ function renderQuestions(){
       const ta=ce('textarea');ta.id='fld_'+q.k;ta.rows=3;ta.maxLength=2000;if(q.ph)ta.placeholder=q.ph;
       ta.oninput=()=>ANS[q.k]=ta.value;wrap.appendChild(ta);
     } else if(q.t==='photo'){
-      const lab=ce('label','drop');lab.htmlFor='fld_'+q.k;lab.innerHTML='📷 Tomar o subir una foto';
+      const lab=ce('label','drop');lab.htmlFor='fld_'+q.k;lab.innerHTML='<span aria-hidden="true">📷</span><span>Tomar o subir una foto</span>';
       const inp=ce('input');inp.type='file';inp.id='fld_'+q.k;inp.accept='image/jpeg,image/png,image/webp';inp.capture='environment';inp.hidden=true;
       const img=ce('img');img.hidden=true;img.alt='Vista previa';
       inp.onchange=()=>{const fl=inp.files&&inp.files[0];if(!fl){photoFile=null;img.hidden=true;return;}
