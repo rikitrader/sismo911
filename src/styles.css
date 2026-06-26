@@ -8,6 +8,7 @@
 }
 @layer components {
   .font-display { font-family: 'Public Sans', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
   .label-caps {
     font-family: 'Public Sans', sans-serif;
     font-weight: 700; font-size: 12px; line-height: 16px;
