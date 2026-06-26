@@ -204,61 +204,48 @@ describe('security: HTML/script-injection (stored-XSS) name gate', () => {
   });
 });
 
-describe('history bootstrap: one-time, self-disabling gate', () => {
+describe('history bootstrap: one-time, count-gated (KV-free)', () => {
   const bbox = { USGS_MINLAT: '-2', USGS_MAXLAT: '16', USGS_MINLON: '-76', USGS_MAXLON: '-58' };
-  const fakeKv = (init: Record<string, string> = {}) => {
-    const m = new Map(Object.entries(init));
-    return { store: m, get: async (k: string) => m.get(k) ?? null, put: async (k: string, v: string) => void m.set(k, v) };
-  };
+  // Gate depends ONLY on the D1 events count (KV writes were unreliable on this
+  // deployment). DB.first() returns the count; DB.batch/bind power the upsert +
+  // ingest_log writes.
   const fakeDb = (count: number) => ({
     prepare: () => ({ first: async () => ({ n: count }), bind: () => ({ run: async () => ({}) }) }),
     batch: async (s: any[]) => s.map(() => ({})),
   });
 
-  it('no-ops when the KV flag is already set (no backfill / no network)', async () => {
-    const env: any = { ...bbox, CACHE: fakeKv({ 'history:bootstrapped': '1' }), DB: fakeDb(0) };
+  it('skips the backfill (no network) when D1 already has the archive', async () => {
+    const env: any = { ...bbox, DB: fakeDb(9968) };
     const realFetch = globalThis.fetch;
-    globalThis.fetch = (async () => { throw new Error('must not fetch when already bootstrapped'); }) as any;
+    globalThis.fetch = (async () => { throw new Error('must not fetch when already populated'); }) as any;
     try {
       const r = await bootstrapHistory(env);
-      expect(r).toEqual({ skipped: 'already-bootstrapped' });
+      expect(r.skipped).toBe('already-populated');
+      expect(r.count).toBe(9968);
     } finally {
       globalThis.fetch = realFetch;
     }
   });
 
-  it('latches the flag without backfilling when D1 is already populated', async () => {
-    const kv = fakeKv();
-    const env: any = { ...bbox, CACHE: kv, DB: fakeDb(9968) };
-    const r = await bootstrapHistory(env);
-    expect(r.skipped).toBe('already-populated');
-    expect(r.count).toBe(9968);
-    expect(r.latched).toBe(true);
-    expect(kv.store.get('history:bootstrapped')).toBeTruthy();
-  });
-
-  it('reports latched=false (and does NOT crash) when the KV put fails', async () => {
-    const failKv = { get: async () => null, put: async () => { throw new Error('KV put quota'); } };
-    const env: any = { ...bbox, CACHE: failKv, DB: fakeDb(9968) };
-    const r = await bootstrapHistory(env);
-    expect(r.skipped).toBe('already-populated');
-    expect(r.latched).toBe(false);
-  });
-
-  it('runs the backfill on a fresh/empty D1 and latches on a clean run', async () => {
-    const kv = fakeKv();
-    const env: any = { ...bbox, CACHE: kv, DB: fakeDb(0) };
+  it('runs the backfill on a fresh/empty D1', async () => {
+    const env: any = { ...bbox, DB: fakeDb(0) };
     const realFetch = globalThis.fetch;
-    // No network in unit tests: return an empty FeatureCollection → backfill
-    // writes 0 with no failed spans, so the bootstrap latches the flag.
+    // No network in unit tests: empty FeatureCollection → backfill writes 0, no
+    // failed spans.
     globalThis.fetch = (async () => new Response(JSON.stringify({ features: [] }), { status: 200 })) as any;
     try {
       const r = await bootstrapHistory(env);
       expect(r.bootstrapped).toBe(true);
+      expect(r.priorCount).toBe(0);
       expect((r as any).failedYears).toEqual([]);
-      expect(kv.store.get('history:bootstrapped')).toBeTruthy();
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+
+  it('does not depend on KV at all (works with no CACHE binding present)', async () => {
+    const env: any = { ...bbox, DB: fakeDb(9968) }; // note: no CACHE
+    const r = await bootstrapHistory(env);
+    expect(r.skipped).toBe('already-populated');
   });
 });
