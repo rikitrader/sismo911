@@ -6,32 +6,48 @@
   if (!document.querySelector('link[rel=manifest]')) {
     var ml = document.createElement('link'); ml.rel = 'manifest'; ml.href = '/manifest.webmanifest'; document.head.appendChild(ml);
   }
-  const NAV = [
+  // Pinned items stay visible at the top of the sidebar (urgent / primary actions).
+  const NAV_PINNED = [
     { label: 'Personas Desaparecidas', href: '/personas', m: ['/personas'], alarm: true, d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zm12.5 1.5L19 15m0 0l-2.5-2.5M19 15l2.5-2.5M19 15l-2.5 2.5' },
     { label: 'Casos / Expedientes', href: '/casos', m: ['/casos'], solid: true, d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
     { label: 'Terremotos EN-VIVO', href: '/', m: ['/'], d: 'M3 12h4l2 7 4-14 2 7h6' },
-    { label: 'Mapa de Capas', href: '/mapa', m: ['/mapa'], d: 'M9 20l-5.4 2.7A1 1 0 012 21.8V6.6a1 1 0 01.55-.9L9 2.5m0 17.5l6 3m-6-3V2.5m6 20.5l5.45-2.72a1 1 0 00.55-.9V4.2a1 1 0 00-1.45-.9L15 5.5m0 17.5V5.5m0 0L9 2.5' },
-    { label: 'Alertas', href: '/alertas', m: ['/alertas'], d: 'M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z' },
-    { label: 'Noticias', href: '/blog', m: ['/blog'], d: 'M4 4h16v16H4z M8 8h8M8 12h8M8 16h5' },
-    { label: 'Alerta PAGER', href: '/pager', m: ['/pager'], d: 'M12 3l8 4v5c0 4.5-3.1 7.9-8 9-4.9-1.1-8-4.5-8-9V7l8-4z' },
-    { label: 'Archivo Histórico', href: '/archivo', m: ['/archivo'], d: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v3H3zM3 10h18v7a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 14h6' },
-    { label: 'Familia / Check-in', href: '/familia', m: ['/familia'], d: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
-    { label: 'Centros de Acopio', href: '/acopio', m: ['/acopio'], d: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12' },
-    { label: 'Operaciones Logísticas', href: '/operaciones', m: ['/operaciones'], d: 'M3 11l19-9-9 19-2-8-8-2z' },
-    { label: 'Recursos', href: '/recursos', m: ['/recursos'], d: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v14M4 7v10l8 4' },
-    { label: 'Donar / Recaudar', href: '/donar', m: ['/donar', '/campana', '/recaudar'], d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z' },
-    { label: 'Panel de Suministros', href: '/suministros-dashboard', m: ['/suministros-dashboard'], d: 'M3 3v18h18M7 16V10m5 6V6m5 10v-3' },
-    { label: 'Suministros Médicos', href: '/suministros-medicos', m: ['/suministros-medicos'], d: 'M12 8v8m-4-4h8M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2z' },
-    { label: 'Herramientas + Cruz Roja', href: '/herramientas', m: ['/herramientas'], d: 'M14.7 6.3a4 4 0 00-5.4 5.4l-5 5a1.5 1.5 0 002 2l5-5a4 4 0 005.4-5.4l-2.3 2.3-2-2 2.3-2.3z' },
-    { label: 'Red Global de Ayuda', href: '/red-ayuda', m: ['/red-ayuda'], d: 'M12 21a9 9 0 100-18 9 9 0 000 18zm0-18c2.6 2.7 2.6 15.3 0 18M3 12h18' },
-    { label: 'Daños (IA)', href: '/danos', m: ['/danos'], d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
-    { label: 'Daños Estructurales', href: '/danos-estructurales', m: ['/danos-estructurales'], d: 'M4 21V8l8-5 8 5v13M9 21v-5h6v5M8 11h2m4 0h2m-7 8 5-5' },
-    { label: 'Reportar', href: '/reportar', m: ['/reportar'], d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
-    { label: 'Radio', href: '/comms', m: ['/comms'], d: 'M4 11a16 16 0 0116 0M7 14a10 10 0 0110 0M10 17a5 5 0 014 0M12 20h.01' },
-    { label: 'Guía', href: '/guia', m: ['/guia'], d: 'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13' },
-    { label: 'Contacto', href: '/contacto', m: ['/contacto'], d: 'M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.81.36 1.6.7 2.34a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0122 16.92z' },
-    { label: 'Consola', href: '/admin', m: ['/admin'], d: 'M12 3l8 3.5v5c0 4-3 7-8 9-5-2-8-5-8-9v-5z M9.5 12l2 2 3.5-4' },
   ];
+
+  // The rest collapse into a few accordion groups so the sidebar stays short.
+  // Each group auto-expands when the current page lives inside it.
+  const NAV_GROUPS = [
+    { label: 'Sismos y Daños', d: 'M9 20l-5.4 2.7A1 1 0 012 21.8V6.6a1 1 0 01.55-.9L9 2.5m0 17.5l6 3m-6-3V2.5m6 20.5l5.45-2.72a1 1 0 00.55-.9V4.2a1 1 0 00-1.45-.9L15 5.5m0 17.5V5.5m0 0L9 2.5', items: [
+      { label: 'Mapa de Capas', href: '/mapa', m: ['/mapa'], d: 'M9 20l-5.4 2.7A1 1 0 012 21.8V6.6a1 1 0 01.55-.9L9 2.5m0 17.5l6 3m-6-3V2.5m6 20.5l5.45-2.72a1 1 0 00.55-.9V4.2a1 1 0 00-1.45-.9L15 5.5m0 17.5V5.5m0 0L9 2.5' },
+      { label: 'Alertas', href: '/alertas', m: ['/alertas'], d: 'M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z' },
+      { label: 'Alerta PAGER', href: '/pager', m: ['/pager'], d: 'M12 3l8 4v5c0 4.5-3.1 7.9-8 9-4.9-1.1-8-4.5-8-9V7l8-4z' },
+      { label: 'Archivo Histórico', href: '/archivo', m: ['/archivo'], d: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v3H3zM3 10h18v7a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 14h6' },
+      { label: 'Daños (IA)', href: '/danos', m: ['/danos'], d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
+      { label: 'Daños Estructurales', href: '/danos-estructurales', m: ['/danos-estructurales'], d: 'M4 21V8l8-5 8 5v13M9 21v-5h6v5M8 11h2m4 0h2m-7 8 5-5' },
+    ] },
+    { label: 'Familia y Reportes', d: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75', items: [
+      { label: 'Familia / Check-in', href: '/familia', m: ['/familia'], d: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
+      { label: 'Reportar', href: '/reportar', m: ['/reportar'], d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
+    ] },
+    { label: 'Ayuda y Suministros', d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z', items: [
+      { label: 'Centros de Acopio', href: '/acopio', m: ['/acopio'], d: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12' },
+      { label: 'Suministros Médicos', href: '/suministros-medicos', m: ['/suministros-medicos'], d: 'M12 8v8m-4-4h8M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2z' },
+      { label: 'Panel de Suministros', href: '/suministros-dashboard', m: ['/suministros-dashboard'], d: 'M3 3v18h18M7 16V10m5 6V6m5 10v-3' },
+      { label: 'Operaciones Logísticas', href: '/operaciones', m: ['/operaciones'], d: 'M3 11l19-9-9 19-2-8-8-2z' },
+      { label: 'Herramientas + Cruz Roja', href: '/herramientas', m: ['/herramientas'], d: 'M14.7 6.3a4 4 0 00-5.4 5.4l-5 5a1.5 1.5 0 002 2l5-5a4 4 0 005.4-5.4l-2.3 2.3-2-2 2.3-2.3z' },
+      { label: 'Recursos', href: '/recursos', m: ['/recursos'], d: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v14M4 7v10l8 4' },
+      { label: 'Red Global de Ayuda', href: '/red-ayuda', m: ['/red-ayuda'], d: 'M12 21a9 9 0 100-18 9 9 0 000 18zm0-18c2.6 2.7 2.6 15.3 0 18M3 12h18' },
+      { label: 'Donar / Recaudar', href: '/donar', m: ['/donar', '/campana', '/recaudar'], d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z' },
+    ] },
+    { label: 'Información', d: 'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13', items: [
+      { label: 'Noticias', href: '/blog', m: ['/blog'], d: 'M4 4h16v16H4z M8 8h8M8 12h8M8 16h5' },
+      { label: 'Radio', href: '/comms', m: ['/comms'], d: 'M4 11a16 16 0 0116 0M7 14a10 10 0 0110 0M10 17a5 5 0 014 0M12 20h.01' },
+      { label: 'Guía', href: '/guia', m: ['/guia'], d: 'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13' },
+      { label: 'Contacto', href: '/contacto', m: ['/contacto'], d: 'M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.81.36 1.6.7 2.34a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0122 16.92z' },
+    ] },
+  ];
+
+  // Admin console stays pinned at the bottom of the nav list.
+  const NAV_ADMIN = { label: 'Consola', href: '/admin', m: ['/admin'], d: 'M12 3l8 3.5v5c0 4-3 7-8 9-5-2-8-5-8-9v-5z M9.5 12l2 2 3.5-4' };
 
   const NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0';
   const path = (location.pathname.replace(/\.html$/, '') || '/');
@@ -56,6 +72,22 @@
     return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;font:600 13.5px Inter,sans-serif;text-decoration:none;${on ? 'background:rgba(0,23,58,.06);color:' + NAVY : 'color:' + VARIANT}" onmouseover="if(!${on})this.style.background='#eeeef0'" onmouseout="if(!${on})this.style.background='transparent'">
       <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;${on ? 'background:' + NAVY + ';color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)' : 'background:rgba(0,23,58,.10);color:' + NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
+  };
+
+  // Collapsible group: a header button (icon + label + chevron) over a body of
+  // child items. Starts open when the current page is one of its items.
+  const groupActive = (g) => g.items.some(active);
+  const chevron = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="s911-chev" style="width:15px;height:15px;margin-left:auto"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>`;
+  const group = (g, i) => {
+    const open = groupActive(g);
+    return `<div class="s911-group${open ? ' open' : ''}" data-g="${i}">
+      <button type="button" class="s911-ghead" aria-expanded="${open}">
+        <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.10);color:${NAVY}">${icon(g.d)}</span>
+        <span style="flex:1;text-align:left;min-width:0">${g.label}</span>
+        ${chevron}
+      </button>
+      <div class="s911-gbody">${g.items.map(item).join('')}</div>
+    </div>`;
   };
 
   const css = `
@@ -84,6 +116,13 @@
       70%{box-shadow:0 0 0 10px rgba(187,0,39,0)}
       100%{box-shadow:0 0 0 0 rgba(187,0,39,0)}
     }
+    /* Collapsible nav groups (accordion). */
+    #s911-shell .s911-ghead{width:100%;display:flex;align-items:center;gap:12px;padding:8px 10px;border:none;border-radius:10px;background:transparent;font:700 13px Inter,sans-serif;color:${VARIANT};cursor:pointer;transition:background .12s}
+    #s911-shell .s911-ghead:hover{background:#eeeef0}
+    #s911-shell .s911-chev{color:#9aa0ac;transition:transform .18s ease}
+    #s911-shell .s911-group.open .s911-chev{transform:rotate(180deg)}
+    #s911-shell .s911-gbody{display:none;flex-direction:column;gap:2px;margin:2px 0 4px 22px;padding-left:10px;border-left:1px solid ${LINE}}
+    #s911-shell .s911-group.open .s911-gbody{display:flex}
   `;
   const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
 
@@ -106,7 +145,7 @@
       <img src="/logo.svg" alt="SISMO911" style="width:46px;height:46px">
       <div style="line-height:1"><div style="font:800 30px 'Public Sans',sans-serif;color:${NAVY};letter-spacing:-.01em">SISMO911</div></div>
     </div>
-    <nav style="flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:2px">${NAV.map(item).join('')}</nav>
+    <nav style="flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:2px">${NAV_PINNED.map(item).join('')}<div style="height:6px"></div>${NAV_GROUPS.map(group).join('')}<div style="height:6px"></div>${item(NAV_ADMIN)}</nav>
     <div style="padding:12px;border-top:1px solid ${LINE};display:flex;flex-direction:column;gap:8px">
       <a href="/sos" style="display:flex;align-items:center;justify-content:center;gap:8px;background:${SECONDARY};color:#fff;font:800 13.5px 'Public Sans',sans-serif;padding:11px;border-radius:10px;text-decoration:none">⚠ Emergencia / SOS</a>
       <div id="s911-acct"></div>
@@ -126,6 +165,11 @@
   // Close the drawer after tapping a nav link (mobile).
   shell.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => toggle(false)));
   back.onclick = () => toggle(false);
+  // Expand/collapse accordion groups (header buttons, not links — drawer stays open).
+  shell.querySelectorAll('.s911-ghead').forEach((h) => h.addEventListener('click', () => {
+    const g = h.parentElement, open = g.classList.toggle('open');
+    h.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }));
 
   // Auth-aware account block
   const ROLE = { citizen: 'Ciudadano', operator: 'Operador', admin: 'Administrador' };
