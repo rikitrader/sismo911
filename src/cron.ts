@@ -18,7 +18,7 @@ import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
 import { ingestSosDamage } from './ingest/sos-damage';
 import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
-import { cleanPersonas } from './lib/clean';
+import { cleanPersonas, cleanNameFloods } from './lib/clean';
 import { dedupePersonas } from './lib/dedupe';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
@@ -43,6 +43,7 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   '15 * * * *': [
     { name: 'familia-ingest', run: ingestFamilia },
     { name: 'personas-clean', run: (env) => cleanPersonas(env, { apply: true }) },
+    { name: 'personas-name-floods', run: (env) => cleanNameFloods(env, { apply: true }) },
     { name: 'personas-dedupe-exact', run: (env) => dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 }) },
     { name: 'personas-dedupe-photo', run: (env) => dedupePersonas(env, { mode: 'photo', apply: true, limit: 400 }) },
   ],

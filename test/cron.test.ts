@@ -8,7 +8,7 @@ import { CRON_GROUPS, jobsForCron } from '../src/cron';
 
 const ALL_JOB_NAMES = [
   'usgs', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet',
-  'familia-ingest', 'personas-clean', 'personas-dedupe-exact', 'personas-dedupe-photo',
+  'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo',
   'familia-photo-mirror', 'monitor-sheet', 'social-monitor', 'blog',
 ];
 

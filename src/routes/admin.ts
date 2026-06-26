@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { dedupePersonas, type DedupeMode } from '../lib/dedupe';
-import { cleanPersonas } from '../lib/clean';
+import { cleanPersonas, cleanNameFloods } from '../lib/clean';
 import { ingestFamilia } from '../ingest/familia-cron';
 import { backfillUsgsHistory } from '../ingest/usgs-history';
 import { sweepCaseScores } from '../lib/case-score-sync';
@@ -41,6 +41,16 @@ admin.post('/clean-personas', async (c) => {
   const b: any = await c.req.json().catch(() => ({}));
   const r = await cleanPersonas(c.env, { apply: !!b?.apply });
   if (r.applied) await audit(c, 'personas.clean', r);
+  return c.json(r);
+});
+
+// Reject "name flood" corruption — one name spammed across many rows with no
+// real per-row detail (e.g. "SIMONE BURATTI GAY" ×353, 1 description). Keeps the
+// newest row per group, rejects the rest. Body: { apply?: boolean, minCount?: number }.
+admin.post('/clean-name-floods', async (c) => {
+  const b: any = await c.req.json().catch(() => ({}));
+  const r = await cleanNameFloods(c.env, { apply: !!b?.apply, minCount: b?.minCount });
+  if (r.applied) await audit(c, 'personas.cleanFloods', r);
   return c.json(r);
 });
 
