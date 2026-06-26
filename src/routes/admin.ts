@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { dedupePersonas, type DedupeMode } from '../lib/dedupe';
-import { cleanPersonas, cleanNameFloods } from '../lib/clean';
+import { cleanPersonas, cleanNameFloods, purgeMarkupAbuse } from '../lib/clean';
 import { ingestFamilia } from '../ingest/familia-cron';
 import { backfillUsgsHistory } from '../ingest/usgs-history';
 import { sweepCaseScores } from '../lib/case-score-sync';
@@ -51,6 +51,18 @@ admin.post('/clean-name-floods', async (c) => {
   const b: any = await c.req.json().catch(() => ({}));
   const r = await cleanNameFloods(c.env, { apply: !!b?.apply, minCount: b?.minCount });
   if (r.applied) await audit(c, 'personas.cleanFloods', r);
+  return c.json(r);
+});
+
+// Physically DELETE stored-XSS abuse rows (name/title carrying HTML/script
+// markup like '"><svg/onload=…') from personas/persons/map_reports, plus the
+// known deploy-test report rep_f7fdc6e7. Idempotent (a second call → all 0).
+// Body: { apply?: boolean }. apply=false → dry-run counts; apply=true → delete.
+// Operator/admin-gated in index.ts (same auth as /clean-name-floods).
+admin.post('/clean-markup', async (c) => {
+  const b: any = await c.req.json().catch(() => ({}));
+  const r = await purgeMarkupAbuse(c.env, { apply: !!b?.apply });
+  if (r.applied) await audit(c, 'personas.cleanMarkup', r);
   return c.json(r);
 });
 
