@@ -4,10 +4,21 @@ import { dedupePersonas, type DedupeMode } from '../lib/dedupe';
 import { cleanPersonas } from '../lib/clean';
 import { ingestFamilia } from '../ingest/familia-cron';
 import { backfillUsgsHistory } from '../ingest/usgs-history';
+import { sweepCaseScores } from '../lib/case-score-sync';
 import { audit } from '../lib/audit';
 import { getUserFromRequest } from '../lib/auth';
 
 export const admin = new Hono<{ Bindings: Env }>();
+
+// Manual trigger for the autonomous case re-scoring sweep (the hourly cron runs
+// it automatically). Body: { famLimit?: number } — size of the familia batch this
+// tick. Returns { native, familia, changed }.
+admin.post('/rescore-cases', async (c) => {
+  const b: any = await c.req.json().catch(() => ({}));
+  const r = await sweepCaseScores(c.env, { famLimit: b?.famLimit });
+  await audit(c, 'cases.rescore', r);
+  return c.json(r);
+});
 
 // Operator/admin only (gated in index.ts via ADMIN_WRITE_PREFIXES '/api/admin').
 // Body: { mode?: 'exact'|'loose'|'photo', apply?: boolean, limit?: number }.

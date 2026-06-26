@@ -4,8 +4,24 @@ import { uid } from '../lib/db';
 import { rateLimit, validLatLon, blurCoord, nameHasSpam, textHasLink, requestIp } from '../lib/security';
 import { audit } from '../lib/audit';
 import { getUserFromRequest } from '../lib/auth';
+import { scoreCase } from '../lib/case-score';
+import { recomputeCaseScore } from '../lib/case-score-sync';
 
 export const persons = new Hono<{ Bindings: Env }>();
+
+// Attach the live FEMA-triage score to a case/person object (compute-on-read,
+// so it always reflects the current status + new info). Derived priority wins
+// over any stored value. Reads non-PII signals only → safe for public payloads.
+function withScore<T extends Record<string, any>>(x: T, now = Date.now()): T & {
+  score: number; priority: string; triage: string; triage_label: string; triage_color: string; score_reasons: string[];
+} {
+  const sc = scoreCase({
+    status: x.status, age: x.age ?? null, incidentType: x.incident_type ?? null,
+    createdMs: x.created_ms ?? null, lastActivityMs: x.last_activity_ms ?? null,
+    docketCount: x.docket_count ?? 0, eventMag: x.event_mag ?? null, eventAlert: x.event_alert ?? null, now,
+  });
+  return { ...x, score: sc.score, priority: sc.priority, triage: sc.triage, triage_label: sc.label, triage_color: sc.color, score_reasons: sc.reasons };
+}
 
 // True when the current request is from a signed-in operator/admin.
 async function isOperator(c: any): Promise<boolean> {
@@ -127,7 +143,7 @@ persons.get('/cases', async (c) => {
     `SELECT p.id, p.case_number, p.full_name, p.age, p.sex, p.last_seen, p.last_seen_lat, p.last_seen_lon,
             p.status, p.priority, p.incident_type, p.assigned_to, p.review, p.photo_url, p.contact_phone, p.reported_by, p.notes,
             p.event_id, p.created_ms, p.updated_ms,
-            e.place_es AS event_place, e.place AS event_place_en, e.mag AS event_mag, e.time_ms AS event_time,
+            e.place_es AS event_place, e.place AS event_place_en, e.mag AS event_mag, e.alert AS event_alert, e.time_ms AS event_time,
             (SELECT COUNT(*) FROM person_events pe WHERE pe.person_id = p.id${dCount}) AS docket_count,
             (SELECT COUNT(*) FROM case_attachments a WHERE a.person_id = p.id) AS evidence_count,
             (SELECT MAX(pe.created_ms) FROM person_events pe WHERE pe.person_id = p.id${dCount}) AS last_activity_ms
@@ -138,9 +154,10 @@ persons.get('/cases', async (c) => {
     id: r.id, case_number: r.case_number, full_name: r.full_name, age: r.age, sex: r.sex, last_seen: r.last_seen,
     status: r.status, incident_type: r.incident_type, review: r.review, photo_url: r.photo_url, notes: r.notes,
     event_id: r.event_id, created_ms: r.created_ms, updated_ms: r.updated_ms,
-    event_place: r.event_place, event_place_en: r.event_place_en, event_mag: r.event_mag, event_time: r.event_time,
+    event_place: r.event_place, event_place_en: r.event_place_en, event_mag: r.event_mag, event_alert: r.event_alert, event_time: r.event_time,
     docket_count: r.docket_count, last_activity_ms: r.last_activity_ms,
-    // redacted for the public: contact_phone, reported_by, last_seen_lat/lon, priority, assigned_to
+    // redacted for the public: contact_phone, reported_by, last_seen_lat/lon, assigned_to.
+    // priority is NOT redacted — it's the derived triage level (non-PII), re-attached by withScore().
   });
   const sum: any = await c.env.DB.prepare(
     `SELECT
@@ -184,7 +201,7 @@ persons.get('/cases', async (c) => {
         priority: m.priority || 'media', incident_type: m.incident_type || 'persona_desaparecida', assigned_to: m.assigned_to || null,
         photo_url: r.foto_r2 ? `/api/familia/photo/${r.id}` : (r.foto || null), notes: r.descripcion,
         event_id: quake?.id || null, created_ms: r.created_at, updated_ms: r.updated_at,
-        event_place: quake?.place_es || quake?.place || null, event_place_en: quake?.place || null, event_mag: quake?.mag || null, event_time: quake?.time_ms || null,
+        event_place: quake?.place_es || quake?.place || null, event_place_en: quake?.place || null, event_mag: quake?.mag || null, event_alert: quake?.alert || null, event_time: quake?.time_ms || null,
         docket_count: cnt[id] || 0, evidence_count: 0, last_activity_ms: null, source: 'familia',
         contact_phone: op ? (r.contacto || null) : undefined, reported_by: null,
       };
@@ -193,7 +210,11 @@ persons.get('/cases', async (c) => {
     });
   } catch (e: any) { console.error('[cases] familia bridge failed:', e?.message ?? e); }
 
-  const merged = [...cases, ...famCases].sort((a, b) => (b.updated_ms || 0) - (a.updated_ms || 0)).slice(0, limit);
+  const nowMs = Date.now();
+  const merged = [...cases, ...famCases]
+    .sort((a, b) => (b.updated_ms || 0) - (a.updated_ms || 0))
+    .slice(0, limit)
+    .map((x) => withScore(x, nowMs));   // live FEMA-triage score on every case
 
   let fsum: any = {};
   try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado='localizado' THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
@@ -244,6 +265,8 @@ persons.post('/docket/:eid/approve', async (c) => {
   } else if (!isFam(ev.person_id)) {
     await c.env.DB.prepare(`UPDATE persons SET updated_ms = ? WHERE id = ?`).bind(Date.now(), ev.person_id).run();
   }
+  // Autonomous auto-update: a newly-approved status change / new info re-scores the case.
+  await recomputeCaseScore(c.env, ev.person_id).catch(() => {});
   await audit(c, 'persons.docket_approve', { eid, person_id: ev.person_id });
   return c.json({ ok: true });
 });
@@ -292,8 +315,14 @@ persons.get('/:id/docket', async (c) => {
     created_ms: person.created_ms, updated_ms: person.updated_ms,
     // redacted: contact_phone, reported_by, last_seen_lat/lon, assigned_to
   };
+  // Live FEMA-triage score for the case file (uses the docket for activity signals).
+  const lastActivityMs = docket.length ? Math.max(...docket.map((d: any) => d.created_ms || 0)) : null;
+  const scored = withScore({
+    ...pubPerson, event_mag: event?.mag ?? null, event_alert: event?.alert ?? null,
+    docket_count: docket.length, last_activity_ms: lastActivityMs,
+  });
   c.header('Cache-Control', 'no-store'); c.header('Vary', 'Cookie');
-  return c.json({ person: pubPerson, event, docket, operator: op });
+  return c.json({ person: scored, event, docket, operator: op });
 });
 
 // POST /api/persons/:id/docket — submit a tracing update (LOGIN REQUIRED, any
@@ -342,6 +371,9 @@ persons.post('/:id/docket', async (c) => {
     lat, lon, source: op ? (b.source ? String(b.source).slice(0, 30) : 'operator') : 'citizen',
     review: op ? 'approved' : 'pending',
   });
+  // Autonomous auto-update: operator updates are live immediately → re-score now.
+  // Citizen updates are pending (no status/score change until approved).
+  if (op) await recomputeCaseScore(c.env, id).catch(() => {});
   await audit(c, 'persons.docket_add', { id, kind: status_to ? 'status_change' : kind, review: op ? 'approved' : 'pending' });
   return c.json({ ok: true, review: op ? 'approved' : 'pending' }, 201);
 });

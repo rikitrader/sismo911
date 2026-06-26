@@ -92,6 +92,13 @@
   .pill .d{width:7px;height:7px;border-radius:50%}
   .prio{display:inline-flex;align-items:center;gap:7px;font:700 12px Inter}
   .prio .bar{width:4px;height:16px;border-radius:3px}
+  /* FEMA triage badge */
+  .tri{display:inline-flex;align-items:center;gap:6px;font:800 10.5px Inter;letter-spacing:.04em;padding:4px 9px;border-radius:7px;white-space:nowrap;vertical-align:middle}
+  .tri .d{width:7px;height:7px;border-radius:50%}
+  .tri + .chipnum{margin-left:6px;vertical-align:middle}
+  .tri-legend{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:2px 0 12px;font:600 11.5px Inter;color:var(--muted)}
+  .tri-legend .it{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 9px}
+  .tri-legend .it .d{width:8px;height:8px;border-radius:50%}
   .chipnum{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:22px;padding:0 7px;border-radius:7px;font:700 12px 'JetBrains Mono';background:#eef2f9;color:var(--navy-2);border:1px solid var(--line)}
   .chipnum.zero{background:#f4f6fb;color:var(--faint);border-color:var(--line)}
 
@@ -213,6 +220,7 @@
         <option value="baja">Prioridad baja</option>
       </select>
       <select id="f_sort" class="sel">
+        <option value="triage">Prioridad (triage)</option>
         <option value="recent">Actividad reciente</option>
         <option value="opened">Fecha de apertura</option>
         <option value="movs">Más movimientos</option>
@@ -221,10 +229,18 @@
       <span id="count" class="pill-count"></span>
     </div>
 
+    <div class="tri-legend" title="Sistema de priorización tipo triage FEMA, calculado automáticamente a partir del estado, vulnerabilidad, el sismo y el tiempo.">
+      <span style="font-weight:800;color:var(--ink);letter-spacing:.02em">Triage:</span>
+      <span class="it"><span class="d" style="background:#c8102e"></span>INMEDIATA · búsqueda urgente</span>
+      <span class="it"><span class="d" style="background:#b06a00"></span>DEMORADA · búsqueda activa</span>
+      <span class="it"><span class="d" style="background:#1f7a37"></span>MENOR · localizada a salvo</span>
+      <span class="it"><span class="d" style="background:#1f2430"></span>FALLECIDA · recuperación</span>
+    </div>
+
     <div class="panel">
       <div class="dt-scroll"><table class="dt">
         <thead><tr>
-          <th>Expediente</th><th>Persona</th><th>Estado</th><th id="th_prio">Prioridad</th>
+          <th>Expediente</th><th>Persona</th><th>Estado</th><th id="th_prio">Prioridad · Triage</th>
           <th>Tipo</th><th>Sismo de referencia</th><th class="c">Movs.</th><th class="c">Evid.</th>
           <th>Últ. actividad</th><th>Abierto</th><th></th>
         </tr></thead>
@@ -289,6 +305,20 @@ const ST={
   unknown:{es:'Sin datos',fg:'#475569',bg:'#eef2f7',d:'#64748b'}
 };
 const PRIO={alta:{es:'Alta',c:'#c8102e'},media:{es:'Media',c:'#e57200'},baja:{es:'Baja',c:'#5b6781'}};
+// FEMA START-triage levels (matches the server case-score engine).
+const TRIAGE={
+  immediate:{lbl:'INMEDIATA',c:'#c8102e',bg:'#fdeaec'},
+  delayed:  {lbl:'DEMORADA', c:'#b06a00',bg:'#fdf2e0'},
+  minor:    {lbl:'MENOR',    c:'#1f7a37',bg:'#e7f4ec'},
+  deceased: {lbl:'FALLECIDA',c:'#1f2430',bg:'#e9eaee'}
+};
+// Triage badge with the 0–100 score chip. Falls back to the raw priority bucket.
+const triageCell=c=>{
+  const t=TRIAGE[c.triage]||(c.priority?{immediate:TRIAGE.immediate,media:TRIAGE.delayed,baja:TRIAGE.minor}[c.priority]:null);
+  if(!t)return '<span class="sub">—</span>';
+  const sc=(typeof c.score==='number')?`<span class="chipnum" style="background:${t.bg};color:${t.c};border-color:${t.c}33">${c.score}</span>`:'';
+  return `<span class="tri" style="color:${t.c};background:${t.bg}"><span class="d" style="background:${t.c}"></span>${c.triage_label||t.lbl}</span>${sc}`;
+};
 const TYPE={persona_desaparecida:'Persona desaparecida',rescate:'Rescate',evacuacion:'Evacuación',medico:'Atención médica',estructural:'Daño estructural',menor:'Menor de edad'};
 const KIND={report_filed:'Reporte recibido',status_change:'Cambio de estado',sighting:'Avistamiento',contact:'Contacto',note:'Nota',shelter:'Refugio',hospital:'Hospital',morgue:'Morgue',reunified:'Reunificación',review:'Moderación',opened:'Expediente abierto',sismo:'Sismo de referencia'};
 const KC={sismo:'#bb0027',report_filed:'#00173a',status_change:'#9a6400',sighting:'#1f8a4c',contact:'#1f5fd0',hospital:'#1f8a4c',shelter:'#1f8a4c',morgue:'#5a5f6a',reunified:'#1f8a4c',review:'#5a5f6a',note:'#5a5f6a',opened:'#00173a'};
@@ -302,6 +332,22 @@ const ago=ms=>{if(!ms)return '—';const s=Math.floor((Date.now()-Number(ms))/10
 const pill=s=>{const o=ST[s]||ST.unknown;return `<span class="pill" style="background:${o.bg};color:${o.fg}"><span class="d" style="background:${o.d}"></span>${o.es}</span>`;};
 const prioCell=p=>{if(!p)return '<span class="sub">—</span>';const o=PRIO[p]||PRIO.media;return `<span class="prio" style="color:${o.c}"><span class="bar" style="background:${o.c}"></span>${o.es}</span>`;};
 const avatar=(url,cls)=>url?`<img src="${esc(url)}" class="${cls}" onerror="this.outerHTML='<div class=\\'${cls} ph\\'>👤</div>'">`:`<div class="${cls} ph">👤</div>`;
+// Triage assessment card for the case detail: badge + score bar + why (rules hit).
+function triagePanel(p){
+  const t=TRIAGE[p.triage]; if(!t)return '';
+  const reasons=(p.score_reasons||[]).map(r=>`<li style="margin:0 0 5px;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:${t.c}">›</span>${esc(r)}</li>`).join('');
+  const sc=typeof p.score==='number'?p.score:0;
+  return `<div class="card" style="border-left:4px solid ${t.c}">
+    <h3 style="justify-content:space-between"><span style="display:inline-flex;gap:8px;align-items:center"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" stroke-linecap="round" stroke-linejoin="round"/></svg>Prioridad · Triage</span>
+      <span class="tri" style="color:${t.c};background:${t.bg}"><span class="d" style="background:${t.c}"></span>${p.triage_label||t.lbl}</span></h3>
+    <div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px">
+      <div style="flex:1;height:8px;border-radius:6px;background:#eef1f7;overflow:hidden"><div style="width:${sc}%;height:100%;background:${t.c}"></div></div>
+      <span class="mono" style="font:700 13px 'JetBrains Mono';color:${t.c}">${sc}/100</span>
+    </div>
+    ${reasons?`<div class="k" style="font:700 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:6px">Por qué esta prioridad</div><ul style="list-style:none;margin:0;padding:0;font:500 13px Inter;color:var(--ink)">${reasons}</ul>`:''}
+    <div class="note" style="margin-top:12px">Calculada automáticamente (estado · vulnerabilidad · sismo · tiempo). Se actualiza sola al cambiar el caso.</div>
+  </div>`;
+}
 
 /* ---------------- DOCKET LIST ---------------- */
 function skeletonRows(){
@@ -310,7 +356,8 @@ function skeletonRows(){
 function sortCases(list){
   const s=$('#f_sort').value;
   const a=[...list];
-  if(s==='recent')a.sort((x,y)=>(y.last_activity_ms||y.updated_ms||0)-(x.last_activity_ms||x.updated_ms||0));
+  if(s==='triage')a.sort((x,y)=>(y.score||0)-(x.score||0)||(y.last_activity_ms||0)-(x.last_activity_ms||0));
+  else if(s==='recent')a.sort((x,y)=>(y.last_activity_ms||y.updated_ms||0)-(x.last_activity_ms||x.updated_ms||0));
   else if(s==='opened')a.sort((x,y)=>(y.created_ms||0)-(x.created_ms||0));
   else if(s==='movs')a.sort((x,y)=>(y.docket_count||0)-(x.docket_count||0));
   else if(s==='name')a.sort((x,y)=>String(x.full_name||'').localeCompare(String(y.full_name||''),'es'));
@@ -327,7 +374,7 @@ function renderRows(){
       <td><div class="casecell"><span class="caseno">${esc(caseNo(c))}</span>${c.source==='familia'?'<span class="sub">Familia</span>':''}</div></td>
       <td><div class="person">${avatar(c.photo_url,'avatar')}<div><div class="nm">${esc(c.full_name||'Sin nombre')}</div><div class="sub">${c.age?c.age+' años':''}${c.sex?(c.age?' · ':'')+esc(c.sex):''}</div></div></div></td>
       <td>${pill(c.status)}</td>
-      <td>${prioCell(c.priority)}</td>
+      <td>${triageCell(c)}</td>
       <td><span class="sub" style="color:var(--ink);font-weight:600">${esc(typeLbl(c.incident_type))}</span></td>
       <td>${sismo}</td>
       <td class="c"><span class="chipnum${dc?'':' zero'}">${dc}</span></td>
@@ -397,7 +444,7 @@ function renderCase(d){
     </div>`;
   const meta=[
     ['Estado',(ST[p.status]||ST.unknown).es],
-    ['Prioridad',p.priority?(PRIO[p.priority]||PRIO.media).es:'—'],
+    ['Prioridad (triage)',(p.triage_label||(p.priority?(PRIO[p.priority]||PRIO.media).es:'—'))+(typeof p.score==='number'?` · ${p.score}/100`:'')],
     ['Tipo de incidente',typeLbl(p.incident_type)],
     ['Visto por última vez',p.last_seen||'—'],
     ['Caso abierto',`${fmtD(p.created_ms)} · ${days(p.created_ms)} d`],
@@ -430,6 +477,7 @@ function renderCase(d){
       ${p.notes?`<div style="margin-top:13px" class="fact"><div class="k">Descripción / señas</div><div class="v" style="font-weight:500;line-height:1.5">${esc(p.notes)}</div></div>`:''}
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
+      ${triagePanel(p)}
       ${sismoCard}
       <div class="card">
         <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" stroke-linecap="round" stroke-linejoin="round"/></svg>Acciones</h3>
