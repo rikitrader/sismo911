@@ -54,19 +54,35 @@ export async function analyzeRavPhotos(env: Env, batch = BATCH): Promise<RavPhot
   if (!env.AI) { console.warn('[rav-photos] no AI binding — skip'); return { scanned: 0, analyzed: 0, hashed: 0, failed: 0 }; }
   const model = (env as any).RAV_VISION_MODEL || VISION_MODEL_DEFAULT;
   const { results } = await env.DB.prepare(
-    `SELECT id, foto, tags FROM personas
+    `SELECT id, foto, foto_r2, tags FROM personas
      WHERE trim(coalesce(foto,'')) <> '' AND photo_caption IS NULL
      ORDER BY updated_at DESC LIMIT ?`,
-  ).bind(Math.min(Math.max(batch, 1), 25)).all<{ id: string; foto: string; tags: string | null }>();
+  ).bind(Math.min(Math.max(batch, 1), 25)).all<{ id: string; foto: string; foto_r2: string | null; tags: string | null }>();
   const rows = results ?? [];
   let analyzed = 0, hashed = 0, failed = 0;
 
+  // Fetch the image bytes: prefer the self-hosted R2 mirror (reliable) over the
+  // external URL (often dead/hotlink-protected on these citizen aggregators).
+  const getBytes = async (row: { foto: string; foto_r2: string | null }): Promise<Uint8Array | null> => {
+    if (row.foto_r2 && env.DESAP_FOTOS) {
+      try { const o = await env.DESAP_FOTOS.get(row.foto_r2); if (o) { const b = new Uint8Array(await o.arrayBuffer()); if (b.length) return b; } } catch { /* fall through to URL */ }
+    }
+    try { const r = await fetch(row.foto); if (r.ok) { const b = new Uint8Array(await r.arrayBuffer()); if (b.length) return b; } } catch { /* unreachable */ }
+    return null;
+  };
+
   for (const row of rows) {
     try {
-      const res = await fetch(row.foto);
-      if (!res.ok) { failed++; continue; }
-      const bytes = new Uint8Array(await res.arrayBuffer());
-      if (!bytes.length) { failed++; continue; }
+      const bytes = await getBytes(row);
+      if (!bytes) {
+        // Mark unreachable so the queue ADVANCES (never block on dead URLs); the
+        // 'unreachable' flag lets a future sweep retry these if photos are mirrored.
+        failed++;
+        await env.DB.prepare(
+          `UPDATE personas SET photo_caption=?, photo_flags=?, tags=? WHERE id=?`,
+        ).bind('(foto no accesible)', JSON.stringify(['unreachable']), mergeTags(row.tags, 'unreachable'), row.id).run();
+        continue;
+      }
       const phash = await sha256Hex(bytes);
 
       let caption = ''; let flag = 'unknown';
