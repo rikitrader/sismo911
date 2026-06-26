@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword } from '../src/lib/auth';
 import { estimatePager } from '../src/lib/pager';
 import { inBbox, normalizeFeature } from '../src/lib/usgs';
 import { scoreThreat } from '../src/lib/threat';
+import { bootstrapHistory } from '../src/ingest/usgs-history';
 
 // ---- helpers ----
 const envWith = (over: any = {}) => ({ ...over } as any);
@@ -200,5 +201,51 @@ describe('security: HTML/script-injection (stored-XSS) name gate', () => {
     expect(nameHasMarkup('Muro inclinado >2m sobre la acera')).toBe(false);
     expect(nameHasMarkup('')).toBe(false);
     expect(nameHasMarkup(null)).toBe(false);
+  });
+});
+
+describe('history bootstrap: one-time, self-disabling gate', () => {
+  const bbox = { USGS_MINLAT: '-2', USGS_MAXLAT: '16', USGS_MINLON: '-76', USGS_MAXLON: '-58' };
+  const fakeKv = (init: Record<string, string> = {}) => {
+    const m = new Map(Object.entries(init));
+    return { store: m, get: async (k: string) => m.get(k) ?? null, put: async (k: string, v: string) => void m.set(k, v) };
+  };
+  const fakeDb = (count: number) => ({
+    prepare: () => ({ first: async () => ({ n: count }), bind: () => ({ run: async () => ({}) }) }),
+    batch: async (s: any[]) => s.map(() => ({})),
+  });
+
+  it('no-ops when the KV flag is already set (no DB/network touch)', async () => {
+    let dbTouched = false;
+    const env: any = { ...bbox, CACHE: fakeKv({ 'history:bootstrapped': '1' }), DB: { prepare: () => { dbTouched = true; return {}; } } };
+    const r = await bootstrapHistory(env);
+    expect(r).toEqual({ skipped: 'already-bootstrapped' });
+    expect(dbTouched).toBe(false);
+  });
+
+  it('latches the flag without backfilling when D1 is already populated', async () => {
+    const kv = fakeKv();
+    const env: any = { ...bbox, CACHE: kv, DB: fakeDb(9968) };
+    const r = await bootstrapHistory(env);
+    expect(r.skipped).toBe('already-populated');
+    expect(r.count).toBe(9968);
+    expect(kv.store.get('history:bootstrapped')).toBeTruthy();
+  });
+
+  it('runs the backfill on a fresh/empty D1 and latches on a clean run', async () => {
+    const kv = fakeKv();
+    const env: any = { ...bbox, CACHE: kv, DB: fakeDb(0) };
+    const realFetch = globalThis.fetch;
+    // No network in unit tests: return an empty FeatureCollection → backfill
+    // writes 0 with no failed spans, so the bootstrap latches the flag.
+    globalThis.fetch = (async () => new Response(JSON.stringify({ features: [] }), { status: 200 })) as any;
+    try {
+      const r = await bootstrapHistory(env);
+      expect(r.bootstrapped).toBe(true);
+      expect((r as any).failedYears).toEqual([]);
+      expect(kv.store.get('history:bootstrapped')).toBeTruthy();
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });
