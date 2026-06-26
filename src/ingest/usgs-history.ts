@@ -87,17 +87,31 @@ const BOOTSTRAP_KEY = 'history:bootstrapped';
 const FRESH_THRESHOLD = 500; // events already present ⇒ treat as populated
 
 export async function bootstrapHistory(env: Env): Promise<Record<string, unknown>> {
-  if (await env.CACHE.get(BOOTSTRAP_KEY).catch(() => null)) return { skipped: 'already-bootstrapped' };
+  // Latch the KV flag and record the outcome to ingest_log so EVERY :05 tick is
+  // observable (otherwise the no-op/already-populated branches leave no trace and
+  // a swallowed KV-put failure is invisible). Returns whether the flag is set.
+  const latch = async (note: string, count: number): Promise<boolean> => {
+    let ok = true;
+    try { await env.CACHE.put(BOOTSTRAP_KEY, String(Date.now())); }
+    catch (e: any) { ok = false; note = `${note};kv-put-failed:${e?.message ?? e}`; }
+    await recordIngest(env, 'history-bootstrap', ok, count, note).catch(() => {});
+    return ok;
+  };
+
+  if (await env.CACHE.get(BOOTSTRAP_KEY).catch(() => null)) {
+    await recordIngest(env, 'history-bootstrap', true, 0, 'skip:already-bootstrapped').catch(() => {});
+    return { skipped: 'already-bootstrapped' };
+  }
 
   const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM events').first<{ n: number }>().catch(() => null);
   const count = Number(row?.n ?? 0);
   if (count >= FRESH_THRESHOLD) {
-    await env.CACHE.put(BOOTSTRAP_KEY, String(Date.now())).catch(() => {});
-    return { skipped: 'already-populated', count };
+    const latched = await latch('skip:already-populated', count);
+    return { skipped: 'already-populated', count, latched };
   }
 
   const report = await backfillUsgsHistory(env, { years: 60, minMag: 0 });
   // Only latch the flag on a clean run so a partial/failed fetch retries next tick.
-  if (report.failedYears.length === 0) await env.CACHE.put(BOOTSTRAP_KEY, String(Date.now())).catch(() => {});
-  return { bootstrapped: true, priorCount: count, ...report };
+  const latched = report.failedYears.length === 0 ? await latch('bootstrapped', report.written) : false;
+  return { bootstrapped: true, priorCount: count, latched, ...report };
 }
