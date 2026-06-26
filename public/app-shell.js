@@ -7,6 +7,7 @@
     var ml = document.createElement('link'); ml.rel = 'manifest'; ml.href = '/manifest.webmanifest'; document.head.appendChild(ml);
   }
   const NAV = [
+    { label: 'Personas Desaparecidas', href: '/personas', m: ['/personas'], alarm: true, d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zm12.5 1.5L19 15m0 0l-2.5-2.5M19 15l2.5-2.5M19 15l-2.5 2.5' },
     { label: 'Feed en Tiempo Real', href: '/', m: ['/'], d: 'M3 12h4l2 7 4-14 2 7h6' },
     { label: 'Mapa de Capas', href: '/mapa', m: ['/mapa'], d: 'M9 20l-5.4 2.7A1 1 0 012 21.8V6.6a1 1 0 01.55-.9L9 2.5m0 17.5l6 3m-6-3V2.5m6 20.5l5.45-2.72a1 1 0 00.55-.9V4.2a1 1 0 00-1.45-.9L15 5.5m0 17.5V5.5m0 0L9 2.5' },
     { label: 'Alertas', href: '/alertas', m: ['/alertas'], d: 'M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z' },
@@ -14,7 +15,6 @@
     { label: 'Alerta PAGER', href: '/pager', m: ['/pager'], d: 'M12 3l8 4v5c0 4.5-3.1 7.9-8 9-4.9-1.1-8-4.5-8-9V7l8-4z' },
     { label: 'Archivo Histórico', href: '/archivo', m: ['/archivo'], d: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v3H3zM3 10h18v7a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 14h6' },
     { label: 'Familia / Check-in', href: '/familia', m: ['/familia'], d: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
-    { label: 'Personas Desaparecidas', href: '/personas', m: ['/personas'], d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zm12.5 1.5L19 15m0 0l-2.5-2.5M19 15l2.5-2.5M19 15l-2.5 2.5' },
     { label: 'Casos / Expedientes', href: '/casos', m: ['/casos'], d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
     { label: 'Centros de Acopio', href: '/acopio', m: ['/acopio'], d: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12' },
     { label: 'Operaciones Logísticas', href: '/operaciones', m: ['/operaciones'], d: 'M3 11l19-9-9 19-2-8-8-2z' },
@@ -41,6 +41,12 @@
 
   const item = (it) => {
     const on = active(it);
+    if (it.alarm) {
+      // Red "alarm" button — solid SECONDARY with a pulsing ring so it reads as urgent.
+      return `<a href="${it.href}" class="s911-alarm" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 1px 3px rgba(187,0,39,.4)">
+      <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.18);color:#fff">${icon(it.d)}</span>
+      ${it.label}</a>`;
+    }
     return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;font:600 13.5px Inter,sans-serif;text-decoration:none;${on ? 'background:rgba(0,23,58,.06);color:' + NAVY : 'color:' + VARIANT}" onmouseover="if(!${on})this.style.background='#eeeef0'" onmouseout="if(!${on})this.style.background='transparent'">
       <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;${on ? 'background:' + NAVY + ';color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)' : 'background:rgba(0,23,58,.10);color:' + NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
@@ -65,6 +71,13 @@
     #s911-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1199;display:none}
     #s911-back.open{display:block}
     #s911-shell a.acct{text-decoration:none}
+    /* Red alarm nav button — pulsing ring to draw the eye to missing persons. */
+    #s911-shell a.s911-alarm{position:relative;animation:s911-alarm-pulse 1.8s ease-in-out infinite}
+    @keyframes s911-alarm-pulse{
+      0%{box-shadow:0 0 0 0 rgba(187,0,39,.55)}
+      70%{box-shadow:0 0 0 10px rgba(187,0,39,0)}
+      100%{box-shadow:0 0 0 0 rgba(187,0,39,0)}
+    }
   `;
   const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
 
