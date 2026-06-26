@@ -215,12 +215,16 @@ describe('history bootstrap: one-time, self-disabling gate', () => {
     batch: async (s: any[]) => s.map(() => ({})),
   });
 
-  it('no-ops when the KV flag is already set (no DB/network touch)', async () => {
-    let dbTouched = false;
-    const env: any = { ...bbox, CACHE: fakeKv({ 'history:bootstrapped': '1' }), DB: { prepare: () => { dbTouched = true; return {}; } } };
-    const r = await bootstrapHistory(env);
-    expect(r).toEqual({ skipped: 'already-bootstrapped' });
-    expect(dbTouched).toBe(false);
+  it('no-ops when the KV flag is already set (no backfill / no network)', async () => {
+    const env: any = { ...bbox, CACHE: fakeKv({ 'history:bootstrapped': '1' }), DB: fakeDb(0) };
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () => { throw new Error('must not fetch when already bootstrapped'); }) as any;
+    try {
+      const r = await bootstrapHistory(env);
+      expect(r).toEqual({ skipped: 'already-bootstrapped' });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 
   it('latches the flag without backfilling when D1 is already populated', async () => {
@@ -229,7 +233,16 @@ describe('history bootstrap: one-time, self-disabling gate', () => {
     const r = await bootstrapHistory(env);
     expect(r.skipped).toBe('already-populated');
     expect(r.count).toBe(9968);
+    expect(r.latched).toBe(true);
     expect(kv.store.get('history:bootstrapped')).toBeTruthy();
+  });
+
+  it('reports latched=false (and does NOT crash) when the KV put fails', async () => {
+    const failKv = { get: async () => null, put: async () => { throw new Error('KV put quota'); } };
+    const env: any = { ...bbox, CACHE: failKv, DB: fakeDb(9968) };
+    const r = await bootstrapHistory(env);
+    expect(r.skipped).toBe('already-populated');
+    expect(r.latched).toBe(false);
   });
 
   it('runs the backfill on a fresh/empty D1 and latches on a clean run', async () => {
