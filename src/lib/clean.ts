@@ -57,6 +57,21 @@ export function spamPhraseWhere(col = 'nombre'): string {
   return SPAM_PHRASES.map((p) => `${c} LIKE '%${p.replace(/'/g, "''")}%'`).map((x) => `(${x})`).join(' OR ');
 }
 
+// WHERE clause matching a NAME/TITLE that carries HTML/script-injection markup —
+// stored-XSS abuse like '"><svg/onload=("@jofpin");>'. SQL twin of MARKUP_RE in
+// lib/security.ts (nameHasMarkup). Scoped TIGHTLY to tag-open / handler / URI
+// patterns (NOT a bare '<'/'>' LIKE that could catch a legit "grieta <5cm").
+export function markupNameWhere(col = 'nombre'): string {
+  const lc = `lower(trim(${col}))`;
+  return [
+    `${lc} GLOB '*<[a-z]*'`,          // HTML tag open: '<svg', '<img', '<script'
+    `${lc} GLOB '*</[a-z]*'`,         // closing tag: '</a', '</svg'
+    `${lc} LIKE '%javascript:%'`,
+    `${lc} LIKE '%data:text/html%'`,
+    `${lc} GLOB '*on[a-z]*=*'`,       // on*= event handler: onload=, onerror=, onclick=
+  ].map((x) => `(${x})`).join(' OR ');
+}
+
 // WHERE clause (without leading WHERE) that matches a junk/corrupted row.
 export function junkWhere(col = 'nombre'): string {
   const list = JUNK_NAMES.map((n) => `'${n.replace(/'/g, "''")}'`).join(', ');
@@ -72,11 +87,12 @@ export function junkWhere(col = 'nombre'): string {
 export interface CleanReport { scanned: number; flagged: number; applied: boolean; }
 
 // Flag corrupted/fake/spam personas as moderation='rejected'. apply=false reports
-// only. Catches both junk names (empty/no-letter/test tokens) and link/email/domain
-// spam names (e.g. "TRUSTEDF57 - infinityhotel.it") that slipped past the door.
+// only. Catches junk names (empty/no-letter/test tokens), link/email/domain spam
+// names (e.g. "TRUSTEDF57 - infinityhotel.it"), AND HTML/script-injection markup
+// names (e.g. '"><svg/onload=…') that slip past the door via the familia ingest.
 export async function cleanPersonas(env: Env, opts: { apply?: boolean } = {}): Promise<CleanReport> {
   const apply = !!opts.apply;
-  const where = `moderation = 'approved' AND ((${junkWhere('nombre')}) OR (${spamNameWhere('nombre')}) OR (${spamPhraseWhere('nombre')}))`;
+  const where = `moderation = 'approved' AND ((${junkWhere('nombre')}) OR (${spamNameWhere('nombre')}) OR (${spamPhraseWhere('nombre')}) OR (${markupNameWhere('nombre')}))`;
   const scanned = (await env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${where}`).first<{ n: number }>())?.n ?? 0;
   if (!apply || scanned === 0) return { scanned, flagged: 0, applied: false };
   await env.DB.prepare(`UPDATE personas SET moderation = 'rejected', updated_at = ? WHERE ${where}`).bind(Date.now()).run();
@@ -154,4 +170,59 @@ export async function cleanNameFloods(
     flagged += scanned;
   }
   return { groups: names.length, flagged, applied: apply && flagged > 0 };
+}
+
+// The one known operator-left test report row (a deploy-verification post, not a
+// real damage report) — purged alongside the XSS markup rows.
+export const TEST_REPORT_ID = 'rep_f7fdc6e7';
+
+export interface MarkupPurgeReport {
+  personas: number;
+  persons: number;
+  map_reports: number;
+  testRow: number;
+  applied: boolean;
+}
+
+// Physically DELETE stored-XSS abuse rows whose name/title carries HTML/script
+// markup ('"><svg/onload=…') from personas (nombre), persons (full_name) and
+// map_reports (title), plus the known test report TEST_REPORT_ID. Idempotent:
+// re-running after a successful purge matches nothing → all counts 0. apply=false
+// → count-only dry run (deletes nothing). Deletion is scoped tightly via
+// markupNameWhere() (tag/handler/URI patterns) so legitimate missing-person or
+// damage reports are never touched. personas R2 photos for matched rows are freed.
+export async function purgeMarkupAbuse(
+  env: Env,
+  opts: { apply?: boolean } = {},
+): Promise<MarkupPurgeReport> {
+  const apply = !!opts.apply;
+  const personasWhere = markupNameWhere('nombre');
+  const personsWhere = markupNameWhere('full_name');
+  const reportsWhere = `(${markupNameWhere('title')}) OR id = '${TEST_REPORT_ID}'`;
+
+  const countOf = async (table: string, where: string) =>
+    (await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${where}`).first<{ n: number }>())?.n ?? 0;
+
+  const personas = await countOf('personas', personasWhere);
+  const persons = await countOf('persons', personsWhere);
+  const map_reports = await countOf('map_reports', reportsWhere);
+  const testRow = await countOf('map_reports', `id = '${TEST_REPORT_ID}'`);
+
+  if (!apply) return { personas, persons, map_reports, testRow, applied: false };
+
+  // Free R2 photos for the matched personas before deleting their rows.
+  if (personas > 0) {
+    const { results } = await env.DB.prepare(
+      `SELECT foto_r2 FROM personas WHERE ${personasWhere} AND foto_r2 IS NOT NULL`
+    ).all<{ foto_r2: string }>();
+    for (const r of results ?? []) {
+      try { await env.DESAP_FOTOS.delete(r.foto_r2); } catch { /* ignore */ }
+    }
+  }
+
+  await env.DB.prepare(`DELETE FROM personas WHERE ${personasWhere}`).run();
+  await env.DB.prepare(`DELETE FROM persons WHERE ${personsWhere}`).run();
+  await env.DB.prepare(`DELETE FROM map_reports WHERE ${reportsWhere}`).run();
+
+  return { personas, persons, map_reports, testRow, applied: true };
 }
