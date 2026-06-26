@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { ingestRav, ingestRavStats, ingestRavVerified } from '../ingest/rav-cron';
+import { analyzeRavPhotos } from '../ingest/rav-photos';
 import { cleanPersonas } from '../lib/clean';
 import { dedupePersonas } from '../lib/dedupe';
 
@@ -29,11 +30,13 @@ rav.post('/api/rav/run', async (c) => {
   if (!authed(c)) return c.json({ error: 'unauthorized' }, 401);
   const kind = (c.req.query('kind') || 'persons').toLowerCase();
   const pages = Math.min(Math.max(Number(c.req.query('pages')) || 5, 1), 25);
+  const photoBatch = Math.min(Math.max(Number(c.req.query('batch')) || 24, 1), 25);
   const out: Record<string, unknown> = { kind };
   try {
     if (kind === 'stats' || kind === 'all') out.stats = await ingestRavStats(c.env);
     if (kind === 'verified' || kind === 'all') out.verified = await ingestRavVerified(c.env);
     if (kind === 'persons' || kind === 'all') out.persons = await ingestRav(c.env, pages);
+    if (kind === 'photos' || kind === 'all') out.photos = await analyzeRavPhotos(c.env, photoBatch);
     if (c.req.query('clean')) out.cleaned = await cleanPersonas(c.env, { apply: true });
     if (c.req.query('dedupe')) {
       // Namesake-safe modes only (omit `loose` = name+location, which can merge

@@ -17,7 +17,7 @@ import type { Env } from '../types';
 // idempotent: successive cron ticks grind down the backlog.
 
 const VISION_MODEL_DEFAULT = '@cf/meta/llama-3.2-11b-vision-instruct';
-const BATCH = 8;
+const BATCH = 24;   // per cron tick; the backfill drives larger batches via /api/rav/run?kind=photos
 const PROMPT =
   `Eres analista del registro de desaparecidos SISMO911. Describe esta foto en UNA frase breve en español ` +
   `(¿es una persona? ¿rostro visible? ¿edad/sexo aparente?). Luego, en una segunda línea exacta, clasifica con ` +
