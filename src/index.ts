@@ -35,6 +35,7 @@ import { ingestUsgs } from './ingest/usgs-cron';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
 import { ingestSosDamage } from './ingest/sos-damage';
+import { ingestBlog } from './ingest/blog-cron';
 import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
 import { sweepCaseScores } from './lib/case-score-sync';
 import { adapterStatus } from './adapters/social';
@@ -267,6 +268,9 @@ export default {
       await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));
       // Safety net: re-mirror the SOS table (live posts/patches sync it immediately).
       await syncSosSheet(env).catch((e: any) => console.error('[cron] sos sheet sync failed:', e?.message ?? e));
+      // Always-on blog: every ~3h (KV-gated), publish AI-written field reports
+      // from free sources (VE news RSS + YouTube + GDELT). Runs on CF's network.
+      await ingestBlog(env).catch((e: any) => console.error('[cron] blog ingest failed:', e?.message ?? e));
       // Autonomous case re-scoring: re-evaluate active cases against the FEMA-triage
       // rules so time-based priority (72 h window, cold cases) stays current. Bounded
       // per tick (native missing + a cursor-walked familia batch).

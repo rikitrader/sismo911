@@ -34,34 +34,68 @@ async function getJson(url: string, headers: Record<string, string> = {}) {
   return r.json<any>();
 }
 
-// ---- Google News RSS (keyless, datacenter-friendly) — story + link ----
-// The link is a news.google.com redirect that resolves to the article; image is
-// left empty (the UI shows a branded cover). Reliable from a Worker, unlike the
-// keyless social APIs which IP-block / throttle datacenters.
-async function fetchGoogleNews(sinceMs: number): Promise<SourceRecord[]> {
-  const out: SourceRecord[] = [];
-  const seen = new Set<string>();
-  for (const q of QUERY_ES) {
-    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q + ' when:7d')}&hl=es-419&gl=VE&ceid=VE:es-419`;
-    try {
-      const r = await fetch(url, { headers: { 'user-agent': UA } });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const xml = await r.text();
-      for (const block of xml.split('<item>').slice(1)) {
-        const pick = (tag: string) => (block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`)) || [, ''])[1];
-        const strip = (s: string) => s.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, '').trim();
-        const link = strip(pick('link'));
-        const title = strip(pick('title'));
-        const src = strip(pick('source'));
-        const ts = Date.parse(strip(pick('pubDate'))) || Date.now();
-        const id = (block.match(/<guid[^>]*>([\s\S]*?)<\/guid>/) || [, link])[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim() || link;
-        if (!title || !link || seen.has(id) || ts < sinceMs) continue;
-        seen.add(id);
-        out.push({ platform: 'noticia', id, author: src || 'Google News', caption: title, url: link, image: '', video: '', ts, views: 0, likes: 0, comments: 0 });
-      }
-    } catch (e: any) { console.error('[blog-sources] googlenews', q, e?.message ?? e); }
+// ---- Venezuelan news RSS feeds (keyless, datacenter-friendly) ----
+// Normal news sites' RSS — no IP-blocking — give DIRECT article links + images.
+// We filter each feed to earthquake items and enrich the poster image from
+// media:content/enclosure, else a bounded og:image fetch of the article.
+const VE_FEEDS = [
+  'https://efectococuyo.com/feed/',
+  'https://runrun.es/feed/',
+  'https://talcualdigital.com/feed/',
+  'https://elpitazo.net/feed/',
+  'https://cronica.uno/feed/',
+];
+const QUAKE_RE = /terremoto|sismo|sismic|temblor|r[ée]plica|magnitud|epicentr|tsunami|funvisis/i;
+const stripTags = (s: string) => String(s).replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim();
+const attr = (s: string, a: string) => (s.match(new RegExp(`${a}\\s*=\\s*["']([^"']+)["']`)) || [, ''])[1];
+
+async function ogImage(link: string): Promise<string> {
+  try {
+    const r = await fetch(link, { headers: { 'user-agent': UA }, cf: { cacheTtl: 0 } });
+    if (!r.ok) return '';
+    const html = (await r.text()).slice(0, 60_000);
+    const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    return m ? m[1] : '';
+  } catch { return ''; }
+}
+
+async function fetchVeNews(sinceMs: number): Promise<SourceRecord[]> {
+  const settled = await Promise.allSettled(VE_FEEDS.map(async (feed) => {
+    const host = new URL(feed).hostname.replace(/^www\./, '');
+    const out: SourceRecord[] = [];
+    const r = await fetch(feed, { headers: { 'user-agent': UA }, cf: { cacheTtl: 0 } });
+    if (!r.ok) throw new Error(`${host} HTTP ${r.status}`);
+    const xml = await r.text();
+    for (const block of xml.split(/<item[ >]/).slice(1)) {
+      const pick = (tag: string) => (block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`)) || [, ''])[1];
+      const title = stripTags(pick('title'));
+      const link = stripTags(pick('link')) || stripTags(pick('guid'));
+      const desc = pick('description') + pick('content:encoded');
+      const ts = Date.parse(stripTags(pick('pubDate'))) || Date.now();
+      if (!title || !link || ts < sinceMs) continue;
+      if (!QUAKE_RE.test(`${title} ${stripTags(desc).slice(0, 300)}`)) continue;
+      // image: media:content / media:thumbnail / enclosure / <img> in content
+      let image = attr(block, 'url') && /media:|enclosure/.test(block)
+        ? (block.match(/<(?:media:content|media:thumbnail|enclosure)[^>]*\burl=["']([^"']+)["']/) || [, ''])[1] : '';
+      if (!image) image = (desc.match(/<img[^>]+src=["']([^"']+)["']/) || [, ''])[1];
+      out.push({ platform: 'noticia', id: link, author: host, caption: title, url: link, image, video: '', ts, views: 0, likes: 0, comments: 0 });
+    }
+    return out;
+  }));
+  const items: SourceRecord[] = [];
+  settled.forEach((s, i) => {
+    if (s.status === 'fulfilled') items.push(...s.value);
+    else console.error('[blog-sources] venews', VE_FEEDS[i], (s.reason as any)?.message ?? s.reason);
+  });
+  // Bounded og:image enrichment for items still missing a poster (≤8 fetches).
+  let budget = 8;
+  for (const it of items) {
+    if (it.image || budget <= 0) continue;
+    budget--;
+    it.image = await ogImage(it.url);
   }
-  return out;
+  return items;
 }
 
 // ---- GDELT DOC 2.0 (keyless) — news coverage with a share image + link ----
@@ -154,8 +188,8 @@ async function fetchBluesky(sinceMs: number): Promise<SourceRecord[]> {
 
 // Fetch all free sources, dedupe by platform:id, newest first.
 export async function fetchBlogSources(env: Env, sinceMs: number): Promise<{ candidates: SourceRecord[]; counts: Record<string, number> }> {
-  const results = await Promise.allSettled([fetchGoogleNews(sinceMs), fetchYoutube(env, sinceMs), fetchGdelt(sinceMs), fetchBluesky(sinceMs)]);
-  const names = ['googlenews', 'youtube', 'gdelt', 'bluesky'];
+  const results = await Promise.allSettled([fetchVeNews(sinceMs), fetchYoutube(env, sinceMs), fetchGdelt(sinceMs), fetchBluesky(sinceMs)]);
+  const names = ['venews', 'youtube', 'gdelt', 'bluesky'];
   const counts: Record<string, number> = {};
   const seen = new Set<string>();
   const candidates: SourceRecord[] = [];
