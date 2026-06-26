@@ -22,7 +22,7 @@
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css" />
-<style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}</style>
+<style>body{background:#f9f9fc}</style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"ContactPage","name":"Contacto y Compartir — SISMO911","url":"https://sismo911.com/contacto","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
 </script>
@@ -116,7 +116,7 @@ if(navigator.share){sn.onclick=()=>navigator.share({title:'SISMO911',text:MSG,ur
 else{sn.style.display='none';}
 
 // Trail / mapa del sitio
-const PAGES=[['/','Panel'],['/mapa','Mapa sísmico'],['/alertas','Alertas'],['/sos','SOS'],['/personas','Personas'],['/familia','Familia'],['/recursos','Recursos'],['/acopio','Centros de acopio'],['/suministros-medicos','Botiquín'],['/red-ayuda','Red de ayuda'],['/comms','Radio'],['/guia','Guía'],['/reportar','Reportar'],['/canal','Canal'],['/movimiento','Movimiento'],['/pager','PAGER'],['/blog','Blog'],['/contacto','Contacto']];
+const PAGES=[['/','Panel'],['/mapa','Mapa sísmico'],['/alertas','Alertas'],['/sos','SOS'],['/personas','Personas'],['/recursos','Recursos'],['/acopio','Centros de acopio'],['/suministros-medicos','Botiquín'],['/red-ayuda','Red de ayuda'],['/comms','Radio'],['/guia','Guía'],['/reportar','Reportar'],['/canal','Canal'],['/movimiento','Movimiento'],['/pager','PAGER'],['/blog','Blog'],['/contacto','Contacto']];
 document.getElementById('trail').innerHTML=PAGES.map(([h,t])=>`<a href="${h}" class="text-primary hover:underline">${t}</a>`).join('<span class="text-outline-variant">·</span>');
 </script>
 </body>
