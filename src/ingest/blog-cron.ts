@@ -69,11 +69,11 @@ ${JSON.stringify({ plataforma: rec.platform, autor: rec.author, lugar: rec.place
       messages: [{ role: 'system', content: sys }, { role: 'user', content: user }],
       max_tokens: 900, temperature: 0.3,
     });
-    const text = String(resp?.response ?? resp?.result?.response ?? '').trim();
+    const text = String(resp?.response ?? resp?.result?.response ?? (typeof resp === 'string' ? resp : '')).trim();
     const a = text.indexOf('{'), b = text.lastIndexOf('}');
-    if (a === -1 || b === -1) return null;
+    if (a === -1 || b === -1) { console.error('[blog-cron] AI no-json:', JSON.stringify(resp).slice(0, 300)); return null; }
     const obj = JSON.parse(text.slice(a, b + 1));
-    if (!obj.headline || !obj.body_html) return null;
+    if (!obj.headline || !obj.body_html) { console.error('[blog-cron] AI missing fields:', text.slice(0, 200)); return null; }
     return { headline: String(obj.headline), meta_desc: String(obj.meta_desc || ''), body_html: String(obj.body_html) };
   } catch (e: any) {
     console.error('[blog-cron] writeArticle failed:', e?.message ?? e);
