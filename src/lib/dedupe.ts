@@ -1,6 +1,23 @@
 import type { Env } from '../types';
 
-export type DedupeMode = 'exact' | 'loose' | 'photo';
+export type DedupeMode = 'exact' | 'loose' | 'photo' | 'fuzzyphone';
+
+// Accent/case/space-insensitive normalized name (Spanish diacritics → ASCII).
+// lower() first, then fold the lowercase accented vowels + ñ/ü. Used so that
+// "Aron sánchez", "Aron sanchez" collapse to one key.
+function normNameSql(col = 'nombre'): string {
+  let e = `lower(trim(${col}))`;
+  for (const [a, b] of [['á', 'a'], ['é', 'e'], ['í', 'i'], ['ó', 'o'], ['ú', 'u'], ['ü', 'u'], ['ñ', 'n']]) {
+    e = `replace(${e}, '${a}', '${b}')`;
+  }
+  return e;
+}
+// Phone normalized to digits only (strip spaces, punctuation, +, parens).
+function normPhoneSql(col = 'contacto'): string {
+  let e = `coalesce(${col}, '')`;
+  for (const ch of [' ', '-', '+', '(', ')', '.']) e = `replace(${e}, '${ch}', '')`;
+  return e;
+}
 
 export interface DedupeReport {
   mode: DedupeMode;
@@ -17,6 +34,7 @@ export interface DedupeReport {
 //  loose → same name + location only (may merge namesakes; operator-confirmed use only)
 function partitionFor(mode: DedupeMode): string {
   if (mode === 'photo') return `lower(trim(foto))`;
+  if (mode === 'fuzzyphone') return `${normNameSql('nombre')}, coalesce(edad,-1), ${normPhoneSql('contacto')}`;
   return mode === 'loose'
     ? `lower(trim(nombre)), lower(trim(coalesce(ubicacion,'')))`
     : `lower(trim(nombre)), coalesce(edad,-1), lower(trim(coalesce(ubicacion,''))), lower(trim(coalesce(descripcion,''))), lower(trim(coalesce(contacto,'')))`;
@@ -31,12 +49,16 @@ export async function dedupePersonas(
   env: Env,
   opts: { mode?: DedupeMode; apply?: boolean; limit?: number } = {}
 ): Promise<DedupeReport> {
-  const mode: DedupeMode = opts.mode === 'loose' ? 'loose' : opts.mode === 'photo' ? 'photo' : 'exact';
+  const mode: DedupeMode = opts.mode === 'loose' ? 'loose' : opts.mode === 'photo' ? 'photo'
+    : opts.mode === 'fuzzyphone' ? 'fuzzyphone' : 'exact';
   const apply = !!opts.apply;
   const limit = Math.min(Math.max(opts.limit ?? 300, 1), 400);
   // photo mode must only group rows that actually have a photo, or it would
-  // collapse every photoless row into one bogus group.
-  const scope = mode === 'photo' ? `WHERE trim(coalesce(foto,'')) != ''` : ``;
+  // collapse every photoless row into one bogus group. fuzzyphone likewise needs
+  // a real phone (≥7 digits) or every phoneless row would merge by name+age alone.
+  const scope = mode === 'photo' ? `WHERE trim(coalesce(foto,'')) != ''`
+    : mode === 'fuzzyphone' ? `WHERE length(${normPhoneSql('contacto')}) >= 7`
+    : ``;
   const sql = `SELECT id, foto_r2 FROM (
       SELECT id, foto_r2, ROW_NUMBER() OVER (
         PARTITION BY ${partitionFor(mode)}

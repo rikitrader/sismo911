@@ -83,6 +83,40 @@ export async function cleanPersonas(env: Env, opts: { apply?: boolean } = {}): P
   return { scanned, flagged: scanned, applied: true };
 }
 
+export interface PurgeReport { found: number; deletedRows: number; deletedPhotos: number; remaining: number; applied: boolean; }
+
+// Physically delete personas already flagged moderation='rejected' (confirmed
+// junk/spam, hidden from public reads) plus their R2 photos. cleanPersonas /
+// cleanNameFloods only soft-reject (auditable); this drains that backlog so it
+// doesn't accumulate. Bounded by `limit` to stay within the Worker subrequest
+// budget — convergent: repeated runs (the :15 cron or the admin button) finish
+// the job. apply=false → count only.
+export async function purgeRejectedPersonas(
+  env: Env,
+  opts: { apply?: boolean; limit?: number } = {},
+): Promise<PurgeReport> {
+  const apply = !!opts.apply;
+  const limit = Math.min(Math.max(opts.limit ?? 300, 1), 400);
+  const found = (await env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE moderation='rejected'`).first<{ n: number }>())?.n ?? 0;
+  if (!apply || found === 0) return { found, deletedRows: 0, deletedPhotos: 0, remaining: found, applied: false };
+  const { results } = await env.DB.prepare(
+    `SELECT id, foto_r2 FROM personas WHERE moderation='rejected' LIMIT ?`
+  ).bind(limit).all<{ id: string; foto_r2: string | null }>();
+  const batch = results ?? [];
+  let deletedPhotos = 0;
+  for (const r of batch) {
+    if (r.foto_r2) { try { await env.DESAP_FOTOS.delete(r.foto_r2); deletedPhotos++; } catch { /* ignore */ } }
+  }
+  let deletedRows = 0;
+  const ids = batch.map((r) => r.id);
+  for (let i = 0; i < ids.length; i += 40) {
+    const chunk = ids.slice(i, i + 40);
+    await env.DB.prepare(`DELETE FROM personas WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).run();
+    deletedRows += chunk.length;
+  }
+  return { found, deletedRows, deletedPhotos, remaining: found - deletedRows, applied: true };
+}
+
 export interface FloodReport { groups: number; flagged: number; applied: boolean; }
 
 // Reject "name flood" corruption: a single name spammed across many rows with no
