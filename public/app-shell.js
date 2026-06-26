@@ -61,19 +61,19 @@
     if (it.alarm) {
       // Red "alarm" button — solid SECONDARY with a pulsing ring so it reads as urgent.
       return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 1px 3px rgba(187,0,39,.4)">
-      <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.18);color:#fff">${icon(it.d)}</span>
+      <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.18);color:#fff">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
     if (it.solid) {
       // Solid navy feature button — same treatment as the alarm button, navy instead of red.
       return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${NAVY};color:#fff;box-shadow:0 1px 3px rgba(0,23,58,.4)">
-      <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.18);color:#fff">${icon(it.d)}</span>
+      <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.18);color:#fff">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
     if (it.gold) {
       // Solid Venezuela-flag gold feature button with navy text/icon (the flag's yellow+blue pairing).
       return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${GOLD};color:${NAVY};box-shadow:0 1px 3px rgba(201,162,39,.45)">
-      <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
+      <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
     if (it.report) {
@@ -87,11 +87,11 @@
       // Solid red call-to-action (CTA conversion color), static — no animation.
       const on2 = active(it);
       return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${CTARED};color:#fff;box-shadow:0 1px 3px rgba(214,40,40,.4)${on2 ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
-      <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.20);color:#fff">${icon(it.d)}</span>
+      <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.20);color:#fff">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
     return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;font:600 13.5px Inter,sans-serif;text-decoration:none;${on ? 'background:rgba(0,23,58,.06);color:' + NAVY : 'color:' + VARIANT}" onmouseover="if(!${on})this.style.background='#eeeef0'" onmouseout="if(!${on})this.style.background='transparent'">
-      <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;${on ? 'background:' + NAVY + ';color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)' : 'background:rgba(0,23,58,.10);color:' + NAVY}">${icon(it.d)}</span>
+      <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;${on ? 'background:' + NAVY + ';color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)' : 'background:rgba(0,23,58,.10);color:' + NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
   };
 
@@ -103,7 +103,7 @@
     const open = groupActive(g);
     return `<div class="s911-group${open ? ' open' : ''}" data-g="${i}">
       <button type="button" class="s911-ghead" aria-expanded="${open}">
-        <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.10);color:${NAVY}">${icon(g.d)}</span>
+        <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.10);color:${NAVY}">${icon(g.d)}</span>
         <span style="flex:1;text-align:left;min-width:0">${g.label}</span>
         ${chevron}
       </button>
