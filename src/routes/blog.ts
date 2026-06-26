@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
+import { fetchBlogSources } from '../ingest/blog-sources';
 
 // Dynamic /blog ("Noticias") — a magazine of AI-written field reports, each
 // derived from a REAL scraped citizen post about the 24-J terremoto. Rendered
@@ -264,6 +265,18 @@ blog.get('/api/blog', async (c) => {
        FROM blog_posts WHERE status='published' ORDER BY published_at DESC LIMIT 1000`,
   ).all<any>();
   return c.json({ total: results.length, items: results });
+});
+
+// ---------------- free source feed (cron reads this; bearer-token gated) ----------------
+// Fetches GDELT + YouTube + Bluesky from Cloudflare's clean network (the host
+// Mac has poisoned DNS for these hosts) and returns normalized candidates. The
+// local cron then geolocates, writes with `claude -p`, and POSTs to ingest.
+blog.get('/api/blog/sources', async (c) => {
+  const tok = (c.req.header('authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!c.env.BLOG_INGEST_TOKEN || tok !== c.env.BLOG_INGEST_TOKEN) return c.json({ error: 'unauthorized' }, 401);
+  const since = Number(c.req.query('since')) || (Date.now() - 6 * 3600_000);
+  const { candidates, counts } = await fetchBlogSources(c.env, since);
+  return c.json({ since, counts, total: candidates.length, candidates });
 });
 
 // ---------------- ingest (cron POSTs new posts here; bearer-token gated) ----------------
