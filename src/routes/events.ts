@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { listEvents, getEvent } from '../lib/db';
 import { getCachedEvents, ingestUsgs } from '../ingest/usgs-cron';
+import { backfillUsgsHistory } from '../ingest/usgs-history';
 import { estimatePager } from '../lib/pager';
 import { scoreThreat } from '../lib/threat';
 
@@ -66,6 +67,24 @@ events.get('/:id', async (c) => {
 events.post('/refresh', async (c) => {
   try {
     const r = await ingestUsgs(c.env);
+    return c.json({ ok: true, ...r });
+  } catch (e: any) {
+    return c.json({ ok: false, error: String(e?.message ?? e) }, 502);
+  }
+});
+
+// POST /api/events/backfill-run — Bearer-gated in-Worker historical backfill
+// from USGS FDSNWS (the operator /admin button needs a session; this lets the
+// same job be triggered headlessly + returns the BackfillReport so we can see
+// whether FDSNWS is reachable from CF egress). Path is NOT under a guarded
+// prefix (see ADMIN_WRITE_PREFIXES in index.ts) — it does its own auth.
+// Body: { years?: number (≤60), minMag?: number }.
+events.post('/backfill-run', async (c) => {
+  const tok = (c.req.header('authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!c.env.BLOG_INGEST_TOKEN || tok !== c.env.BLOG_INGEST_TOKEN) return c.json({ error: 'unauthorized' }, 401);
+  const b: any = await c.req.json().catch(() => ({}));
+  try {
+    const r = await backfillUsgsHistory(c.env, { years: b?.years, minMag: b?.minMag });
     return c.json({ ok: true, ...r });
   } catch (e: any) {
     return c.json({ ok: false, error: String(e?.message ?? e) }, 502);
