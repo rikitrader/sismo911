@@ -169,10 +169,27 @@ const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 // "SIMONE BURATTI GAY" ×353 flood). Kept in sync with SPAM_PHRASES in lib/clean.ts.
 const SPAM_PHRASE_RE = /simone\s+buratti/i;
 
-/** A NAME field that contains any link, bare domain or known spam phrase is spam — names never do. */
+// HTML/script-injection (stored-XSS) markup in a NAME or report TITLE. A real
+// person name or damage-report title never contains an HTML tag, a javascript:
+// URI or an on*= event handler — these are abuse payloads (e.g. the stored
+// '"><svg/onload=("@jofpin");>' case-name flood). We match a *tag-like* token
+// (`<` immediately followed by a letter or `/`, i.e. '<svg', '<img', '</a'),
+// `javascript:`/`data:text/html` URIs, and on*=handlers — deliberately NOT a bare
+// `<`/`>` so a legitimate damage title like "grieta <5cm" / "muro >2m" is allowed.
+// Kept in sync with markupNameWhere() in lib/clean.ts (the SQL twin).
+const MARKUP_RE = /<\s*\/?\s*[a-z][a-z0-9]*|javascript:|data:text\/html|\bon[a-z]+\s*=/i;
+
+/** A NAME/TITLE field carrying HTML tags, a javascript: URI or an on*= handler is XSS abuse. */
+export function nameHasMarkup(s: string | null | undefined): boolean {
+  if (!s) return false;
+  return MARKUP_RE.test(s);
+}
+
+/** A NAME field that contains any link, bare domain, known spam phrase, or
+ *  HTML/script-injection markup is spam — real names never do. */
 export function nameHasSpam(s: string | null | undefined): boolean {
   if (!s) return false;
-  return URL_RE.test(s) || DOMAIN_RE.test(s) || SPAM_PHRASE_RE.test(s);
+  return URL_RE.test(s) || DOMAIN_RE.test(s) || SPAM_PHRASE_RE.test(s) || nameHasMarkup(s);
 }
 
 /** Free text contains a promotional link/domain. Emails are stripped first so a

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   allowedOrigins, isAllowedOrigin, validLatLon, blurCoord, isImageBytes, rateLimit, requestIp,
-  nameHasSpam, textHasLink,
+  nameHasSpam, textHasLink, nameHasMarkup,
 } from '../src/lib/security';
 import { hashPassword, verifyPassword } from '../src/lib/auth';
 import { estimatePager } from '../src/lib/pager';
@@ -178,5 +178,27 @@ describe('security: link-spam gate for public submissions', () => {
     expect(textHasLink('escribe a maria.lopez@gmail.com')).toBe(false);
     expect(textHasLink('última vez visto cerca del Hotel Plaza, Catia')).toBe(false);
     expect(textHasLink(null)).toBe(false);
+  });
+});
+
+describe('security: HTML/script-injection (stored-XSS) name gate', () => {
+  it('flags the stored-XSS case-name payload', () => {
+    expect(nameHasMarkup('"><svg/onload=("@jofpin");>')).toBe(true);
+    expect(nameHasSpam('"><svg/onload=("@jofpin");>')).toBe(true);
+  });
+  it('flags assorted injection vectors', () => {
+    expect(nameHasMarkup('<img src=x onerror=alert(1)>')).toBe(true);
+    expect(nameHasMarkup('<script>alert(1)</script>')).toBe(true);
+    expect(nameHasMarkup('javascript:alert(document.cookie)')).toBe(true);
+    expect(nameHasMarkup('María<svg onload=1>')).toBe(true);
+    expect(nameHasMarkup('</a><body onload=evil()>')).toBe(true);
+  });
+  it('does NOT flag legitimate names or measurement titles', () => {
+    expect(nameHasMarkup('María José Pérez')).toBe(false);
+    expect(nameHasMarkup('Juan Carlos Rodríguez Méndez')).toBe(false);
+    expect(nameHasMarkup('Grieta de <5cm en la pared')).toBe(false);
+    expect(nameHasMarkup('Muro inclinado >2m sobre la acera')).toBe(false);
+    expect(nameHasMarkup('')).toBe(false);
+    expect(nameHasMarkup(null)).toBe(false);
   });
 });
