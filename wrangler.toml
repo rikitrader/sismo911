@@ -33,7 +33,7 @@ run_worker_first = true
 [triggers]
 # Staggered so each trigger is a SEPARATE invocation with its own subrequest
 # budget (see src/cron.ts CRON_GROUPS — keep in sync; test/cron.test.ts checks it).
-crons = ["0 * * * *", "5 * * * *", "15 * * * *", "30 * * * *", "45 * * * *"]
+crons = ["0 * * * *", "5 * * * *", "15 * * * *", "30 * * * *", "35 * * * *", "45 * * * *"]
 
 # Relational store: events, missing persons, emergency contacts, citizen reports.
 [[d1_databases]]
