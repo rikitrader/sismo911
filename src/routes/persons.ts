@@ -128,29 +128,90 @@ persons.get('/cases', async (c) => {
   const priority = c.req.query('priority') ?? '';
   const review = c.req.query('review') ?? '';
   const since = Number(c.req.query('since') || 0) || 0;   // created since (epoch ms)
-  const limit = Math.min(1000, Math.max(1, Number(c.req.query('limit') || 500) || 500));
-  const where: string[] = []; const binds: unknown[] = [];
-  if (q) { where.push('(p.full_name LIKE ? OR p.last_seen LIKE ? OR p.case_number LIKE ?' + (op ? ' OR p.contact_phone LIKE ?' : '') + ')'); const l = `%${q}%`; binds.push(l, l, l); if (op) binds.push(l); }
-  if (status && ['missing', 'found_safe', 'found_deceased', 'unknown'].includes(status)) { where.push('p.status = ?'); binds.push(status); }
-  if (priority && ['alta', 'media', 'baja'].includes(priority)) { where.push('p.priority = ?'); binds.push(priority); }
-  if (since > 0) { where.push('p.created_ms >= ?'); binds.push(since); }
-  if (!op) { where.push("p.review = 'approved'"); }                                  // public: approved cases only
-  else if (review && ['pending', 'approved', 'rejected'].includes(review)) { where.push('p.review = ?'); binds.push(review); }
-  const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
-  // Public docket count = approved entries only; operators count everything.
-  const dCount = op ? '' : " AND pe.review='approved'";
-  const { results } = await c.env.DB.prepare(
-    `SELECT p.id, p.case_number, p.full_name, p.age, p.sex, p.last_seen, p.last_seen_lat, p.last_seen_lon,
-            p.status, p.priority, p.incident_type, p.assigned_to, p.review, p.photo_url, p.contact_phone, p.reported_by, p.notes,
-            p.event_id, p.created_ms, p.updated_ms,
-            e.place_es AS event_place, e.place AS event_place_en, e.mag AS event_mag, e.alert AS event_alert, e.time_ms AS event_time,
-            (SELECT COUNT(*) FROM person_events pe WHERE pe.person_id = p.id${dCount}) AS docket_count,
-            (SELECT COUNT(*) FROM case_attachments a WHERE a.person_id = p.id) AS evidence_count,
-            (SELECT MAX(pe.created_ms) FROM person_events pe WHERE pe.person_id = p.id${dCount}) AS last_activity_ms
-     FROM persons p LEFT JOIN events e ON e.id = p.event_id
-     ${w} ORDER BY p.updated_ms DESC LIMIT ?`
-  ).bind(...binds, limit).all<any>();
-  const cases = (results ?? []).map((r) => op ? r : {
+  const sort = c.req.query('sort') ?? 'recent';
+  // Fixed 500-per-page docket window; `page` is 1-based and `total`/`pages` are
+  // returned so the client can jump anywhere across the whole registry (52k+).
+  const pageSize = Math.min(500, Math.max(1, Number(c.req.query('limit') || 500) || 500));
+  const page = Math.max(1, Number(c.req.query('page') || 1) || 1);
+  const offset = (page - 1) * pageSize;
+  const l = `%${q}%`;
+
+  // ---------- filters: native `persons` table ----------
+  const pWhere: string[] = []; const pBind: unknown[] = [];
+  if (q) { pWhere.push('(p.full_name LIKE ? OR p.last_seen LIKE ? OR p.case_number LIKE ?' + (op ? ' OR p.contact_phone LIKE ?' : '') + ')'); pBind.push(l, l, l); if (op) pBind.push(l); }
+  if (status && ['missing', 'found_safe', 'found_deceased', 'unknown'].includes(status)) { pWhere.push('p.status = ?'); pBind.push(status); }
+  if (priority && ['alta', 'media', 'baja'].includes(priority)) { pWhere.push('p.priority = ?'); pBind.push(priority); }
+  if (since > 0) { pWhere.push('p.created_ms >= ?'); pBind.push(since); }
+  if (!op) { pWhere.push("p.review = 'approved'"); }                                  // public: approved cases only
+  else if (review && ['pending', 'approved', 'rejected'].includes(review)) { pWhere.push('p.review = ?'); pBind.push(review); }
+  const pW = pWhere.length ? 'WHERE ' + pWhere.join(' AND ') : '';
+
+  // ---------- filters: federated Familia `personas` table ----------
+  // Familia priority lives in case_meta (not personas), so a priority filter can't
+  // be expressed in SQL here — drop Familia rows when one is active so the paged
+  // total stays consistent with what the operator filtered for.
+  const includeFam = !(priority && ['alta', 'media', 'baja'].includes(priority));
+  const fWhere: string[] = []; const fBind: unknown[] = [];
+  if (q) { fWhere.push('(nombre LIKE ? OR ubicacion LIKE ?' + (op ? ' OR contacto LIKE ?' : '') + ')'); fBind.push(l, l); if (op) fBind.push(l); }
+  if (status === 'found_safe') fWhere.push("estado = 'localizado'");
+  else if (status === 'found_deceased') fWhere.push("estado = 'fallecido'");
+  else if (status === 'missing') fWhere.push("estado NOT IN ('localizado','fallecido')");
+  else if (status === 'unknown') fWhere.push('1=0');                                   // personas have no 'unknown' bucket
+  if (since > 0) { fWhere.push('created_at >= ?'); fBind.push(since); }
+  const fW = fWhere.length ? 'WHERE ' + fWhere.join(' AND ') : '';
+
+  // ---------- total filtered count (matches the union below exactly) ----------
+  const pCnt: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM persons p ${pW}`).bind(...pBind).first().catch(() => ({ n: 0 }));
+  let fCnt: any = { n: 0 };
+  if (includeFam) fCnt = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas ${fW}`).bind(...fBind).first().catch(() => ({ n: 0 }));
+  const total = (pCnt?.n || 0) + (fCnt?.n || 0);
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+
+  // ---------- page window: union of case ids ordered by the chosen key ----------
+  // Only `recent`/`opened`/`name` can be ordered in SQL across both tables (the
+  // triage score & movement count are computed on read); other sorts fall back to
+  // recency here and are refined client-side within the page.
+  const SORT: Record<string, { p: string; f: string; dir: 'ASC' | 'DESC'; text?: boolean }> = {
+    recent: { p: 'p.updated_ms', f: 'updated_at', dir: 'DESC' },
+    opened: { p: 'p.created_ms', f: 'created_at', dir: 'DESC' },
+    name: { p: 'p.full_name', f: 'nombre', dir: 'ASC', text: true },
+  };
+  const sk = SORT[sort] || SORT.recent;
+  const orderBy = (sk.text ? `k COLLATE NOCASE ${sk.dir}` : `k ${sk.dir}`) + ', src ASC, id DESC';
+  const unionSql =
+    `SELECT id, src FROM (` +
+    `SELECT p.id AS id, 0 AS src, ${sk.p} AS k FROM persons p ${pW}` +
+    (includeFam ? ` UNION ALL SELECT ('fam-'||id) AS id, 1 AS src, ${sk.f} AS k FROM personas ${fW}` : '') +
+    `) ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
+  const { results: pageRows } = await c.env.DB.prepare(unionSql)
+    .bind(...pBind, ...(includeFam ? fBind : []), pageSize, offset).all<any>();
+  const order = (pageRows ?? []).map((r) => String(r.id));
+  const personIds = (pageRows ?? []).filter((r) => r.src === 0).map((r) => String(r.id));
+  const famIds = (pageRows ?? []).filter((r) => r.src === 1).map((r) => String(r.id));
+  const famKeys = famIds.map((id) => id.slice(FAM.length));
+
+  // D1 caps bound parameters per query (~100) → hydrate the page's rows in chunks.
+  const chunk = <T>(a: T[], n: number) => { const o: T[][] = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
+  const dCount = op ? '' : " AND pe.review='approved'";  // public docket count = approved entries only
+
+  // ---------- hydrate native `persons` rows on this page ----------
+  let personRows: any[] = [];
+  if (personIds.length) {
+    const stmts = chunk(personIds, 90).map((ids) => c.env.DB.prepare(
+      `SELECT p.id, p.case_number, p.full_name, p.age, p.sex, p.last_seen, p.last_seen_lat, p.last_seen_lon,
+              p.status, p.priority, p.incident_type, p.assigned_to, p.review, p.photo_url, p.contact_phone, p.reported_by, p.notes,
+              p.event_id, p.created_ms, p.updated_ms,
+              e.place_es AS event_place, e.place AS event_place_en, e.mag AS event_mag, e.alert AS event_alert, e.time_ms AS event_time,
+              (SELECT COUNT(*) FROM person_events pe WHERE pe.person_id = p.id${dCount}) AS docket_count,
+              (SELECT COUNT(*) FROM case_attachments a WHERE a.person_id = p.id) AS evidence_count,
+              (SELECT MAX(pe.created_ms) FROM person_events pe WHERE pe.person_id = p.id${dCount}) AS last_activity_ms
+       FROM persons p LEFT JOIN events e ON e.id = p.event_id
+       WHERE p.id IN (${ids.map(() => '?').join(',')})`
+    ).bind(...ids));
+    const res = await c.env.DB.batch<any>(stmts);
+    personRows = res.flatMap((r) => r.results ?? []);
+  }
+  const personCases = personRows.map((r) => op ? r : {
     id: r.id, case_number: r.case_number, full_name: r.full_name, age: r.age, sex: r.sex, last_seen: r.last_seen,
     status: r.status, incident_type: r.incident_type, review: r.review, photo_url: r.photo_url, notes: r.notes,
     event_id: r.event_id, created_ms: r.created_ms, updated_ms: r.updated_ms,
@@ -159,6 +220,53 @@ persons.get('/cases', async (c) => {
     // redacted for the public: contact_phone, reported_by, last_seen_lat/lon, assigned_to.
     // priority is NOT redacted — it's the derived triage level (non-PII), re-attached by withScore().
   });
+
+  // ---------- hydrate federated Familia rows on this page ----------
+  let famCases: any[] = [];
+  if (includeFam && famKeys.length) {
+    try {
+      const quake = await quakeRef(c.env);
+      const famRowsRes = await c.env.DB.batch<any>(chunk(famKeys, 90).map((ks) => c.env.DB.prepare(
+        `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto, foto_r2, estado, created_at, updated_at
+         FROM personas WHERE id IN (${ks.map(() => '?').join(',')})`
+      ).bind(...ks)));
+      const famRows = famRowsRes.flatMap((r) => r.results ?? []);
+      // Docket counts + metadata overlay, keyed by the fam-<id> case id.
+      const cnt: any = {};
+      const cntStmts = chunk(famIds, 90).map((ids) => c.env.DB.prepare(
+        `SELECT person_id, COUNT(*) AS c FROM person_events WHERE person_id IN (${ids.map(() => '?').join(',')})${op ? '' : " AND review='approved'"} GROUP BY person_id`
+      ).bind(...ids));
+      if (cntStmts.length) (await c.env.DB.batch<any>(cntStmts)).forEach((r) => (r.results ?? []).forEach((x: any) => cnt[x.person_id] = x.c));
+      const metaMap: any = {};
+      const metaStmts = chunk(famIds, 90).map((ids) => c.env.DB.prepare(
+        `SELECT person_id, priority, incident_type, assigned_to FROM case_meta WHERE person_id IN (${ids.map(() => '?').join(',')})`
+      ).bind(...ids));
+      if (metaStmts.length) (await c.env.DB.batch<any>(metaStmts)).forEach((r) => (r.results ?? []).forEach((m: any) => metaMap[m.person_id] = m));
+      famCases = famRows.map((r: any) => {
+        const id = FAM + r.id; const m = metaMap[id] || {};
+        const full: any = {
+          id, case_number: famCaseNumber(r.id), full_name: r.nombre, age: r.edad, sex: null,
+          last_seen: r.ubicacion, status: estadoToStatus(r.estado), review: 'approved',
+          priority: m.priority || 'media', incident_type: m.incident_type || 'persona_desaparecida', assigned_to: m.assigned_to || null,
+          photo_url: r.foto_r2 ? `/api/familia/photo/${r.id}` : (r.foto || null), notes: r.descripcion,
+          event_id: quake?.id || null, created_ms: r.created_at, updated_ms: r.updated_at,
+          event_place: quake?.place_es || quake?.place || null, event_place_en: quake?.place || null, event_mag: quake?.mag || null, event_alert: quake?.alert || null, event_time: quake?.time_ms || null,
+          docket_count: cnt[id] || 0, evidence_count: 0, last_activity_ms: null, source: 'familia',
+          contact_phone: op ? (r.contacto || null) : undefined, reported_by: null,
+        };
+        if (op) return full;
+        const { contact_phone, priority, assigned_to, ...pub } = full; return pub;
+      });
+    } catch (e: any) { console.error('[cases] familia bridge failed:', e?.message ?? e); }
+  }
+
+  // ---------- stitch back into the union order + live triage score ----------
+  const nowMs = Date.now();
+  const byId: any = {};
+  [...personCases, ...famCases].forEach((x) => byId[x.id] = x);
+  const cases = order.map((id) => byId[id]).filter(Boolean).map((x) => withScore(x, nowMs));
+
+  // ---------- global summary (whole registry, not just this page) ----------
   const sum: any = await c.env.DB.prepare(
     `SELECT
        SUM(CASE WHEN status='missing' THEN 1 ELSE 0 END) AS missing,
@@ -168,54 +276,6 @@ persons.get('/cases', async (c) => {
        COUNT(*) AS total
      FROM persons${op ? '' : " WHERE review='approved'"}`
   ).first();
-
-  // ---- Familia bridge: federate DESAP personas as cases anchored to the quake.
-  const quake = await quakeRef(c.env);
-  const l = `%${q}%`;
-  const fw: string[] = []; const fb: unknown[] = [];
-  if (q) { fw.push('(nombre LIKE ? OR ubicacion LIKE ?' + (op ? ' OR contacto LIKE ?' : '') + ')'); fb.push(l, l); if (op) fb.push(l); }
-  if (status === 'found_safe') fw.push("estado = 'localizado'");
-  else if (status === 'found_deceased') fw.push("estado = 'fallecido'");
-  else if (status === 'missing') fw.push("estado NOT IN ('localizado','fallecido')");
-  if (since > 0) { fw.push('created_at >= ?'); fb.push(since); }
-  const fwSql = fw.length ? 'WHERE ' + fw.join(' AND ') : '';
-  const famLimit = Math.min(limit, 500);
-  let famCases: any[] = [];
-  try {
-    const { results: famRows } = await c.env.DB.prepare(
-      `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto, foto_r2, estado, created_at, updated_at
-       FROM personas ${fwSql} ORDER BY updated_at DESC, id DESC LIMIT ?`
-    ).bind(...fb, famLimit).all<any>();
-    // Activity (docket/evidence) counts + metadata overlay for federated cases.
-    const { results: famCnt } = await c.env.DB.prepare(
-      `SELECT person_id, COUNT(*) AS c FROM person_events WHERE person_id LIKE 'fam-%'${op ? '' : " AND review='approved'"} GROUP BY person_id`
-    ).all<any>().catch(() => ({ results: [] }));
-    const cnt: any = {}; (famCnt || []).forEach((r: any) => cnt[r.person_id] = r.c);
-    const { results: metaRows } = await c.env.DB.prepare(`SELECT person_id, priority, incident_type, assigned_to FROM case_meta WHERE person_id LIKE 'fam-%'`).all<any>().catch(() => ({ results: [] }));
-    const metaMap: any = {}; (metaRows || []).forEach((m: any) => metaMap[m.person_id] = m);
-    famCases = (famRows || []).map((r: any) => {
-      const id = FAM + r.id; const m = metaMap[id] || {};
-      const full: any = {
-        id, case_number: famCaseNumber(r.id), full_name: r.nombre, age: r.edad, sex: null,
-        last_seen: r.ubicacion, status: estadoToStatus(r.estado), review: 'approved',
-        priority: m.priority || 'media', incident_type: m.incident_type || 'persona_desaparecida', assigned_to: m.assigned_to || null,
-        photo_url: r.foto_r2 ? `/api/familia/photo/${r.id}` : (r.foto || null), notes: r.descripcion,
-        event_id: quake?.id || null, created_ms: r.created_at, updated_ms: r.updated_at,
-        event_place: quake?.place_es || quake?.place || null, event_place_en: quake?.place || null, event_mag: quake?.mag || null, event_alert: quake?.alert || null, event_time: quake?.time_ms || null,
-        docket_count: cnt[id] || 0, evidence_count: 0, last_activity_ms: null, source: 'familia',
-        contact_phone: op ? (r.contacto || null) : undefined, reported_by: null,
-      };
-      if (op) return full;
-      const { contact_phone, priority, assigned_to, ...pub } = full; return pub;
-    });
-  } catch (e: any) { console.error('[cases] familia bridge failed:', e?.message ?? e); }
-
-  const nowMs = Date.now();
-  const merged = [...cases, ...famCases]
-    .sort((a, b) => (b.updated_ms || 0) - (a.updated_ms || 0))
-    .slice(0, limit)
-    .map((x) => withScore(x, nowMs));   // live FEMA-triage score on every case
-
   let fsum: any = {};
   try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado='localizado' THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
   const summary = {
@@ -226,7 +286,7 @@ persons.get('/cases', async (c) => {
     total: (sum?.total || 0) + (fsum?.total || 0),
   };
   c.header('Cache-Control', 'no-store'); c.header('Vary', 'Cookie');
-  return c.json({ cases: merged, summary, operator: op });
+  return c.json({ cases, summary, operator: op, page, pageSize, total, pages });
 });
 
 // GET /api/persons/docket/queue — pending citizen-submitted updates awaiting
