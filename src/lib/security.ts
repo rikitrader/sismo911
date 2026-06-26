@@ -165,11 +165,14 @@ export function isImageBytes(bytes: Uint8Array, contentType: string): boolean {
 const URL_RE = /(https?:\/\/|www\.)/i;
 const DOMAIN_RE = /\b[a-z0-9][a-z0-9-]{1,62}\.(it|com|net|org|info|biz|xyz|ru|cn|top|online|site|click|link|shop|store|vip|live|club|icu|app|io|me|co)\b/i;
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+// Known bot spam phrases flooded into the missing-persons form (e.g. the
+// "SIMONE BURATTI GAY" ×353 flood). Kept in sync with SPAM_PHRASES in lib/clean.ts.
+const SPAM_PHRASE_RE = /simone\s+buratti/i;
 
-/** A NAME field that contains any link or bare domain is spam — names never do. */
+/** A NAME field that contains any link, bare domain or known spam phrase is spam — names never do. */
 export function nameHasSpam(s: string | null | undefined): boolean {
   if (!s) return false;
-  return URL_RE.test(s) || DOMAIN_RE.test(s);
+  return URL_RE.test(s) || DOMAIN_RE.test(s) || SPAM_PHRASE_RE.test(s);
 }
 
 /** Free text contains a promotional link/domain. Emails are stripped first so a
