@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   allowedOrigins, isAllowedOrigin, validLatLon, blurCoord, isImageBytes, rateLimit, requestIp,
+  nameHasSpam, textHasLink,
 } from '../src/lib/security';
 import { hashPassword, verifyPassword } from '../src/lib/auth';
 import { estimatePager } from '../src/lib/pager';
@@ -156,5 +157,26 @@ describe('scoreThreat', () => {
   it('decays to Normal when the big quake is older than 48h', () => {
     const t = scoreThreat([{ id: 'd', mag: 7.5, time_ms: now - 60 * H, alert: 'red', place: 'x' }], now);
     expect(t.level).toBe(1);
+  });
+});
+
+describe('security: link-spam gate for public submissions', () => {
+  it('flags names containing a bare domain or URL', () => {
+    expect(nameHasSpam('TRUSTEDF57 - infinityhotel.it')).toBe(true);
+    expect(nameHasSpam('visit www.spam.example')).toBe(true);
+    expect(nameHasSpam('http://x.io promo')).toBe(true);
+  });
+  it('accepts real human names', () => {
+    expect(nameHasSpam('María José Pérez')).toBe(false);
+    expect(nameHasSpam('Juan Carlos Rodríguez Méndez')).toBe(false);
+    expect(nameHasSpam('')).toBe(false);
+    expect(nameHasSpam(null)).toBe(false);
+  });
+  it('blocks links in free text but allows legitimate emails', () => {
+    expect(textHasLink('contáctame en infinityhotel.it')).toBe(true);
+    expect(textHasLink('mira https://bit.ly/x')).toBe(true);
+    expect(textHasLink('escribe a maria.lopez@gmail.com')).toBe(false);
+    expect(textHasLink('última vez visto cerca del Hotel Plaza, Catia')).toBe(false);
+    expect(textHasLink(null)).toBe(false);
   });
 });

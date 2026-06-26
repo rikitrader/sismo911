@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { rateLimit, validLatLon, blurCoord } from '../lib/security';
+import { rateLimit, validLatLon, blurCoord, nameHasSpam, textHasLink } from '../lib/security';
 import { audit } from '../lib/audit';
 import { getUserFromRequest } from '../lib/auth';
 
@@ -563,6 +563,10 @@ persons.post('/', async (c) => {
   if (limited) return limited;
   const b = await c.req.json().catch(() => null);
   if (!b?.full_name) return c.json({ error: 'nombre requerido' }, 400);
+  // Link-spam gate (see lib/security): names/notes/contact never carry websites.
+  if (nameHasSpam(b.full_name) || textHasLink(b.notes) || textHasLink(b.contact_phone)) {
+    return c.json({ error: 'spam_blocked', hint: 'No incluyas enlaces ni sitios web en el reporte.' }, 400);
+  }
   if (b.status && !['missing', 'found_safe', 'found_deceased', 'unknown'].includes(b.status)) return c.json({ error: 'bad_status' }, 400);
   const lat = b.last_seen_lat == null ? null : Number(b.last_seen_lat);
   const lon = b.last_seen_lon == null ? null : Number(b.last_seen_lon);
