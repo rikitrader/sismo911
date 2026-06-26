@@ -29,6 +29,7 @@ import { aidOrgs } from './routes/aid_orgs';
 import { donations } from './routes/donations';
 import { botiquin } from './routes/botiquin';
 import { agencias } from './routes/agencias';
+import { laguaira } from './routes/laguaira';
 import { dataApi } from './routes/data-api';
 import { mcp } from './routes/mcp';
 import { runCronGroup } from './cron';
@@ -190,6 +191,7 @@ app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directo
 app.route('/api', donations); // crowdfunding: /api/campaigns* + /api/donations* (anonymous donate; card→USDC via Crossmint)
 app.route('/', botiquin);     // /botiquin index + /botiquin/:slug per-item pages + /api/botiquin
 app.route('/', agencias);     // FEMA-VE: /agencias mapa + ESF-15 + /agencias/:slug + /api/agencias
+app.route('/la-guaira', laguaira); // mapa sísmico regional del estado La Guaira (GIS OSM + sismos USGS en vivo)
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
 app.route('/api/funding', funding); // live funder pipeline for the supply dashboard (reads 09_Funding sheet)
