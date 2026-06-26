@@ -80,13 +80,18 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // PHYSICALLY drain the soft-rejected backlog (spam/junk flagged just above).
     { name: 'personas-purge-rejected', run: (env) => drain(() => purgeRejectedPersonas(env, { apply: true, limit: 400 })) },
   ],
-  // :30 — photo mirroring (external fetch + R2 puts, the heaviest) on its own budget,
-  // plus the bounded RAV ingest (Supabase REST → personas + stats + verified news).
+  // :30 — photo mirroring (external fetch + R2 puts, the heaviest) plus the
+  // sheet sync and fuzzyphone dedupe. Keep RAV off this trigger: together these
+  // jobs can exceed the Free-plan subrequest cap before RAV gets its turn.
   '30 * * * *': [
     { name: 'familia-photo-mirror', run: mirrorFamiliaPhotos },
     { name: 'monitor-sheet', run: syncMonitorSheet },
     // Safe fuzzy dedup: same normalized name + age + phone (near-zero false merges).
     { name: 'personas-dedupe-fuzzyphone', run: (env) => drain(() => dedupePersonas(env, { mode: 'fuzzyphone', apply: true, limit: 400 })) },
+  ],
+  // :35 — RAV registry ingest + lightweight companion tables. Isolated from the
+  // :30 cleanup/mirror group so it has a fresh subrequest budget every hour.
+  '35 * * * *': [
     { name: 'rav-ingest', run: (env) => ingestRav(env) },
     { name: 'rav-stats', run: ingestRavStats },
     { name: 'rav-verified', run: ingestRavVerified },

@@ -43,6 +43,19 @@ describe('cron groups', () => {
     }
   });
 
+  it('keeps RAV jobs isolated from the :30 cleanup/mirror group', () => {
+    expect(CRON_GROUPS['30 * * * *'].map((j) => j.name)).toEqual([
+      'familia-photo-mirror',
+      'monitor-sheet',
+      'personas-dedupe-fuzzyphone',
+    ]);
+    expect(CRON_GROUPS['35 * * * *'].map((j) => j.name)).toEqual([
+      'rav-ingest',
+      'rav-stats',
+      'rav-verified',
+    ]);
+  });
+
   it('jobsForCron returns the group for a known cron, and ALL jobs for unknown/undefined', () => {
     const firstCron = Object.keys(CRON_GROUPS)[0];
     expect(jobsForCron(firstCron)).toBe(CRON_GROUPS[firstCron]);
