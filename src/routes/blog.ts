@@ -268,6 +268,20 @@ blog.get('/api/blog', async (c) => {
   return c.json({ total: results.length, items: results });
 });
 
+// ---------------- admin: remove posts by slug (bearer-gated) ----------------
+blog.post('/api/blog/delete', async (c) => {
+  const tok = (c.req.header('authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!c.env.BLOG_INGEST_TOKEN || tok !== c.env.BLOG_INGEST_TOKEN) return c.json({ error: 'unauthorized' }, 401);
+  let body: any;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'bad_json' }, 400); }
+  const slugs: string[] = Array.isArray(body?.slugs) ? body.slugs.filter((s: any) => typeof s === 'string').slice(0, 50) : [];
+  if (!slugs.length) return c.json({ error: 'no_slugs' }, 400);
+  const ph = slugs.map(() => '?').join(',');
+  const res = await c.env.DB.prepare(`DELETE FROM blog_posts WHERE slug IN (${ph})`).bind(...slugs).run();
+  await c.env.CACHE.delete('sitemap:blog').catch(() => {});
+  return c.json({ ok: true, deleted: res.meta?.changes ?? 0 });
+});
+
 // ---------------- run the always-on cron now (bearer-gated manual trigger) ----------------
 blog.post('/api/blog/run', async (c) => {
   const tok = (c.req.header('authorization') || '').replace(/^Bearer\s+/i, '');
