@@ -9,7 +9,7 @@ tab to the monitor sheet.
 """
 import subprocess, json, os, sys, urllib.parse
 
-DB = 'desaparecidos-vzla'
+DB = 'sismo911'  # single source of truth — the DB the live app reads/writes
 BASE = 'https://sismo911.com'
 SHEET = '1gHZ40ajgcZvK8aHKdmwP5p7ARBVtdMtP6M36bIHXOts'  # monitor sheet
 TAB = 'Desaparecidas (con foto)'

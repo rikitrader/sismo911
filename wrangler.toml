@@ -56,12 +56,10 @@ binding = "PERSON_PHOTOS"
 bucket_name = "sismo911-person-photos"
 
 
-# Missing-persons dataset (31k records) + photos (separate resources).
-[[d1_databases]]
-binding = "DESAP"
-database_name = "desaparecidos-vzla"
-database_id = "b722baa9-00d8-4b66-82ca-fe495eef1851"
-
+# Missing-person photos. personas data is centralized in the `sismo911` DB above
+# (single source of truth) — the former legacy `desaparecidos-vzla` D1 binding was
+# removed because no code references env.DESAP. The R2 photo bucket stays: foto_r2
+# keys are stored here and served via /api/familia/photo/:id.
 [[r2_buckets]]
 binding = "DESAP_FOTOS"
 bucket_name = "desaparecidos-fotos"
