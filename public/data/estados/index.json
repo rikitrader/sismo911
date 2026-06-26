@@ -1,0 +1,452 @@
+[
+{
+"slug": "amazonas",
+"name": "Amazonas",
+"relid": 2269815,
+"center": [
+3.421665,
+-65.609605
+],
+"bbox": [
+-67.86432,
+0.6474,
+-63.35489,
+6.19593
+],
+"municipios": 7,
+"roads": 81,
+"places": 43
+},
+{
+"slug": "anzoategui",
+"name": "Anzoátegui",
+"relid": 2267150,
+"center": [
+9.01784,
+-64.219425
+],
+"bbox": [
+-65.75103,
+7.66157,
+-62.68782,
+10.37411
+],
+"municipios": 21,
+"roads": 1570,
+"places": 413
+},
+{
+"slug": "apure",
+"name": "Apure",
+"relid": 3395162,
+"center": [
+7.570045,
+-69.37413000000001
+],
+"bbox": [
+-72.42,
+6.07934,
+-66.32826,
+9.06075
+],
+"municipios": 8,
+"roads": 284,
+"places": 216
+},
+{
+"slug": "aragua",
+"name": "Aragua",
+"relid": 272746,
+"center": [
+9.989765,
+-67.21402499999999
+],
+"bbox": [
+-67.88161,
+9.38368,
+-66.54644,
+10.59585
+],
+"municipios": 18,
+"roads": 1209,
+"places": 268
+},
+{
+"slug": "barinas",
+"name": "Barinas",
+"relid": 3763132,
+"center": [
+7.570045,
+-69.40804
+],
+"bbox": [
+-72.48782,
+6.07934,
+-66.32826,
+9.06075
+],
+"municipios": 15,
+"roads": 769,
+"places": 421
+},
+{
+"slug": "bolivar",
+"name": "Bolívar",
+"relid": 2269155,
+"center": [
+6.034610000000001,
+-63.841865
+],
+"bbox": [
+-67.44161,
+3.60977,
+-60.24212,
+8.45945
+],
+"municipios": 11,
+"roads": 2338,
+"places": 345
+},
+{
+"slug": "carabobo",
+"name": "Carabobo",
+"relid": 272745,
+"center": [
+10.214295,
+-67.972955
+],
+"bbox": [
+-68.42865,
+9.81148,
+-67.51726,
+10.61711
+],
+"municipios": 14,
+"roads": 1870,
+"places": 245
+},
+{
+"slug": "cojedes",
+"name": "Cojedes",
+"relid": 272662,
+"center": [
+9.30945,
+-68.369955
+],
+"bbox": [
+-68.988,
+8.53333,
+-67.75191,
+10.08557
+],
+"municipios": 9,
+"roads": 343,
+"places": 211
+},
+{
+"slug": "delta-amacuro",
+"name": "Delta Amacuro",
+"relid": 272669,
+"center": [
+9.03523,
+-61.912005
+],
+"bbox": [
+-64.0185,
+7.7652,
+-59.80551,
+10.30526
+],
+"municipios": 5,
+"roads": 93,
+"places": 65
+},
+{
+"slug": "dependencias-federales",
+"name": "Dependencias Federales",
+"relid": 3399075,
+"center": [
+13.160969999999999,
+-66.397235
+],
+"bbox": [
+-70.99164,
+10.57695,
+-61.80283,
+15.74499
+],
+"municipios": 5,
+"roads": 0,
+"places": 2
+},
+{
+"slug": "distrito-capital",
+"name": "Distrito Capital",
+"relid": 2444378,
+"center": [
+10.47505,
+-67.01227
+],
+"bbox": [
+-67.16324,
+10.38236,
+-66.8613,
+10.56774
+],
+"municipios": 1,
+"roads": 2346,
+"places": 5
+},
+{
+"slug": "falcon",
+"name": "Falcón",
+"relid": 2269792,
+"center": [
+11.27419,
+-69.70934500000001
+],
+"bbox": [
+-71.28127,
+10.29286,
+-68.13742,
+12.25552
+],
+"municipios": 25,
+"roads": 687,
+"places": 547
+},
+{
+"slug": "guarico",
+"name": "Guárico",
+"relid": 272663,
+"center": [
+8.834855000000001,
+-66.40265
+],
+"bbox": [
+-68.03206,
+7.62848,
+-64.77324,
+10.04123
+],
+"municipios": 15,
+"roads": 604,
+"places": 375
+},
+{
+"slug": "la-guaira",
+"name": "La Guaira",
+"relid": 2442704,
+"center": [
+10.53924,
+-66.859355
+],
+"bbox": [
+-67.41225,
+10.38804,
+-66.30646,
+10.69044
+],
+"municipios": 1,
+"roads": 454,
+"places": 91
+},
+{
+"slug": "lara",
+"name": "Lara",
+"relid": 272744,
+"center": [
+10.0714,
+-69.87895
+],
+"bbox": [
+-70.88281,
+9.38892,
+-68.87509,
+10.75388
+],
+"municipios": 9,
+"roads": 1249,
+"places": 581
+},
+{
+"slug": "miranda",
+"name": "Miranda",
+"relid": 272673,
+"center": [
+10.406780000000001,
+-66.32043
+],
+"bbox": [
+-67.21996,
+9.93715,
+-65.4209,
+10.87641
+],
+"municipios": 21,
+"roads": 3791,
+"places": 620
+},
+{
+"slug": "monagas",
+"name": "Monagas",
+"relid": 272670,
+"center": [
+9.343415,
+-63.006415000000004
+],
+"bbox": [
+-64.0185,
+8.38157,
+-61.99433,
+10.30526
+],
+"municipios": 13,
+"roads": 922,
+"places": 304
+},
+{
+"slug": "merida",
+"name": "Mérida",
+"relid": 272635,
+"center": [
+8.49106,
+-71.22862
+],
+"bbox": [
+-71.91363,
+7.66608,
+-70.54361,
+9.31604
+],
+"municipios": 23,
+"roads": 738,
+"places": 228
+},
+{
+"slug": "nueva-esparta",
+"name": "Nueva Esparta",
+"relid": 2269770,
+"center": [
+10.96444,
+-64.092845
+],
+"bbox": [
+-64.46802,
+10.69031,
+-63.71767,
+11.23857
+],
+"municipios": 11,
+"roads": 591,
+"places": 110
+},
+{
+"slug": "portuguesa",
+"name": "Portuguesa",
+"relid": 272661,
+"center": [
+8.9675,
+-69.34561
+],
+"bbox": [
+-70.18734,
+8.09151,
+-68.50388,
+9.84349
+],
+"municipios": 14,
+"roads": 1486,
+"places": 803
+},
+{
+"slug": "sucre",
+"name": "Sucre",
+"relid": 272671,
+"center": [
+10.42897,
+-63.177459999999996
+],
+"bbox": [
+-64.56518,
+10.03366,
+-61.78974,
+10.82428
+],
+"municipios": 15,
+"roads": 845,
+"places": 580
+},
+{
+"slug": "trujillo",
+"name": "Trujillo",
+"relid": 272634,
+"center": [
+9.495845,
+-70.726115
+],
+"bbox": [
+-71.45671,
+8.95194,
+-69.99552,
+10.03975
+],
+"municipios": 20,
+"roads": 629,
+"places": 199
+},
+{
+"slug": "tachira",
+"name": "Táchira",
+"relid": 272633,
+"center": [
+8.021975000000001,
+-71.90155999999999
+],
+"bbox": [
+-72.48782,
+7.36129,
+-71.3153,
+8.68266
+],
+"municipios": 29,
+"roads": 1732,
+"places": 644
+},
+{
+"slug": "yaracuy",
+"name": "Yaracuy",
+"relid": 272743,
+"center": [
+10.30406,
+-68.733935
+],
+"bbox": [
+-69.22263,
+9.83419,
+-68.24524,
+10.77393
+],
+"municipios": 14,
+"roads": 829,
+"places": 343
+},
+{
+"slug": "zulia",
+"name": "Zulia",
+"relid": 272632,
+"center": [
+10.107025,
+-72.01030499999999
+],
+"bbox": [
+-73.35296,
+8.36347,
+-70.66765,
+11.85058
+],
+"municipios": 21,
+"roads": 1835,
+"places": 268
+}
+]
