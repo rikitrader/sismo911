@@ -236,43 +236,29 @@ app.all('*', async (c) => {
 
 export default {
   fetch: app.fetch,
-  // Cron trigger (every minute) → keep the USGS mirror + KoboToolbox damage feed fresh.
+  // Cron trigger (hourly, "0 * * * *") → every ingest/sync job is parsed once per hour.
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil((async () => {
+      // Keep the USGS mirror + KoboToolbox damage feed fresh, then announce new quakes.
       await Promise.allSettled([
         ingestUsgs(env).catch((e) => console.error('[cron] usgs ingest failed:', e?.message ?? e)),
         ingestKobo(env).catch((e) => console.error('[cron] kobo ingest failed:', e?.message ?? e)),
       ]);
-      // After events are fresh, announce significant new quakes to the channel.
-      // Throttled to every 15 min (minutes 0/15/30/45) to avoid channel spam;
-      // USGS/Kobo ingest above still runs every minute for fast detection.
-      if (new Date(_event.scheduledTime).getUTCMinutes() % 15 === 0) {
-        await announceQuakes(env).catch((e) => console.error('[cron] quake announce failed:', e?.message ?? e));
-      }
-      // Hourly: sync structural-damage reports from sosvenezuela2026 (source of truth).
-      if (new Date(_event.scheduledTime).getUTCMinutes() === 0) {
-        await ingestSosDamage(env).catch((e: any) => console.error('[cron] sos-damage sync failed:', e?.message ?? e));
-        // Hourly: re-ingest the missing-persons (Familia) registry from FAMILIA_SOURCE_URL (no-op if unset),
-        // then CLEAN BEFORE LIVE — flag corrupted/fake rows (→moderation='rejected', hidden from public)
-        // and remove exact-content + same-photo duplicates. Public reads only ever see clean, deduped rows.
-        await ingestFamilia(env).catch((e: any) => console.error('[cron] familia sync failed:', e?.message ?? e));
-        await cleanPersonas(env, { apply: true }).catch((e: any) => console.error('[cron] personas clean failed:', e?.message ?? e));
-        await dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 }).catch((e: any) => console.error('[cron] personas dedupe(exact) failed:', e?.message ?? e));
-        await dedupePersonas(env, { mode: 'photo', apply: true, limit: 400 }).catch((e: any) => console.error('[cron] personas dedupe(photo) failed:', e?.message ?? e));
-        // Hourly: social/web disaster-signal monitor → D1, then mirror into the Google Sheet.
-        await ingestSocialMonitor(env).catch((e: any) => console.error('[cron] social monitor failed:', e?.message ?? e));
-        await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));
-        // Safety net: re-mirror the SOS table hourly (live posts/patches sync it immediately).
-        await syncSosSheet(env).catch((e: any) => console.error('[cron] sos sheet sync failed:', e?.message ?? e));
-      }
-      // Daily 06:23 UTC: auto-remove EXACT duplicate personas (true re-scrapes) +
-      // their orphaned R2 photos, in capped batches. Loose/heuristic dedupe stays
-      // operator-only via /api/admin/dedupe-personas.
-      const t = new Date(_event.scheduledTime);
-      if (t.getUTCHours() === 6 && t.getUTCMinutes() === 23) {
-        await dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 })
-          .catch((e: any) => console.error('[cron] personas dedupe failed:', e?.message ?? e));
-      }
+      await announceQuakes(env).catch((e) => console.error('[cron] quake announce failed:', e?.message ?? e));
+      // Sync structural-damage reports from sosvenezuela2026 (source of truth).
+      await ingestSosDamage(env).catch((e: any) => console.error('[cron] sos-damage sync failed:', e?.message ?? e));
+      // Re-ingest the missing-persons (Familia) registry from FAMILIA_SOURCE_URL (no-op if unset),
+      // then CLEAN BEFORE LIVE — flag corrupted/fake rows (→moderation='rejected', hidden from public)
+      // and remove exact-content + same-photo duplicates. Public reads only ever see clean, deduped rows.
+      await ingestFamilia(env).catch((e: any) => console.error('[cron] familia sync failed:', e?.message ?? e));
+      await cleanPersonas(env, { apply: true }).catch((e: any) => console.error('[cron] personas clean failed:', e?.message ?? e));
+      await dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 }).catch((e: any) => console.error('[cron] personas dedupe(exact) failed:', e?.message ?? e));
+      await dedupePersonas(env, { mode: 'photo', apply: true, limit: 400 }).catch((e: any) => console.error('[cron] personas dedupe(photo) failed:', e?.message ?? e));
+      // Social/web disaster-signal monitor → D1, then mirror into the Google Sheet.
+      await ingestSocialMonitor(env).catch((e: any) => console.error('[cron] social monitor failed:', e?.message ?? e));
+      await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));
+      // Safety net: re-mirror the SOS table (live posts/patches sync it immediately).
+      await syncSosSheet(env).catch((e: any) => console.error('[cron] sos sheet sync failed:', e?.message ?? e));
     })());
   },
 };

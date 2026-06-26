@@ -29,9 +29,9 @@ directory = "./public"
 binding = "ASSETS"
 run_worker_first = true
 
-# Poll USGS every minute (Cloudflare cron minimum granularity).
+# Run every ingest/sync job once per hour (one parse per hour).
 [triggers]
-crons = ["* * * * *"]
+crons = ["0 * * * *"]
 
 # Relational store: events, missing persons, emergency contacts, citizen reports.
 [[d1_databases]]
