@@ -24,8 +24,10 @@ const color = (c: string) => CATCOLOR[c] || '#00173a';
 function avatar(a: Agencia, size: number): string {
   const col = color(a.category);
   // every agent has a generated photo at /agentes/<slug>.webp; missing → initials
-  const img = `<img src="/agentes/${e(a.slug)}.webp" alt="${e(a.agent_name)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'">`;
-  return `<span class="ag-av" style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;background:${col};color:#fff;font-family:'Public Sans',sans-serif;font-weight:800;font-size:${Math.round(size * 0.34)}px;flex:0 0 auto;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)">${img}${e(initials(a.agent_name))}</span>`;
+  // initials sit behind; the photo overlays absolutely and covers them when it
+  // loads (onerror removes it → initials show). Absolute overlay avoids the
+  // flexbox-shrink bug that hid the photo behind the initials.
+  return `<span class="ag-av" style="position:relative;width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;background:${col};color:#fff;font-family:'Public Sans',sans-serif;font-weight:800;font-size:${Math.round(size * 0.34)}px;flex:0 0 auto;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"><span>${e(initials(a.agent_name))}</span><img src="/agentes/${e(a.slug)}.webp" alt="${e(a.agent_name)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()"></span>`;
 }
 
 function head(title: string, desc: string, canonical: string, leaflet = false): string {
@@ -131,12 +133,13 @@ agencias.get('/agencias', (c) => {
   const byEstado: Record<string, Agencia[]> = {};
   for (const a of others) (byEstado[a.estado] ||= []).push(a);
 
-  const cardOf = (a: Agencia) => `<a href="/agencias/${e(a.slug)}" class="ag-card card p-3 flex items-center gap-3 hover:shadow-md transition" data-niv="${e(a.nivel)}" data-s="${e((a.agency + ' ' + a.acronym + ' ' + a.agent_name + ' ' + a.category + ' ' + a.estado + ' ' + a.ciudad).toLowerCase())}">
-      ${avatar(a, 44)}
-      <span class="min-w-0">
-        <span class="block font-semibold text-[13.5px] leading-tight truncate">${e(a.acronym)} <span class="chip" style="background:${color(a.category)};color:#fff;font-size:9px;padding:.02rem .3rem">${e(a.nivel)}</span></span>
-        <span class="block text-xs text-on-surface-variant truncate">${e(a.agent_name)}</span>
-        <span class="block text-[11px] text-on-surface-variant truncate">${e(a.agency)}</span>
+  const cardOf = (a: Agencia) => `<a href="/agencias/${e(a.slug)}" class="ag-card card p-3 flex items-start gap-3 hover:shadow-md transition" data-niv="${e(a.nivel)}" data-s="${e((a.agency + ' ' + a.acronym + ' ' + a.agent_name + ' ' + a.category + ' ' + a.estado + ' ' + a.ciudad + ' ' + a.esf_name + ' ' + a.ics + ' ' + a.skills).toLowerCase())}">
+      ${avatar(a, 46)}
+      <span class="min-w-0 flex-1">
+        <span class="block font-semibold text-[13.5px] leading-snug">${e(a.acronym)} <span class="chip" style="background:${color(a.category)};color:#fff;font-size:9px;padding:.02rem .3rem">${e(a.nivel)}</span> ${a.esf ? `<span class="chip" style="background:#eef1f7;color:#00173a;font-size:9px;padding:.02rem .3rem">ESF-${a.esf}</span>` : ''}</span>
+        <span class="block text-xs text-on-surface mt-0.5">${e(a.agent_name)} <span class="text-on-surface-variant">· ${e(a.agent_title)}</span></span>
+        <span class="block text-[11.5px] text-on-surface-variant leading-snug">${e(a.agency)}</span>
+        <span class="block text-[11px] text-on-surface-variant mt-0.5">📍 ${e(a.ciudad)} · 🛡️ ${e(a.ics)} · ⏱️ ${e(a.activacion)}</span>
       </span></a>`;
 
   const sections = estados.map((est) => `
@@ -158,7 +161,7 @@ agencias.get('/agencias', (c) => {
       <div class="min-w-0">
         <div class="chip" style="background:#7c3aed;color:#fff">CENTRO DE MANDO · AI CORP FEDERAL</div>
         <div class="font-display font-extrabold text-xl mt-1 leading-tight">${e(ax.agency)}</div>
-        <div class="text-on-surface-variant text-sm line-clamp-2">Orquestador + departamentos: activa el flujo, aprueba proyectos y coordina entrega y asistencia.</div>
+        <div class="text-on-surface-variant text-sm">Orquestador central + 6 departamentos: detecta, activa el flujo de respuesta, aprueba proyectos y coordina la entrega y la asistencia sobre las 139 agencias IA.</div>
       </div>
       <span class="ml-auto text-primary font-bold shrink-0 hidden sm:block">Ver AI Corp →</span>
     </a>
