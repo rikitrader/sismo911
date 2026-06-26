@@ -27,9 +27,6 @@
       { label: 'Daños (IA)', href: '/danos', m: ['/danos'], d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
       { label: 'Daños Estructurales', href: '/danos-estructurales', m: ['/danos-estructurales'], d: 'M4 21V8l8-5 8 5v13M9 21v-5h6v5M8 11h2m4 0h2m-7 8 5-5' },
     ] },
-    { label: 'Familia y Reportes', d: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75', items: [
-      { label: 'Familia / Check-in', href: '/familia', m: ['/familia'], d: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
-    ] },
     { label: 'Ayuda y Suministros', d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z', items: [
       { label: 'Centros de Acopio', href: '/acopio', m: ['/acopio'], d: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12' },
       { label: 'Suministros Médicos', href: '/suministros-medicos', m: ['/suministros-medicos'], d: 'M12 8v8m-4-4h8M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2z' },
