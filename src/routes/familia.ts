@@ -278,6 +278,32 @@ familia.post('/:id/approve', async (c) => {
 //   2) PHYSICALLY purge every rejected row (confirmed junk, already hidden) + R2 photo
 //   3) remove exact + same-photo duplicates among the survivors
 // Convergent + bounded: re-call until purged/dedupe counts reach 0. apply=false → dry run.
+// POST /api/familia/delete-ids — operator-only. Physically delete specific
+// personas by id (+ their R2 photos). Used by the local edit-distance dedup
+// script, which computes near-duplicate clusters offline (heavy Levenshtein work
+// the Worker shouldn't carry) and submits only the loser ids here. Capped per
+// call; the caller batches. Returns how many rows + photos were removed.
+familia.post('/delete-ids', async (c) => {
+  if (!(await isOperator(c))) return c.json({ error: 'unauthorized', hint: 'Inicia sesión como operador o admin' }, 401);
+  const b: any = await c.req.json().catch(() => ({}));
+  const ids: string[] = Array.isArray(b?.ids) ? b.ids.filter((x: any) => typeof x === 'string').slice(0, 500) : [];
+  if (!ids.length) return c.json({ error: 'no_ids' }, 400);
+  // delete R2 photos for the targeted rows (best-effort) before dropping them.
+  const { results } = await c.env.DB.prepare(
+    `SELECT foto_r2 FROM personas WHERE foto_r2 IS NOT NULL AND id IN (${ids.map(() => '?').join(',')})`
+  ).bind(...ids).all<{ foto_r2: string }>();
+  let deletedPhotos = 0;
+  for (const r of results ?? []) { try { await c.env.DESAP_FOTOS.delete(r.foto_r2); deletedPhotos++; } catch { /* ignore */ } }
+  let deletedRows = 0;
+  for (let i = 0; i < ids.length; i += 40) {
+    const chunk = ids.slice(i, i + 40);
+    const res = await c.env.DB.prepare(`DELETE FROM personas WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).run();
+    deletedRows += res.meta?.changes ?? 0;
+  }
+  await audit(c, 'personas.deleteIds', { requested: ids.length, deletedRows, deletedPhotos });
+  return c.json({ ok: true, requested: ids.length, deletedRows, deletedPhotos });
+});
+
 familia.post('/maintenance', async (c) => {
   if (!(await isOperator(c))) return c.json({ error: 'unauthorized', hint: 'Inicia sesión como operador o admin' }, 401);
   const b: any = await c.req.json().catch(() => ({}));
