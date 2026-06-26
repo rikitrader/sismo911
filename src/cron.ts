@@ -115,6 +115,15 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'rav-stats', run: ingestRavStats },
     { name: 'rav-verified', run: ingestRavVerified },
   ],
+  // TEMPORARY fast-drain — every 5 min, isolated invocation/budget. The hourly
+  // :45 backfill (batch 150) would take ~16 days to hash the one-time ~58k photo
+  // backlog; this runs ONLY backfillPhashes at batch 400 (~4,800/hr) to clear it
+  // in ~12h, then it (and its `*/5` cron in wrangler.toml) gets REMOVED — the :45
+  // group covers steady-state. AI-free + idempotent, so the overlap with the
+  // exact-minute triggers at :00/:05/:15/:30/:45 just re-hashes a few rows harmlessly.
+  '*/5 * * * *': [
+    { name: 'personas-phash-fast', run: (env) => backfillPhashes(env, 400) },
+  ],
 };
 
 // Jobs to run for a fired cron. Unknown/empty cron (e.g. local `wrangler dev`

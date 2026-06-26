@@ -12,6 +12,7 @@ const ALL_JOB_NAMES = [
   'familia-photo-mirror', 'monitor-sheet', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
   'social-monitor', 'blog', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash',
   'history-bootstrap',
+  'personas-phash-fast', // TEMPORARY */5 fast-drain trigger (remove with its cron once backlog is hashed)
 ];
 
 describe('cron groups', () => {
