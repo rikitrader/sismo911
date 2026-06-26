@@ -46,8 +46,8 @@ function d1(sql, db = DB) {
   return (Array.isArray(json) ? json[0] : json)?.results ?? [];
 }
 
-// The /familia missing-persons registry lives in a SEPARATE D1 database
-// (desaparecidos-vzla) with photos in the DESAP_FOTOS R2 bucket. Row+photo
+// The /familia missing-persons registry lives in the main `sismo911` D1 (the
+// single source of truth) with photos in the DESAP_FOTOS R2 bucket. Row+photo
 // de-duplication there is handled inside the Worker (daily cron + the
 // /admin → Mantenimiento button) because it must delete R2 objects too —
 // here we only REPORT it so this script gives the full picture.
@@ -57,10 +57,9 @@ function reportPersonas() {
        SELECT COUNT(*) n FROM personas
        GROUP BY lower(trim(nombre)), coalesce(edad,-1), lower(trim(coalesce(ubicacion,''))),
                 lower(trim(coalesce(descripcion,''))), lower(trim(coalesce(contacto,'')))
-       HAVING n > 1)`,
-    'desaparecidos-vzla'
+       HAVING n > 1)`
   )[0] || { groups: 0, extra: 0 };
-  console.log(`\n▸ personas (DESAP) [fotos duplicadas]: ${exact.groups} grupo(s) exacto(s), ${exact.extra} fila(s) sobrantes`);
+  console.log(`\n▸ personas [fotos duplicadas]: ${exact.groups} grupo(s) exacto(s), ${exact.extra} fila(s) sobrantes`);
   console.log('    Limpieza: /admin → Mantenimiento (con preview), o el cron diario 06:23 UTC (borra filas + fotos R2).');
 }
 
