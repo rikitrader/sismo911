@@ -24,7 +24,7 @@ import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
 import { ingestBlog } from './ingest/blog-cron';
 import { ingestRav, ingestRavStats, ingestRavVerified } from './ingest/rav-cron';
-import { analyzeRavPhotos } from './ingest/rav-photos';
+import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
 
 export interface CronJob { name: string; run: (env: Env) => Promise<unknown>; }
@@ -97,6 +97,12 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'social-monitor', run: ingestSocialMonitor },
     { name: 'blog', run: ingestBlog },
     { name: 'rav-photos', run: (env) => analyzeRavPhotos(env) },
+    // Cheap (AI-free) content-hash backfill for R2-mirrored photos, run RIGHT
+    // BEFORE the phash dedupe so this tick's freshly hashed rows are deduped in
+    // the same invocation. analyzeRavPhotos only hashes 24/tick (welded to the
+    // slow vision call); this drains the ~17k mirrored backlog in days, not
+    // months — without it the phash mode below has almost nothing to group on.
+    { name: 'personas-phash-backfill', run: (env) => backfillPhashes(env, 150) },
     { name: 'personas-dedupe-phash', run: (env) => drain(() => dedupePersonas(env, { mode: 'phash', apply: true, limit: 400 })) },
   ],
 };
