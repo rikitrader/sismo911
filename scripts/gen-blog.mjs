@@ -41,7 +41,7 @@ const headline = (p, ov) => (ov && ov.headline) || (p.texto && p.texto.length > 
 const dek = (p, ov) => (ov && ov.metaDesc) || `Reporte ciudadano del terremoto M7.5 del 24 de junio de 2026 desde ${place(p)}.`
 
 // ---- shared chrome ----
-const HEADER = `<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/alertas" class="hover:text-white/70">Alertas</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a><a href="/familia" class="hover:text-white/70">Familia</a><a href="/acopio" class="hover:text-white/70">Acopio</a><a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/comms" class="hover:text-white/70">Radio</a><a href="/guia" class="hover:text-white/70">Guía</a><a href="/reportar" class="hover:text-white/70">Reportar</a><a href="/contacto" class="hover:text-white/70">Contacto</a><a href="/blog" class="text-white">Blog</a></nav></div></header>`
+const HEADER = `<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/alertas" class="hover:text-white/70">Alertas</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a><a href="/familia" class="hover:text-white/70">Familia</a><a href="/acopio" class="hover:text-white/70">Acopio</a><a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/comms" class="hover:text-white/70">Radio</a><a href="/guia" class="hover:text-white/70">Guía</a><a href="/reportar" class="hover:text-white/70">Reportar</a><a href="/contacto" class="hover:text-white/70">Contacto</a><a href="/blog" class="text-white">Noticias</a></nav></div></header>`
 const HEAD = (title, desc, canon, img) => `<!DOCTYPE html><html lang="es"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
@@ -55,9 +55,25 @@ const HEAD = (title, desc, canon, img) => `<!DOCTYPE html><html lang="es"><head>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="preload" as="style" href="/app.css"><link rel="stylesheet" href="/app.css" />
-<link rel="alternate" type="application/rss+xml" title="SISMO911 · Blog Sísmico" href="/blog/rss.xml">
+<link rel="alternate" type="application/rss+xml" title="SISMO911 · Noticias Sísmicas" href="/blog/rss.xml">
 <script src="/app-shell.js" defer></script>
 <style>body{background:#f9f9fc}.font-display{font-family:'Public Sans',sans-serif}.prose-ve p{margin:.85rem 0;line-height:1.75}.prose-ve h2{font-family:'Public Sans',sans-serif;font-weight:700;font-size:1.25rem;color:#00173a;margin:1.6rem 0 .4rem;scroll-margin-top:5rem}</style>`
+
+// ---- share bar: all major social networks + native share/copy ----
+function shareBar(title, url) {
+  const u = encodeURIComponent(url), t = encodeURIComponent(title), tu = t + '%20' + u
+  const btn = (label, href, bg) => `<a class="inline-flex items-center gap-1 text-sm font-semibold text-white rounded-lg px-3 py-2 hover:opacity-90 transition-opacity no-underline" style="background:${bg}" target="_blank" rel="noopener" aria-label="Compartir en ${label}">${label}</a>`
+  return `<div class="mt-6 flex flex-wrap items-center gap-2" aria-label="Compartir esta noticia">
+        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wide mr-1">Compartir</span>
+        <button onclick="navigator.share?navigator.share({title:document.title,url:location.href}):navigator.clipboard.writeText(location.href).then(()=>alert('Enlace copiado'))" class="inline-flex items-center gap-1 text-sm font-semibold border border-outline-variant rounded-lg px-3 py-2 hover:bg-surface-container" aria-label="Compartir o copiar el enlace">🔗 Compartir</button>
+        ${btn('WhatsApp', `https://wa.me/?text=${tu}`, '#25D366')}
+        ${btn('Facebook', `https://www.facebook.com/sharer/sharer.php?u=${u}`, '#1877F2')}
+        ${btn('X', `https://twitter.com/intent/tweet?text=${t}&url=${u}`, '#111827')}
+        ${btn('Telegram', `https://t.me/share/url?url=${u}&text=${t}`, '#229ED9')}
+        ${btn('LinkedIn', `https://www.linkedin.com/sharing/share-offsite/?url=${u}`, '#0A66C2')}
+        ${btn('Email', `mailto:?subject=${t}&body=${tu}`, '#6B7280')}
+      </div>`
+}
 
 // ---- article page ----
 function renderArticle(p, ov, slug) {
@@ -72,7 +88,7 @@ function renderArticle(p, ov, slug) {
   const ld = { '@context': 'https://schema.org', '@type': 'NewsArticle', headline: title, description: desc, datePublished: dateISO, dateModified: dateISO, inLanguage: 'es', image: [cv], mainEntityOfPage: canon, author: { '@type': 'Person', name: p.autor || 'Reporte ciudadano' }, publisher: { '@type': 'Organization', name: 'SISMO911', logo: { '@type': 'ImageObject', url: 'https://sismo911.com/logo.svg' } }, about: { '@type': 'Event', name: 'Terremoto de Venezuela del 24 de junio de 2026' } }
   const crumb = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://sismo911.com/' },
-    { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://sismo911.com/blog' },
+    { '@type': 'ListItem', position: 2, name: 'Noticias', item: 'https://sismo911.com/blog' },
     { '@type': 'ListItem', position: 3, name: place(p), item: canon } ] }
   return `${HEAD(title + ' — SISMO911', desc, canon, cv)}
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
@@ -82,7 +98,7 @@ function renderArticle(p, ov, slug) {
 ${HEADER}
 <main class="px-4 sm:px-6 lg:px-8 py-8">
   <div class="mx-auto max-w-3xl">
-    <nav class="text-xs text-on-surface-variant mb-3" aria-label="Ruta"><a href="/" class="hover:underline">Inicio</a> › <a href="/blog" class="hover:underline">Blog</a> › <span>${esc(place(p))}</span></nav>
+    <nav class="text-xs text-on-surface-variant mb-3" aria-label="Ruta"><a href="/" class="hover:underline">Inicio</a> › <a href="/blog" class="hover:underline">Noticias</a> › <span>${esc(place(p))}</span></nav>
     <article class="prose-ve">
       <div class="flex flex-wrap items-center gap-2 text-xs font-semibold mb-3">
         <span class="inline-flex items-center gap-1 text-white px-2 py-0.5 rounded" style="background:${PLAT[p.plataforma] || '#00173a'}">${esc(platLabel(p.plataforma))}</span>
@@ -95,15 +111,11 @@ ${HEADER}
       <a href="${cl}" class="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-lg p-3 mb-6 hover:bg-secondary/15 transition-colors no-underline"><span class="text-xl shrink-0">🔎</span><span class="text-sm text-on-surface"><b class="text-secondary">¿Reconoces a alguien en esta imagen?</b> Vincúlala a un <b>caso de búsqueda de personas</b> en Familia →</span></a>
       ${ov && ov.body_html ? ov.body_html : `<p>${esc(p.texto || '')}</p>`}
       ${p.enlace ? `<p class="mt-6"><a href="${esc(p.enlace)}" target="_blank" rel="noopener nofollow" class="inline-flex items-center gap-2 bg-primary text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-primary-container transition">▶ Ver la publicación original en ${esc(platLabel(p.plataforma))}</a></p>` : ''}
-      <div class="mt-6 flex flex-wrap gap-2" aria-label="Compartir">
-        <button onclick="navigator.share?navigator.share({title:document.title,url:location.href}):navigator.clipboard.writeText(location.href)" class="text-sm font-semibold border border-outline-variant rounded-lg px-3 py-2 hover:bg-surface-container">🔗 Compartir</button>
-        <a class="text-sm font-semibold border border-outline-variant rounded-lg px-3 py-2 hover:bg-surface-container" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(title)}%20https://sismo911.com/blog/${slug}">WhatsApp</a>
-        <a class="text-sm font-semibold border border-outline-variant rounded-lg px-3 py-2 hover:bg-surface-container" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=https://sismo911.com/blog/${slug}">X</a>
-      </div>
+      ${shareBar(title, canon)}
       <div class="mt-8 bg-primary/5 border border-primary/20 rounded-lg p-4 text-xs text-on-surface-variant">
         <b>Aviso:</b> material recopilado del monitoreo social de SISMO911 a partir de una publicación pública en ${esc(platLabel(p.plataforma))}. Es un <b>testimonio ciudadano sin verificación independiente</b>; los derechos pertenecen a su autor. Para información oficial siga a FUNVISIS, Protección Civil y NOAA/PTWC.
       </div>
-      <p class="mt-6"><a href="/blog" class="text-primary font-semibold text-sm">← Volver al Blog</a></p>
+      <p class="mt-6"><a href="/blog" class="text-primary font-semibold text-sm">← Volver a Noticias</a></p>
     </article>
   </div>
 </main>
@@ -136,8 +148,8 @@ const card = x => {
   </div>`
 }
 
-const indexHtml = `${HEAD('Blog Sísmico — Cobertura del terremoto de Venezuela | SISMO911', 'Cobertura del terremoto M7.5 que sacudió Venezuela el 24 de junio de 2026: informe oficial con fuentes verificadas (USGS, EMSC, PTWC) y ' + picked.length + ' reportes ciudadanos en terreno geolocalizados.', 'https://sismo911.com/blog', 'https://sismo911.com/og/og-terremoto-yumare.png')}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Blog","name":"Blog Sísmico SISMO911","url":"https://sismo911.com/blog","inLanguage":"es","publisher":{"@type":"Organization","name":"SISMO911","logo":{"@type":"ImageObject","url":"https://sismo911.com/logo.svg"}}}</script>
+const indexHtml = `${HEAD('Noticias Sísmicas — Cobertura del terremoto de Venezuela | SISMO911', 'Cobertura del terremoto M7.5 que sacudió Venezuela el 24 de junio de 2026: informe oficial con fuentes verificadas (USGS, EMSC, PTWC) y ' + picked.length + ' reportes ciudadanos en terreno geolocalizados.', 'https://sismo911.com/blog', 'https://sismo911.com/og/og-terremoto-yumare.png')}
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Blog","name":"Noticias Sísmicas SISMO911","url":"https://sismo911.com/blog","inLanguage":"es","publisher":{"@type":"Organization","name":"SISMO911","logo":{"@type":"ImageObject","url":"https://sismo911.com/logo.svg"}}}</script>
 </head>
 <body class="font-sans text-on-surface">
 ${HEADER}
@@ -147,7 +159,7 @@ ${HEADER}
     <div class="flex items-end justify-between flex-wrap gap-3">
       <div>
         <div class="label-caps text-secondary text-[11px] mb-1">SISMO911 · Periodismo sísmico</div>
-        <h1 class="font-display font-extrabold text-4xl tracking-tight">Blog Sísmico</h1>
+        <h1 class="font-display font-extrabold text-4xl tracking-tight">Noticias Sísmicas</h1>
       </div>
       <p class="text-sm text-on-surface-variant max-w-md">Informe oficial con fuentes verificadas (USGS · EMSC · PTWC · FUNVISIS) y la cobertura ciudadana del terremoto del 24-J — sin predicciones, solo ciencia y testimonios.</p>
     </div>
@@ -163,6 +175,19 @@ ${HEADER}
         <p class="text-on-surface-variant mb-5">${esc(FEATURED.dek)}</p>
         <span class="inline-flex items-center gap-2 text-primary font-bold">Leer el informe completo →</span>
       </div>
+    </div>
+  </a>
+
+  <!-- Missing persons CTA -->
+  <a href="/blog/desaparecidos" class="group block bg-secondary/10 border border-secondary/30 rounded-2xl p-5 sm:p-6 mb-10 hover:bg-secondary/15 transition-colors no-underline">
+    <div class="flex items-center gap-4">
+      <span class="text-3xl shrink-0">🔎</span>
+      <div class="flex-1">
+        <div class="label-caps text-secondary text-[11px] mb-1">SISMO911 · Familia</div>
+        <h2 class="font-display font-extrabold text-xl sm:text-2xl text-on-surface group-hover:text-primary">Personas desaparecidas — una página por cada caso para difundir</h2>
+        <p class="text-sm text-on-surface-variant mt-1">Miles de reportes ciudadanos del 24-J, cada uno con su foto y botones para compartir en todas las redes. Comparte para ayudar a reunir a las familias.</p>
+      </div>
+      <span class="hidden sm:inline-flex items-center gap-2 text-secondary font-bold shrink-0">Ver todos →</span>
     </div>
   </a>
 
@@ -190,7 +215,7 @@ const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://w
 writeFileSync(`${OUT}/sitemap-blog.xml`, sitemap)
 
 const rssItem = (title, link, desc, dateISO) => `  <item><title>${esc(title)}</title><link>${link}</link><guid>${link}</guid><pubDate>${new Date(Date.parse(dateISO) || Date.parse('2026-06-24')).toUTCString()}</pubDate><description>${esc(desc)}</description></item>`
-const rss = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>\n<title>SISMO911 · Blog Sísmico</title>\n<link>https://sismo911.com/blog</link>\n<atom:link href="https://sismo911.com/blog/rss.xml" rel="self" type="application/rss+xml"/>\n<description>Cobertura del terremoto de Venezuela: informe oficial y reportes ciudadanos geolocalizados.</description>\n<language>es-ve</language>\n` +
+const rss = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>\n<title>SISMO911 · Noticias Sísmicas</title>\n<link>https://sismo911.com/blog</link>\n<atom:link href="https://sismo911.com/blog/rss.xml" rel="self" type="application/rss+xml"/>\n<description>Cobertura del terremoto de Venezuela: informe oficial y reportes ciudadanos geolocalizados.</description>\n<language>es-ve</language>\n` +
   rssItem(FEATURED.title, 'https://sismo911.com/blog/' + FEATURED.slug, FEATURED.dek, '2026-06-24T22:30:00Z') + '\n' +
   picked.map(x => rssItem(headline(x.p, x.ov), 'https://sismo911.com/blog/' + x.slug, dek(x.p, x.ov), x.p.fechaISO)).join('\n') +
   `\n</channel></rss>\n`

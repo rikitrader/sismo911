@@ -20,6 +20,7 @@ import { acopio } from './routes/acopio';
 import { admin } from './routes/admin';
 import { funding } from './routes/funding';
 import { plan } from './routes/plan';
+import { desaparecidos } from './routes/desaparecidos';
 import { dedupePersonas } from './lib/dedupe';
 import { cleanPersonas } from './lib/clean';
 import { monitor } from './routes/monitor';
@@ -205,6 +206,10 @@ app.get('/familia', async (c) => {
       { html: true }); } })
     .transform(base);
 });
+
+// Public shareable "Se busca" articles (one per missing-person case) + their
+// paginated index + sitemap. Dynamic from D1 → scales to the whole registry.
+app.route('/', desaparecidos);
 
 // Anything not under /api and not a static asset → let ASSETS serve (404s handled by CF).
 app.all('*', async (c) => {
