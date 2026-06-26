@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API · Desarrolladores — SISMO911</title>
+<meta name="description" content="API de datos sísmicos de Venezuela y servidor MCP. Feed público abierto de terremotos, y API con clave para extraer datos de nuestra base de datos. Regístrate para obtener una clave.">
+<meta name="author" content="SISMO911 — Comando Sísmico Nacional">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/developers">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="API · Desarrolladores — SISMO911">
+<meta property="og:description" content="Feed público de sismos + servidor MCP + API con clave para extraer datos de nuestra base de datos.">
+<meta property="og:url" content="https://sismo911.com/developers">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>
+  body{background:#f9f9fc}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre.code{background:#00173a;color:#e8eefc;border-radius:.6rem;padding:1rem;overflow-x:auto;font-size:.8rem;line-height:1.5}
+  pre.code .k{color:#9fc6ff}.pill{font-variant-numeric:tabular-nums}
+  .meth{font-weight:700;font-size:.7rem;letter-spacing:.03em;padding:.1rem .45rem;border-radius:.35rem}
+  .get{background:#2e7d3215;color:#2e7d32}.post{background:#bb002715;color:#bb0027}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebAPI","name":"SISMO911 Data API","description":"API de datos sísmicos de Venezuela y servidor MCP.","url":"https://sismo911.com/developers","documentation":"https://sismo911.com/developers","provider":{"@type":"Organization","name":"SISMO911"}}
+</script>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+
+<main class="mx-auto max-w-5xl px-4 py-8 space-y-8">
+
+  <!-- Hero -->
+  <header>
+    <span class="inline-block text-[11px] font-bold uppercase tracking-wider text-secondary border border-secondary/30 rounded px-2 py-0.5 mb-3">Plataforma de Datos Abiertos</span>
+    <h1 class="font-display font-extrabold text-3xl sm:text-4xl mb-2">API &amp; MCP de SISMO911</h1>
+    <p class="text-on-surface-variant max-w-3xl">Construye sobre los datos sísmicos en vivo de Venezuela. Tenemos tres formas de acceso:
+      un <b>feed público abierto</b>, un <b>servidor MCP</b> para agentes de IA, y una <b>API con clave</b> para extraer datos en volumen de nuestra base de datos (requiere registro y aprobación).</p>
+  </header>
+
+  <!-- Three lanes -->
+  <section class="grid md:grid-cols-3 gap-4">
+    <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+      <div class="text-safe font-display font-bold text-lg mb-1">1 · Feed público</div>
+      <p class="text-sm text-on-surface-variant">Abierto, sin clave. 60 req/min por IP. Ideal para mapas, paneles y widgets.</p>
+      <a href="#publico" class="text-secondary text-sm font-semibold mt-2 inline-block">Ver endpoints →</a>
+    </div>
+    <div class="bg-white rounded-lg border border-outline-variant/60 p-5 border-l-4 border-l-secondary">
+      <div class="text-primary font-display font-bold text-lg mb-1">2 · Servidor MCP</div>
+      <p class="text-sm text-on-surface-variant">Conecta Claude o cualquier agente. Herramientas de solo lectura sobre todos nuestros datos.</p>
+      <a href="#mcp" class="text-secondary text-sm font-semibold mt-2 inline-block">Configurar MCP →</a>
+    </div>
+    <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+      <div class="text-warning font-display font-bold text-lg mb-1">3 · API con clave</div>
+      <p class="text-sm text-on-surface-variant">Extracción en volumen desde nuestra DB. Regístrate → aprobación → clave + secreto.</p>
+      <a href="#registro" class="text-secondary text-sm font-semibold mt-2 inline-block">Registrarme →</a>
+    </div>
+  </section>
+
+  <!-- PUBLIC ENDPOINTS -->
+  <section id="publico" class="space-y-3">
+    <h2 class="font-display font-bold text-2xl">1 · Feed público <span class="text-safe text-sm font-semibold align-middle">(abierto)</span></h2>
+    <div class="bg-white rounded-lg border border-outline-variant/60 divide-y divide-outline-variant/50">
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/earthquakes</span><p class="text-sm text-on-surface-variant mt-1">Lista de sismos. Filtros: <span class="mono">minMag, from, to, q, page, pageSize</span>.</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/earthquakes/:id</span><p class="text-sm text-on-surface-variant mt-1">Un sismo por id.</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/latest</span><p class="text-sm text-on-surface-variant mt-1">Sismos recientes + nivel de amenaza actual calculado.</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/stats</span><p class="text-sm text-on-surface-variant mt-1">Estadísticas agregadas (total, mag máx, conteos 24h/7d/30d).</p></div>
+    </div>
+    <details class="bg-white rounded-lg border border-outline-variant/60 p-4">
+      <summary class="cursor-pointer font-semibold text-sm">Ejemplo</summary>
+      <pre class="code mt-3"><span class="k">curl</span> https://sismo911.com/api/v1/latest?limit=5</pre>
+    </details>
+  </section>
+
+  <!-- MCP -->
+  <section id="mcp" class="space-y-3">
+    <h2 class="font-display font-bold text-2xl">2 · Servidor MCP</h2>
+    <p class="text-on-surface-variant text-sm max-w-3xl">Endpoint MCP (Streamable HTTP, JSON-RPC 2.0): <span class="mono">https://sismo911.com/mcp</span>. Solo lectura, sin clave. Herramientas:
+      <span class="mono text-xs">list_earthquakes, get_earthquake, latest_earthquakes, seismic_stats, list_shelters, list_news, search_missing_persons</span>.</p>
+    <div class="bg-white rounded-lg border border-outline-variant/60 p-4">
+      <p class="text-sm font-semibold mb-2">Claude Code / Desktop (mcp.json)</p>
+      <pre class="code"><span class="k">{</span>
+  "mcpServers": {
+    "sismo911": {
+      "type": "http",
+      "url": "https://sismo911.com/mcp"
+    }
+  }
+<span class="k">}</span></pre>
+      <p class="text-sm font-semibold mt-4 mb-2">CLI</p>
+      <pre class="code">claude mcp add --transport http sismo911 https://sismo911.com/mcp</pre>
+    </div>
+  </section>
+
+  <!-- REGISTER -->
+  <section id="registro" class="space-y-3">
+    <h2 class="font-display font-bold text-2xl">3 · API con clave — Regístrate</h2>
+    <p class="text-on-surface-variant text-sm max-w-3xl">Para extraer datos en volumen de nuestra base de datos (incluido el registro de personas desaparecidas, bajo permiso explícito), solicita una clave. Recibirás una <b>API key</b> y un <b>secreto</b> al instante (el secreto se muestra <b>una sola vez</b>); un operador revisará y aprobará tu solicitud antes de habilitar el acceso a <span class="mono">/api/v1/data/*</span>.</p>
+
+    <div class="grid md:grid-cols-2 gap-5">
+      <form id="regForm" class="bg-white rounded-lg border border-outline-variant/60 p-5 space-y-3">
+        <label class="block text-[11px] font-semibold text-on-surface-variant">Nombre de contacto *
+          <input name="name" required minlength="2" class="mt-1 w-full rounded-lg border border-outline-variant px-3 py-2 text-sm font-normal" placeholder="Tu nombre">
+        </label>
+        <label class="block text-[11px] font-semibold text-on-surface-variant">Correo *
+          <input name="email" type="email" required class="mt-1 w-full rounded-lg border border-outline-variant px-3 py-2 text-sm font-normal" placeholder="tu@correo.com">
+        </label>
+        <label class="block text-[11px] font-semibold text-on-surface-variant">Organización / proyecto
+          <input name="org" class="mt-1 w-full rounded-lg border border-outline-variant px-3 py-2 text-sm font-normal" placeholder="Universidad, ONG, medio…">
+        </label>
+        <label class="block text-[11px] font-semibold text-on-surface-variant">¿Para qué usarás los datos? *
+          <textarea name="purpose" required minlength="10" rows="3" class="mt-1 w-full rounded-lg border border-outline-variant px-3 py-2 text-sm font-normal" placeholder="Describe tu caso de uso (mín. 10 caracteres)"></textarea>
+        </label>
+        <button type="submit" class="w-full rounded-lg bg-secondary text-white font-semibold py-2.5 text-sm hover:bg-secondary/90">Solicitar clave</button>
+        <p id="regMsg" class="text-sm hidden"></p>
+      </form>
+
+      <div id="regResult" class="bg-white rounded-lg border border-outline-variant/60 p-5 hidden">
+        <div class="text-safe font-display font-bold mb-1">✅ Solicitud recibida</div>
+        <p class="text-sm text-on-surface-variant mb-3">Guarda estas credenciales <b>ahora</b>. El secreto no se vuelve a mostrar. Tu clave queda <b>pendiente de aprobación</b>.</p>
+        <label class="block text-[11px] font-semibold text-on-surface-variant">API Key
+          <input id="outKey" readonly class="mono mt-1 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs">
+        </label>
+        <label class="block text-[11px] font-semibold text-on-surface-variant mt-2">API Secret
+          <input id="outSecret" readonly class="mono mt-1 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs">
+        </label>
+        <button id="copyBtn" type="button" class="mt-3 rounded-lg border border-outline-variant px-3 py-2 text-sm font-semibold hover:bg-surface-variant/40">Copiar credenciales</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GATED ENDPOINTS -->
+  <section class="space-y-3">
+    <h2 class="font-display font-bold text-2xl">Endpoints con clave <span class="text-warning text-sm font-semibold align-middle">(requiere aprobación)</span></h2>
+    <div class="bg-white rounded-lg border border-outline-variant/60 p-4">
+      <p class="text-sm mb-2">Autenticación — cabeceras o Bearer:</p>
+      <pre class="code">X-API-Key: sk911_xxxxxxxx
+X-API-Secret: &lt;tu_secreto&gt;
+<span class="k"># o bien</span>
+Authorization: Bearer sk911_xxxxxxxx:&lt;tu_secreto&gt;</pre>
+    </div>
+    <div class="bg-white rounded-lg border border-outline-variant/60 divide-y divide-outline-variant/50">
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/me</span><p class="text-sm text-on-surface-variant mt-1">Estado de tu clave (pendiente / aprobada) + permisos.</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/data/earthquakes</span><p class="text-sm text-on-surface-variant mt-1">scope <span class="mono">read:earthquakes</span> — export paginado (hasta 200/página).</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/data/shelters</span><p class="text-sm text-on-surface-variant mt-1">scope <span class="mono">read:shelters</span> — albergues aprobados.</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/data/blog</span><p class="text-sm text-on-surface-variant mt-1">scope <span class="mono">read:blog</span> — noticias publicadas.</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/data/stats</span><p class="text-sm text-on-surface-variant mt-1">scope <span class="mono">read:stats</span> — estadísticas.</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/data/missing-persons</span><p class="text-sm text-on-surface-variant mt-1">scope <span class="mono">read:missing-persons</span> — registro de desaparecidos (otorgado por un operador, sin datos de contacto).</p></div>
+    </div>
+    <details class="bg-white rounded-lg border border-outline-variant/60 p-4">
+      <summary class="cursor-pointer font-semibold text-sm">Ejemplo de extracción</summary>
+      <pre class="code mt-3"><span class="k">curl</span> https://sismo911.com/api/v1/data/earthquakes?minMag=4&amp;pageSize=200 \
+  -H <span class="k">"X-API-Key: sk911_xxxxxxxx"</span> \
+  -H <span class="k">"X-API-Secret: &lt;tu_secreto&gt;"</span></pre>
+    </details>
+  </section>
+
+  <p class="text-xs text-on-surface-variant text-center pt-4 border-t border-outline-variant/50">
+    Datos sísmicos por <b>USGS</b>. Personas desaparecidas y albergues son aportados por la ciudadanía (solo registros moderados/aprobados). Úsalos de forma responsable.
+  </p>
+</main>
+
+<script>
+(function () {
+  var form = document.getElementById('regForm');
+  var msg = document.getElementById('regMsg');
+  var result = document.getElementById('regResult');
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    msg.className = 'text-sm text-on-surface-variant';
+    msg.classList.remove('hidden');
+    msg.textContent = 'Enviando…';
+    var btn = form.querySelector('button[type=submit]');
+    btn.disabled = true;
+    var data = Object.fromEntries(new FormData(form).entries());
+    try {
+      var r = await fetch('/api/v1/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      var j = await r.json();
+      if (!r.ok) {
+        msg.className = 'text-sm text-critical';
+        msg.textContent = (j.hint || j.error || 'Error') ;
+        btn.disabled = false;
+        return;
+      }
+      document.getElementById('outKey').value = j.api_key;
+      document.getElementById('outSecret').value = j.api_secret;
+      form.classList.add('hidden');
+      result.classList.remove('hidden');
+      result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (err) {
+      msg.className = 'text-sm text-critical';
+      msg.textContent = 'No se pudo enviar la solicitud. Intenta de nuevo.';
+      btn.disabled = false;
+    }
+  });
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    var txt = 'SISMO911 API\nAPI Key: ' + document.getElementById('outKey').value +
+              '\nAPI Secret: ' + document.getElementById('outSecret').value;
+    navigator.clipboard.writeText(txt).then(function () {
+      var b = document.getElementById('copyBtn');
+      b.textContent = '¡Copiado!';
+      setTimeout(function () { b.textContent = 'Copiar credenciales'; }, 1800);
+    });
+  });
+})();
+</script>
+</body>
+</html>
