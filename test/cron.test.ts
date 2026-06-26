@@ -11,8 +11,7 @@ const ALL_JOB_NAMES = [
   'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-purge-rejected',
   'familia-photo-mirror', 'monitor-sheet', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
   'social-monitor', 'blog', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash',
-  'history-bootstrap',
-  'personas-phash-fast', // TEMPORARY */5 fast-drain trigger (remove with its cron once backlog is hashed)
+  'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30',
 ];
 
 describe('cron groups', () => {
@@ -49,12 +48,14 @@ describe('cron groups', () => {
       'familia-photo-mirror',
       'monitor-sheet',
       'personas-dedupe-fuzzyphone',
+      'personas-phash-backfill-30',
     ]);
     expect(CRON_GROUPS['5 * * * *'].map((j) => j.name)).toEqual([
       'history-bootstrap',
       'rav-ingest',
       'rav-stats',
       'rav-verified',
+      'personas-phash-backfill-05',
     ]);
   });
 
