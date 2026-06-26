@@ -21,6 +21,7 @@ import { admin } from './routes/admin';
 import { funding } from './routes/funding';
 import { plan } from './routes/plan';
 import { desaparecidos } from './routes/desaparecidos';
+import { blog } from './routes/blog';
 import { dedupePersonas } from './lib/dedupe';
 import { cleanPersonas } from './lib/clean';
 import { monitor } from './routes/monitor';
@@ -214,6 +215,9 @@ app.get('/familia', async (c) => {
 // Public shareable "Se busca" articles (one per missing-person case) + their
 // paginated index + sitemap. Dynamic from D1 → scales to the whole registry.
 app.route('/', desaparecidos);
+// Dynamic /blog ("Noticias") magazine from the blog_posts table — mounted AFTER
+// desaparecidos so its specific /blog/desaparecidos routes win over /blog/:slug.
+app.route('/', blog);
 
 // Anything not under /api and not a static asset → let ASSETS serve (404s handled by CF).
 app.all('*', async (c) => {

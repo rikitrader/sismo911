@@ -1,7 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // Scan every page + JS (classes also live inside inline <script> template literals).
-  content: ['./public/**/*.html', './public/**/*.js'],
+  // Scan every page + JS (classes also live inside inline <script> template
+  // literals), plus the server-rendered routes in src (blog/desaparecidos emit
+  // HTML with utility classes that must compile too).
+  content: ['./public/**/*.html', './public/**/*.js', './src/**/*.ts'],
   theme: {
     extend: {
       colors: {
