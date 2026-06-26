@@ -95,24 +95,36 @@ familia.get('/persons', async (c) => {
   return c.json({ persons, total: total + nativeTotal, nextCursor: nextCursor(rows, limit), limit });
 });
 
-// GET /api/familia/gallery?cursor=&limit=
+// GET /api/familia/gallery?cursor=&limit=&q=&edo=&lugar=&desde=&hasta=
+// q   → free text on nombre/ubicacion · edo → estado (LIKE ubicacion, freeform) ·
+// lugar → ciudad/edificio (LIKE ubicacion) · desde/hasta → updated_at date range (YYYY-MM-DD).
 familia.get('/gallery', async (c) => {
   const limit = clampLimit(c.req.query('limit'), 30);
   // optional ?status=missing → only still-missing (estado='sin-contacto'); default = all approved photos
   const est = statusToEstado(c.req.query('status') || '');
   const base = ['foto_r2 IS NOT NULL', "moderation = 'approved'"]; const baseBinds: unknown[] = [];
   if (est) { base.push('estado = ?'); baseBinds.push(est); }
+  const q = (c.req.query('q') || '').trim();
+  if (q) { base.push('(nombre LIKE ? OR ubicacion LIKE ?)'); baseBinds.push(`%${q}%`, `%${q}%`); }
+  const edo = (c.req.query('edo') || '').trim();
+  if (edo) { base.push('ubicacion LIKE ?'); baseBinds.push(`%${edo}%`); }
+  const lugar = (c.req.query('lugar') || '').trim();
+  if (lugar) { base.push('ubicacion LIKE ?'); baseBinds.push(`%${lugar}%`); }
+  const desde = Date.parse((c.req.query('desde') || '') + 'T00:00:00Z');
+  if (!Number.isNaN(desde)) { base.push('updated_at >= ?'); baseBinds.push(desde); }
+  const hasta = Date.parse((c.req.query('hasta') || '') + 'T23:59:59Z');
+  if (!Number.isNaN(hasta)) { base.push('updated_at <= ?'); baseBinds.push(hasta); }
   const wBase = base.join(' AND ');
   const total = ((await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${wBase}`).bind(...baseBinds).first<any>())?.n) ?? 0;
   const where = [...base]; const binds = [...baseBinds];
   cursorClause(c.req.query('cursor') || '', where, binds);
   const { results } = await c.env.DB.prepare(
-    `SELECT id, nombre, edad, ubicacion, estado, foto_r2, updated_at FROM personas
+    `SELECT id, nombre, edad, ubicacion, fecha, estado, foto_r2, updated_at FROM personas
      WHERE ${where.join(' AND ')} ORDER BY updated_at DESC, id DESC LIMIT ?`
   ).bind(...binds, limit + 1).all<any>();
   const rows = results ?? [];
   return c.json({
-    photos: rows.slice(0, limit).map((p) => ({ id: p.id, full_name: p.nombre, age: p.edad, status: estadoToStatus(p.estado), last_seen: p.ubicacion, photo_url: `/api/familia/photo/${p.id}` })),
+    photos: rows.slice(0, limit).map((p) => ({ id: p.id, full_name: p.nombre, age: p.edad, status: estadoToStatus(p.estado), last_seen: p.ubicacion, fecha: p.fecha || null, updated_at: p.updated_at, photo_url: `/api/familia/photo/${p.id}` })),
     total, nextCursor: nextCursor(rows, limit),
   });
 });
