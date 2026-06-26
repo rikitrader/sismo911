@@ -33,7 +33,11 @@ run_worker_first = true
 [triggers]
 # Staggered so each trigger is a SEPARATE invocation with its own subrequest
 # budget (see src/cron.ts CRON_GROUPS — keep in sync; test/cron.test.ts checks it).
-crons = ["0 * * * *", "5 * * * *", "15 * * * *", "30 * * * *", "45 * * * *"]
+# `*/5` is a TEMPORARY high-frequency trigger draining the one-time photo-phash
+# backlog (~58k rows) in ~12h. REMOVE it (and its CRON_GROUPS entry) once the
+# backlog is hashed — steady-state hashing rides the hourly :45 group. Paid plan
+# allows 250 cron triggers, so the 6th is fine.
+crons = ["0 * * * *", "5 * * * *", "15 * * * *", "30 * * * *", "45 * * * *", "*/5 * * * *"]
 
 # Relational store: events, missing persons, emergency contacts, citizen reports.
 [[d1_databases]]
