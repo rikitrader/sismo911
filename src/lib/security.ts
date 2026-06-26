@@ -65,16 +65,14 @@ export async function rateLimit(
   limit: number,
   windowSec: number
 ): Promise<Response | null> {
-  const ip = requestIp(c);
-  const now = Math.floor(Date.now() / 1000);
-  const bucket = Math.floor(now / windowSec);
-  const key = `rl:${name}:${ip}:${bucket}`;
-  const current = Number((await env.CACHE.get(key)) ?? '0');
-  if (current >= limit) {
-    return c.json({ error: 'rate_limited', retry_after: windowSec - (now % windowSec) }, 429);
-  }
-  await env.CACHE.put(key, String(current + 1), { expirationTtl: windowSec + 30 });
-  return null;
+  // Delegates to the D1-atomic limiter. The previous implementation did a KV
+  // `put` on EVERY request; across the busy public write endpoints (SOS,
+  // check-ins, familia, reports, damage, donations) that exhausted the free-tier
+  // daily KV write cap (~1,000/day) — after which ALL Worker KV writes silently
+  // stopped committing (the usgs:latest hot cache, etc. went dead). D1 is atomic,
+  // fails open, and does NOT consume the KV write budget. Same (name,limit,window)
+  // semantics, so every call site is unchanged.
+  return burstLimit(env, c, name, limit, windowSec);
 }
 
 /**

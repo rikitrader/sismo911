@@ -11,15 +11,6 @@ import { bootstrapHistory } from '../src/ingest/usgs-history';
 
 // ---- helpers ----
 const envWith = (over: any = {}) => ({ ...over } as any);
-const fakeKvEnv = () => {
-  const store = new Map<string, string>();
-  return {
-    CACHE: {
-      get: async (k: string) => store.get(k) ?? null,
-      put: async (k: string, v: string) => { store.set(k, v); },
-    },
-  } as any;
-};
 const fakeCtx = (ip = '203.0.113.7') => ({
   req: { header: (k: string) => (k === 'cf-connecting-ip' ? ip : undefined) },
   json: (obj: any, status = 200) => new Response(JSON.stringify(obj), { status }),
@@ -75,10 +66,31 @@ describe('security: isImageBytes (magic-number check)', () => {
   it('rejects non-image bytes', () => expect(isImageBytes(new Uint8Array([0x00, 0x01, 0x02, 0x03]), 'image/jpeg')).toBe(false));
 });
 
-describe('security: requestIp + rateLimit', () => {
+// rateLimit now delegates to the D1-atomic burstLimit (no KV writes — those
+// exhausted the free-tier KV write cap). Fake the rate_buckets INSERT…ON
+// CONFLICT…RETURNING so the counter semantics are exercised.
+const fakeRlEnv = () => {
+  const buckets = new Map<string, { count: number; reset_ms: number }>();
+  return {
+    DB: {
+      prepare: (_sql: string) => ({
+        bind: (key: string, reset: number, now: number) => ({
+          first: async () => {
+            const row = buckets.get(key);
+            if (!row || row.reset_ms < now) buckets.set(key, { count: 1, reset_ms: reset });
+            else row.count += 1;
+            return buckets.get(key);
+          },
+        }),
+      }),
+    },
+  } as any;
+};
+
+describe('security: requestIp + rateLimit (D1-backed)', () => {
   it('extracts cf-connecting-ip', () => expect(requestIp(fakeCtx('9.9.9.9'))).toBe('9.9.9.9'));
   it('allows under the limit then blocks with 429', async () => {
-    const env = fakeKvEnv(); const c = fakeCtx();
+    const env = fakeRlEnv(); const c = fakeCtx();
     expect(await rateLimit(env, c, 'login', 3, 60)).toBe(null);
     expect(await rateLimit(env, c, 'login', 3, 60)).toBe(null);
     expect(await rateLimit(env, c, 'login', 3, 60)).toBe(null);
@@ -87,9 +99,13 @@ describe('security: requestIp + rateLimit', () => {
     expect((blocked as Response).status).toBe(429);
   });
   it('keys per-IP independently', async () => {
-    const env = fakeKvEnv();
+    const env = fakeRlEnv();
     await rateLimit(env, fakeCtx('1.1.1.1'), 'sos', 1, 60);
     expect(await rateLimit(env, fakeCtx('2.2.2.2'), 'sos', 1, 60)).toBe(null); // different IP, fresh
+  });
+  it('fails OPEN on a DB error (never blocks a life-safety write on infra failure)', async () => {
+    const env: any = { DB: { prepare: () => { throw new Error('D1 down'); } } };
+    expect(await rateLimit(env, fakeCtx(), 'sos', 1, 60)).toBe(null);
   });
 });
 
