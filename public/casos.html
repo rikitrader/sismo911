@@ -239,6 +239,20 @@
         <input id="q" placeholder="Buscar expediente, persona, lugar o número de caso…" autocomplete="off">
         <span class="kbd">/</span>
       </div>
+      <!-- Balance oficial (cifra de prensa/oficial vía RAV official_stats) — distinta del conteo del docket -->
+      <a id="balanceOficial" href="/informacion-verificada" style="display:none;text-decoration:none;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 12px;padding:12px 16px;border:1px solid var(--line,#e2e8f0);border-left:4px solid #c8102e;border-radius:12px;background:#fff">
+        <span style="display:flex;align-items:baseline;gap:8px">
+          <span id="bo_dead" style="font:900 28px/1 'Public Sans',system-ui;color:#c8102e;font-variant-numeric:tabular-nums">—</span>
+          <span style="font:700 12px/1.1 Inter,system-ui;color:#475569;text-transform:uppercase;letter-spacing:.04em">fallecidos<br>cifra oficial</span>
+        </span>
+        <span style="width:1px;height:30px;background:var(--line,#e2e8f0)"></span>
+        <span style="display:flex;align-items:baseline;gap:6px">
+          <span id="bo_hurt" style="font:800 20px/1 'Public Sans',system-ui;color:#e57200;font-variant-numeric:tabular-nums">—</span>
+          <span style="font:600 11px/1.1 Inter,system-ui;color:#475569;text-transform:uppercase;letter-spacing:.04em">heridos</span>
+        </span>
+        <span id="bo_src" style="font:500 11px/1.3 Inter,system-ui;color:#64748b;margin-left:auto;max-width:340px"></span>
+        <span style="font:700 12px Inter,system-ui;color:#c8102e">Información verificada →</span>
+      </a>
       <div class="kpis">
         <div class="kpi"><span class="accent" style="background:var(--amber)"></span><div class="v" id="s_missing" style="color:var(--amber)">—</div><div class="l">Desaparecidas</div></div>
         <div class="kpi"><span class="accent" style="background:var(--green)"></span><div class="v" id="s_safe" style="color:var(--green)">—</div><div class="l">Localizadas</div></div>
@@ -509,6 +523,24 @@ async function load(){
   if(OP){$('#f_prio').style.display='';$('#kpiPend').style.display='';$('#s_pend').textContent=(summary.pending??0).toLocaleString('es');}
   renderRows();
   renderPager();
+  loadBalanceOficial();
+}
+// Official/press casualty toll (RAV official_stats) — shown as a distinct banner
+// above the docket KPIs so it is never confused with the docket's own "Fallecidas"
+// count (cases families have marked deceased). Loaded once; enrichment, not critical.
+let BO_DONE=false;
+async function loadBalanceOficial(){
+  if(BO_DONE) return; BO_DONE=true;
+  try{
+    const s=(await (await fetch('/api/stats/official')).json()).stats;
+    if(!s||s.fallecidos==null) { BO_DONE=false; return; }
+    const fmt=n=>(n==null?'—':Number(n).toLocaleString('es'));
+    $('#bo_dead').textContent=fmt(s.fallecidos);
+    $('#bo_hurt').textContent=fmt(s.heridos);
+    const upd=s.updated_at?(' · act. '+new Date(s.updated_at).toLocaleDateString('es-VE')):'';
+    $('#bo_src').textContent=(s.source||'Cifra oficial preliminar')+upd;
+    $('#balanceOficial').style.display='flex';
+  }catch(e){ BO_DONE=false; }
 }
 // Fortune-500 docket pager: First/Prev, windowed page numbers with ellipsis,
 // Next/Last, and a jump-to-page box. The whole 52k+ registry is reachable.
