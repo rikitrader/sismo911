@@ -1,364 +1,410 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reportar un daño — SISMO911</title>
-<meta name="description" content="Reporta daños, colapsos, fugas de gas, personas atrapadas o puntos de ayuda tras el terremoto en Venezuela. Formulario oficial paso a paso con confirmación por correo. Tu ubicación exacta nunca se comparte. Reporte ciudadano del Comando Sísmico Nacional.">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Reportar — SISMO911</title>
+<meta name="description" content="Reporta en segundos: personas atrapadas, peligro, daños, puntos de ayuda, o avisa que estás a salvo. Paso a paso, claro y rápido. Tu ubicación exacta nunca se comparte — se redondea ~100 m.">
 <meta name="author" content="SISMO911 — Comando Sísmico Nacional">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="canonical" href="https://sismo911.com/reportar">
 <meta property="og:type" content="website"><meta property="og:site_name" content="SISMO911"><meta property="og:locale" content="es_VE">
-<meta property="og:title" content="Reportar un daño — SISMO911">
-<meta property="og:description" content="Formulario oficial paso a paso. Reporta daños, personas atrapadas o puntos de ayuda. Confirmación por correo. Tu ubicación exacta nunca se comparte.">
+<meta property="og:title" content="Reportar — SISMO911">
+<meta property="og:description" content="Reporta en segundos: atrapados, peligro, daños o puntos de ayuda. Tu ubicación exacta nunca se comparte.">
 <meta property="og:url" content="https://sismo911.com/reportar">
 <meta property="og:image" content="https://sismo911.com/og/og-default.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Reportar un daño — SISMO911"><meta name="twitter:description" content="Reporte ciudadano paso a paso, con confirmación por correo."><meta name="twitter:image" content="https://sismo911.com/og/og-default.png">
-<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Reportar — SISMO911"><meta name="twitter:description" content="Reporte ciudadano paso a paso tras el terremoto en Venezuela."><meta name="twitter:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css" />
 <script src="/app-shell.js" defer></script>
-
 <style>
-  :root{--navy:#13284f;--navy-2:#0a2c61;--red:#c8102e;--line:#dfe3ec;--ink:#1f2430;--muted:#5a6071;--safe:#1f8a4c;--warn:#9a6400}
-  body{background:#f4f6fb}
+  :root{
+    --navy:#00173a; --red:#bb0027; --crit:#c8102e; --amber:#c2620a; --green:#1f7a37;
+    --ink:#16181d; --muted:#5b6173; --faint:#8a90a2; --line:#d7dae4; --line2:#e6e8f0;
+    --bg:#f4f6fb; --panel:#fff; --shadow:0 1px 2px rgba(16,24,52,.06),0 8px 24px -16px rgba(16,24,52,.25);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-text-size-adjust:100%}
   .font-display{font-family:'Public Sans',sans-serif}
+  .wrap{max-width:560px;margin:0 auto;padding:18px 16px calc(120px + env(safe-area-inset-bottom))}
+  @media(min-width:640px){.wrap{padding:32px 16px 48px}}
 
-  /* ---- FEMA-style government banner ---- */
-  .gov-banner{position:relative;background:linear-gradient(135deg,#00112e 0%,#13284f 55%,#0a2c61 100%);color:#fff;border-radius:18px;overflow:hidden;box-shadow:0 12px 34px rgba(8,20,45,.28)}
-  .gov-banner::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 12% 18%,rgba(255,255,255,.07),transparent 42%),repeating-linear-gradient(135deg,rgba(255,255,255,.04) 0 2px,transparent 2px 9px);pointer-events:none}
-  .gov-banner .stripe{height:5px;background:linear-gradient(90deg,#c8102e 0 33%,#fff 33% 66%,#0a2c61 66% 100%)}
-  .gov-inner{position:relative;padding:24px 26px 22px}
-  .eyebrow{display:inline-flex;align-items:center;gap:8px;font:800 11px Inter;letter-spacing:.16em;text-transform:uppercase;color:#9fc0ff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);padding:6px 12px;border-radius:999px}
-  .gov-title{font:800 clamp(26px,4.6vw,38px)/1.05 'Public Sans';letter-spacing:-.01em;margin:13px 0 6px}
-  .gov-sub{color:#c5d3ee;font:500 14px/1.5 Inter;max-width:62ch}
+  /* ---- Intro ---- */
+  .eyebrow{font:800 11px/1 'Public Sans';letter-spacing:.16em;text-transform:uppercase;color:var(--red)}
+  h1.title{font:800 clamp(26px,7vw,34px)/1.05 'Public Sans';letter-spacing:-.02em;margin:8px 0 6px}
+  .lede{font:500 14.5px/1.5 Inter;color:var(--muted);margin:0 0 16px}
+  .sos{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #f1c4cb;border-left:5px solid var(--crit);border-radius:12px;padding:12px 14px;margin-bottom:20px;box-shadow:var(--shadow);text-decoration:none;color:inherit}
+  .sos .ic{width:38px;height:38px;flex:0 0 auto;display:grid;place-items:center;border-radius:10px;background:#fdecee;font-size:20px}
+  .sos b{display:block;font:800 14.5px 'Public Sans';color:var(--crit)}
+  .sos span{font:500 12.5px Inter;color:var(--muted)}
+  .sos .go{margin-left:auto;color:var(--crit);font-size:20px;flex:0 0 auto}
 
-  .panel{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 2px 10px rgba(20,40,80,.05)}
+  /* ---- Progress ---- */
+  .steps{display:flex;align-items:center;gap:7px;margin-bottom:16px}
+  .steps .s{height:5px;flex:1;border-radius:3px;background:var(--line2);transition:background .25s}
+  .steps .s.on{background:var(--navy)}
+  .steps .s.done{background:var(--green)}
 
-  /* ---- Quick one-tap (fast path) ---- */
-  .qgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .qbtn{border:none;border-radius:12px;padding:16px 8px;font:800 14px Inter;color:#fff;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:transform .12s,filter .12s}
-  .qbtn:hover{transform:translateY(-2px);filter:brightness(1.05)}
-  .qbtn .e{font-size:24px}
-  .qbtn[disabled]{opacity:.55}
+  /* ---- Step heading ---- */
+  .qh{font:800 19px/1.2 'Public Sans';letter-spacing:-.01em;margin:0 0 4px}
+  .qsub{font:500 13.5px Inter;color:var(--muted);margin:0 0 16px}
+  .back{display:inline-flex;align-items:center;gap:6px;background:none;border:0;color:var(--muted);font:700 13px Inter;cursor:pointer;padding:6px 0;margin-bottom:6px}
+  .back:hover{color:var(--navy)}
 
-  /* ---- Stepper ---- */
-  .stepper{display:flex;align-items:center;gap:0;margin-bottom:6px}
-  .step{display:flex;align-items:center;gap:9px;flex:1;min-width:0}
-  .step .dot{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:800 13px Inter;background:#eef1f7;color:var(--muted);border:2px solid #e2e7f0;transition:.2s}
-  .step .nm{font:700 12px Inter;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .step .ln{flex:1;height:2px;background:#e2e7f0;margin:0 8px;border-radius:2px}
-  .step.active .dot{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .step.active .nm{color:var(--navy)}
-  .step.done .dot{background:var(--safe);color:#fff;border-color:var(--safe)}
-  .step.done .nm{color:var(--ink)}
-  @media(max-width:620px){.step .nm{display:none}.step .ln{margin:0 5px}}
-  .pbar{height:6px;background:#eef1f7;border-radius:6px;overflow:hidden;margin:14px 0 22px}
-  .pbar .fill{height:100%;background:linear-gradient(90deg,var(--navy),#1f5fd0);border-radius:6px;transition:width .3s ease}
+  /* ---- Choice cards (step 1) ---- */
+  .choices{display:flex;flex-direction:column;gap:11px}
+  .choice{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--c,var(--navy));border-radius:15px;padding:16px;min-height:74px;cursor:pointer;box-shadow:var(--shadow);transition:transform .08s,box-shadow .15s,border-color .15s;-webkit-tap-highlight-color:transparent}
+  .choice:hover{border-color:var(--c,var(--navy))}
+  .choice:active{transform:scale(.985)}
+  .choice:focus-visible{outline:3px solid color-mix(in srgb,var(--c,var(--navy)) 40%,transparent);outline-offset:2px}
+  .choice .ic{width:46px;height:46px;flex:0 0 auto;display:grid;place-items:center;border-radius:13px;background:var(--cbg,#eef1f8);font-size:24px}
+  .choice .tx{flex:1;min-width:0}
+  .choice .tt{font:800 16px/1.15 'Public Sans';color:var(--ink)}
+  .choice .sb{font:500 12.5px/1.35 Inter;color:var(--muted);margin-top:3px}
+  .choice .ch{color:var(--c,var(--navy));font-size:22px;flex:0 0 auto;opacity:.8}
 
-  /* ---- Form controls ---- */
-  .lab{font:800 11px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block}
-  .req{color:var(--red)}
-  .inp{width:100%;border:1px solid var(--line);border-radius:10px;padding:.65rem .8rem;font:500 15px Inter;background:#fff;color:var(--ink)}
-  .inp:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(19,40,79,.14)}
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{border:1.5px solid var(--line);border-radius:10px;padding:.55rem .85rem;font:700 13.5px Inter;cursor:pointer;background:#fff;color:var(--ink);transition:.12s;display:inline-flex;align-items:center;gap:6px}
-  .chip:hover{border-color:#b9c4da}
+  /* ---- Fields ---- */
+  .field{margin-bottom:16px}
+  .field>label{display:block;font:700 13px Inter;color:var(--ink);margin-bottom:8px}
+  .field .hint{font:500 12px Inter;color:var(--faint);margin-top:6px}
+  input[type=text],textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;font:500 15.5px Inter;background:var(--panel);color:var(--ink);outline:none;transition:border-color .12s,box-shadow .12s}
+  textarea{resize:vertical;min-height:84px;line-height:1.45}
+  input[type=text]:focus,textarea:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,23,58,.12)}
+  ::placeholder{color:var(--faint)}
+  .chips{display:flex;flex-wrap:wrap;gap:9px}
+  .chip{border:1.5px solid var(--line);background:var(--panel);border-radius:12px;padding:12px 15px;font:700 14px Inter;color:var(--ink);cursor:pointer;min-height:48px;display:inline-flex;align-items:center;gap:7px;transition:all .12s;-webkit-tap-highlight-color:transparent}
+  .chip:hover{border-color:var(--navy)}
   .chip.sel{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .sevchip.sel[data-v="rojo"]{background:var(--red);border-color:var(--red)}
-  .sevchip.sel[data-v="naranja"]{background:#d97706;border-color:#d97706}
-  .sevchip.sel[data-v="amarillo"]{background:var(--warn);border-color:var(--warn)}
-  .nav{display:flex;gap:10px;margin-top:22px}
-  .btn{flex:1;border-radius:11px;padding:.85rem 1rem;font:800 15px Inter;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--navy);transition:.12s}
-  .btn:hover{border-color:var(--navy)}
-  .btn.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .btn.primary:hover{filter:brightness(1.08)}
-  .btn.submit{background:var(--red);border-color:var(--red);color:#fff}
-  .btn[disabled]{opacity:.5;cursor:not-allowed}
-  .stepwrap{display:none}
-  .stepwrap.on{display:block;animation:fade .25s ease}
-  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  .hint{font:500 12.5px/1.5 Inter;color:var(--muted);margin-top:6px}
+  .chip:focus-visible{outline:3px solid rgba(0,23,58,.3);outline-offset:2px}
 
-  /* ---- Gov info card ---- */
-  .infocard{background:#f0f4fb;border:1px solid #d9e2f2;border-radius:14px;padding:16px 18px}
-  .infocard h3{font:800 12px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--navy);margin:0 0 10px}
-  .infocard ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
-  .infocard li{font:500 13px/1.45 Inter;color:#33405c;display:flex;gap:9px}
-  .infocard li .i{flex:0 0 auto}
-  .review{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font:500 14px Inter}
-  .review .row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed #eceef4}
-  .review .row:last-child{border-bottom:none}
-  .review .k{color:var(--muted);font-weight:700}
-  .review .v{color:var(--ink);text-align:right;font-weight:600;max-width:62%}
+  /* ---- Photo ---- */
+  .photo label.drop{display:flex;align-items:center;justify-content:center;gap:9px;border:1.5px dashed var(--line);border-radius:12px;padding:16px;font:700 14px Inter;color:var(--navy);cursor:pointer;background:#fbfcff}
+  .photo label.drop:hover{border-color:var(--navy);background:#f3f6ff}
+  .photo img{margin-top:10px;border-radius:12px;max-height:200px;width:auto;border:1px solid var(--line);display:block}
 
-  /* ---- Success ---- */
-  .done{text-align:center;padding:14px 6px}
-  .done .ic{width:74px;height:74px;border-radius:50%;background:#e7f3ec;display:grid;place-items:center;margin:0 auto 14px;font-size:38px}
-  .refbox{display:inline-block;margin:10px 0 4px;background:#f0f4fb;border:1px dashed var(--navy);border-radius:10px;padding:10px 18px;font:800 18px/1 monospace;color:var(--navy);letter-spacing:.06em}
+  /* ---- Location ---- */
+  .geobtn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;border:1.5px solid var(--navy);background:#fff;color:var(--navy);border-radius:12px;padding:14px;font:800 14.5px 'Public Sans';cursor:pointer;min-height:52px;transition:background .12s}
+  .geobtn:hover{background:#f0f4ff}
+  .geobtn.ok{border-color:var(--green);color:var(--green);background:#eefaf0}
+  .geostat{font:500 12.5px Inter;color:var(--muted);margin-top:8px;text-align:center}
+  .privacy{display:flex;gap:9px;align-items:flex-start;font:500 12px/1.45 Inter;color:var(--muted);background:#fff;border:1px solid var(--line2);border-radius:11px;padding:11px 12px;margin-top:14px}
+  .privacy .ic{flex:0 0 auto;color:var(--green)}
+  details.more{margin-top:14px}
+  details.more>summary{cursor:pointer;font:700 13px Inter;color:var(--navy);list-style:none}
+  details.more>summary::-webkit-details-marker{display:none}
+  details.more>summary::before{content:'+ ';font-weight:800}
+  details.more[open]>summary::before{content:'– '}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:12px}
+
+  /* ---- Sticky action bar (mobile) ---- */
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:linear-gradient(to top,var(--bg) 70%,rgba(244,246,251,0));padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;justify-content:center}
+  .bar .inner{width:100%;max-width:560px}
+  .cta{width:100%;border:0;border-radius:14px;padding:16px;font:800 16px 'Public Sans';color:#fff;background:var(--red);cursor:pointer;min-height:56px;box-shadow:0 6px 18px -6px rgba(187,0,39,.5);transition:filter .12s,opacity .12s}
+  .cta:hover{filter:brightness(1.05)}
+  .cta:disabled{opacity:.6;cursor:not-allowed;box-shadow:none}
+  .cta.green{background:var(--green);box-shadow:0 6px 18px -6px rgba(31,122,55,.5)}
+  .formmsg{font:600 13px Inter;text-align:center;margin:0 0 8px;min-height:18px}
+
+  /* ---- Done ---- */
+  .done{text-align:center;padding:8px 0}
+  .done .seal{width:84px;height:84px;margin:6px auto 16px;border-radius:50%;display:grid;place-items:center;background:#eefaf0;border:2px solid #bfe6c8;font-size:42px}
+  .done h2{font:800 23px 'Public Sans';margin:0 0 8px}
+  .done p{font:500 14.5px/1.5 Inter;color:var(--muted);margin:0 auto 18px;max-width:420px}
+  .nextcard{text-align:left;background:#fff;border:1px solid var(--line2);border-radius:13px;padding:15px;margin:0 0 14px;box-shadow:var(--shadow)}
+  .nextcard h3{font:800 12px 'Public Sans';letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:0 0 9px}
+  .nextcard ol{margin:0;padding-left:18px;font:500 13.5px/1.6 Inter;color:var(--ink)}
+  .wa{display:inline-flex;align-items:center;justify-content:center;gap:9px;width:100%;background:#25D366;color:#fff;font:800 15px 'Public Sans';border-radius:13px;padding:14px;text-decoration:none;min-height:52px;margin-bottom:10px}
+  .ghost{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;background:#fff;border:1.5px solid var(--line);color:var(--navy);font:800 14.5px 'Public Sans';border-radius:13px;padding:13px;cursor:pointer;text-decoration:none;min-height:50px;margin-bottom:10px}
+  [hidden]{display:none!important}
 </style>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebPage","name":"Reportar un daño — SISMO911","description":"Formulario oficial paso a paso para reportar daños tras el terremoto en Venezuela, con confirmación por correo.","url":"https://sismo911.com/reportar","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+{"@context":"https://schema.org","@type":"WebPage","name":"Reportar — SISMO911","description":"Reporte ciudadano paso a paso tras el terremoto en Venezuela.","url":"https://sismo911.com/reportar","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
 </script>
 </head>
-<body class="font-sans text-on-surface">
-<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/alertas" class="hover:text-white/70">Alertas</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a><a href="/familia" class="hover:text-white/70">Familia</a><a href="/acopio" class="hover:text-white/70">Acopio</a><a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/comms" class="hover:text-white/70">Radio</a><a href="/guia" class="hover:text-white/70">Guía</a><a href="/reportar" class="text-white">Reportar</a><a href="/contacto" class="hover:text-white/70">Contacto</a><a href="/blog" class="hover:text-white/70">Noticias</a></nav></div></header>
+<body>
+<main class="wrap">
 
-<main class="mx-auto max-w-5xl px-4 py-6 space-y-5">
+  <!-- ============ STEP 1: choose ============ -->
+  <section id="step-choose" data-step>
+    <div class="eyebrow">Reporte ciudadano</div>
+    <h1 class="title font-display">¿Qué está pasando?</h1>
+    <p class="lede">Elige una opción. Te haremos solo 1 o 2 preguntas. Toma segundos.</p>
 
-  <!-- ===== Banner ===== -->
-  <section class="gov-banner">
-    <div class="stripe"></div>
-    <div class="gov-inner">
-      <span class="eyebrow">📋 Reporte Ciudadano Oficial · Comando Sísmico</span>
-      <h1 class="gov-title">Reportar un daño</h1>
-      <p class="gov-sub">Tu reporte ayuda a dirigir el rescate. Pasa por revisión de un operador antes de publicarse. <b>Tu ubicación exacta nunca se comparte</b> — se redondea a ~100 m. ¿Vida en riesgo ahora? Usa <a href="/sos" style="color:#ffd0d7;font-weight:700;text-decoration:underline">SOS</a> o llama al <b>911</b>.</p>
+    <a href="/sos" class="sos">
+      <span class="ic">🆘</span>
+      <span><b>¿Hay una vida en peligro AHORA?</b><span>Usa SOS o llama al 911 de inmediato.</span></span>
+      <span class="go">›</span>
+    </a>
+
+    <div class="choices" id="choices"></div>
+
+    <p class="privacy" style="margin-top:18px">
+      <span class="ic">🔒</span>
+      <span>Tu ubicación exacta <b>nunca</b> se comparte: se publica redondeada a ~100 m. Todo reporte pasa por revisión antes de aparecer en el mapa.</span>
+    </p>
+  </section>
+
+  <!-- ============ STEP 2: quick details ============ -->
+  <section id="step-detail" data-step hidden>
+    <button type="button" class="back" id="backToChoose">‹ Volver</button>
+    <div class="steps"><span class="s done"></span><span class="s on"></span><span class="s"></span></div>
+    <h2 class="qh" id="dTitle"></h2>
+    <p class="qsub" id="dSub"></p>
+    <form id="detailForm" novalidate>
+      <div id="qbody"></div>
+    </form>
+  </section>
+
+  <!-- ============ STEP 3: location + send ============ -->
+  <section id="step-loc" data-step hidden>
+    <button type="button" class="back" id="backToDetail">‹ Volver</button>
+    <div class="steps"><span class="s done"></span><span class="s done"></span><span class="s on"></span></div>
+    <h2 class="qh">¿Dónde estás?</h2>
+    <p class="qsub">Comparte tu ubicación aproximada para ubicar el reporte en el mapa. Es opcional, pero ayuda mucho.</p>
+
+    <button type="button" id="geoBtn" class="geobtn">📍 Compartir mi ubicación</button>
+    <p class="geostat" id="geoStat">Aproximada y redondeada. Nunca mostramos tu punto exacto.</p>
+
+    <details class="more">
+      <summary>O escríbelo a mano (municipio y sector)</summary>
+      <div class="grid2">
+        <div><input type="text" id="municipio" placeholder="Municipio"></div>
+        <div><input type="text" id="parroquia" placeholder="Parroquia / sector"></div>
+      </div>
+    </details>
+
+    <p class="privacy"><span class="ic">🔒</span><span>Al enviar, tu reporte entra a la cola de revisión. Aparecerá en el mapa público cuando un moderador lo confirme.</span></p>
+  </section>
+
+  <!-- ============ STEP 4: done ============ -->
+  <section id="step-done" data-step hidden>
+    <div class="done">
+      <div class="seal" id="doneSeal">✅</div>
+      <h2 class="font-display" id="doneTitle">Reporte recibido</h2>
+      <p id="doneMsg"></p>
+      <div class="nextcard">
+        <h3>¿Qué sigue?</h3>
+        <ol id="doneNext"></ol>
+      </div>
+      <div id="doneShare"></div>
+      <button type="button" class="ghost" id="againBtn">↺ Hacer otro reporte</button>
+      <a class="ghost" href="/casos" style="border-color:var(--line2)">Ver expedientes y seguimiento →</a>
     </div>
   </section>
 
-  <!-- ===== Quick one-tap (fast workflow) ===== -->
-  <section class="panel p-5">
-    <div class="flex items-center gap-2 mb-1"><span class="font-display font-extrabold text-lg text-primary">Reporte rápido</span><span class="text-[11px] font-bold uppercase tracking-wide bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">un toque</span></div>
-    <p class="text-sm text-on-surface-variant mb-3">¿Apuro? Toca, comparte tu ubicación y listo. Pasa por revisión.</p>
-    <div class="qgrid">
-      <button type="button" data-kind="trapped" class="qbtn" style="background:#c8102e"><span class="e">🆘</span>Atrapado</button>
-      <button type="button" data-kind="hazard" class="qbtn" style="background:#d97706"><span class="e">⚠️</span>Peligro</button>
-      <button type="button" data-kind="safe" class="qbtn" style="background:#1f8a4c"><span class="e">✅</span>A salvo</button>
-    </div>
-    <p id="qmsg" class="text-sm mt-3"></p>
-    <div id="qshare" class="hidden mt-2"></div>
-  </section>
-
-  <div class="grid lg:grid-cols-[1fr_300px] gap-5 items-start">
-    <!-- ===== Step-by-step wizard ===== -->
-    <section class="panel p-5 sm:p-6">
-      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h2 class="font-display font-extrabold text-xl text-primary">Reporte detallado</h2>
-        <span class="text-xs text-on-surface-variant">Paso <b id="stepNum">1</b> de 4</span>
-      </div>
-
-      <div class="stepper" id="stepper">
-        <div class="step active" data-s="1"><span class="dot">1</span><span class="nm">Tipo</span><span class="ln"></span></div>
-        <div class="step" data-s="2"><span class="dot">2</span><span class="nm">Detalles</span><span class="ln"></span></div>
-        <div class="step" data-s="3"><span class="dot">3</span><span class="nm">Ubicación</span><span class="ln"></span></div>
-        <div class="step" data-s="4"><span class="dot">4</span><span class="nm">Contacto</span></div>
-      </div>
-      <div class="pbar"><div class="fill" id="pfill" style="width:25%"></div></div>
-
-      <form id="wiz" novalidate>
-        <!-- Step 1 -->
-        <div class="stepwrap on" data-step="1">
-          <label class="lab">Tipo de reporte <span class="req">*</span></label>
-          <div id="cats" class="chips"></div>
-          <label class="lab" style="margin-top:18px">Gravedad</label>
-          <div id="sevs" class="chips"></div>
-          <p class="hint">Elige el tipo que mejor describe lo que ves. La gravedad ayuda a priorizar el rescate.</p>
-        </div>
-
-        <!-- Step 2 -->
-        <div class="stepwrap" data-step="2">
-          <label class="lab" for="title">Título corto</label>
-          <input id="title" class="inp" maxlength="140" placeholder="Ej: Grietas en edificio Residencias La Paz">
-          <label class="lab" for="description" style="margin-top:16px">Descripción <span class="req">*</span></label>
-          <textarea id="description" class="inp" rows="3" maxlength="2000" placeholder="¿Qué ocurre? ¿Hay personas en riesgo? ¿Cuántas?"></textarea>
-          <label class="lab" for="photo" style="margin-top:16px">Foto (opcional)</label>
-          <input id="photo" class="inp" type="file" accept="image/jpeg,image/png,image/webp" capture="environment">
-          <img id="preview" class="hidden mt-2 rounded-lg max-h-48 w-auto border border-outline-variant" alt="Vista previa">
-          <p class="hint">JPG, PNG o WebP · máx. 6 MB. La foto se publica solo tras revisión.</p>
-        </div>
-
-        <!-- Step 3 -->
-        <div class="stepwrap" data-step="3">
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="lab" for="municipio">Municipio</label><input id="municipio" class="inp" placeholder="Ej: Vargas"></div>
-            <div><label class="lab" for="parroquia">Parroquia / sector</label><input id="parroquia" class="inp" placeholder="Ej: Catia La Mar"></div>
-          </div>
-          <label class="lab" style="margin-top:16px">Ubicación aproximada (GPS)</label>
-          <button type="button" id="geo" class="btn" style="flex:none;width:100%">📍 Usar mi ubicación (aproximada)</button>
-          <p id="geostat" class="hint"></p>
-          <p class="hint">Tu ubicación se redondea a ~100 m antes de publicarse. Nunca mostramos tu posición exacta.</p>
-        </div>
-
-        <!-- Step 4 -->
-        <div class="stepwrap" data-step="4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><label class="lab" for="reporter">Tu nombre (opcional)</label><input id="reporter" class="inp" maxlength="80" placeholder="Ej: María G."></div>
-            <div><label class="lab" for="reporter_email">Correo para confirmación</label><input id="reporter_email" class="inp" type="email" inputmode="email" placeholder="tucorreo@ejemplo.com"></div>
-          </div>
-          <p class="hint">Si dejas tu correo, te enviamos un <b>comprobante con número de referencia</b>. Opcional — nunca se publica.</p>
-          <div class="review mt-4" id="review"></div>
-        </div>
-
-        <div class="nav">
-          <button type="button" class="btn" id="back" style="display:none">← Atrás</button>
-          <button type="button" class="btn primary" id="next">Siguiente →</button>
-          <button type="submit" class="btn submit" id="submit" style="display:none">Enviar reporte</button>
-        </div>
-        <p id="msg" class="text-sm text-center mt-3"></p>
-      </form>
-
-      <!-- Success state -->
-      <div id="success" class="done hidden">
-        <div class="ic">✓</div>
-        <h2 class="font-display font-extrabold text-2xl text-primary">Reporte recibido</h2>
-        <p class="text-sm text-on-surface-variant mt-1 mb-1">Está en revisión por un operador. Aparecerá en el mapa una vez verificado.</p>
-        <div class="refbox" id="refOut">—</div>
-        <p id="emailNote" class="text-sm text-safe font-semibold mt-2"></p>
-        <div class="nav" style="max-width:380px;margin:18px auto 0">
-          <a href="/mapa" class="btn primary" style="text-align:center;text-decoration:none">Ver el mapa</a>
-          <button type="button" class="btn" id="again">Otro reporte</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Gov info sidebar ===== -->
-    <aside class="space-y-4">
-      <div class="infocard">
-        <h3>Qué pasa con tu reporte</h3>
-        <ul>
-          <li><span class="i">1️⃣</span><span>Lo recibe el <b>Comando Sísmico Nacional</b> en estado “en revisión”.</span></li>
-          <li><span class="i">2️⃣</span><span>Un <b>operador lo verifica</b> y le asigna prioridad de rescate.</span></li>
-          <li><span class="i">3️⃣</span><span>Una vez verificado, se <b>publica en el mapa</b> de emergencia.</span></li>
-          <li><span class="i">📧</span><span>Si dejaste tu correo, recibes un <b>comprobante con referencia</b>.</span></li>
-        </ul>
-      </div>
-      <div class="infocard" style="background:#fdeaec;border-color:#f3c6cd">
-        <h3 style="color:#c8102e">¿Vida en riesgo ahora?</h3>
-        <ul>
-          <li><span class="i">🆘</span><span>Usa el <a href="/sos" style="color:#c8102e;font-weight:700;text-decoration:underline">botón SOS</a> para emergencia con vida en riesgo.</span></li>
-          <li><span class="i">📞</span><span>Llama al <b>911</b> (emergencias) o <b>171</b>.</span></li>
-        </ul>
-      </div>
-      <div class="infocard" style="background:#eef7f1;border-color:#cfe6d8">
-        <h3 style="color:#1f8a4c">Privacidad</h3>
-        <ul>
-          <li><span class="i">🛡</span><span>Tu ubicación exacta <b>nunca se publica</b> — se redondea a ~100 m.</span></li>
-          <li><span class="i">🔒</span><span>Tu nombre y correo son <b>opcionales</b> y no se muestran.</span></li>
-        </ul>
-      </div>
-    </aside>
-  </div>
 </main>
+
+<!-- sticky action bar: only on detail + location steps -->
+<div class="bar" id="actionBar" hidden>
+  <div class="inner">
+    <p class="formmsg" id="formMsg"></p>
+    <button type="button" class="cta" id="ctaBtn">Continuar</button>
+  </div>
+</div>
 
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
-const $=id=>document.getElementById(id);
-const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=s=>document.querySelector(s), ce=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;};
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 
-// ---- One-tap quick report (no login) ----
-function getPos(){return new Promise(res=>{if(!navigator.geolocation)return res(null);navigator.geolocation.getCurrentPosition(p=>res(p.coords),()=>res(null),{enableHighAccuracy:true,timeout:8000});});}
-const QK={trapped:{cat:'trapped_people',sev:'rojo',desc:'Reporte rápido: persona(s) atrapada(s)',label:'persona atrapada'},hazard:{cat:'gas_leak',sev:'rojo',desc:'Reporte rápido: peligro (gas / estructura)',label:'peligro (gas/estructura)'}};
-function showShare(label,lat,lon){
-  const box=$('qshare');if(!box)return;
-  const loc=(lat!=null&&lon!=null)?('https://maps.google.com/?q='+lat.toFixed(5)+','+lon.toFixed(5)):'';
-  const text='🆘 SISMO911: Reporté '+label+' en mi zona.'+(loc?(' Ubicación: '+loc):'')+' Sigue la emergencia: https://sismo911.com';
-  const wa='https://wa.me/?text='+encodeURIComponent(text);
-  box.innerHTML='<a href="'+wa+'" target="_blank" rel="noopener" class="inline-flex items-center gap-2 bg-[#25D366] text-white font-bold rounded-lg py-2 px-3 text-sm">📲 Compartir por WhatsApp</a>';
-  box.classList.remove('hidden');
-}
-document.querySelectorAll('.qbtn').forEach(b=>b.onclick=async()=>{
-  const kind=b.dataset.kind,qmsg=$('qmsg');
-  document.querySelectorAll('.qbtn').forEach(x=>x.disabled=true);
-  qmsg.style.color='#44474f';qmsg.textContent='Obteniendo ubicación…';
-  $('qshare').classList.add('hidden');
-  const pos=await getPos();const lat=pos?pos.latitude:null,lon=pos?pos.longitude:null;
-  try{
-    if(kind==='safe'){
-      const r=await fetch('/api/checkins',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'Ciudadano (reporte rápido)',status:'safe',lat,lon})});
-      qmsg.style.color=r.ok?'#2e7d32':'#bb0027';qmsg.textContent=r.ok?'✓ Registrado como a salvo. Gracias.':'No se pudo registrar.';
-    }else{
-      const q=QK[kind];const r=await fetch('/api/reports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({category:q.cat,severity:q.sev,description:q.desc,lat,lon})});
-      const d=await r.json().catch(()=>({}));
-      qmsg.style.color=r.ok?'#2e7d32':'#bb0027';qmsg.textContent=r.ok?('✓ '+(d.message||'Reporte enviado. Aparecerá tras revisión.')):(d.error||'Error al enviar.');
-      if(r.ok)showShare(q.label,lat,lon);
-    }
-  }catch{qmsg.style.color='#bb0027';qmsg.textContent='Sin conexión. Intenta de nuevo.';}
-  document.querySelectorAll('.qbtn').forEach(x=>x.disabled=false);
+// ---- Flow definitions. Each asks only the few questions that matter. ----
+// `maps` writes the chip value onto the report payload (cat=category, sev=severity).
+const FLOWS={
+  trapped:{ icon:'🆘', tt:'Personas atrapadas', sb:'Alguien quedó atrapado o no puede salir', c:'var(--crit)', cbg:'#fdecee',
+    head:'Personas atrapadas', sub:'Esto se marca como prioridad máxima. Dinos lo esencial.', cat:'trapped_people', sev:'rojo',
+    q:[ {k:'count',t:'chips',label:'¿Cuántas personas, más o menos?',opts:[['1','1'],['2','2'],['3','3'],['5','4 o más'],['','No sé']]},
+        {k:'where',t:'text',label:'¿Dónde? Edificio, dirección o referencia',ph:'Ej: Edificio La Paz, piso 3, Av. Sucre',req:true},
+        {k:'photo',t:'photo',label:'Foto del lugar (opcional)'} ] },
+  hazard:{ icon:'⚠️', tt:'Hay un peligro', sb:'Fuga de gas, colapso o estructura a punto de caer', c:'var(--amber)', cbg:'#fbf0e2',
+    head:'Reportar un peligro', sub:'Cuéntanos qué tipo de peligro y dónde está.', sev:'rojo',
+    q:[ {k:'cat',t:'chips',label:'¿Qué tipo de peligro?',maps:'cat',opts:[['gas_leak','⛽ Fuga de gas'],['collapsed_building','🏚️ Colapso'],['damaged_building','🧱 Estructura dañada'],['other','⚠️ Otro']],req:true},
+        {k:'where',t:'text',label:'¿Dónde?',ph:'Edificio, calle o referencia',req:true},
+        {k:'photo',t:'photo',label:'Foto (opcional)'} ] },
+  damage:{ icon:'🏚️', tt:'Daño en un edificio o casa', sb:'Grietas, paredes o techos dañados', c:'var(--navy)', cbg:'#eaeef7',
+    head:'Daño estructural', sub:'¿Qué tan grave es y dónde?', cat:'damaged_building',
+    q:[ {k:'sev',t:'chips',label:'¿Qué tan grave?',maps:'sev',opts:[['rojo','🔴 Crítico'],['naranja','🟠 Grave'],['amarillo','🟡 Leve']],req:true},
+        {k:'where',t:'text',label:'¿Dónde?',ph:'Edificio, calle o referencia',req:true},
+        {k:'desc',t:'textarea',label:'¿Qué ves? (opcional)',ph:'Ej: grietas grandes en la pared, parte del techo caída'},
+        {k:'photo',t:'photo',label:'Foto (opcional)'} ] },
+  aid:{ icon:'🤝', tt:'Marcar un punto de ayuda', sb:'Agua, refugio, atención médica o suministros', c:'var(--green)', cbg:'#eafaf0',
+    head:'Punto de ayuda', sub:'Ayuda a otros a encontrar recursos cerca.',
+    q:[ {k:'cat',t:'chips',label:'¿Qué hay disponible?',maps:'cat',opts:[['water_point','💧 Agua'],['shelter','⛺ Refugio'],['medical_need','➕ Médico'],['aid_point','🤝 Otro']],req:true},
+        {k:'where',t:'text',label:'¿Dónde?',ph:'Nombre del sitio o dirección',req:true},
+        {k:'desc',t:'textarea',label:'Detalles (opcional)',ph:'Ej: agua potable de 8am a 12m'} ] },
+  safe:{ icon:'✅', tt:'Estoy a salvo', sb:'Avisa que estás bien para tranquilizar a tu familia', c:'var(--green)', cbg:'#eafaf0',
+    head:'Estás a salvo', sub:'Gracias. Esto ayuda a despejar la lista de búsqueda.', checkin:true,
+    q:[ {k:'name',t:'text',label:'Tu nombre (opcional)',ph:'Para que tu familia te reconozca'},
+        {k:'msg',t:'textarea',label:'Mensaje para tu familia (opcional)',ph:'Ej: Estoy bien, en casa de un vecino en Catia'} ] },
+};
+const ORDER=['trapped','hazard','damage','safe','aid'];
+
+let FLOW=null, ANS={}, photoFile=null, lat=null, lon=null;
+
+// ---- Build step 1 choice cards ----
+const choices=$('#choices');
+ORDER.forEach(key=>{
+  const f=FLOWS[key];
+  const b=ce('button','choice'); b.type='button';
+  b.style.setProperty('--c',f.c); b.style.setProperty('--cbg',f.cbg);
+  b.innerHTML=`<span class="ic">${f.icon}</span><span class="tx"><span class="tt">${esc(f.tt)}</span><span class="sb">${esc(f.sb)}</span></span><span class="ch">›</span>`;
+  b.onclick=()=>pickFlow(key);
+  choices.appendChild(b);
 });
 
-// ---- Detailed wizard ----
-const CATS=[['collapsed_building','🏚️ Colapso'],['damaged_building','🧱 Daño estructural'],['trapped_people','🆘 Personas atrapadas'],['gas_leak','⛽ Fuga de gas'],['medical_need','➕ Necesidad médica'],['aid_point','🤝 Punto de ayuda'],['water_point','💧 Agua'],['shelter','⛺ Refugio'],['other','📌 Otro']];
-const SEVS=[['rojo','🔴 Crítico'],['naranja','🟠 Grave'],['amarillo','🟡 Leve']];
-const CATLBL=Object.fromEntries(CATS.map(([v,l])=>[v,l]));
-const SEVLBL=Object.fromEntries(SEVS.map(([v,l])=>[v,l]));
-const state={category:'',severity:'',lat:null,lon:null};
+// ---- Navigation between steps ----
+function show(id){document.querySelectorAll('[data-step]').forEach(s=>s.hidden=(s.id!==id));window.scrollTo(0,0);}
+function setBar(label,green,show){const bar=$('#actionBar');bar.hidden=!show;if(show){const c=$('#ctaBtn');c.textContent=label;c.classList.toggle('green',!!green);$('#formMsg').textContent='';}}
 
-const catBox=$('cats'),sevBox=$('sevs');
-CATS.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className='chip';b.dataset.v=v;b.textContent=l;b.onclick=()=>{document.querySelectorAll('#cats .chip').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');state.category=v;$('msg').textContent='';};catBox.appendChild(b);});
-SEVS.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className='chip sevchip';b.dataset.v=v;b.textContent=l;b.onclick=()=>{document.querySelectorAll('#sevs .chip').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');state.severity=v;};sevBox.appendChild(b);});
-
-// photo preview
-const photoInput=$('photo'),preview=$('preview');
-photoInput.onchange=()=>{const f=photoInput.files&&photoInput.files[0];const msg=$('msg');
-  if(!f){preview.classList.add('hidden');return;}
-  if(f.size>6_000_000){msg.style.color='#bb0027';msg.textContent='La foto supera 6 MB. Elige una más liviana.';photoInput.value='';preview.classList.add('hidden');return;}
-  msg.textContent='';preview.src=URL.createObjectURL(f);preview.classList.remove('hidden');};
-
-// geolocation
-$('geo').onclick=()=>{const s=$('geostat');s.textContent='Obteniendo ubicación…';navigator.geolocation.getCurrentPosition(p=>{state.lat=p.coords.latitude;state.lon=p.coords.longitude;s.style.color='#1f8a4c';s.textContent='✓ Ubicación capturada (se publicará redondeada).';},()=>{s.style.color='#bb0027';s.textContent='No se pudo obtener ubicación. Indica municipio/parroquia.';});};
-
-// stepper navigation
-let step=1; const TOTAL=4;
-function paint(){
-  document.querySelectorAll('.stepwrap').forEach(w=>w.classList.toggle('on',Number(w.dataset.step)===step));
-  document.querySelectorAll('#stepper .step').forEach(s=>{const n=Number(s.dataset.s);s.classList.toggle('active',n===step);s.classList.toggle('done',n<step);});
-  $('pfill').style.width=(step/TOTAL*100)+'%';
-  $('stepNum').textContent=step;
-  $('back').style.display=step>1?'block':'none';
-  $('next').style.display=step<TOTAL?'block':'none';
-  $('submit').style.display=step===TOTAL?'block':'none';
-  if(step===TOTAL)buildReview();
+function pickFlow(key){
+  FLOW=FLOWS[key]; ANS={}; photoFile=null;
+  $('#dTitle').textContent=FLOW.head; $('#dSub').textContent=FLOW.sub;
+  renderQuestions();
+  show('step-detail');
+  setBar('Continuar',false,true);
 }
-function valid(s){const msg=$('msg');msg.textContent='';
-  if(s===1&&!state.category){msg.style.color='#bb0027';msg.textContent='Selecciona un tipo de reporte.';return false;}
-  if(s===2&&!$('description').value.trim()){msg.style.color='#bb0027';msg.textContent='Agrega una descripción de lo que ocurre.';return false;}
+
+// ---- Render the 1–3 questions for the chosen flow ----
+function renderQuestions(){
+  const body=$('#qbody'); body.innerHTML='';
+  FLOW.q.forEach(q=>{
+    const wrap=ce('div','field'+(q.t==='photo'?' photo':''));
+    if(q.label){const lab=ce('label');lab.textContent=q.label;lab.htmlFor='fld_'+q.k;wrap.appendChild(lab);}
+    if(q.t==='chips'){
+      const row=ce('div','chips');
+      q.opts.forEach(([v,l])=>{
+        const ch=ce('button','chip');ch.type='button';ch.textContent=l;
+        ch.onclick=()=>{row.querySelectorAll('.chip').forEach(x=>x.classList.remove('sel'));ch.classList.add('sel');ANS[q.k]=v;if(q.maps)ANS['_'+q.maps]=v;};
+        row.appendChild(ch);
+      });
+      wrap.appendChild(row);
+    } else if(q.t==='text'){
+      const i=ce('input');i.type='text';i.id='fld_'+q.k;if(q.ph)i.placeholder=q.ph;
+      i.oninput=()=>ANS[q.k]=i.value;wrap.appendChild(i);
+    } else if(q.t==='textarea'){
+      const ta=ce('textarea');ta.id='fld_'+q.k;ta.rows=3;ta.maxLength=2000;if(q.ph)ta.placeholder=q.ph;
+      ta.oninput=()=>ANS[q.k]=ta.value;wrap.appendChild(ta);
+    } else if(q.t==='photo'){
+      const lab=ce('label','drop');lab.htmlFor='fld_'+q.k;lab.innerHTML='📷 Tomar o subir una foto';
+      const inp=ce('input');inp.type='file';inp.id='fld_'+q.k;inp.accept='image/jpeg,image/png,image/webp';inp.capture='environment';inp.hidden=true;
+      const img=ce('img');img.hidden=true;img.alt='Vista previa';
+      inp.onchange=()=>{const fl=inp.files&&inp.files[0];if(!fl){photoFile=null;img.hidden=true;return;}
+        if(fl.size>6_000_000){msg('La foto supera 6 MB. Elige una más liviana.');inp.value='';photoFile=null;img.hidden=true;return;}
+        photoFile=fl;img.src=URL.createObjectURL(fl);img.hidden=false;lab.innerHTML='📷 Cambiar foto';};
+      wrap.appendChild(lab);wrap.appendChild(inp);wrap.appendChild(img);
+      const h=ce('p','hint');h.textContent='JPG, PNG o WebP · máx. 6 MB. Se publica solo tras revisión.';wrap.appendChild(h);
+    }
+    body.appendChild(wrap);
+  });
+}
+
+function msg(t,ok){const m=$('#formMsg');m.textContent=t||'';m.style.color=ok?'var(--green)':'var(--red)';}
+
+// ---- Validate the detail step, then go to location ----
+function detailValid(){
+  for(const q of FLOW.q){
+    if(q.req){const v=ANS[q.k];if(!v||!String(v).trim()){msg('Falta: '+q.label.replace(/\s*\(opcional\)/,''));return false;}}
+  }
   return true;
 }
-function buildReview(){
-  const place=[$('parroquia').value,$('municipio').value].filter(Boolean).join(', ')||(state.lat!=null?'GPS aproximado capturado':'—');
-  const rows=[
-    ['Tipo',CATLBL[state.category]||'—'],
-    ['Gravedad',state.severity?SEVLBL[state.severity]:'No indicada'],
-    ['Descripción',$('description').value.trim()||'—'],
-    ['Ubicación',place],
-    ['Foto',(photoInput.files&&photoInput.files[0])?'Adjunta':'Sin foto'],
-    ['Confirmación',$('reporter_email').value.trim()?$('reporter_email').value.trim():'Sin correo'],
-  ];
-  $('review').innerHTML=rows.map(([k,v])=>`<div class="row"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`).join('');
-}
-$('next').onclick=()=>{if(!valid(step))return;if(step<TOTAL){step++;paint();}};
-$('back').onclick=()=>{if(step>1){step--;paint();}};
 
-// submit
-$('wiz').onsubmit=async e=>{e.preventDefault();
-  if(!valid(1)){step=1;paint();return;} if(!valid(2)){step=2;paint();return;}
-  const msg=$('msg'),btn=$('submit');btn.disabled=true;btn.textContent='Enviando…';msg.textContent='';
-  const fd=new FormData();
-  fd.append('category',state.category);
-  fd.append('description',$('description').value.trim());
-  if(state.severity)fd.append('severity',state.severity);
-  const title=$('title').value.trim();if(title)fd.append('title',title);
-  const muni=$('municipio').value.trim();if(muni)fd.append('municipio',muni);
-  const parr=$('parroquia').value.trim();if(parr)fd.append('parroquia',parr);
-  const rep=$('reporter').value.trim();if(rep)fd.append('reporter',rep);
-  const email=$('reporter_email').value.trim();if(email)fd.append('reporter_email',email);
-  if(state.lat!=null)fd.append('lat',state.lat);if(state.lon!=null)fd.append('lon',state.lon);
-  const f=photoInput.files&&photoInput.files[0];if(f)fd.append('photo',f);
-  try{
-    const r=await fetch('/api/reports',{method:'POST',body:fd});const d=await r.json().catch(()=>({}));
-    if(r.ok){
-      $('wiz').classList.add('hidden');
-      const su=$('success');su.classList.remove('hidden');
-      $('refOut').textContent=(d.id||'—').toUpperCase();
-      $('emailNote').textContent=d.emailQueued?('📧 Te enviamos un comprobante a '+email):'';
-      su.scrollIntoView({behavior:'smooth',block:'center'});
-    }else{
-      msg.style.color='#bb0027';msg.textContent=(d.hint||d.error||'Error al enviar.');
-      btn.disabled=false;btn.textContent='Enviar reporte';
-    }
-  }catch{msg.style.color='#bb0027';msg.textContent='Sin conexión. Intenta de nuevo.';btn.disabled=false;btn.textContent='Enviar reporte';}
+// ---- Geolocation ----
+$('#geoBtn').onclick=()=>{
+  const st=$('#geoStat'),btn=$('#geoBtn');
+  if(!navigator.geolocation){st.textContent='Tu dispositivo no permite ubicación. Escríbela a mano abajo.';return;}
+  st.textContent='Obteniendo ubicación…';
+  navigator.geolocation.getCurrentPosition(p=>{
+    lat=p.coords.latitude;lon=p.coords.longitude;
+    btn.classList.add('ok');btn.textContent='✓ Ubicación lista';st.textContent='Capturada y redondeada. Lista para enviar.';
+  },()=>{st.textContent='No pudimos obtenerla. Escríbela a mano abajo (es opcional).';},{enableHighAccuracy:true,timeout:8000});
 };
-$('again').onclick=()=>location.reload();
-paint();
+
+// ---- Single CTA drives the flow forward ----
+$('#ctaBtn').onclick=()=>{
+  const cur=document.querySelector('[data-step]:not([hidden])').id;
+  if(cur==='step-detail'){ if(!detailValid())return; show('step-loc'); setBar(FLOW.checkin?'Avisar que estoy a salvo':'Enviar reporte',!!FLOW.checkin,true); }
+  else if(cur==='step-loc'){ submit(); }
+};
+$('#backToChoose').onclick=()=>{show('step-choose');setBar('',false,false);};
+$('#backToDetail').onclick=()=>{show('step-detail');setBar('Continuar',false,true);};
+
+// ---- Build an HONEST description from the user's own answers (never invented) ----
+function buildDescription(){
+  if(FLOW.checkin) return '';
+  const parts=[];
+  if(FLOW===FLOWS.trapped){
+    parts.push(ANS.count?('Personas atrapadas: '+(ANS.count==='5'?'4 o más':ANS.count)):'Personas atrapadas (cantidad no indicada)');
+  } else if(FLOW===FLOWS.hazard){
+    const lbl={gas_leak:'Fuga de gas',collapsed_building:'Colapso de estructura',damaged_building:'Estructura dañada',other:'Peligro'}[ANS.cat]||'Peligro';
+    parts.push(lbl);
+  } else if(FLOW===FLOWS.damage){
+    parts.push('Daño estructural');
+  } else if(FLOW===FLOWS.aid){
+    const lbl={water_point:'Punto de agua',shelter:'Refugio',medical_need:'Atención médica',aid_point:'Punto de ayuda'}[ANS.cat]||'Punto de ayuda';
+    parts.push(lbl);
+  }
+  if(ANS.where) parts.push('Ubicación: '+ANS.where.trim());
+  if(ANS.desc && ANS.desc.trim()) parts.push(ANS.desc.trim());
+  return parts.join('. ');
+}
+
+// ---- Submit ----
+async function submit(){
+  const cta=$('#ctaBtn'); cta.disabled=true; const orig=cta.textContent; cta.textContent='Enviando…'; msg('');
+  try{
+    if(FLOW.checkin){
+      const name=(ANS.name&&ANS.name.trim())?ANS.name.trim():'Anónimo';
+      const r=await fetch('/api/checkins',{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({name,status:'safe',message:(ANS.msg||'').trim()||null,lat,lon})});
+      if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||'No se pudo registrar');}
+      done('safe');
+    } else {
+      const cat=ANS._cat||FLOW.cat;
+      const sev=ANS._sev||FLOW.sev||null;
+      const fd=new FormData();
+      fd.append('category',cat);
+      if(sev)fd.append('severity',sev);
+      fd.append('description',buildDescription());
+      if(ANS.where)fd.append('title',ANS.where.trim().slice(0,140));
+      if(FLOW===FLOWS.trapped&&ANS.count)fd.append('people_trapped',ANS.count);
+      const muni=$('#municipio').value.trim();if(muni)fd.append('municipio',muni);
+      const parr=$('#parroquia').value.trim();if(parr)fd.append('parroquia',parr);
+      if(lat!=null)fd.append('lat',lat);if(lon!=null)fd.append('lon',lon);
+      if(photoFile)fd.append('photo',photoFile);
+      const r=await fetch('/api/reports',{method:'POST',body:fd});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(d.error||'No se pudo enviar');
+      done('report',d.message);
+    }
+  }catch(e){ msg(e.message||'Sin conexión. Intenta de nuevo.'); cta.disabled=false; cta.textContent=orig; }
+}
+
+// ---- Confirmation (honest: no invented case numbers) ----
+function done(kind,apiMsg){
+  $('#actionBar').hidden=true;
+  const seal=$('#doneSeal'),title=$('#doneTitle'),m=$('#doneMsg'),next=$('#doneNext'),share=$('#doneShare');
+  if(kind==='safe'){
+    seal.textContent='✅';title.textContent='Quedaste registrado como a salvo';
+    m.textContent='Gracias por avisar. Tu familia y los equipos de búsqueda lo verán reflejado.';
+    next.innerHTML='<li>Si conoces a alguien desaparecido, repórtalo en Desaparecidos.</li><li>Comparte la app con quien aún no sabes si está bien.</li>';
+    share.innerHTML=waLink('✅ Estoy a salvo tras el terremoto. Sigan la emergencia en SISMO911:');
+  } else {
+    seal.textContent='📨';title.textContent='Reporte recibido';
+    m.textContent=(apiMsg||'Tu reporte entró a la cola de revisión.')+' Aparecerá en el mapa público cuando un moderador lo confirme.';
+    next.innerHTML='<li>Un moderador revisa tu reporte (suele ser rápido).</li><li>Una vez confirmado, se ubica en el mapa redondeado a ~100 m.</li><li>Puedes seguir su estado en Expedientes.</li>';
+    share.innerHTML=waLink('🚨 Reporté una situación tras el terremoto en SISMO911. Sigan la emergencia:');
+  }
+  show('step-done');
+}
+function waLink(text){
+  const loc=(lat!=null&&lon!=null)?(' Ubicación aprox: https://maps.google.com/?q='+lat.toFixed(4)+','+lon.toFixed(4)):'';
+  const t=text+loc+' https://sismo911.com';
+  return '<a class="wa" target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent(t)+'">📲 Compartir por WhatsApp</a>';
+}
+$('#againBtn').onclick=()=>{FLOW=null;ANS={};photoFile=null;lat=null;lon=null;$('#geoBtn').classList.remove('ok');$('#geoBtn').textContent='📍 Compartir mi ubicación';$('#geoStat').textContent='Aproximada y redondeada. Nunca mostramos tu punto exacto.';$('#municipio').value='';$('#parroquia').value='';show('step-choose');setBar('',false,false);};
+
+// deep-link support: /reportar?tipo=trapped opens that flow directly
+const tp=new URLSearchParams(location.search).get('tipo');
+if(tp&&FLOWS[tp])pickFlow(tp);
 </script>
 </body>
 </html>
