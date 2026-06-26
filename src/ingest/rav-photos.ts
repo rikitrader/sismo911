@@ -49,46 +49,75 @@ function mergeTags(tagsJson: string | null, photoFlag: string): string {
   return JSON.stringify([...new Set(tags)]);
 }
 
+// Append an internal marker tag (de-duped) to a JSON tags array. Used only to
+// retire permanently-unfetchable photo rows from the backfill queue — `tags` is
+// never selected by the public familia/desaparecidos routes, so it stays internal.
+function addTag(tagsJson: string | null, tag: string): string {
+  let tags: string[] = [];
+  try { const p = JSON.parse(tagsJson || '[]'); if (Array.isArray(p)) tags = p.map(String); } catch { /* reset */ }
+  return JSON.stringify([...new Set([...tags, tag])]);
+}
+
 // AI-free content-hash backfill so the dedupePersonas `phash` mode can actually
 // run. analyzeRavPhotos welds photo_phash to the slow Workers-AI vision call on a
 // single `photo_caption IS NULL` queue (24/tick), so populating ~58k photos would
-// take MONTHS and the phash dedupe stays a no-op. This pass hashes ONLY rows that
-// already have a reliable R2 mirror — bytes are always available, so there's no
-// dead-URL handling, no AI, no quota: R2 get + SHA-256 + a batched UPDATE. It
-// never writes a sentinel into photo_phash (the dedupe groups by it, so a sentinel
-// would collapse every failed row into one bogus duplicate group) — failures just
-// leave the row NULL to retry. Query-driven + idempotent; the cron grinds it down.
-// Leaves photo_caption untouched, so the vision queue is unaffected.
+// take MONTHS and the phash dedupe stays a no-op. This pass hashes from the R2
+// mirror when present (reliable) and otherwise straight from the source URL — the
+// bulk of unmirrored rows are on a public S3 bucket that serves the bytes fine, so
+// they don't need to wait on the slow vision/mirror queues. SHA-256 + a batched
+// UPDATE, no AI, no quota.
+//
+// It NEVER writes a sentinel into photo_phash (the dedupe groups by it, so a
+// sentinel would collapse every failure into one bogus duplicate group). Instead,
+// a URL-only row whose bytes are genuinely unfetchable gets an internal
+// `phash_dead` tag so it stops re-scanning every tick (otherwise it would head-of-
+// line block the queue forever). A row that later gains an R2 mirror re-enters via
+// the mirror branch regardless of the tag. Query-driven + idempotent.
 export async function backfillPhashes(
   env: Env,
-  batch = 250,
+  batch = 150,
 ): Promise<{ scanned: number; hashed: number; failed: number; remaining: number }> {
-  if (!env.DESAP_FOTOS) return { scanned: 0, hashed: 0, failed: 0, remaining: 0 };
   const lim = Math.min(Math.max(batch, 1), 400);
-  const phashPending = `(photo_phash IS NULL OR trim(photo_phash) = '') AND trim(coalesce(foto_r2,'')) <> ''`;
+  // Pending = no hash yet AND (has a mirror — always retry, reliable) OR (has a
+  // source URL not yet marked dead). Mirror rows sort first (cheapest + surest).
+  const pending = `(photo_phash IS NULL OR trim(photo_phash) = '') AND (
+      trim(coalesce(foto_r2,'')) <> ''
+      OR (trim(coalesce(foto,'')) <> '' AND coalesce(tags,'') NOT LIKE '%"phash_dead"%')
+    )`;
   const { results } = await env.DB.prepare(
-    `SELECT id, foto_r2 FROM personas WHERE ${phashPending} ORDER BY updated_at DESC LIMIT ?`,
-  ).bind(lim).all<{ id: string; foto_r2: string }>();
+    `SELECT id, foto, foto_r2, tags FROM personas WHERE ${pending}
+     ORDER BY (CASE WHEN trim(coalesce(foto_r2,'')) <> '' THEN 0 ELSE 1 END), updated_at DESC LIMIT ?`,
+  ).bind(lim).all<{ id: string; foto: string | null; foto_r2: string | null; tags: string | null }>();
   const rows = results ?? [];
-  let failed = 0;
-  const updates: D1PreparedStatement[] = [];
+  let hashed = 0, failed = 0;
+  const writes: D1PreparedStatement[] = [];
   for (const row of rows) {
     try {
-      const o = await env.DESAP_FOTOS.get(row.foto_r2);
-      const buf = o ? new Uint8Array(await o.arrayBuffer()) : null;
-      if (!buf || !buf.length) { failed++; continue; }
-      const phash = await sha256Hex(buf);
-      updates.push(env.DB.prepare(`UPDATE personas SET photo_phash = ? WHERE id = ?`).bind(phash, row.id));
+      let buf: Uint8Array | null = null;
+      if (row.foto_r2 && env.DESAP_FOTOS) {
+        try { const o = await env.DESAP_FOTOS.get(row.foto_r2); if (o) { const b = new Uint8Array(await o.arrayBuffer()); if (b.length) buf = b; } } catch { /* fall through to URL */ }
+      }
+      if (!buf && row.foto && row.foto.trim()) {
+        try { const r = await fetch(row.foto); if (r.ok) { const b = new Uint8Array(await r.arrayBuffer()); if (b.length) buf = b; } } catch { /* unreachable */ }
+      }
+      if (!buf) {
+        failed++;
+        // Only URL-only rows get retired; a mirror row stays NULL to retry (its R2
+        // object should reappear). NEVER touch photo_phash here.
+        if (!row.foto_r2) writes.push(env.DB.prepare(`UPDATE personas SET tags = ? WHERE id = ?`).bind(addTag(row.tags, 'phash_dead'), row.id));
+        continue;
+      }
+      writes.push(env.DB.prepare(`UPDATE personas SET photo_phash = ? WHERE id = ?`).bind(await sha256Hex(buf), row.id));
+      hashed++;
     } catch (e: any) { failed++; console.warn('[phash-backfill] failed', row.id, e?.message ?? e); }
   }
-  // Batch the writes (≤50/statement-group) so N hashes cost a few D1 subrequests,
-  // not N — keeps the cron tick well under the Worker subrequest budget.
-  for (const part of chunk(updates, 50)) await env.DB.batch(part);
+  // Batch the writes (≤50/statement-group) so N rows cost a few D1 subrequests, not N.
+  for (const part of chunk(writes, 50)) await env.DB.batch(part);
   const remaining = (await env.DB.prepare(
-    `SELECT COUNT(*) AS n FROM personas WHERE ${phashPending}`,
+    `SELECT COUNT(*) AS n FROM personas WHERE ${pending}`,
   ).first<{ n: number }>())?.n ?? 0;
-  console.log(`[phash-backfill] scanned ${rows.length}: hashed ${updates.length}, failed ${failed}, remaining ${remaining}`);
-  return { scanned: rows.length, hashed: updates.length, failed, remaining };
+  console.log(`[phash-backfill] scanned ${rows.length}: hashed ${hashed}, failed ${failed}, remaining ${remaining}`);
+  return { scanned: rows.length, hashed, failed, remaining };
 }
 
 export interface RavPhotoResult { scanned: number; analyzed: number; hashed: number; failed: number; }
