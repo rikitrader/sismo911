@@ -197,6 +197,21 @@ app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep
 app.route('/api/funding', funding); // live funder pipeline for the supply dashboard (reads 09_Funding sheet)
 app.route('/plan', plan);  // invitation-only business-plan slide deck (own invite-code gate)
 
+// Homepage = the DESAPARECIDOS registry. The root URL serves the /personas page
+// (family-reunification is the app's front door post-quake); the old TERREMOTOS
+// dashboard moves to /terremotos. ASSETS.fetch is independent of these Hono
+// routes, so it still resolves the real static files (/personas → personas.html,
+// / → index.html) regardless of what we mount here.
+const serveAsset = async (c: any, assetPath: string) => {
+  const assetRes = await c.env.ASSETS.fetch(new Request(new URL(assetPath, c.req.url).toString(), c.req.raw));
+  const res = new Response(assetRes.body, assetRes);
+  setSecurityHeaders({ header: (k: string, v: string) => res.headers.set(k, v) } as any);
+  res.headers.set('Cache-Control', 'no-cache, must-revalidate');
+  return res;
+};
+app.get('/', (c) => serveAsset(c, '/personas'));
+app.get('/terremotos', (c) => serveAsset(c, '/'));
+
 // Per-person social cards: a shared /familia?persona=<id> link rewrites the page's
 // OG/Twitter meta to the person's photo + name, so the preview shows THEM (→ virality).
 app.get('/familia', async (c) => {
