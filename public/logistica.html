@@ -125,9 +125,10 @@
         <div class="space-y-3">
           <div><label class="lbl">Origen</label><select id="s-origin" class="inp"></select></div>
           <div><label class="lbl">Destino</label><select id="s-dest" class="inp"></select></div>
-          <div class="grid grid-cols-2 gap-2">
-            <div><label class="lbl">Insumo</label><select id="s-commodity" class="inp"></select></div>
-            <div><label class="lbl">Cantidad</label><input id="s-qty" type="number" min="0" step="any" class="inp" placeholder="0"></div>
+          <div>
+            <label class="lbl">Manifiesto (insumos)</label>
+            <div id="s-items" class="space-y-2"></div>
+            <button type="button" id="s-additem" class="text-xs font-semibold text-primary border border-outline-variant rounded-lg px-2.5 py-1.5 mt-2">＋ Añadir insumo</button>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div><label class="lbl">Vehículo</label><input id="s-vehicle" class="inp" maxlength="80" placeholder="Convoy / placa"></div>
@@ -155,6 +156,12 @@
           <div><label class="lbl">Cantidad en existencia</label><input id="i-qty" type="number" min="0" step="any" class="inp" placeholder="0"></div>
           <button class="bg-secondary text-white font-bold rounded-lg px-4 py-2.5 w-full">Guardar</button>
           <span id="i-msg" class="text-xs block"></span>
+        </div>
+        <div class="mt-4 pt-3 border-t border-outline-variant/50">
+          <label class="lbl">Importación masiva (CSV)</label>
+          <p class="text-[11px] text-on-surface-variant mb-1.5">Columnas: <code class="mono">center_id,commodity,qty,unit</code> (con encabezado).</p>
+          <input id="i-csv" type="file" accept=".csv,text/csv" class="text-xs w-full">
+          <span id="i-csvmsg" class="text-xs block mt-1"></span>
         </div>
       </form>
     </div>
@@ -306,14 +313,28 @@ function msg(el,ok,t){el.style.color=ok?'#16a34a':'#bb0027';el.textContent=t;}
 async function patchNeed(id,status){const r=await patchJSON('/api/acopio/needs/'+id,{status});if(r.ok)refresh();}
 async function advanceShip(id,to){const r=await patchJSON('/api/acopio/shipments/'+id,{status:to,actor:'consola'});if(r.ok)refresh();}
 
+// ── Manifest (multi-item) ──
+const comOpts=()=>COM_IDS.map(k=>`<option value="${k}">${COM[k][0]} ${COM[k][1]}</option>`).join('');
+function addShipRow(commodity,qty){
+  const row=document.createElement('div');row.className='s-item grid grid-cols-[1fr_auto_auto] gap-2 items-center';
+  row.innerHTML=`<select class="inp s-it-com">${comOpts()}</select><input type="number" min="0" step="any" class="inp s-it-qty" style="width:90px" placeholder="0"><button type="button" class="s-it-del text-secondary font-bold px-2" title="Quitar">✕</button>`;
+  $('#s-items').appendChild(row);
+  if(commodity)row.querySelector('.s-it-com').value=commodity;
+  if(qty!=null)row.querySelector('.s-it-qty').value=qty;
+  row.querySelector('.s-it-del').onclick=()=>{row.remove();if(!$('#s-items').children.length)addShipRow();};
+  return row;
+}
+function readManifest(){return [...document.querySelectorAll('#s-items .s-item')].map(r=>({commodity:r.querySelector('.s-it-com').value,qty:Number(r.querySelector('.s-it-qty').value)})).filter(it=>it.commodity&&it.qty>0);}
+
 function prefillShip(d){
   document.querySelector('[data-tab="ships"]').click();
-  $('#s-origin').value=d.o;$('#s-dest').value=d.d;$('#s-commodity').value=d.c;$('#s-qty').value=d.q;
+  $('#s-origin').value=d.o;$('#s-dest').value=d.d;
+  $('#s-items').innerHTML='';addShipRow(d.c,d.q);
   $('#shipform').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 // ── Selects ──
-function fillCommoditySelects(){const opts=COM_IDS.map(k=>`<option value="${k}">${COM[k][0]} ${COM[k][1]}</option>`).join('');['#n-commodity','#s-commodity','#i-commodity'].forEach(s=>{if($(s))$(s).innerHTML=opts;});}
+function fillCommoditySelects(){const opts=comOpts();['#n-commodity','#i-commodity'].forEach(s=>{if($(s))$(s).innerHTML=opts;});}
 function fillCenterSelects(){const opts=CENTER_LIST.map(c=>`<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');['#n-center','#s-origin','#s-dest','#i-center'].forEach(s=>{if($(s))$(s).innerHTML=opts;});}
 
 // ── Tabs ──
@@ -331,10 +352,23 @@ function wireForms(){
   $('#invform').addEventListener('submit',async e=>{e.preventDefault();const m=$('#i-msg');
     const r=await postJSON('/api/acopio/inventory',{center_id:$('#i-center').value,commodity:$('#i-commodity').value,qty:Number($('#i-qty').value)});
     if(r.ok){msg(m,1,'✓ Guardado');refresh();}else msg(m,0,r.d.error||(r.status===401?'Requiere operador':'Error'));});
+  $('#s-additem').addEventListener('click',()=>addShipRow());
   $('#shipform').addEventListener('submit',async e=>{e.preventDefault();const m=$('#s-msg');
     if($('#s-origin').value===$('#s-dest').value){msg(m,0,'Origen y destino deben diferir');return;}
-    const r=await postJSON('/api/acopio/shipments',{origin_id:$('#s-origin').value,dest_id:$('#s-dest').value,vehicle:$('#s-vehicle').value||null,driver:$('#s-driver').value||null,created_by:'consola',items:[{commodity:$('#s-commodity').value,qty:Number($('#s-qty').value)}]});
-    if(r.ok){msg(m,1,'✓ Despachado');e.target.reset();refresh();}else msg(m,0,r.d.error||(r.status===401?'Requiere operador':'Error'));});
+    const items=readManifest();
+    if(!items.length){msg(m,0,'Añade al menos un insumo con cantidad');return;}
+    const r=await postJSON('/api/acopio/shipments',{origin_id:$('#s-origin').value,dest_id:$('#s-dest').value,vehicle:$('#s-vehicle').value||null,driver:$('#s-driver').value||null,created_by:'consola',items});
+    if(r.ok){msg(m,1,'✓ Despachado');e.target.reset();$('#s-items').innerHTML='';addShipRow();refresh();}else msg(m,0,r.d.error||(r.status===401?'Requiere operador':'Error'));});
+  // CSV bulk inventory import
+  $('#i-csv').addEventListener('change',async e=>{const f=e.target.files[0];const cm=$('#i-csvmsg');if(!f)return;
+    try{const text=await f.text();const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2){msg(cm,0,'CSV vacío');return;}
+      const head=lines[0].toLowerCase().split(',').map(s=>s.trim());const ci=head.indexOf('center_id'),co=head.indexOf('commodity'),cq=head.indexOf('qty'),cu=head.indexOf('unit');
+      if(ci<0||co<0||cq<0){msg(cm,0,'Faltan columnas center_id,commodity,qty');return;}
+      const rows=lines.slice(1).map(l=>{const p=l.split(',').map(s=>s.trim().replace(/^"|"$/g,''));return{center_id:p[ci],commodity:p[co],qty:Number(p[cq]),unit:cu>=0?p[cu]:undefined};}).filter(r=>r.center_id&&r.commodity);
+      const r=await postJSON('/api/acopio/inventory/bulk',{rows});
+      if(r.ok){msg(cm,1,`✓ ${r.d.imported} importadas, ${r.d.skipped} omitidas`);refresh();}else msg(cm,0,r.d.error||(r.status===401?'Requiere operador':'Error'));
+    }catch{msg(cm,0,'No se pudo leer el CSV');}
+    e.target.value='';});
 }
 
 // ── Load ──
@@ -365,7 +399,7 @@ async function refresh(){
 }
 $('#refresh').addEventListener('click',refresh);
 
-(async()=>{fillCommoditySelects();wireForms();await whoami();await loadCenters();await refresh();})();
+(async()=>{fillCommoditySelects();addShipRow();wireForms();await whoami();await loadCenters();await refresh();})();
 </script>
 </body>
 </html>
