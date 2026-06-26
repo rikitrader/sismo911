@@ -3,6 +3,15 @@ import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { rateLimit, burstLimit, validLatLon, isImageBytes, nameHasSpam, textHasLink } from '../lib/security';
 import { audit } from '../lib/audit';
+import { sendEmail, reportReceivedEmail } from '../lib/email';
+
+// Human-readable Spanish labels for confirmation emails.
+const CATEGORY_LABELS: Record<string, string> = {
+  damaged_building: 'Daño estructural', collapsed_building: 'Colapso', trapped_people: 'Personas atrapadas',
+  gas_leak: 'Fuga de gas', aid_point: 'Punto de ayuda', medical_need: 'Necesidad médica',
+  water_point: 'Agua', shelter: 'Refugio', other: 'Otro',
+};
+const isEmail = (s: unknown): s is string => typeof s === 'string' && s.length <= 200 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 
 // Citizen damage-report map (the "movement" core). PUBLIC reads of APPROVED
 // reports; PUBLIC submission enters a moderation queue (status='pending').
@@ -84,7 +93,7 @@ reports.post('/', async (c) => {
   if (ct.includes('multipart/form-data')) {
     const form = await c.req.formData().catch(() => null);
     if (!form) return c.json({ error: 'form_invalida' }, 400);
-    for (const k of ['category', 'severity', 'title', 'description', 'estado', 'municipio', 'parroquia', 'building_type', 'people_trapped', 'reporter', 'lat', 'lon']) {
+    for (const k of ['category', 'severity', 'title', 'description', 'estado', 'municipio', 'parroquia', 'building_type', 'people_trapped', 'reporter', 'reporter_email', 'lat', 'lon']) {
       const v = form.get(k);
       if (typeof v === 'string' && v !== '') b[k] = v;
     }
@@ -141,7 +150,24 @@ reports.post('/', async (c) => {
     blur(lat), blur(lon), b.estado ? String(b.estado).slice(0, 120) : null, b.municipio ? String(b.municipio).slice(0, 120) : null, b.parroquia ? String(b.parroquia).slice(0, 120) : null,
     b.building_type ? String(b.building_type).slice(0, 80) : null, b.people_trapped ?? null, 'citizen', imageKey, b.reporter ? String(b.reporter).slice(0, 120) : null, now, now
   ).run();
-  return c.json({ ok: true, id, status: 'pending', hasPhoto: !!imageKey, message: 'Recibido. Aparecerá tras revisión.' }, 201);
+
+  // Email confirmation system: if the reporter left a valid email, send a
+  // branded receipt with a reference number. Never blocks the response — the
+  // send runs after we respond (waitUntil) and a failure is logged, not fatal.
+  let emailQueued = false;
+  if (isEmail(b.reporter_email)) {
+    emailQueued = true;
+    const place = [b.parroquia, b.municipio, b.estado].filter(Boolean).join(', ') || undefined;
+    const msg = reportReceivedEmail({
+      name: b.reporter ? String(b.reporter).slice(0, 80) : undefined,
+      refId: id,
+      categoryLabel: CATEGORY_LABELS[b.category] || b.category,
+      place,
+    });
+    c.executionCtx.waitUntil(sendEmail(c.env, String(b.reporter_email).trim(), msg).catch(() => false));
+  }
+
+  return c.json({ ok: true, id, status: 'pending', hasPhoto: !!imageKey, emailQueued, message: 'Recibido. Aparecerá tras revisión.' }, 201);
 });
 
 // GET /api/reports/photo/:id — serve an approved report's photo from KV.
