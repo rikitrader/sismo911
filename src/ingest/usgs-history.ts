@@ -9,7 +9,9 @@ import { upsertEvents, recordIngest } from '../lib/db';
 // idempotent and shares dedupe with the live feed. Runs server-side (Worker),
 // where USGS DNS resolves correctly — do not expect it to work from the dev Mac.
 
-const FDSN = 'https://earthquake.usgs.gov/fdsnws/event/1.0/query';
+// USGS FDSNWS path version is "1" — "1.0" returns 404 (every backfill year
+// would silently land in failedYears and write 0).
+const FDSN = 'https://earthquake.usgs.gov/fdsnws/event/1/query';
 
 export interface BackfillReport { years: number; minMag: number; fetched: number; written: number; failedYears: number[]; }
 
