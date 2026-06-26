@@ -93,6 +93,27 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
 // ===================== GIS console =====================
 let map,resultLayer,aoiMarker,aoi=null;
 const YUMARE=[10.4351,-68.4716];
+
+// La Guaira GIS overlays (OpenStreetMap / Overpass). Each is an empty group in
+// the layer control until first enabled, then its geojson is fetched once
+// (roads.geojson is ~3 MB, so we never load it on page open).
+function guairaLayers(){
+  const PARR=['#ef476f','#f78c6b','#ffd166','#06d6a0','#118ab2','#8338ec','#3a86ff','#fb5607','#ff006e','#06ffa5','#caffbf'];
+  const ROAD={motorway:{color:'#ff6b6b',weight:3},trunk:{color:'#ff924c',weight:2.6},primary:{color:'#ffd166',weight:2.2},secondary:{color:'#e8eef3',weight:1.6},tertiary:{color:'#9fb3c8',weight:1.2}};
+  const defs={
+    'La Guaira · límite':{url:'/la-guaira/state.geojson',build:gj=>L.geoJSON(gj,{style:{color:'#13284f',weight:2.5,dashArray:'6 5',fill:false}})},
+    'La Guaira · parroquias':{url:'/la-guaira/parroquias.geojson',build:gj=>{let i=0;return L.geoJSON(gj,{style:()=>({color:'#13284f',weight:1.2,fillColor:PARR[(i++)%PARR.length],fillOpacity:.18}),onEachFeature:(f,l)=>l.bindPopup('<b>'+esc(f.properties.name||'Parroquia')+'</b>')});}},
+    'La Guaira · poblados':{url:'/la-guaira/places.geojson',build:gj=>L.geoJSON(gj,{pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:f.properties.place==='city'?7:f.properties.place==='town'?5:3,color:'#13284f',weight:1,fillColor:'#3a86ff',fillOpacity:.9}),onEachFeature:(f,l)=>l.bindPopup('<b>'+esc(f.properties.name||'?')+'</b><br>'+esc(f.properties.place||''))})},
+    'La Guaira · vialidad':{url:'/la-guaira/roads.geojson',build:gj=>L.geoJSON(gj,{style:f=>ROAD[f.properties.highway]||{color:'#94a3b8',weight:.6},onEachFeature:(f,l)=>{const p=f.properties;if(p.name)l.bindPopup('<b>'+esc(p.name)+'</b><br>'+esc(p.highway||''));}})},
+  };
+  const controls={},loaded={};
+  Object.keys(defs).forEach(k=>controls[k]=L.layerGroup());
+  const onAdd=async e=>{
+    const k=e.name; if(!defs[k]||loaded[k])return; loaded[k]=true;
+    try{const gj=await fetch(defs[k].url).then(r=>r.json()); defs[k].build(gj).addTo(controls[k]);}catch{loaded[k]=false;}
+  };
+  return {controls,onAdd};
+}
 async function initGis(){
   map=L.map('gmap',{attributionControl:false}).setView(YUMARE,11);
   const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
@@ -108,7 +129,11 @@ async function initGis(){
   let cfg={}; try{cfg=await fetch('/api/sat/config').then(r=>r.json());}catch{}
   const layerNames=['Esri'];
   if(cfg.google){ const g=L.tileLayer('/api/sat/google/{z}/{x}/{y}',{maxZoom:20}); bases['Google satélite']=g; g.addTo(map); esri.remove(); layerNames.unshift('Google'); }
-  L.control.layers(bases,{'Evaluaciones IA':resultLayer},{collapsed:false}).addTo(map);
+
+  // La Guaira GIS overlays (estado más golpeado: Catia La Mar, Playa Grande).
+  const guaira=guairaLayers();
+  L.control.layers(bases,Object.assign({'Evaluaciones IA':resultLayer},guaira.controls),{collapsed:false}).addTo(map);
+  map.on('overlayadd',guaira.onAdd);
   if(cfg.gibs)layerNames.push('NASA GIBS');
   document.getElementById('layerinfo').textContent=layerNames.join(' · ');
   document.getElementById('maxar-note').innerHTML=cfg.maxar?`🛰️ Maxar Open Data: <b>${esc(cfg.maxar.event)}</b> disponible para este evento.`:'Maxar Open Data: sin activación publicada para este sismo todavía.';

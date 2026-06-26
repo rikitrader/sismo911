@@ -17,6 +17,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css" />
 <script src="/app-shell.js" defer></script>
+<script src="/quake-clock.js"></script>
 
 <style>
   :root{--navy:#13284f;--navy-2:#0a2c61;--red:#c8102e;--line:#dfe3ec;--ink:#1f2430;--muted:#5a6071}
@@ -105,6 +106,16 @@
     </div>
   </section>
 
+  <!-- ===== Cronómetro sincronizado: tiempo desde el sismo = tiempo desaparecidos ===== -->
+  <section class="flex items-center gap-3 bg-critical/10 border border-critical/30 rounded-xl p-4">
+    <svg class="h-6 w-6 text-critical shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 13V9 M10 2h4 M12 5V2 M17.5 6.5 19 5"/></svg>
+    <div class="flex-1 min-w-0">
+      <div class="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">Tiempo desaparecidos desde el sismo M7.5</div>
+      <div class="text-xs text-on-surface-variant">Las primeras 72 horas son críticas para el rescate con vida.</div>
+    </div>
+    <span id="pp-cron-val" class="font-mono font-extrabold tabular-nums text-xl sm:text-2xl text-critical">—</span>
+  </section>
+
   <!-- Buscas a un familiar CTA -->
   <a href="/familia?reportar=1&ref=https%3A%2F%2Fsismo911.com%2Fpersonas" class="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-xl p-3.5 hover:bg-secondary/15 transition-colors">
     <span class="text-2xl shrink-0">🔎</span>
@@ -180,6 +191,9 @@
 
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+// Live cronómetro anchored to the canonical quake origin (quake-clock.js) — same
+// clock as the Alerta Roja banner on /terremotos, so both pages agree exactly.
+(function(){const el=document.getElementById('pp-cron-val');if(el&&window.sismoTick)window.sismoTick(p=>el.textContent=p.clock);})();
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=id=>document.getElementById(id);
 const ST={missing:['Buscada','#c8102e'],found_safe:['A salvo','#1f8a4c'],found_deceased:['Fallecida','#5a5f6a'],unknown:['Sin datos','#7a8096']};
