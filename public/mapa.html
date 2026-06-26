@@ -32,7 +32,6 @@
   <script src="/app-shell.js" defer></script>
 </head>
 <body>
-<header class="bg-primary text-white sticky top-0 z-[1000]" style="height:56px"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="text-white">Mapa</a><a href="/alertas" class="hover:text-white/70">Alertas</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a><a href="/familia" class="hover:text-white/70">Familia</a><a href="/acopio" class="hover:text-white/70">Acopio</a><a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/comms" class="hover:text-white/70">Radio</a><a href="/guia" class="hover:text-white/70">Guía</a><a href="/reportar" class="hover:text-white/70">Reportar</a><a href="/contacto" class="hover:text-white/70">Contacto</a><a href="/blog" class="hover:text-white/70">Noticias</a></nav></div></header>
 <div id="map" class="s911-fullmap"></div>
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
