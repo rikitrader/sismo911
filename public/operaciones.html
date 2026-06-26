@@ -17,6 +17,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css" />
 <script src="https://unpkg.com/chart.js@4.4.4/dist/chart.umd.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/app-shell.js" defer></script>
 <style>
   .label-caps{letter-spacing:.14em;text-transform:uppercase;font-weight:700}
@@ -177,7 +179,8 @@
    https://console.cloud.google.com → Maps JavaScript API.
    Sin clave: KPIs, rutas, tablas y gráficas funcionan; el mapa muestra aviso.
    ============================================================ */
-const GMAPS_KEY = "REPLACE_WITH_GOOGLE_MAPS_API_KEY";
+/* El mapa usa Leaflet sobre el proxy de mosaicos del Worker (/api/sat/google);
+   la clave de Google vive como secreto del Worker, no en el navegador. */
 
 /* ---------- DATOS VERIFICADOS (research 2026-06-25) ---------- */
 const STC={op:"#2e7d32",deg:"#e57200",clo:"#c8102e",city:"#00173a"};
@@ -231,7 +234,7 @@ function renderRoutes(){
     </div>`).join('');
   document.querySelectorAll('.route-card').forEach(n=>n.addEventListener('click',()=>{
     const r=ROUTES[+n.dataset.i];
-    if(MAP){MAP.setCenter({lat:(r.focus[0][0]+r.focus[1][0])/2,lng:(r.focus[0][1]+r.focus[1][1])/2});MAP.setZoom(7);drawFocus(r);}
+    if(MAP){drawFocus(r);}
   }));
 }
 function renderTables(){
@@ -255,60 +258,52 @@ function buildCharts(){
     options:{plugins:{legend:{labels:{color:'#44474f',font:{family:'Inter',size:11}}}},scales:{x:{ticks:tick,grid:{display:false}},y:{ticks:tick,grid,suggestedMax:100}}}});
 }
 
-/* ---------- GOOGLE MAPS (latest async loader) ---------- */
-let MAP=null,INFO=null,focusLine=null;
-function loadGoogleMaps(){
-  if(!GMAPS_KEY||GMAPS_KEY.includes("REPLACE_WITH")){
-    const b=document.getElementById('apiBanner');b.classList.remove('hidden');
-    b.innerHTML='⚠ <b>Falta la clave de Google Maps API.</b> Pega tu clave en la constante <span class="font-mono">GMAPS_KEY</span> de <span class="font-mono">operaciones.html</span> para activar el mapa. Los KPIs, rutas, tablas y gráficas ya funcionan.';
-    document.getElementById('map').innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;text-align:center;color:#747780;font-size:13px;padding:20px">🗺️ Mapa Google en espera de clave API · 6 puertos · 6 aeropuertos · 5 corredores · epicentro M7.5</div>';
-    return;
-  }
-  ((g)=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({key:GMAPS_KEY,v:"weekly"});
-  initMap();
-}
-async function initMap(){
-  const {Map}=await google.maps.importLibrary("maps");
-  const {AdvancedMarkerElement,PinElement}=await google.maps.importLibrary("marker");
-  const light=[
-    {elementType:"geometry",stylers:[{color:"#f3f3f6"}]},
-    {elementType:"labels.text.fill",stylers:[{color:"#44474f"}]},
-    {elementType:"labels.text.stroke",stylers:[{color:"#ffffff"}]},
-    {featureType:"water",elementType:"geometry",stylers:[{color:"#cfe0f0"}]},
-    {featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},
-    {featureType:"administrative",elementType:"geometry.stroke",stylers:[{color:"#c4c6d0"}]},
-    {featureType:"poi",stylers:[{visibility:"off"}]},
-    {featureType:"landscape",elementType:"geometry",stylers:[{color:"#eeeef0"}]}
-  ];
-  MAP=new Map(document.getElementById('map'),{center:{lat:9.6,lng:-67.5},zoom:6,styles:light,mapId:"DEMO_MAP_ID",mapTypeControl:false,streetViewControl:false,fullscreenControl:true});
-  INFO=new google.maps.InfoWindow();
+/* ---------- MAP (Leaflet sobre el proxy de mosaicos Google del Worker) ----------
+   Sin clave en el navegador: los mosaicos se sirven por /api/sat/google/{z}/{x}/{y}
+   (la API key vive como secreto del Worker). Si el proxy falla, KPIs/rutas/tablas/gráficas siguen. */
+let MAP=null,focusLine=null;
+function initMap(){
+  if(typeof L==='undefined'){console.error('Leaflet no cargó');return;}
+  const banner=document.getElementById('apiBanner');
+  MAP=L.map('map',{zoomControl:true,attributionControl:true,scrollWheelZoom:true}).setView([9.6,-67.5],6);
+  let errShown=false;
+  L.tileLayer('/api/sat/google/{z}/{x}/{y}',{minZoom:3,maxZoom:18,tileSize:256,attribution:'Imágenes © Google'})
+    .on('tileerror',()=>{if(!errShown&&banner){errShown=true;banner.classList.remove('hidden');
+      banner.innerHTML='⚠ No se pudieron cargar los mosaicos del mapa (proxy de Google). Los KPIs, rutas, tablas y gráficas funcionan igual.';}})
+    .addTo(MAP);
+  // corredores viales
   ROADS.forEach(rd=>{
-    const mid=rd.path[Math.floor(rd.path.length/2)];
-    const line=new google.maps.Polyline({path:rd.path.map(([la,ln])=>({lat:la,lng:ln})),strokeColor:STC[rd.risk]||"#e57200",strokeOpacity:.95,strokeWeight:4,map:MAP,
-      icons:[{icon:{path:'M 0,-1 0,1',strokeOpacity:1,scale:3},offset:'0',repeat:'15px'}]});
-    line.addListener('click',()=>{INFO.setContent(`<div style="font-family:Inter;color:#1a1c1e;font-size:13px"><b>${rd.n}</b><br>${rd.note}</div>`);INFO.setPosition({lat:mid[0],lng:mid[1]});INFO.open(MAP);});
+    L.polyline(rd.path,{color:STC[rd.risk]||'#e57200',weight:4,opacity:.95,dashArray:'8 8'}).addTo(MAP)
+      .bindPopup(`<div style="font-family:Inter;font-size:13px"><b>${rd.n}</b><br>${rd.note}</div>`);
   });
+  // puertos, ciudades y aeropuertos
   [...NODES,...AIRS].forEach(nd=>{
     const isAir='ic' in nd, st=nd.st, glyph=isAir?'✈':nd.t==='city'?'★':'⚓';
-    const pin=new PinElement({background:STC[st],borderColor:'#ffffff',glyphColor:'#ffffff',glyph,scale:st==='clo'?1.3:1.0});
-    const mk=new AdvancedMarkerElement({map:MAP,position:{lat:nd.lat,lng:nd.lng},title:nd.n,content:pin.element});
+    const big=st==='clo';
+    const sz=big?30:26;
+    const html=`<div style="background:${STC[st]};color:#fff;width:${sz}px;height:${sz}px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:${big?16:14}px">${glyph}</div>`;
+    const icon=L.divIcon({html,className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});
     const body=isAir?`${nd.ic} · ${nd.city}<br>Pistas: ${nd.rw}<br>${nd.role}`:`${nd.op} · ${nd.role}<br>${nd.ves} buques · ${nd.ton} · ${nd.ber}`;
-    mk.addListener('click',()=>{INFO.setContent(`<div style="font-family:Inter;max-width:250px;color:#1a1c1e;font-size:12.5px;line-height:1.5"><b style="font-size:13.5px">${nd.n}</b><br>${body}</div>`);INFO.open({anchor:mk,map:MAP});});
+    L.marker([nd.lat,nd.lng],{icon,title:nd.n}).addTo(MAP)
+      .bindPopup(`<div style="font-family:Inter;max-width:250px;font-size:12.5px;line-height:1.5"><b style="font-size:13.5px">${nd.n}</b><br>${body}</div>`);
   });
-  new google.maps.Circle({map:MAP,center:{lat:QUAKE.lat,lng:QUAKE.lng},radius:120000,strokeColor:'#c8102e',strokeOpacity:.7,strokeWeight:2,fillColor:'#c8102e',fillOpacity:.10});
-  new google.maps.Circle({map:MAP,center:{lat:QUAKE.lat,lng:QUAKE.lng},radius:50000,strokeColor:'#bb0027',strokeOpacity:.9,strokeWeight:2,fillColor:'#c8102e',fillOpacity:.18});
+  // anillos del epicentro M7.5
+  L.circle([QUAKE.lat,QUAKE.lng],{radius:120000,color:'#c8102e',opacity:.7,weight:2,fillColor:'#c8102e',fillOpacity:.10}).addTo(MAP);
+  L.circle([QUAKE.lat,QUAKE.lng],{radius:50000,color:'#bb0027',opacity:.9,weight:2,fillColor:'#c8102e',fillOpacity:.18}).addTo(MAP)
+    .bindPopup('<div style="font-family:Inter;font-size:13px"><b>Epicentro M7.5</b><br>24-jun-2026</div>');
+  setTimeout(()=>MAP.invalidateSize(),200);
 }
 function drawFocus(r){
-  if(focusLine)focusLine.setMap(null);
-  focusLine=new google.maps.Polyline({path:r.focus.map(([la,ln])=>({lat:la,lng:ln})),strokeColor:'#00173a',strokeOpacity:.95,strokeWeight:5,map:MAP,
-    icons:[{icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:3,strokeColor:'#00173a'},offset:'100%'}]});
+  if(focusLine)MAP.removeLayer(focusLine);
+  focusLine=L.polyline(r.focus,{color:'#00173a',weight:5,opacity:.95}).addTo(MAP);
+  MAP.fitBounds(focusLine.getBounds().pad(0.35));
 }
 
 /* boot — each step isolated so one failure can't block the others */
 try{renderRoutes();}catch(e){console.error('routes',e);}
 try{renderTables();}catch(e){console.error('tables',e);}
 try{if(window.Chart)buildCharts();}catch(e){console.error('charts',e);}
-try{loadGoogleMaps();}catch(e){console.error('map',e);}
+try{initMap();}catch(e){console.error('map',e);}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 </script>
 </body>
