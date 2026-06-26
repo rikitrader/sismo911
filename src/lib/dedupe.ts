@@ -1,4 +1,5 @@
 import type { Env } from '../types';
+import { deleteByIds, deletePhotos } from './sql';
 
 export type DedupeMode = 'exact' | 'loose' | 'photo' | 'fuzzyphone' | 'fuzzyname';
 
@@ -82,16 +83,7 @@ export async function dedupePersonas(
   if (!apply) return { mode, found, applied: false, deletedRows: 0, deletedPhotos: 0, remaining: found };
 
   const batch = all.slice(0, limit);
-  let deletedPhotos = 0;
-  for (const v of batch) {
-    if (v.foto_r2) { try { await env.DESAP_FOTOS.delete(v.foto_r2); deletedPhotos++; } catch { /* ignore */ } }
-  }
-  let deletedRows = 0;
-  const ids = batch.map((v) => v.id);
-  for (let i = 0; i < ids.length; i += 40) {
-    const chunk = ids.slice(i, i + 40);
-    await env.DB.prepare(`DELETE FROM personas WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).run();
-    deletedRows += chunk.length;
-  }
+  const deletedPhotos = await deletePhotos(env.DESAP_FOTOS, batch.map((v) => v.foto_r2));
+  const deletedRows = await deleteByIds(env.DB, 'personas', batch.map((v) => v.id));
   return { mode, found, applied: true, deletedRows, deletedPhotos, remaining: found - deletedRows };
 }
