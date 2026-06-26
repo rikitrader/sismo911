@@ -35,7 +35,7 @@ import { ingestUsgs } from './ingest/usgs-cron';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
 import { ingestSosDamage } from './ingest/sos-damage';
-import { ingestFamilia } from './ingest/familia-cron';
+import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
 import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
@@ -258,6 +258,9 @@ export default {
       await cleanPersonas(env, { apply: true }).catch((e: any) => console.error('[cron] personas clean failed:', e?.message ?? e));
       await dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 }).catch((e: any) => console.error('[cron] personas dedupe(exact) failed:', e?.message ?? e));
       await dedupePersonas(env, { mode: 'photo', apply: true, limit: 400 }).catch((e: any) => console.error('[cron] personas dedupe(photo) failed:', e?.message ?? e));
+      // Mirror external missing-person photos into R2 (foto_r2) so they're self-hosted,
+      // not hot-linked. Ported from the decommissioned desaparecidos-vzla-api worker.
+      await mirrorFamiliaPhotos(env).catch((e: any) => console.error('[cron] familia photo mirror failed:', e?.message ?? e));
       // Social/web disaster-signal monitor → D1, then mirror into the Google Sheet.
       await ingestSocialMonitor(env).catch((e: any) => console.error('[cron] social monitor failed:', e?.message ?? e));
       await syncMonitorSheet(env).catch((e: any) => console.error('[cron] monitor sheet sync failed:', e?.message ?? e));

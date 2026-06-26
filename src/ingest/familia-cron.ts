@@ -7,8 +7,11 @@ import { recordIngest } from '../lib/db';
 //
 // DEDUPE BY CONSTRUCTION: personas.id IS the API's own stable id, and every
 // write is an UPSERT (ON CONFLICT(id) DO UPDATE). Re-runs refresh existing rows
-// rather than duplicating them. created_at / moderation / foto_r2 are preserved
-// on conflict (admin/first-seen owned). Content-level dedupe of any rows that
+// rather than duplicating them. Bio fields are refreshed, but APP-OWNED status
+// columns (estado / localizado_* / reportada*) are NEVER overwritten — families
+// set them through the app and the upstream scrape doesn't know about them, so
+// refreshing would revert real "found safe/deceased" reports. created_at /
+// moderation / foto_r2 are also preserved. Content-level dedupe of any rows that
 // slip in with different ids stays with the daily dedupePersonas cron.
 //
 // PAGINATION: the API caps pageSize at 100 (~490 pages). To stay within Worker
@@ -75,10 +78,7 @@ export async function ingestFamilia(env: Env): Promise<number> {
          ON CONFLICT(id) DO UPDATE SET
            nombre=excluded.nombre, edad=excluded.edad, ubicacion=excluded.ubicacion, fecha=excluded.fecha,
            descripcion=excluded.descripcion, contacto=excluded.contacto,
-           foto=COALESCE(excluded.foto, personas.foto), estado=excluded.estado,
-           localizado_por=excluded.localizado_por, localizado_contacto=excluded.localizado_contacto,
-           localizado_relacion=excluded.localizado_relacion, localizado_nota=excluded.localizado_nota,
-           reportada=excluded.reportada, reportes=excluded.reportes, reportada_at=excluded.reportada_at,
+           foto=COALESCE(excluded.foto, personas.foto), reportes=excluded.reportes,
            updated_at=excluded.updated_at, pulled_at=excluded.pulled_at`
       ).bind(
         id, String(nombre).slice(0, 120), asInt(pick(o, ['edad', 'age'])),
@@ -108,4 +108,53 @@ export async function ingestFamilia(env: Env): Promise<number> {
     await recordIngest(env, 'familia', false, 0, String(e?.message ?? e)).catch(() => {});
     return 0;
   }
+}
+
+// Mirror external `foto` URLs into the DESAP_FOTOS R2 bucket and set foto_r2, so
+// /api/familia/photo/:id serves a self-hosted copy instead of hot-linking the
+// origin. Bounded per run to stay within Worker subrequest/CPU limits; successive
+// hourly runs grind down the backlog. Ported from the decommissioned
+// desaparecidos-vzla-api worker (its only unique job).
+const MIRROR_BATCH = 50;
+const MIRROR_CONCURRENCY = 6;
+
+async function fetchRetry(u: string, n = 2): Promise<Response> {
+  for (let a = 0; ; a++) {
+    try { const r = await fetch(u); if (r.ok || a >= n) return r; }
+    catch (e) { if (a >= n) throw e; }
+    await new Promise((res) => setTimeout(res, 200 * (a + 1)));
+  }
+}
+
+export async function mirrorFamiliaPhotos(env: Env, batchSize = MIRROR_BATCH): Promise<number> {
+  if (!env.DESAP_FOTOS) { console.warn('[familia] DESAP_FOTOS R2 not bound — skip photo mirror'); return 0; }
+  const { results } = await env.DB.prepare(
+    `SELECT id, foto FROM personas WHERE foto <> '' AND foto_r2 IS NULL ORDER BY updated_at DESC LIMIT ?`
+  ).bind(batchSize).all<{ id: string; foto: string }>();
+  if (!results?.length) return 0;
+
+  const done: [string, string][] = [];
+  let i = 0, failed = 0;
+  const worker = async () => {
+    while (i < results.length) {
+      const row = results[i++];
+      try {
+        const res = await fetchRetry(row.foto);
+        if (!res.ok || !res.body) { failed++; continue; }
+        const key = `fotos/${row.id}.jpg`;
+        await env.DESAP_FOTOS.put(key, res.body, {
+          httpMetadata: { contentType: res.headers.get('content-type') || 'image/jpeg' },
+        });
+        done.push([key, row.id]);
+      } catch { failed++; }
+    }
+  };
+  await Promise.all(Array.from({ length: MIRROR_CONCURRENCY }, worker));
+  if (done.length) {
+    for (let j = 0; j < done.length; j += 100)
+      await env.DB.batch(done.slice(j, j + 100).map(([key, id]) =>
+        env.DB.prepare('UPDATE personas SET foto_r2 = ? WHERE id = ?').bind(key, id)));
+  }
+  console.log(`[familia] photo mirror: ${done.length} copied, ${failed} failed`);
+  return done.length;
 }
