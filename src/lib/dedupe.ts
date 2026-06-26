@@ -1,7 +1,7 @@
 import type { Env } from '../types';
 import { deleteByIds, deletePhotos } from './sql';
 
-export type DedupeMode = 'exact' | 'loose' | 'photo' | 'fuzzyphone' | 'fuzzyname';
+export type DedupeMode = 'exact' | 'loose' | 'photo' | 'fuzzyphone' | 'fuzzyname' | 'phash';
 
 // Accent/case/space-insensitive normalized name (Spanish diacritics → ASCII).
 // lower() first, then fold the lowercase accented vowels + ñ/ü. Used so that
@@ -33,8 +33,11 @@ export interface DedupeReport {
 //  exact → same name + age + location + description + contact (true re-scrapes; safe to auto-remove)
 //  photo → same photo URL (same image reused across records; safe to auto-remove)
 //  loose → same name + location only (may merge namesakes; operator-confirmed use only)
+//  phash → same photo CONTENT hash (byte-identical image re-hosted at a different
+//          URL across sources — what same-foto-URL dedupe misses)
 function partitionFor(mode: DedupeMode): string {
   if (mode === 'photo') return `lower(trim(foto))`;
+  if (mode === 'phash') return `photo_phash`;
   if (mode === 'fuzzyname') return `${normNameSql('nombre')}, coalesce(edad,-1)`;
   if (mode === 'fuzzyphone') return `${normNameSql('nombre')}, coalesce(edad,-1), ${normPhoneSql('contacto')}`;
   return mode === 'loose'
@@ -52,7 +55,8 @@ export async function dedupePersonas(
   opts: { mode?: DedupeMode; apply?: boolean; limit?: number } = {}
 ): Promise<DedupeReport> {
   const mode: DedupeMode = opts.mode === 'loose' ? 'loose' : opts.mode === 'photo' ? 'photo'
-    : opts.mode === 'fuzzyphone' ? 'fuzzyphone' : opts.mode === 'fuzzyname' ? 'fuzzyname' : 'exact';
+    : opts.mode === 'fuzzyphone' ? 'fuzzyphone' : opts.mode === 'fuzzyname' ? 'fuzzyname'
+    : opts.mode === 'phash' ? 'phash' : 'exact';
   const apply = !!opts.apply;
   const limit = Math.min(Math.max(opts.limit ?? 300, 1), 400);
   // photo mode must only group rows that actually have a photo, or it would
@@ -60,6 +64,7 @@ export async function dedupePersonas(
   // phone (≥7 digits). fuzzyname groups by name+age alone — scope it to a real
   // first+last name (a space, ≥5 chars) so single-token names don't over-merge.
   const scope = mode === 'photo' ? `WHERE trim(coalesce(foto,'')) != ''`
+    : mode === 'phash' ? `WHERE trim(coalesce(photo_phash,'')) != ''`
     : mode === 'fuzzyphone' ? `WHERE length(${normPhoneSql('contacto')}) >= 7`
     : mode === 'fuzzyname' ? `WHERE length(${normNameSql('nombre')}) >= 5 AND instr(trim(nombre), ' ') > 0`
     : ``;

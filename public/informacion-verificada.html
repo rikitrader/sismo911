@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Información Verificada — SISMO911</title>
+<meta name="description" content="Información verificada sobre el terremoto de Venezuela 2026: balance oficial de víctimas y noticias confirmadas de fuentes confiables, agregadas por SISMO911.">
+<meta name="author" content="SISMO911 — Comando Sísmico Nacional">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/informacion-verificada">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Información Verificada — SISMO911">
+<meta property="og:description" content="Balance oficial + noticias confirmadas del terremoto de Venezuela 2026.">
+<meta property="og:url" content="https://sismo911.com/informacion-verificada">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>body{background:#f9f9fc}.tnum{font-variant-numeric:tabular-nums}</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Información Verificada — SISMO911","description":"Balance oficial + noticias confirmadas del terremoto de Venezuela 2026.","url":"https://sismo911.com/informacion-verificada","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+  <script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+
+<main class="mx-auto max-w-5xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Información Verificada</h1>
+  <p class="text-on-surface-variant mb-5 max-w-3xl">Balance oficial de víctimas y noticias <b>confirmadas de fuentes confiables</b> sobre el terremoto de Venezuela 2026. Agregado por SISMO911 desde la red ciudadana de emergencia. Cada ítem enlaza a su fuente original.</p>
+
+  <!-- Balance oficial -->
+  <div class="bg-white rounded-lg border border-outline-variant/60 border-l-4 border-l-secondary p-5 mb-6">
+    <div class="flex items-baseline justify-between mb-3">
+      <h2 class="font-display font-extrabold text-lg">Balance oficial</h2>
+      <span id="stats-updated" class="text-[11px] text-on-surface-variant"></span>
+    </div>
+    <div id="stats" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="text-on-surface-variant text-sm col-span-full">Cargando…</div>
+    </div>
+    <p id="stats-source" class="text-[11px] text-on-surface-variant mt-3"></p>
+  </div>
+
+  <!-- Filtros -->
+  <div class="flex flex-wrap items-center gap-2 mb-4" id="topics"></div>
+
+  <!-- Noticias verificadas -->
+  <div id="feed" class="space-y-3">
+    <div class="text-on-surface-variant text-sm">Cargando información verificada…</div>
+  </div>
+</main>
+
+<script>
+const fmtN = (n) => (n == null ? '—' : Number(n).toLocaleString('es-VE'));
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function fmtDate(s){ if(!s) return ''; try{ return new Date(s).toLocaleDateString('es-VE',{year:'numeric',month:'short',day:'numeric'}); }catch{ return ''; } }
+
+async function loadStats(){
+  try{
+    const r = await fetch('/api/stats/official'); const j = await r.json();
+    const s = j.stats; const box = document.getElementById('stats');
+    if(!s){ box.innerHTML = '<div class="text-on-surface-variant text-sm col-span-full">Sin datos oficiales por ahora.</div>'; return; }
+    const cell = (label, val, color) => `<div class="rounded-lg border border-outline-variant/60 p-3">
+      <div class="text-2xl font-extrabold tnum ${color}">${fmtN(val)}</div>
+      <div class="text-[11px] uppercase tracking-wide text-on-surface-variant">${label}</div></div>`;
+    box.innerHTML = cell('Fallecidos', s.fallecidos, 'text-critical')
+      + cell('Heridos', s.heridos, 'text-warning')
+      + cell('Refugiados', s.refugiados, 'text-primary')
+      + cell('Desaparecidos', s.desaparecidos, 'text-secondary');
+    document.getElementById('stats-source').textContent = s.source ? ('Fuente: ' + s.source) : '';
+    document.getElementById('stats-updated').textContent = s.updated_at ? ('Actualizado ' + fmtDate(s.updated_at)) : '';
+  }catch(e){ document.getElementById('stats').innerHTML = '<div class="text-on-surface-variant text-sm col-span-full">No se pudo cargar el balance.</div>'; }
+}
+
+let allItems = [];
+function render(topic){
+  const feed = document.getElementById('feed');
+  const items = topic ? allItems.filter(i => (i.topic||'general') === topic) : allItems;
+  if(!items.length){ feed.innerHTML = '<div class="text-on-surface-variant text-sm">Sin información verificada por ahora.</div>'; return; }
+  feed.innerHTML = items.map(i => `
+    <article class="bg-white rounded-lg border border-outline-variant/60 p-5">
+      <div class="flex items-center gap-2 mb-1 flex-wrap">
+        <span class="inline-block text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary px-2 py-0.5 rounded">${esc(i.source||'Fuente')}</span>
+        ${i.topic ? `<span class="inline-block text-[10px] uppercase tracking-wide text-on-surface-variant">${esc(i.topic)}</span>` : ''}
+        <span class="text-[11px] text-on-surface-variant ml-auto">${fmtDate(i.published_at)}</span>
+      </div>
+      <h3 class="font-display font-bold text-base leading-snug mb-1">${esc(i.title)}</h3>
+      <p class="text-sm text-on-surface-variant">${esc(i.body)}</p>
+      ${i.url ? `<a href="${esc(i.url)}" target="_blank" rel="noopener nofollow" class="inline-block mt-2 text-sm font-semibold text-secondary hover:underline">Ver fuente →</a>` : ''}
+    </article>`).join('');
+}
+function buildTopics(){
+  const topics = [...new Set(allItems.map(i => i.topic || 'general'))];
+  const box = document.getElementById('topics');
+  const chip = (label, val, active) => `<button data-t="${esc(val)}" class="topic-chip rounded-full border px-3 py-1 text-xs font-semibold ${active?'bg-primary text-white border-primary':'border-outline-variant text-on-surface-variant hover:bg-surface-variant/40'}">${esc(label)}</button>`;
+  box.innerHTML = chip('Todo', '', true) + topics.map(t => chip(t, t, false)).join('');
+  box.querySelectorAll('.topic-chip').forEach(b => b.addEventListener('click', () => {
+    box.querySelectorAll('.topic-chip').forEach(x => x.className = x.className.replace('bg-primary text-white border-primary','border-outline-variant text-on-surface-variant hover:bg-surface-variant/40'));
+    b.className = b.className.replace('border-outline-variant text-on-surface-variant hover:bg-surface-variant/40','bg-primary text-white border-primary');
+    render(b.dataset.t || '');
+  }));
+}
+async function loadFeed(){
+  try{
+    const r = await fetch('/api/verified-info?limit=144'); const j = await r.json();
+    allItems = j.items || [];
+    buildTopics(); render('');
+  }catch(e){ document.getElementById('feed').innerHTML = '<div class="text-on-surface-variant text-sm">No se pudo cargar la información.</div>'; }
+}
+loadStats(); loadFeed();
+</script>
+</body>
+</html>
