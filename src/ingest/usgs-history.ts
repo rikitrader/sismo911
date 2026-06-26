@@ -75,3 +75,29 @@ export async function backfillUsgsHistory(env: Env, opts: { years?: number; minM
   console.log(`[history] ${years}y minMag≥${minMag}: fetched ${fetched}, upserted ${written}, failed spans ${failedYears.length}`);
   return { years, minMag, fetched, written, failedYears };
 }
+
+// One-time bootstrap (cron). On a FRESH/empty D1 the historical archive is
+// blank until someone hits the manual trigger; this auto-populates it once.
+// Runs in its own staggered cron invocation ('5 * * * *') so it gets a full
+// subrequest budget. Idempotent + self-disabling via a KV flag:
+//   - flag already set            → no-op (1 KV read)
+//   - D1 already has the archive  → just set the flag (no fetch needed)
+//   - otherwise                   → run the full backfill, set flag on success
+const BOOTSTRAP_KEY = 'history:bootstrapped';
+const FRESH_THRESHOLD = 500; // events already present ⇒ treat as populated
+
+export async function bootstrapHistory(env: Env): Promise<Record<string, unknown>> {
+  if (await env.CACHE.get(BOOTSTRAP_KEY).catch(() => null)) return { skipped: 'already-bootstrapped' };
+
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM events').first<{ n: number }>().catch(() => null);
+  const count = Number(row?.n ?? 0);
+  if (count >= FRESH_THRESHOLD) {
+    await env.CACHE.put(BOOTSTRAP_KEY, String(Date.now())).catch(() => {});
+    return { skipped: 'already-populated', count };
+  }
+
+  const report = await backfillUsgsHistory(env, { years: 60, minMag: 0 });
+  // Only latch the flag on a clean run so a partial/failed fetch retries next tick.
+  if (report.failedYears.length === 0) await env.CACHE.put(BOOTSTRAP_KEY, String(Date.now())).catch(() => {});
+  return { bootstrapped: true, priorCount: count, ...report };
+}

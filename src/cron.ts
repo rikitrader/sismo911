@@ -14,6 +14,7 @@
 
 import type { Env } from './types';
 import { ingestUsgs } from './ingest/usgs-cron';
+import { bootstrapHistory } from './ingest/usgs-history';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
 import { ingestSosDamage } from './ingest/sos-damage';
@@ -104,6 +105,13 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // months — without it the phash mode below has almost nothing to group on.
     { name: 'personas-phash-backfill', run: (env) => backfillPhashes(env, 150) },
     { name: 'personas-dedupe-phash', run: (env) => drain(() => dedupePersonas(env, { mode: 'phash', apply: true, limit: 400 })) },
+  ],
+  // :05 — one-time historical-archive bootstrap. Self-disabling via a KV flag
+  // (`history:bootstrapped`): on a fresh/empty D1 it runs the full USGS backfill
+  // once; once populated it's a single KV read. Isolated here so the one heavy
+  // bootstrap run gets its own subrequest budget, away from the :00 seismic core.
+  '5 * * * *': [
+    { name: 'history-bootstrap', run: bootstrapHistory },
   ],
 };
 
