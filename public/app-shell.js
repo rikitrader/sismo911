@@ -8,9 +8,12 @@
   }
   // Pinned items stay visible at the top of the sidebar (urgent / primary actions).
   const NAV_PINNED = [
-    { label: 'Personas Desaparecidas', href: '/personas', m: ['/personas'], alarm: true, d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zm12.5 1.5L19 15m0 0l-2.5-2.5M19 15l2.5-2.5M19 15l-2.5 2.5' },
-    { label: 'Casos / Expedientes', href: '/casos', m: ['/casos'], solid: true, d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
+    { label: 'DESAPARECIDOS', href: '/personas', m: ['/personas'], alarm: true, d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zm12.5 1.5L19 15m0 0l-2.5-2.5M19 15l2.5-2.5M19 15l-2.5 2.5' },
+    { label: 'EXPEDIENTES', href: '/casos', m: ['/casos'], solid: true, d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
     { label: 'Terremotos EN-VIVO', href: '/', m: ['/'], gold: true, d: 'M3 12h4l2 7 4-14 2 7h6' },
+    // Big flashing red CTA pulled out of the "Familia y Reportes" submenu so a
+    // damage report is always one tap away — heart on each side, extra spacing.
+    { label: 'Reportar', href: '/reportar', m: ['/reportar'], report: true, d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
   ];
 
   // The rest collapse into a few accordion groups so the sidebar stays short.
@@ -26,7 +29,6 @@
     ] },
     { label: 'Familia y Reportes', d: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75', items: [
       { label: 'Familia / Check-in', href: '/familia', m: ['/familia'], d: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
-      { label: 'Reportar', href: '/reportar', m: ['/reportar'], d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
     ] },
     { label: 'Ayuda y Suministros', d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z', items: [
       { label: 'Centros de Acopio', href: '/acopio', m: ['/acopio'], d: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12' },
@@ -76,6 +78,15 @@
       return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${GOLD};color:${NAVY};box-shadow:0 1px 3px rgba(201,162,39,.45)">
       <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
+    }
+    if (it.report) {
+      // Big flashing red "Reportar" CTA with a beating heart on each side, set
+      // apart from the pinned buttons by extra top/bottom margin.
+      const onR = active(it);
+      return `<a href="${it.href}" class="s911-report" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:12px 0;padding:14px 12px;border-radius:12px;font:900 15px 'Public Sans',sans-serif;letter-spacing:.01em;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 2px 8px rgba(187,0,39,.45)${onR ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      <span class="s911-heart" aria-hidden="true">❤️</span>
+      <span style="display:inline-flex;align-items:center;gap:8px">${icon(it.d)}${it.label}</span>
+      <span class="s911-heart" aria-hidden="true">❤️</span></a>`;
     }
     if (it.cta) {
       // Solid red call-to-action (CTA conversion color), static — no animation.
@@ -133,6 +144,20 @@
     }
     @media(prefers-reduced-motion:reduce){
       #s911-shell a.s911-alarm{animation:none}
+    }
+    /* Big flashing red "Reportar" CTA — flashing button + a beating heart on each side. */
+    #s911-shell a.s911-report{position:relative;animation:s911-report-flash 1.1s ease-in-out infinite}
+    #s911-shell a.s911-report .s911-heart{font-size:17px;line-height:1;display:inline-block;animation:s911-heart-beat 1.1s ease-in-out infinite}
+    @keyframes s911-report-flash{
+      0%,100%{box-shadow:0 2px 8px rgba(187,0,39,.45);filter:brightness(1)}
+      50%{box-shadow:0 0 0 6px rgba(187,0,39,.18),0 3px 14px rgba(187,0,39,.65);filter:brightness(1.13)}
+    }
+    @keyframes s911-heart-beat{
+      0%,100%{transform:scale(1);opacity:1}
+      50%{transform:scale(1.4);opacity:.55}
+    }
+    @media(prefers-reduced-motion:reduce){
+      #s911-shell a.s911-report,#s911-shell a.s911-report .s911-heart{animation:none}
     }
     /* Collapsible nav groups (accordion). */
     #s911-shell .s911-ghead{width:100%;display:flex;align-items:center;gap:12px;padding:8px 10px;border:none;border-radius:10px;background:transparent;font:700 13px Inter,sans-serif;color:${VARIANT};cursor:pointer;transition:background .12s}
