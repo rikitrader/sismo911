@@ -51,7 +51,7 @@
   // Admin console stays pinned at the bottom of the nav list.
   const NAV_ADMIN = { label: 'Consola', href: '/admin', m: ['/admin'], d: 'M12 3l8 3.5v5c0 4-3 7-8 9-5-2-8-5-8-9v-5z M9.5 12l2 2 3.5-4' };
 
-  const NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0', GOLD = '#c9a227', GREEN = '#1f9d57';
+  const NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0', GOLD = '#c9a227', ORANGE = '#ea580c';
   const path = (location.pathname.replace(/\.html$/, '') || '/');
   const active = (it) => it.m.some((x) => x === '/' ? path === '/' : (path === x || path.startsWith(x + '/')));
 
@@ -78,9 +78,9 @@
       ${it.label}</a>`;
     }
     if (it.flash) {
-      // Solid green flashing call-to-action — gentle glow + label blink to draw the eye.
+      // Solid orange flashing call-to-action (CTA conversion color) — gentle glow + label blink to draw the eye.
       const on2 = active(it);
-      return `<a href="${it.href}" class="s911-flash" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${GREEN};color:#fff;box-shadow:0 1px 3px rgba(31,157,87,.4)${on2 ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" class="s911-flash" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${ORANGE};color:#fff;box-shadow:0 1px 3px rgba(234,88,12,.4)${on2 ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
       <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.20);color:#fff">${icon(it.d)}</span>
       <span class="s911-flash-label">${it.label}</span></a>`;
     }
@@ -131,13 +131,13 @@
       70%{box-shadow:0 0 0 10px rgba(187,0,39,0)}
       100%{box-shadow:0 0 0 0 rgba(187,0,39,0)}
     }
-    /* Green flashing call-to-action (Contacto): glowing ring + soft label blink. */
+    /* Orange flashing call-to-action (Contacto): glowing ring + soft label blink. */
     #s911-shell a.s911-flash{position:relative;animation:s911-flash-pulse 1.6s ease-in-out infinite}
     #s911-shell a.s911-flash .s911-flash-label{animation:s911-flash-blink 1.6s ease-in-out infinite}
     @keyframes s911-flash-pulse{
-      0%{box-shadow:0 0 0 0 rgba(31,157,87,.55)}
-      70%{box-shadow:0 0 0 9px rgba(31,157,87,0)}
-      100%{box-shadow:0 0 0 0 rgba(31,157,87,0)}
+      0%{box-shadow:0 0 0 0 rgba(234,88,12,.55)}
+      70%{box-shadow:0 0 0 9px rgba(234,88,12,0)}
+      100%{box-shadow:0 0 0 0 rgba(234,88,12,0)}
     }
     @keyframes s911-flash-blink{ 0%,100%{opacity:1} 50%{opacity:.55} }
     @media(prefers-reduced-motion:reduce){
