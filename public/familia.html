@@ -234,6 +234,9 @@ window.openPerson=async function(id){
         <div class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3"><div class="label-caps text-on-surface-variant text-[10px]">📍 Última ubicación</div><div class="font-semibold mt-0.5">${esc(p.last_seen||'—')}</div></div>
         <div class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3"><div class="label-caps text-on-surface-variant text-[10px]">🗓 ${p.estado==='localizado'?'Localizada':'Sin contacto desde'}</div><div class="font-semibold mt-0.5">${p.estado==='localizado'?esc(p.found_by||'—'):(fmtD(p.since)||'—')}</div></div>
       </div>
+      <a href="/casos#caso=${encodeURIComponent(id)}" class="flex items-center justify-between gap-2 bg-primary/5 border border-primary/20 rounded-lg p-3 mt-2 hover:bg-primary/10 transition-colors">
+        <span class="text-sm font-semibold text-primary">🗂 Ver expediente completo · cronología y prioridad</span>
+        <span class="text-primary text-lg leading-none">→</span></a>
       ${p.reporter?`<div class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3 mt-2 text-sm"><span class="label-caps text-on-surface-variant text-[10px]">👥 Reporta</span> ${esc(p.reporter)}</div>`:''}
       ${p.description?`<p class="text-sm text-on-surface-variant mt-3">${esc(p.description)}</p>`:''}
       ${p.estado!=='localizado'?`<div class="bg-safe/10 border border-safe/30 rounded-xl p-4 mt-4">
