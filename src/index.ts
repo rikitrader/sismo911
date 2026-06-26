@@ -26,6 +26,7 @@ import { cleanPersonas } from './lib/clean';
 import { monitor } from './routes/monitor';
 import { aidOrgs } from './routes/aid_orgs';
 import { donations } from './routes/donations';
+import { botiquin } from './routes/botiquin';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
 import { ingestUsgs } from './ingest/usgs-cron';
@@ -171,6 +172,7 @@ app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-
 app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET public; refresh gated; apify webhook secret-gated)
 app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directory (GET public; writes operator-gated)
 app.route('/api', donations); // crowdfunding: /api/campaigns* + /api/donations* (anonymous donate; card→USDC via Crossmint)
+app.route('/', botiquin);     // /botiquin index + /botiquin/:slug per-item pages + /api/botiquin
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
 app.route('/api/funding', funding); // live funder pipeline for the supply dashboard (reads 09_Funding sheet)
