@@ -10,7 +10,7 @@
   const NAV_PINNED = [
     { label: 'DESAPARECIDOS', href: '/personas', m: ['/personas'], alarm: true, d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zm12.5 1.5L19 15m0 0l-2.5-2.5M19 15l2.5-2.5M19 15l-2.5 2.5' },
     { label: 'EXPEDIENTES', href: '/casos', m: ['/casos'], solid: true, d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
-    { label: 'TERREMOTOS', href: '/', m: ['/'], gold: true, d: 'M3 12h4l2 7 4-14 2 7h6' },
+    { label: 'TERREMOTOS', href: '/terremotos', m: ['/terremotos'], gold: true, d: 'M3 12h4l2 7 4-14 2 7h6' },
     // Big flashing red CTA pulled out of the "Familia y Reportes" submenu so a
     // damage report is always one tap away — extra top/bottom spacing.
     { label: 'REPORTAR', href: '/reportar', m: ['/reportar'], report: true, d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
