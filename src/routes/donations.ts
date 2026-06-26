@@ -45,11 +45,49 @@ export function normalizeAllocation(input: unknown): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Zone visibility — the whole /donar zone is hidden from the public until an
+// admin reveals it. Backed by a single KV flag; admins always see/manage it.
+// ---------------------------------------------------------------------------
+
+const ZONE_KEY = 'zone:donar:public';
+// Hidden by default ("for now") — only "1" means publicly visible.
+async function donarPublic(env: Env): Promise<boolean> {
+  return (await env.CACHE.get(ZONE_KEY).catch(() => null)) === '1';
+}
+
+// GET /api/donations/zone — visibility state + whether the caller can manage it.
+// Public-safe: anyone may read it (the widgets gate themselves on the result).
+donations.get('/donations/zone', async (c) => {
+  const me = await getUserFromRequest(c.env, c).catch(() => null);
+  const isPublic = await donarPublic(c.env);
+  return c.json(
+    { public: isPublic, canManage: me?.role === 'admin' },
+    200, { 'Cache-Control': 'no-store' }
+  );
+});
+
+// POST /api/donations/zone { public: boolean } — admin-only reveal/hide toggle.
+donations.post('/donations/zone', async (c) => {
+  const me = await getUserFromRequest(c.env, c).catch(() => null);
+  if (me?.role !== 'admin') return c.json({ error: 'forbidden' }, 403);
+  const b = await c.req.json().catch(() => ({}));
+  const next = !!b?.public;
+  await c.env.CACHE.put(ZONE_KEY, next ? '1' : '0');
+  await audit(c, 'donar.zone.toggle', { public: next });
+  return c.json({ ok: true, public: next });
+});
+
+// ---------------------------------------------------------------------------
 // Public reads
 // ---------------------------------------------------------------------------
 
 // GET /api/campaigns — list (default: active). Filters: ?category, ?q, ?featured=1, ?status (operator only).
 donations.get('/campaigns', async (c) => {
+  // Zone hidden → no campaigns leak to the public; admins still see them.
+  if (!(await donarPublic(c.env))) {
+    const me = await getUserFromRequest(c.env, c).catch(() => null);
+    if (me?.role !== 'admin') return c.json({ campaigns: [] }, 200, { 'Cache-Control': 'no-store' });
+  }
   const url = new URL(c.req.url);
   const category = url.searchParams.get('category');
   const q = clip(url.searchParams.get('q'), 60);
@@ -74,6 +112,11 @@ donations.get('/campaigns', async (c) => {
 
 // GET /api/campaigns/:slug — detail + recent public donations (ledger).
 donations.get('/campaigns/:slug', async (c) => {
+  // Zone hidden → behave as if the campaign doesn't exist (admins exempt).
+  if (!(await donarPublic(c.env))) {
+    const me = await getUserFromRequest(c.env, c).catch(() => null);
+    if (me?.role !== 'admin') return c.json({ error: 'not_found' }, 404);
+  }
   const slug = c.req.param('slug');
   const camp: any = await c.env.DB.prepare(`SELECT ${CAMPAIGN_COLS} FROM campaigns WHERE slug = ?`).bind(slug).first();
   if (!camp) return c.json({ error: 'not_found' }, 404);
@@ -110,6 +153,12 @@ donations.get('/donations/config', (c) => c.json(crossmintClientConfig(c.env), 2
 donations.post('/campaigns/:slug/donate', async (c) => {
   const limited = await rateLimit(c.env, c, 'donate', 12, 300);
   if (limited) return limited;
+
+  // Zone hidden → donations are not open to the public yet.
+  if (!(await donarPublic(c.env))) {
+    const me = await getUserFromRequest(c.env, c).catch(() => null);
+    if (me?.role !== 'admin') return c.json({ error: 'zone_hidden' }, 404);
+  }
 
   const slug = c.req.param('slug');
   const camp: any = await c.env.DB.prepare(`SELECT id, slug, title, status FROM campaigns WHERE slug = ?`).bind(slug).first();

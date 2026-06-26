@@ -149,4 +149,23 @@
       </div>`;
     document.getElementById('s911-logout').onclick = async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.href = '/login'; };
   }).catch(() => {});
+
+  // The /donar zone is hidden from the public until an admin reveals it. Hide
+  // the nav entry up front (no flash), then reveal only if public, or for an
+  // admin (with an "Oculto" pill). Fail-closed: a fetch error leaves it hidden.
+  const donarLink = shell.querySelector('a[href="/donar"]');
+  if (donarLink) {
+    donarLink.style.display = 'none';
+    fetch('/api/donations/zone').then((r) => r.json()).then((z) => {
+      if (!(z.public || z.canManage)) return;
+      donarLink.style.display = '';
+      if (!z.public && z.canManage && !donarLink.querySelector('.s911-hidden-pill')) {
+        const pill = document.createElement('span');
+        pill.className = 's911-hidden-pill';
+        pill.textContent = 'Oculto';
+        pill.style.cssText = 'margin-left:auto;font:800 9px Inter,sans-serif;letter-spacing:.06em;text-transform:uppercase;background:rgba(0,23,58,.12);color:' + NAVY + ';border-radius:6px;padding:2px 6px';
+        donarLink.appendChild(pill);
+      }
+    }).catch(() => {});
+  }
 })();
