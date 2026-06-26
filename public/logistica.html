@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centro de Comando Logístico — Acopio — SISMO911</title>
+<meta name="description" content="Comando logístico FEMA/NIMS de los centros de acopio de Venezuela: inventario por insumo, necesidades, coincidencias de despacho, envíos con cadena de custodia y panel de mando.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/app.css" />
+<style>
+  body{background:#eef1f7}
+  .tnum{font-variant-numeric:tabular-nums}
+  .mono{font-family:'JetBrains Mono',monospace}
+  #netMap{height:420px;border-radius:14px;z-index:0;border:1px solid #c4c6d0;box-shadow:0 12px 30px -12px rgba(0,23,58,.4)}
+  .cmd-band{background:linear-gradient(180deg,#00173a 0%,#001a44 100%);color:#fff;position:relative;overflow:hidden}
+  .cmd-band::after{content:"";position:absolute;inset:0;opacity:.10;pointer-events:none;
+    background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:34px 34px}
+  .cmd-eyebrow{font:800 11px 'Public Sans',sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#c9a227}
+  .kpi{background:#fff;border:1px solid rgba(196,198,208,.7);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,#00173a)}
+  .card{background:#fff;border:1px solid rgba(196,198,208,.65);border-radius:14px}
+  .pill{display:inline-block;border-radius:999px;padding:1px 8px;font:700 10px Inter,sans-serif;color:#fff}
+  .seg{font:700 12px Inter;padding:7px 12px;border-radius:9px;cursor:pointer;color:#44474f}
+  .seg.on{background:#00173a;color:#fff}
+  .inp{width:100%;border:1px solid #c4c6d0;border-radius:9px;padding:8px 10px;font-size:13px}
+  label.lbl{display:block;font:600 11px Inter;color:#44474f;margin-bottom:3px}
+  .barwrap{height:8px;border-radius:999px;background:#e8e8ea;overflow:hidden}
+  details>summary{cursor:pointer;list-style:none}
+  details>summary::-webkit-details-marker{display:none}
+</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+
+<header class="cmd-band">
+  <div class="mx-auto max-w-7xl px-4 py-7 relative">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="min-w-0">
+        <div class="cmd-eyebrow mb-1.5">Logística de Emergencia · Modelo FEMA / NIMS · ESF-7</div>
+        <h1 class="font-display font-extrabold text-3xl sm:text-4xl leading-tight">Centro de Comando Logístico</h1>
+        <p class="text-white/75 mt-2 max-w-2xl text-sm">Inventario por insumo, necesidades priorizadas, coincidencias de despacho por cercanía, envíos con <b class="text-white">cadena de custodia</b> y panel de mando de la red nacional de centros de acopio.</p>
+      </div>
+      <div class="flex flex-col items-end gap-2 shrink-0">
+        <span id="rolebadge" class="pill" style="background:#44474f">· · ·</span>
+        <div class="flex gap-2">
+          <a href="/acopio" class="inline-flex items-center gap-1.5 bg-white/10 ring-1 ring-white/25 text-white font-semibold rounded-lg px-3 py-2 text-sm hover:bg-white/20">← Mapa de acopio</a>
+          <button id="refresh" class="inline-flex items-center gap-1.5 bg-[#c9a227] text-[#00173a] font-extrabold rounded-lg px-3 py-2 text-sm hover:brightness-105">↻ Actualizar</button>
+        </div>
+        <span id="updated" class="text-[11px] text-white/55 mono"></span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+
+  <!-- KPI row -->
+  <div id="kpis" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5"></div>
+
+  <!-- Map + inventory -->
+  <div class="grid lg:grid-cols-3 gap-4 mb-5">
+    <div class="lg:col-span-2">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-display font-extrabold text-lg flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span> Red de distribución</h2>
+        <span class="text-xs text-on-surface-variant">Líneas = envíos activos (origen → destino)</span>
+      </div>
+      <div id="netMap"></div>
+    </div>
+    <div class="card p-4">
+      <h2 class="font-display font-extrabold text-base mb-3">Inventario nacional por insumo</h2>
+      <div id="invbars" class="space-y-2.5"></div>
+    </div>
+  </div>
+
+  <!-- Section tabs -->
+  <div class="flex flex-wrap gap-1.5 mb-4 bg-white border border-outline-variant/60 rounded-xl p-1.5 w-fit">
+    <button class="seg on" data-tab="needs">Necesidades</button>
+    <button class="seg" data-tab="match">Coincidencias / Despacho</button>
+    <button class="seg" data-tab="ships">Envíos &amp; Custodia</button>
+    <button class="seg" data-tab="inv">Inventario por centro</button>
+  </div>
+
+  <!-- NEEDS -->
+  <section data-panel="needs">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 card overflow-hidden">
+        <div class="px-4 py-2.5 bg-primary text-white font-display font-bold flex items-center justify-between"><span>Necesidades abiertas</span><span id="needcount" class="text-xs text-white/80"></span></div>
+        <div id="needlist"></div>
+      </div>
+      <form id="needform" class="card p-4 h-fit hidden">
+        <h3 class="font-display font-bold mb-3">➕ Registrar necesidad</h3>
+        <div class="space-y-3">
+          <div><label class="lbl">Centro</label><select id="n-center" class="inp"></select></div>
+          <div><label class="lbl">Insumo</label><select id="n-commodity" class="inp"></select></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="lbl">Cantidad</label><input id="n-qty" type="number" min="0" step="any" class="inp" placeholder="0"></div>
+            <div><label class="lbl">Prioridad</label><select id="n-priority" class="inp"><option value="1">1 · Crítico</option><option value="2" selected>2 · Alto</option><option value="3">3 · Normal</option></select></div>
+          </div>
+          <div><label class="lbl">Nota</label><input id="n-note" class="inp" maxlength="400" placeholder="Detalle (opcional)"></div>
+          <button class="bg-secondary text-white font-bold rounded-lg px-4 py-2.5 w-full">Registrar</button>
+          <span id="n-msg" class="text-xs block"></span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- MATCH -->
+  <section data-panel="match" class="hidden">
+    <div class="card overflow-hidden">
+      <div class="px-4 py-2.5 bg-primary text-white font-display font-bold flex items-center justify-between"><span>Coincidencias de despacho · necesidad ↔ excedente (por cercanía)</span><span id="matchcount" class="text-xs text-white/80"></span></div>
+      <div id="matchlist"></div>
+    </div>
+    <p class="text-xs text-on-surface-variant mt-2">El motor enlaza cada necesidad abierta con centros que tienen excedente del mismo insumo, ordenados por distancia (haversine) y prioridad. Los operadores pueden convertir una coincidencia en un envío con un clic.</p>
+  </section>
+
+  <!-- SHIPMENTS -->
+  <section data-panel="ships" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3" id="shiplist"></div>
+      <form id="shipform" class="card p-4 h-fit hidden">
+        <h3 class="font-display font-bold mb-3">🚚 Crear envío</h3>
+        <div class="space-y-3">
+          <div><label class="lbl">Origen</label><select id="s-origin" class="inp"></select></div>
+          <div><label class="lbl">Destino</label><select id="s-dest" class="inp"></select></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="lbl">Insumo</label><select id="s-commodity" class="inp"></select></div>
+            <div><label class="lbl">Cantidad</label><input id="s-qty" type="number" min="0" step="any" class="inp" placeholder="0"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="lbl">Vehículo</label><input id="s-vehicle" class="inp" maxlength="80" placeholder="Convoy / placa"></div>
+            <div><label class="lbl">Responsable</label><input id="s-driver" class="inp" maxlength="120" placeholder="Nombre"></div>
+          </div>
+          <button class="bg-secondary text-white font-bold rounded-lg px-4 py-2.5 w-full">Despachar</button>
+          <span id="s-msg" class="text-xs block"></span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- INVENTORY -->
+  <section data-panel="inv" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 card overflow-hidden">
+        <div class="px-4 py-2.5 bg-primary text-white font-display font-bold">Inventario por centro</div>
+        <div id="invlist"></div>
+      </div>
+      <form id="invform" class="card p-4 h-fit hidden">
+        <h3 class="font-display font-bold mb-3">📦 Cargar / ajustar inventario</h3>
+        <div class="space-y-3">
+          <div><label class="lbl">Centro</label><select id="i-center" class="inp"></select></div>
+          <div><label class="lbl">Insumo</label><select id="i-commodity" class="inp"></select></div>
+          <div><label class="lbl">Cantidad en existencia</label><input id="i-qty" type="number" min="0" step="any" class="inp" placeholder="0"></div>
+          <button class="bg-secondary text-white font-bold rounded-lg px-4 py-2.5 w-full">Guardar</button>
+          <span id="i-msg" class="text-xs block"></span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <p class="text-xs text-on-surface-variant mt-6 max-w-3xl">⚠️ Panel de coordinación. Las escrituras (inventario, necesidades, envíos) requieren sesión de <b>operador</b>. Las cantidades son declarativas y deben verificarse en sitio. Cadena de custodia = registro inmutable de cada traspaso.</p>
+</main>
+
+<script>
+// ── Taxonomía de insumos (espejo de src/data/commodities.ts) ──
+const COM={agua:['💧','Agua potable','l','#0891b2'],alimentos:['🥫','Alimentos','caja','#16a34a'],medicinas:['💊','Medicinas','caja','#bb0027'],abrigo:['🛏️','Abrigo / refugio','u','#7c3aed'],higiene:['🧼','Higiene','kit','#0ea5e9'],infantil:['🍼','Infantil / bebé','kit','#ec4899'],energia:['🔋','Energía','u','#d97706'],rescate:['⛑️','Rescate / SAR','u','#ea580c'],comunicaciones:['📡','Comunicaciones','u','#475569'],logistica:['📦','Logística','u','#00173a']};
+const COM_IDS=Object.keys(COM);
+const PRI={1:['Crítico','#bb0027'],2:['Alto','#d97706'],3:['Normal','#475569']};
+const SHIP={creado:['Creado','#475569'],despachado:['Despachado','#2563eb'],en_transito:['En tránsito','#d97706'],entregado:['Entregado','#16a34a'],confirmado:['Confirmado','#0891b2'],cancelado:['Cancelado','#bb0027']};
+const NEXT={creado:'despachado',despachado:'en_transito',en_transito:'entregado',entregado:'confirmado'};
+
+const $=s=>document.querySelector(s);
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('es-VE',{maximumFractionDigits:1});
+
+let CENTERS={};   // id -> {nombre,estado,ciudad,lat,lon}
+let CENTER_LIST=[]; // sorted [{id,nombre}]
+let DASH={}, NEEDS=[], SHIPS={shipments:[],items:{},custody:{}}, MATCHES=[], INV=[];
+let IS_OP=false;
+
+// ── Operator detection ──
+async function whoami(){
+  try{const d=await fetch('/api/auth/me').then(r=>r.json());
+    const role=d&&d.user&&d.user.role;IS_OP=role==='operator'||role==='admin';
+    $('#rolebadge').textContent=IS_OP?('● Operador ('+role+')'):'Solo lectura';
+    $('#rolebadge').style.background=IS_OP?'#16a34a':'#44474f';
+  }catch{IS_OP=false;$('#rolebadge').textContent='Solo lectura';}
+  ['needform','shipform','invform'].forEach(id=>{const f=$('#'+id);if(f)f.classList.toggle('hidden',!IS_OP);});
+}
+
+// ── Map ──
+const map=L.map('netMap',{attributionControl:false,scrollWheelZoom:false}).setView([8.4,-66],6);
+L.control.attribution({prefix:false}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM · © CARTO',maxZoom:19}).addTo(map);
+const layer=L.layerGroup().addTo(map);
+function dotIcon(c){return L.divIcon({className:'',html:`<div style="width:13px;height:13px;border-radius:50%;background:${c};box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.4)"></div>`,iconSize:[16,16],iconAnchor:[8,8]});}
+function drawMap(){
+  layer.clearLayers();const pts=[];
+  // centers that have inventory or needs
+  const active=new Set([...INV.map(r=>r.center_id),...NEEDS.map(n=>n.center_id)]);
+  active.forEach(id=>{const c=CENTERS[id];if(!c||c.lat==null)return;pts.push([c.lat,c.lon]);
+    const hasNeed=NEEDS.some(n=>n.center_id===id&&n.status==='open');
+    L.marker([c.lat,c.lon],{icon:dotIcon(hasNeed?'#bb0027':'#16a34a')}).bindPopup(`<b>${esc(c.nombre)}</b><br>${esc(c.ciudad||'')} ${esc(c.estado||'')}`).addTo(layer);});
+  // active shipment flow lines
+  (SHIPS.shipments||[]).filter(s=>['creado','despachado','en_transito'].includes(s.status)).forEach(s=>{
+    const a=CENTERS[s.origin_id],b=CENTERS[s.dest_id];if(!a||!b||a.lat==null||b.lat==null)return;
+    L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{color:SHIP[s.status][1],weight:2.5,opacity:.8,dashArray:'6 6'}).addTo(layer);
+    pts.push([a.lat,a.lon],[b.lat,b.lon]);});
+  if(pts.length)map.fitBounds(pts,{padding:[30,30],maxZoom:8});
+  setTimeout(()=>map.invalidateSize(),60);
+}
+
+// ── KPIs ──
+function renderKpis(){
+  const n=DASH.needs||{},s=DASH.shipments||{};
+  const invCenters=new Set(INV.map(r=>r.center_id)).size;
+  const cards=[
+    ['Necesidades abiertas',n.open||0,'#d97706'],
+    ['🔴 Críticas',n.critical||0,'#bb0027'],
+    ['En tránsito',s.in_transit||0,'#2563eb'],
+    ['Entregados',s.delivered||0,'#16a34a'],
+    ['Eventos de custodia',DASH.custody_events||0,'#7c3aed'],
+    ['Centros con inventario',invCenters,'#00173a'],
+  ];
+  $('#kpis').innerHTML=cards.map(([l,v,c])=>`<div class="kpi" style="--accent:${c}"><div class="font-display font-extrabold text-2xl tnum" style="color:${c}">${fmt(v)}</div><div class="text-xs font-semibold mt-0.5 text-on-surface-variant">${l}</div></div>`).join('');
+}
+
+// ── Inventory bars (national) ──
+function renderInvBars(){
+  const rows=(DASH.commodities||[]).slice().sort((a,b)=>b.total-a.total);
+  const max=Math.max(1,...rows.map(r=>r.total));
+  $('#invbars').innerHTML=rows.length?rows.map(r=>{const m=COM[r.commodity]||['📦',r.commodity,'u','#64748b'];
+    return `<div><div class="flex items-center justify-between text-xs mb-1"><span class="font-semibold">${m[0]} ${m[1]}</span><span class="mono text-on-surface-variant">${fmt(r.total)} ${m[2]} · ${r.centers} ctr</span></div><div class="barwrap"><div style="height:100%;width:${Math.max(3,r.total/max*100)}%;background:${m[3]}"></div></div></div>`;}).join('')
+    :'<p class="text-xs text-on-surface-variant">Sin inventario cargado todavía.</p>';
+}
+
+// ── Needs ──
+function renderNeeds(){
+  const open=NEEDS.filter(n=>n.status==='open');
+  $('#needcount').textContent=`${open.length} abiertas`;
+  $('#needlist').innerHTML=open.length?open.map(n=>{const m=COM[n.commodity]||['📦',n.commodity,'u','#64748b'];const p=PRI[n.priority]||PRI[3];const c=CENTERS[n.center_id];
+    return `<div class="flex items-center gap-3 p-3 border-t border-outline-variant/40">
+      <span class="text-lg">${m[0]}</span>
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-sm truncate">${esc(c?c.nombre:n.center_id)}</div>
+        <div class="text-xs text-on-surface-variant">${m[1]} · <b class="mono">${fmt(n.qty)} ${m[2]}</b>${n.note?' · '+esc(n.note):''}</div>
+      </div>
+      <span class="pill" style="background:${p[1]}">${p[0]}</span>
+      ${IS_OP?`<button data-fulfill="${n.id}" class="text-xs font-semibold text-safe border border-outline-variant rounded-lg px-2 py-1">✓ Cumplida</button>`:''}
+    </div>`;}).join(''):'<p class="p-4 text-sm text-on-surface-variant">No hay necesidades abiertas.</p>';
+  if(IS_OP)document.querySelectorAll('[data-fulfill]').forEach(b=>b.onclick=()=>patchNeed(b.dataset.fulfill,'fulfilled'));
+}
+
+// ── Matches ──
+function renderMatches(){
+  $('#matchcount').textContent=`${MATCHES.length} sugerencias`;
+  $('#matchlist').innerHTML=MATCHES.length?MATCHES.map(s=>{const m=COM[s.commodity]||['📦',s.commodity,'u','#64748b'];const p=PRI[s.priority]||PRI[3];
+    return `<div class="flex items-center gap-3 p-3 border-t border-outline-variant/40">
+      <span class="text-lg">${m[0]}</span>
+      <div class="flex-1 min-w-0 text-sm">
+        <div><b>${esc(s.origin_name)}</b> <span class="text-on-surface-variant">→</span> <b>${esc(s.dest_name)}</b></div>
+        <div class="text-xs text-on-surface-variant">${m[1]} · necesita <b class="mono">${fmt(s.qty_needed)}</b>, disponible <b class="mono">${fmt(s.qty_available)} ${m[2]}</b>${s.km!=null?` · <span class="mono">${fmt(s.km)} km</span>`:''}</div>
+      </div>
+      <span class="pill" style="background:${p[1]}">${p[0]}</span>
+      ${IS_OP?`<button class="text-xs font-bold bg-primary text-white rounded-lg px-2.5 py-1.5" data-dispatch='${esc(JSON.stringify({o:s.origin_id,d:s.dest_id,c:s.commodity,q:Math.min(s.qty_needed,s.qty_available)}))}'>🚚 Crear envío</button>`:''}
+    </div>`;}).join(''):'<p class="p-4 text-sm text-on-surface-variant">Sin coincidencias. Carga inventario y registra necesidades para activar el motor.</p>';
+  if(IS_OP)document.querySelectorAll('[data-dispatch]').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.dispatch);prefillShip(d);});
+}
+
+// ── Shipments + custody timeline ──
+function renderShips(){
+  const list=SHIPS.shipments||[];
+  $('#shiplist').innerHTML=(list.length?'':'<p class="card p-4 text-sm text-on-surface-variant">No hay envíos registrados.</p>')+list.map(s=>{
+    const st=SHIP[s.status]||['?','#64748b'];const o=CENTERS[s.origin_id],d=CENTERS[s.dest_id];
+    const items=(SHIPS.items[s.id]||[]).map(it=>{const m=COM[it.commodity]||['📦',it.commodity,'u'];return `${m[0]} ${fmt(it.qty)} ${it.unit||m[2]}`;}).join(' · ');
+    const cust=(SHIPS.custody[s.id]||[]).map(e=>`<div class="flex items-center gap-2 text-xs"><span class="w-1.5 h-1.5 rounded-full" style="background:${(SHIP[e.event]||['',st[1]])[1]||'#475569'}"></span><span class="mono text-on-surface-variant">${new Date(e.at_ms).toLocaleString('es-VE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span><span class="font-semibold">${esc(e.event)}</span>${e.actor?'· '+esc(e.actor):''}${e.note?' · '+esc(e.note):''}</div>`).join('');
+    return `<div class="card p-4">
+      <div class="flex items-center justify-between gap-2 mb-1">
+        <div class="font-semibold text-sm truncate"><b>${esc(o?o.nombre:s.origin_id)}</b> → <b>${esc(d?d.nombre:s.dest_id)}</b></div>
+        <span class="pill" style="background:${st[1]}">${st[0]}</span>
+      </div>
+      <div class="text-xs text-on-surface-variant mb-2">${items||'—'}${s.vehicle?' · 🚚 '+esc(s.vehicle):''}${s.driver?' · '+esc(s.driver):''}</div>
+      <details><summary class="text-xs font-semibold text-primary mb-1">Cadena de custodia (${(SHIPS.custody[s.id]||[]).length})</summary><div class="space-y-1 mt-1 pl-1 border-l-2 border-outline-variant/50">${cust||'<span class="text-xs text-on-surface-variant">—</span>'}</div></details>
+      ${IS_OP&&NEXT[s.status]?`<div class="mt-2 flex gap-2"><button data-adv="${s.id}" data-to="${NEXT[s.status]}" class="text-xs font-bold bg-primary text-white rounded-lg px-2.5 py-1.5">→ ${SHIP[NEXT[s.status]][0]}</button>${s.status!=='confirmado'?`<button data-adv="${s.id}" data-to="cancelado" class="text-xs font-semibold text-secondary border border-outline-variant rounded-lg px-2.5 py-1.5">Cancelar</button>`:''}</div>`:''}
+    </div>`;}).join('');
+  if(IS_OP)document.querySelectorAll('[data-adv]').forEach(b=>b.onclick=()=>advanceShip(b.dataset.adv,b.dataset.to));
+}
+
+// ── Inventory by center ──
+function renderInvList(){
+  const by={};INV.forEach(r=>{(by[r.center_id]=by[r.center_id]||[]).push(r);});
+  const ids=Object.keys(by);
+  $('#invlist').innerHTML=ids.length?ids.map(id=>{const c=CENTERS[id];
+    const chips=by[id].map(r=>{const m=COM[r.commodity]||['📦',r.commodity,'u','#64748b'];return `<span class="inline-flex items-center gap-1 text-xs bg-surface-container rounded-lg px-2 py-1">${m[0]} <b class="mono">${fmt(r.qty)}</b> ${r.unit||m[2]}</span>`;}).join(' ');
+    return `<div class="p-3 border-t border-outline-variant/40"><div class="font-semibold text-sm mb-1">${esc(c?c.nombre:id)}</div><div class="flex flex-wrap gap-1.5">${chips}</div></div>`;}).join('')
+    :'<p class="p-4 text-sm text-on-surface-variant">Sin inventario. Usa el panel para cargar existencias.</p>';
+}
+
+// ── Writes (operator) ──
+async function postJSON(url,body){const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));return{ok:r.ok,status:r.status,d};}
+async function patchJSON(url,body){const r=await fetch(url,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));return{ok:r.ok,status:r.status,d};}
+function msg(el,ok,t){el.style.color=ok?'#16a34a':'#bb0027';el.textContent=t;}
+
+async function patchNeed(id,status){const r=await patchJSON('/api/acopio/needs/'+id,{status});if(r.ok)refresh();}
+async function advanceShip(id,to){const r=await patchJSON('/api/acopio/shipments/'+id,{status:to,actor:'consola'});if(r.ok)refresh();}
+
+function prefillShip(d){
+  document.querySelector('[data-tab="ships"]').click();
+  $('#s-origin').value=d.o;$('#s-dest').value=d.d;$('#s-commodity').value=d.c;$('#s-qty').value=d.q;
+  $('#shipform').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+// ── Selects ──
+function fillCommoditySelects(){const opts=COM_IDS.map(k=>`<option value="${k}">${COM[k][0]} ${COM[k][1]}</option>`).join('');['#n-commodity','#s-commodity','#i-commodity'].forEach(s=>{if($(s))$(s).innerHTML=opts;});}
+function fillCenterSelects(){const opts=CENTER_LIST.map(c=>`<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');['#n-center','#s-origin','#s-dest','#i-center'].forEach(s=>{if($(s))$(s).innerHTML=opts;});}
+
+// ── Tabs ──
+document.querySelectorAll('.seg').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.seg').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('[data-panel]').forEach(p=>p.classList.toggle('hidden',p.dataset.panel!==b.dataset.tab));
+  setTimeout(()=>map.invalidateSize(),60);
+});
+
+// ── Forms ──
+function wireForms(){
+  $('#needform').addEventListener('submit',async e=>{e.preventDefault();const m=$('#n-msg');
+    const r=await postJSON('/api/acopio/needs',{center_id:$('#n-center').value,commodity:$('#n-commodity').value,qty:Number($('#n-qty').value),priority:Number($('#n-priority').value),note:$('#n-note').value||null});
+    if(r.ok){msg(m,1,'✓ Registrada');e.target.reset();$('#n-priority').value='2';refresh();}else msg(m,0,r.d.error||(r.status===401?'Requiere operador':'Error'));});
+  $('#invform').addEventListener('submit',async e=>{e.preventDefault();const m=$('#i-msg');
+    const r=await postJSON('/api/acopio/inventory',{center_id:$('#i-center').value,commodity:$('#i-commodity').value,qty:Number($('#i-qty').value)});
+    if(r.ok){msg(m,1,'✓ Guardado');refresh();}else msg(m,0,r.d.error||(r.status===401?'Requiere operador':'Error'));});
+  $('#shipform').addEventListener('submit',async e=>{e.preventDefault();const m=$('#s-msg');
+    if($('#s-origin').value===$('#s-dest').value){msg(m,0,'Origen y destino deben diferir');return;}
+    const r=await postJSON('/api/acopio/shipments',{origin_id:$('#s-origin').value,dest_id:$('#s-dest').value,vehicle:$('#s-vehicle').value||null,driver:$('#s-driver').value||null,created_by:'consola',items:[{commodity:$('#s-commodity').value,qty:Number($('#s-qty').value)}]});
+    if(r.ok){msg(m,1,'✓ Despachado');e.target.reset();refresh();}else msg(m,0,r.d.error||(r.status===401?'Requiere operador':'Error'));});
+}
+
+// ── Load ──
+async function loadCenters(){
+  try{
+    const [cat,com]=await Promise.all([
+      fetch('/acopio-data.json').then(r=>r.json()).catch(()=>[]),
+      fetch('/api/acopio/centers').then(r=>r.ok?r.json():{centers:[]}).catch(()=>({centers:[]})),
+    ]);
+    CENTERS={};
+    cat.forEach(d=>{if(d.id)CENTERS[d.id]={nombre:d.nombre,estado:d.estado,ciudad:d.ciudad,lat:d.lat,lon:d.lon};});
+    (com.centers||[]).forEach(x=>{CENTERS[x.id]={nombre:x.nombre,estado:x.estado,ciudad:x.ciudad,lat:x.lat,lon:x.lon};});
+    CENTER_LIST=Object.entries(CENTERS).map(([id,c])=>({id,nombre:c.nombre})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    fillCenterSelects();
+  }catch{}
+}
+async function refresh(){
+  const [dash,needs,ships,match,inv]=await Promise.all([
+    fetch('/api/acopio/dashboard').then(r=>r.json()).catch(()=>({})),
+    fetch('/api/acopio/needs').then(r=>r.json()).catch(()=>({needs:[]})),
+    fetch('/api/acopio/shipments').then(r=>r.json()).catch(()=>({shipments:[],items:{},custody:{}})),
+    fetch('/api/acopio/match').then(r=>r.json()).catch(()=>({matches:[]})),
+    fetch('/api/acopio/inventory').then(r=>r.json()).catch(()=>({inventory:[]})),
+  ]);
+  DASH=dash;NEEDS=needs.needs||[];SHIPS=ships;MATCHES=match.matches||[];INV=inv.inventory||[];
+  renderKpis();renderInvBars();renderNeeds();renderMatches();renderShips();renderInvList();drawMap();
+  $('#updated').textContent='Actualizado '+new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+$('#refresh').addEventListener('click',refresh);
+
+(async()=>{fillCommoditySelects();wireForms();await whoami();await loadCenters();await refresh();})();
+</script>
+</body>
+</html>
