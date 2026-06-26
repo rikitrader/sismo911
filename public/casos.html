@@ -344,9 +344,9 @@ function triagePanel(p){
   return `<div class="card" style="border-left:4px solid ${t.c}">
     <h3 style="justify-content:space-between"><span style="display:inline-flex;gap:8px;align-items:center"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" stroke-linecap="round" stroke-linejoin="round"/></svg>Prioridad · Triage</span>
       <span class="tri" style="color:${t.c};background:${t.bg}"><span class="d" style="background:${t.c}"></span>${p.triage_label||t.lbl}</span></h3>
-    <div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px">
-      <div style="flex:1;height:8px;border-radius:6px;background:#eef1f7;overflow:hidden"><div style="width:${sc}%;height:100%;background:${t.c}"></div></div>
-      <span class="mono" style="font:700 13px 'JetBrains Mono';color:${t.c}">${sc}/100</span>
+    <div style="text-align:center;margin:6px 0 14px">
+      <div class="tri-score" style="color:${t.c};font-size:54px">${sc}<span class="mx" style="font-size:16px">/100</span></div>
+      <div style="height:9px;border-radius:6px;background:#eef1f7;overflow:hidden;margin-top:12px"><div style="width:${sc}%;height:100%;background:${t.c}"></div></div>
     </div>
     ${reasons?`<div class="k" style="font:700 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:6px">Por qué esta prioridad</div><ul style="list-style:none;margin:0;padding:0;font:500 13px Inter;color:var(--ink)">${reasons}</ul>`:''}
     <div class="note" style="margin-top:12px">Calculada automáticamente (estado · vulnerabilidad · sismo · tiempo). Se actualiza sola al cambiar el caso.</div>
