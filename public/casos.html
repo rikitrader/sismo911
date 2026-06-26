@@ -190,6 +190,32 @@
   .ai-sum{font:500 14.5px/1.6 Inter;color:var(--ink)}
   .ai-sum b{color:var(--navy-2)}
   .ai-badge{display:inline-flex;align-items:center;gap:6px;font:700 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);background:#e8f0ff;border:1px solid #cfe0ff;border-radius:999px;padding:3px 9px}
+
+  /* ---- Column selector (show/hide docket columns) ---- */
+  .colsel{position:relative}
+  .colsel-btn{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line-2);border-radius:10px;padding:9px 12px;font:600 13px Inter;color:var(--ink)}
+  .colsel-btn:hover{border-color:#9db4e6}
+  .colsel-btn svg{width:15px;height:15px;color:var(--muted)}
+  .colsel-btn .cnt{font:700 11px 'JetBrains Mono';color:var(--muted);background:#eef2f9;border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+  .colsel-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:30;background:var(--panel);border:1px solid var(--line-2);border-radius:12px;box-shadow:var(--shadow-lg);padding:8px;min-width:236px;display:none}
+  .colsel-menu.open{display:block}
+  .colsel-menu .hd{font:700 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:6px 8px 8px}
+  .colsel-opt{display:flex;align-items:center;gap:9px;padding:8px;border-radius:8px;font:600 13px Inter;color:var(--ink);cursor:pointer;user-select:none}
+  .colsel-opt:hover{background:#f3f6fd}
+  .colsel-opt input{width:16px;height:16px;accent-color:var(--navy);cursor:pointer}
+  .colsel-menu .ft{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
+  .colsel-menu .reset{width:100%;text-align:center;background:transparent;border:none;font:600 12px Inter;color:var(--blue);padding:7px;border-radius:8px;cursor:pointer}
+  .colsel-menu .reset:hover{background:#eef2fb}
+  @media(max-width:560px){.colsel-menu{left:auto;right:0}}
+  /* visibility driven by .hN classes on the docket table */
+  table.dt.h3  td:nth-child(3),  table.dt.h3  th:nth-child(3) {display:none}
+  table.dt.h4  td:nth-child(4),  table.dt.h4  th:nth-child(4) {display:none}
+  table.dt.h5  td:nth-child(5),  table.dt.h5  th:nth-child(5) {display:none}
+  table.dt.h6  td:nth-child(6),  table.dt.h6  th:nth-child(6) {display:none}
+  table.dt.h7  td:nth-child(7),  table.dt.h7  th:nth-child(7) {display:none}
+  table.dt.h8  td:nth-child(8),  table.dt.h8  th:nth-child(8) {display:none}
+  table.dt.h9  td:nth-child(9),  table.dt.h9  th:nth-child(9) {display:none}
+  table.dt.h10 td:nth-child(10), table.dt.h10 th:nth-child(10){display:none}
 </style>
 </head>
 <body>
@@ -244,6 +270,13 @@
         <option value="movs">Más movimientos</option>
         <option value="name">Nombre (A–Z)</option>
       </select>
+      <div class="colsel">
+        <button class="colsel-btn" id="colBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Mostrar u ocultar columnas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h4v16H4zM10 4h4v16h-4zM16 4h4v16h-4z" stroke-linejoin="round"/></svg>
+          Columnas <span class="cnt" id="colCnt"></span>
+        </button>
+        <div class="colsel-menu" id="colMenu" role="menu"></div>
+      </div>
       <span id="count" class="pill-count"></span>
     </div>
 
@@ -256,7 +289,7 @@
     </div>
 
     <div class="panel">
-      <div class="dt-scroll"><table class="dt">
+      <div class="dt-scroll"><table class="dt" id="docketTable">
         <thead><tr>
           <th>Expediente</th><th>Persona</th><th>Estado</th><th id="th_prio">Prioridad · Triage</th>
           <th>Tipo</th><th>Sismo de referencia</th><th class="c">Movs.</th><th class="c">Evid.</th>
@@ -372,6 +405,49 @@ function triagePanel(p){
     ${reasons?`<div class="k" style="font:700 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:6px">Por qué esta prioridad</div><ul style="list-style:none;margin:0;padding:0;font:500 13px Inter;color:var(--ink)">${reasons}</ul>`:''}
     <div class="note" style="margin-top:12px">Calculada automáticamente (estado · vulnerabilidad · sismo · tiempo). Se actualiza sola al cambiar el caso.</div>
   </div>`;
+}
+
+/* ---------------- COLUMN SELECTOR ---------------- */
+// Toggleable docket columns (1-based position in the table).
+// Expediente (1), Persona (2) and the open-arrow (11) stay fixed.
+const COLS=[
+  {n:3, key:'estado',  label:'Estado'},
+  {n:4, key:'triage',  label:'Prioridad · Triage'},
+  {n:5, key:'tipo',    label:'Tipo'},
+  {n:6, key:'sismo',   label:'Sismo de referencia'},
+  {n:7, key:'movs',    label:'Movs.'},
+  {n:8, key:'evid',    label:'Evid.'},
+  {n:9, key:'act',     label:'Últ. actividad'},
+  {n:10,key:'abierto', label:'Abierto'},
+];
+const COL_DEFAULT_HIDDEN=['sismo','act','abierto'];
+const COLS_KEY='sismo911_casos_hidden_cols_v1';
+let HIDDEN=(()=>{try{const v=JSON.parse(localStorage.getItem(COLS_KEY));return Array.isArray(v)?v:COL_DEFAULT_HIDDEN.slice();}catch{return COL_DEFAULT_HIDDEN.slice();}})();
+function saveHidden(){try{localStorage.setItem(COLS_KEY,JSON.stringify(HIDDEN));}catch{}}
+function applyCols(){
+  const t=$('#docketTable'); if(!t)return;
+  COLS.forEach(c=>t.classList.toggle('h'+c.n,HIDDEN.includes(c.key)));
+  const shown=COLS.length-HIDDEN.length+2; // +2 fixed identity cols
+  $('#colCnt').textContent=shown+'/'+(COLS.length+2);
+}
+function buildColMenu(){
+  const m=$('#colMenu');
+  m.innerHTML='<div class="hd">Mostrar columnas</div>'+
+    COLS.map(c=>`<label class="colsel-opt"><input type="checkbox" data-col="${c.key}" ${HIDDEN.includes(c.key)?'':'checked'}>${esc(c.label)}</label>`).join('')+
+    '<div class="ft"><button type="button" class="reset" id="colReset">Restablecer vista por defecto</button></div>';
+  m.querySelectorAll('input[data-col]').forEach(cb=>cb.addEventListener('change',()=>{
+    const k=cb.dataset.col;
+    if(cb.checked)HIDDEN=HIDDEN.filter(x=>x!==k); else if(!HIDDEN.includes(k))HIDDEN.push(k);
+    saveHidden(); applyCols();
+  }));
+  $('#colReset').addEventListener('click',()=>{HIDDEN=COL_DEFAULT_HIDDEN.slice();saveHidden();applyCols();buildColMenu();});
+}
+function initColSelector(){
+  buildColMenu(); applyCols();
+  const btn=$('#colBtn'), menu=$('#colMenu');
+  btn.addEventListener('click',e=>{e.stopPropagation();const o=menu.classList.toggle('open');btn.setAttribute('aria-expanded',o?'true':'false');});
+  document.addEventListener('click',e=>{if(!e.target.closest('.colsel')){menu.classList.remove('open');btn.setAttribute('aria-expanded','false');}});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&menu.classList.contains('open')){menu.classList.remove('open');btn.setAttribute('aria-expanded','false');}});
 }
 
 /* ---------------- DOCKET LIST ---------------- */
@@ -695,6 +771,7 @@ document.addEventListener('keydown',e=>{
 
 /* boot */
 (async()=>{
+  initColSelector();
   try{AUTH=await (await api('auth/me')).json()||{authenticated:false};}catch{}
   await load();
   const m=location.hash.match(/^#caso=(.+)$/);
