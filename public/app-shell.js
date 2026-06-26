@@ -9,7 +9,7 @@
   const NAV = [
     { label: 'Personas Desaparecidas', href: '/personas', m: ['/personas'], alarm: true, d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zm12.5 1.5L19 15m0 0l-2.5-2.5M19 15l2.5-2.5M19 15l-2.5 2.5' },
     { label: 'Casos / Expedientes', href: '/casos', m: ['/casos'], solid: true, d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
-    { label: 'Feed en Tiempo Real', href: '/', m: ['/'], d: 'M3 12h4l2 7 4-14 2 7h6' },
+    { label: 'Terremotos EN-VIVO', href: '/', m: ['/'], d: 'M3 12h4l2 7 4-14 2 7h6' },
     { label: 'Mapa de Capas', href: '/mapa', m: ['/mapa'], d: 'M9 20l-5.4 2.7A1 1 0 012 21.8V6.6a1 1 0 01.55-.9L9 2.5m0 17.5l6 3m-6-3V2.5m6 20.5l5.45-2.72a1 1 0 00.55-.9V4.2a1 1 0 00-1.45-.9L15 5.5m0 17.5V5.5m0 0L9 2.5' },
     { label: 'Alertas', href: '/alertas', m: ['/alertas'], d: 'M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z' },
     { label: 'Noticias', href: '/blog', m: ['/blog'], d: 'M4 4h16v16H4z M8 8h8M8 12h8M8 16h5' },
