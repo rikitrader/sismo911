@@ -69,7 +69,11 @@ ${JSON.stringify({ plataforma: rec.platform, autor: rec.author, lugar: rec.place
       messages: [{ role: 'system', content: sys }, { role: 'user', content: user }],
       max_tokens: 900, temperature: 0.3,
     });
-    const text = String(resp?.response ?? resp?.result?.response ?? (typeof resp === 'string' ? resp : '')).trim();
+    // Some models return { response }, others OpenAI-style { choices:[{message:{content}}] }.
+    const text = String(
+      resp?.response ?? resp?.choices?.[0]?.message?.content ?? resp?.result?.response ??
+      (typeof resp === 'string' ? resp : ''),
+    ).trim();
     const a = text.indexOf('{'), b = text.lastIndexOf('}');
     if (a === -1 || b === -1) { console.error('[blog-cron] AI no-json:', JSON.stringify(resp).slice(0, 300)); return null; }
     const obj = JSON.parse(text.slice(a, b + 1));
