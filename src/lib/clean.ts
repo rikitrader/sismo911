@@ -20,6 +20,27 @@ const JUNK_NAMES = [
   'xxx', 'xxxx', 'aaa', 'aaaa', 'ninguno', 'ninguna', '.', '..', '...', '-', '--',
 ];
 
+// TLDs that, appearing as a bare domain inside a NAME, mark it as link-spam.
+// Mirrors DOMAIN_RE in lib/security.ts (nameHasSpam) but as a SQL clause so the
+// cleaner can reject spam already sitting in the DB, not just block it at the door.
+const SPAM_TLDS = [
+  'it', 'com', 'net', 'org', 'info', 'biz', 'xyz', 'ru', 'cn', 'top', 'online',
+  'site', 'click', 'link', 'shop', 'store', 'vip', 'live', 'club', 'icu', 'app', 'io', 'me', 'co',
+];
+
+// WHERE clause (without leading WHERE) matching a NAME that is really a link,
+// email or bare domain — a real person name never contains these.
+export function spamNameWhere(col = 'nombre'): string {
+  const c = `lower(trim(${col}))`;
+  return [
+    `${c} LIKE '%http://%'`,
+    `${c} LIKE '%https://%'`,
+    `${c} LIKE '%www.%'`,
+    `${col} LIKE '%@%.%'`,                                          // email-as-name
+    ...SPAM_TLDS.map((t) => `${c} LIKE '%.${t}%'`),                 // bare domain (e.g. infinityhotel.it)
+  ].map((x) => `(${x})`).join(' OR ');
+}
+
 // WHERE clause (without leading WHERE) that matches a junk/corrupted row.
 export function junkWhere(col = 'nombre'): string {
   const list = JUNK_NAMES.map((n) => `'${n.replace(/'/g, "''")}'`).join(', ');
@@ -34,12 +55,53 @@ export function junkWhere(col = 'nombre'): string {
 
 export interface CleanReport { scanned: number; flagged: number; applied: boolean; }
 
-// Flag corrupted/fake personas as moderation='rejected'. apply=false reports only.
+// Flag corrupted/fake/spam personas as moderation='rejected'. apply=false reports
+// only. Catches both junk names (empty/no-letter/test tokens) and link/email/domain
+// spam names (e.g. "TRUSTEDF57 - infinityhotel.it") that slipped past the door.
 export async function cleanPersonas(env: Env, opts: { apply?: boolean } = {}): Promise<CleanReport> {
   const apply = !!opts.apply;
-  const where = `moderation = 'approved' AND (${junkWhere('nombre')})`;
+  const where = `moderation = 'approved' AND ((${junkWhere('nombre')}) OR (${spamNameWhere('nombre')}))`;
   const scanned = (await env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${where}`).first<{ n: number }>())?.n ?? 0;
   if (!apply || scanned === 0) return { scanned, flagged: 0, applied: false };
   await env.DB.prepare(`UPDATE personas SET moderation = 'rejected', updated_at = ? WHERE ${where}`).bind(Date.now()).run();
   return { scanned, flagged: scanned, applied: true };
+}
+
+export interface FloodReport { groups: number; flagged: number; applied: boolean; }
+
+// Reject "name flood" corruption: a single name spammed across many rows with no
+// real per-row detail. A genuine namesake cluster has varied descriptions (each
+// family writes its own); corruption has ONE description across hundreds of rows
+// (e.g. "SIMONE BURATTI GAY" ×353, 1 description / 192 locations). We keep the
+// newest row per flagged name (auditable, reversible) and reject the rest. The
+// threshold is deliberately conservative so real namesakes are never touched.
+export async function cleanNameFloods(
+  env: Env,
+  opts: { apply?: boolean; minCount?: number } = {},
+): Promise<FloodReport> {
+  const apply = !!opts.apply;
+  const minCount = opts.minCount ?? 25;
+  const { results } = await env.DB.prepare(
+    `SELECT lower(trim(nombre)) AS nm
+       FROM personas WHERE moderation='approved'
+      GROUP BY lower(trim(nombre))
+     HAVING COUNT(*) > ?
+        AND COUNT(DISTINCT lower(trim(coalesce(descripcion,'')))) <= 1`,
+  ).bind(minCount).all<{ nm: string }>();
+  const names = results ?? [];
+  let flagged = 0;
+  for (const { nm } of names) {
+    const keeper = await env.DB.prepare(
+      `SELECT id FROM personas WHERE moderation='approved' AND lower(trim(nombre)) = ?
+        ORDER BY updated_at DESC, id LIMIT 1`,
+    ).bind(nm).first<{ id: string }>();
+    if (!keeper) continue;
+    const extra = `moderation='approved' AND lower(trim(nombre)) = ? AND id <> ?`;
+    const scanned = (await env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${extra}`).bind(nm, keeper.id).first<{ n: number }>())?.n ?? 0;
+    if (apply && scanned > 0) {
+      await env.DB.prepare(`UPDATE personas SET moderation='rejected', updated_at = ? WHERE ${extra}`).bind(Date.now(), nm, keeper.id).run();
+    }
+    flagged += scanned;
+  }
+  return { groups: names.length, flagged, applied: apply && flagged > 0 };
 }
