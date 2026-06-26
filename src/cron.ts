@@ -88,6 +88,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'monitor-sheet', run: syncMonitorSheet },
     // Safe fuzzy dedup: same normalized name + age + phone (near-zero false merges).
     { name: 'personas-dedupe-fuzzyphone', run: (env) => drain(() => dedupePersonas(env, { mode: 'fuzzyphone', apply: true, limit: 400 })) },
+    // 2nd phash-backfill slot (batch 400). Adding the backfill to 3 hourly groups
+    // (:05/:30/:45) is how we go faster WITHOUT a 6th cron (account caps at 5).
+    // :30 has budget: familia-photo-mirror is only ~50 fetches (~100 subrequests).
+    { name: 'personas-phash-backfill-30', run: (env) => backfillPhashes(env, 400) },
   ],
   // :45 — social/web monitor + AI blog (external-fetch heavy) — now isolated, so
   // it always has a full subrequest budget. This is the job that used to fail.
@@ -114,15 +118,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'rav-ingest', run: (env) => ingestRav(env) },
     { name: 'rav-stats', run: ingestRavStats },
     { name: 'rav-verified', run: ingestRavVerified },
-  ],
-  // TEMPORARY fast-drain — every 5 min, isolated invocation/budget. The hourly
-  // :45 backfill (batch 150) would take ~16 days to hash the one-time ~58k photo
-  // backlog; this runs ONLY backfillPhashes at batch 400 (~4,800/hr) to clear it
-  // in ~12h, then it (and its `*/5` cron in wrangler.toml) gets REMOVED — the :45
-  // group covers steady-state. AI-free + idempotent, so the overlap with the
-  // exact-minute triggers at :00/:05/:15/:30/:45 just re-hashes a few rows harmlessly.
-  '*/5 * * * *': [
-    { name: 'personas-phash-fast', run: (env) => backfillPhashes(env, 400) },
+    // 3rd phash-backfill slot (batch 400). :05's rav ingest is bounded (Supabase
+    // REST pages), so there's budget. Together :05+:30+:45 hash ~950/hr → the
+    // one-time ~58k backlog drains in ~2.6 days (vs ~16 at the :45-only 150/tick).
+    { name: 'personas-phash-backfill-05', run: (env) => backfillPhashes(env, 400) },
   ],
 };
 
