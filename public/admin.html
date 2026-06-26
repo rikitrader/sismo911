@@ -572,9 +572,11 @@
     try{
       const r=await api('familia/maintenance',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({apply})});
       if(r.error){ out.textContent='Error: '+r.error+(r.hint?(' — '+r.hint):''); return; }
-      const dd=`exactos: ${r.dedupe.exact.applied?r.dedupe.exact.deletedRows+' borrados, '+r.dedupe.exact.remaining+' restantes':r.dedupe.exact.found+' detectados'} · por foto: ${r.dedupe.photo.applied?r.dedupe.photo.deletedRows+' borrados, '+r.dedupe.photo.remaining+' restantes':r.dedupe.photo.found+' detectados'}`;
+      const fmt=(d)=>d.applied?`${d.deletedRows} borrados, ${d.remaining} restantes`:`${d.found} detectados`;
+      const dd=`exactos: ${fmt(r.dedupe.exact)} · por foto: ${fmt(r.dedupe.photo)} · nombre+edad+tel: ${fmt(r.dedupe.fuzzyphone)}`;
+      const more=(r.purgeRemaining>0||r.dedupe.exact.remaining>0||r.dedupe.photo.remaining>0||r.dedupe.fuzzyphone.remaining>0);
       out.textContent = r.apply
-        ? `Spam/basura marcado: ${r.clean.flagged}. Inundaciones de nombre: ${r.floods.flagged} (en ${r.floods.groups} grupos).\nFilas rechazadas purgadas: ${r.purgedRows} (+${r.purgedPhotos} fotos).\nDuplicados — ${dd}.\n${(r.purgedRows>0||r.dedupe.exact.remaining>0||r.dedupe.photo.remaining>0)?'→ Vuelve a pulsar «Purgar» para continuar.':'✓ Sin spam ni duplicados restantes.'}`
+        ? `Spam/basura marcado: ${r.clean.flagged}. Inundaciones de nombre: ${r.floods.flagged} (en ${r.floods.groups} grupos).\nFilas rechazadas purgadas: ${r.purgedRows} (+${r.purgedPhotos} fotos), ${r.purgeRemaining} restantes.\nDuplicados — ${dd}.\n${more?'→ Vuelve a pulsar «Purgar» para continuar.':'✓ Sin spam ni duplicados restantes.'}`
         : `EN SECO — nada borrado.\nSpam/basura: ${r.clean.scanned} · inundaciones: ${r.floods.flagged} en ${r.floods.groups} grupos · rechazadas pendientes de purgar: ${r.rejected}.\nDuplicados — ${dd}.`;
     }catch(e){ out.textContent='Error: '+(e&&e.message||e); }
   }

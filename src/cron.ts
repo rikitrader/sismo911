@@ -18,7 +18,7 @@ import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
 import { ingestSosDamage } from './ingest/sos-damage';
 import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
-import { cleanPersonas, cleanNameFloods } from './lib/clean';
+import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from './lib/clean';
 import { dedupePersonas } from './lib/dedupe';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
@@ -46,11 +46,16 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'personas-name-floods', run: (env) => cleanNameFloods(env, { apply: true }) },
     { name: 'personas-dedupe-exact', run: (env) => dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 }) },
     { name: 'personas-dedupe-photo', run: (env) => dedupePersonas(env, { mode: 'photo', apply: true, limit: 400 }) },
+    // PHYSICALLY drain the soft-rejected backlog (spam/junk flagged just above).
+    // Steady-state this is a handful of rows/hour; bounded + convergent.
+    { name: 'personas-purge-rejected', run: (env) => purgeRejectedPersonas(env, { apply: true, limit: 400 }) },
   ],
   // :30 — photo mirroring (external fetch + R2 puts, the heaviest) on its own budget.
   '30 * * * *': [
     { name: 'familia-photo-mirror', run: mirrorFamiliaPhotos },
     { name: 'monitor-sheet', run: syncMonitorSheet },
+    // Safe fuzzy dedup: same normalized name + age + phone (near-zero false merges).
+    { name: 'personas-dedupe-fuzzyphone', run: (env) => dedupePersonas(env, { mode: 'fuzzyphone', apply: true, limit: 400 }) },
   ],
   // :45 — social/web monitor + AI blog (external-fetch heavy) — now isolated, so
   // it always has a full subrequest budget. This is the job that used to fail.
