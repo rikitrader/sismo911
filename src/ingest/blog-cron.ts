@@ -50,7 +50,7 @@ function slugify(s: string) {
 }
 
 // ---- Workers AI article writer ----
-async function writeArticle(env: Env, rec: SourceRecord & { place: string }): Promise<{ headline: string; meta_desc: string; body_html: string } | null> {
+export async function writeArticle(env: Env, rec: SourceRecord & { place: string }): Promise<{ headline: string; meta_desc: string; body_html: string } | null> {
   const ai = env.AI;
   if (!ai) return null;
   const model = env.BLOG_AI_MODEL || DEFAULT_MODEL;

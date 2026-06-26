@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { fetchBlogSources } from '../ingest/blog-sources';
-import { ingestBlog } from '../ingest/blog-cron';
+import { ingestBlog, writeArticle } from '../ingest/blog-cron';
 
 // Dynamic /blog ("Noticias") — a magazine of AI-written field reports, each
 // derived from a REAL scraped citizen post about the 24-J terremoto. Rendered
@@ -272,6 +272,14 @@ blog.get('/api/blog', async (c) => {
 blog.post('/api/blog/run', async (c) => {
   const tok = (c.req.header('authorization') || '').replace(/^Bearer\s+/i, '');
   if (!c.env.BLOG_INGEST_TOKEN || tok !== c.env.BLOG_INGEST_TOKEN) return c.json({ error: 'unauthorized' }, 401);
+  // ?probe=1 → isolate the Workers AI writer on a synthetic post (no sources/dedup).
+  if (c.req.query('probe')) {
+    const art = await writeArticle(c.env, {
+      platform: 'youtube', id: 'probe', author: 'Canal de Prueba', caption: 'Vecinos de Chacao en Caracas evacuan un edificio tras el fuerte sismo y muestran grietas en las paredes.',
+      url: '', image: '', video: '', ts: Date.now(), views: 0, likes: 0, comments: 0, place: 'Chacao',
+    } as any);
+    return c.json({ ok: true, probe: true, article: art });
+  }
   const summary = await ingestBlog(c.env, { force: true });
   return c.json({ ok: true, ...summary });
 });
