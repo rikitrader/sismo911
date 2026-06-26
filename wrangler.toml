@@ -86,6 +86,11 @@ USGS_MAXLAT = "16"
 USGS_MINLON = "-76"
 USGS_MAXLON = "-58"
 USGS_WINDOW_DAYS = "30"
+# redayudavenezuela.com (RAV) public Supabase REST source. The anon key is public
+# (shipped in their browser bundle) so it lives here, not in secrets. RAV_INGEST_TOKEN
+# (gates POST /api/rav/run) is a secret — set via `wrangler secret put`.
+RAV_SUPABASE_URL = "https://cpavwkdonvkvrwygfzfo.supabase.co"
+RAV_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwYXZ3a2RvbnZrdnJ3eWdmemZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjAyODMsImV4cCI6MjA5NzkzNjI4M30.-_FAsA2csTrB9qt267pBfjJkczMP7pcaUi4plMv3kv4"
 # Cloudflare Access — set these after creating the Access application (the AUD
 # tag from the app, and your team domain <team>.cloudflareaccess.com → just the
 # <team> part). Empty = enforcement disabled (app stays open).

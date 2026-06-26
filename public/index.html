@@ -140,6 +140,36 @@
         </div>
       </section>
 
+      <!-- Balance oficial (RAV verified casualty counter) — hidden until data loads -->
+      <section id="balance-oficial" class="hidden bg-white rounded-lg border border-outline-variant/60 border-l-4 border-l-secondary p-5">
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="font-display font-extrabold text-lg">Balance oficial del terremoto</h2>
+          <a href="/informacion-verificada" class="text-xs font-semibold text-secondary hover:underline">Información verificada →</a>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="rounded-lg border border-outline-variant/60 p-3"><div id="bo-fallecidos" class="text-3xl font-extrabold tabular-nums text-critical">—</div><div class="text-[11px] uppercase tracking-wide text-on-surface-variant">Fallecidos</div></div>
+          <div class="rounded-lg border border-outline-variant/60 p-3"><div id="bo-heridos" class="text-3xl font-extrabold tabular-nums text-warning">—</div><div class="text-[11px] uppercase tracking-wide text-on-surface-variant">Heridos</div></div>
+          <div class="rounded-lg border border-outline-variant/60 p-3"><div id="bo-refugiados" class="text-3xl font-extrabold tabular-nums text-primary">—</div><div class="text-[11px] uppercase tracking-wide text-on-surface-variant">Refugiados</div></div>
+          <div class="rounded-lg border border-outline-variant/60 p-3"><div id="bo-desaparecidos" class="text-3xl font-extrabold tabular-nums text-secondary">—</div><div class="text-[11px] uppercase tracking-wide text-on-surface-variant">Desaparecidos</div></div>
+        </div>
+        <p id="bo-source" class="text-[11px] text-on-surface-variant mt-3"></p>
+      </section>
+      <script>
+      (async () => {
+        try {
+          const r = await fetch('/api/stats/official'); const j = await r.json(); const s = j.stats;
+          if (!s) return;
+          const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString('es-VE'));
+          const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = fmt(v); };
+          set('bo-fallecidos', s.fallecidos); set('bo-heridos', s.heridos);
+          set('bo-refugiados', s.refugiados); set('bo-desaparecidos', s.desaparecidos);
+          const src = document.getElementById('bo-source');
+          if (src) src.textContent = [s.source && ('Fuente: ' + s.source), s.updated_at && ('Actualizado ' + new Date(s.updated_at).toLocaleDateString('es-VE'))].filter(Boolean).join(' · ');
+          document.getElementById('balance-oficial').classList.remove('hidden');
+        } catch (e) { /* silent: counter is enrichment, not critical */ }
+      })();
+      </script>
+
       <!-- KPI cards -->
       <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <!-- Total events -->

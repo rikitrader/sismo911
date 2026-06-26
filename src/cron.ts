@@ -23,6 +23,8 @@ import { dedupePersonas } from './lib/dedupe';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
 import { ingestBlog } from './ingest/blog-cron';
+import { ingestRav, ingestRavStats, ingestRavVerified } from './ingest/rav-cron';
+import { analyzeRavPhotos } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
 
 export interface CronJob { name: string; run: (env: Env) => Promise<unknown>; }
@@ -70,18 +72,25 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // PHYSICALLY drain the soft-rejected backlog (spam/junk flagged just above).
     { name: 'personas-purge-rejected', run: (env) => drain(() => purgeRejectedPersonas(env, { apply: true, limit: 400 })) },
   ],
-  // :30 — photo mirroring (external fetch + R2 puts, the heaviest) on its own budget.
+  // :30 — photo mirroring (external fetch + R2 puts, the heaviest) on its own budget,
+  // plus the bounded RAV ingest (Supabase REST → personas + stats + verified news).
   '30 * * * *': [
     { name: 'familia-photo-mirror', run: mirrorFamiliaPhotos },
     { name: 'monitor-sheet', run: syncMonitorSheet },
     // Safe fuzzy dedup: same normalized name + age + phone (near-zero false merges).
     { name: 'personas-dedupe-fuzzyphone', run: (env) => drain(() => dedupePersonas(env, { mode: 'fuzzyphone', apply: true, limit: 400 })) },
+    { name: 'rav-ingest', run: (env) => ingestRav(env) },
+    { name: 'rav-stats', run: ingestRavStats },
+    { name: 'rav-verified', run: ingestRavVerified },
   ],
   // :45 — social/web monitor + AI blog (external-fetch heavy) — now isolated, so
   // it always has a full subrequest budget. This is the job that used to fail.
+  // RAV photo analysis (vision + content-hash) + the image-content dedupe ride here.
   '45 * * * *': [
     { name: 'social-monitor', run: ingestSocialMonitor },
     { name: 'blog', run: ingestBlog },
+    { name: 'rav-photos', run: (env) => analyzeRavPhotos(env) },
+    { name: 'personas-dedupe-phash', run: (env) => drain(() => dedupePersonas(env, { mode: 'phash', apply: true, limit: 400 })) },
   ],
 };
 
