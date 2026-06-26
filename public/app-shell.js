@@ -14,6 +14,8 @@
     // Big flashing red CTA pulled out of the "Familia y Reportes" submenu so a
     // damage report is always one tap away — extra top/bottom spacing.
     { label: 'REPORTAR', href: '/reportar', m: ['/reportar'], report: true, d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
+    // Big blue "DAÑOS" CTA — same large shape as REPORTAR, navy blue instead of red.
+    { label: 'DAÑOS', href: '/danos', m: ['/danos'], damage: true, d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
   ];
 
   // The rest collapse into a few accordion groups so the sidebar stays short.
@@ -84,6 +86,12 @@
       // extra top/bottom margin.
       const onR = active(it);
       return `<a href="${it.href}" class="s911-report" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:14px 0;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 2px 10px rgba(187,0,39,.45)${onR ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      ${icon(it.d)}${it.label}</a>`;
+    }
+    if (it.damage) {
+      // Big blue "DAÑOS" CTA — same large shape as REPORTAR, solid navy (no flash).
+      const onD = active(it);
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${NAVY};color:#fff;box-shadow:0 2px 10px rgba(0,23,58,.45)${onD ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.cta) {
