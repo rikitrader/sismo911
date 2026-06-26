@@ -27,6 +27,8 @@ import { aidOrgs } from './routes/aid_orgs';
 import { donations } from './routes/donations';
 import { botiquin } from './routes/botiquin';
 import { agencias } from './routes/agencias';
+import { dataApi } from './routes/data-api';
+import { mcp } from './routes/mcp';
 import { runCronGroup } from './cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
@@ -40,8 +42,18 @@ app.use('*', async (c, next) => {
 app.use('/api/*', cors({
   origin: (origin, c) => (isAllowedOrigin(c.env, origin) ? (origin || allowedOrigins(c.env)[0]) : null),
   allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['content-type', 'authorization', 'cf-access-jwt-assertion'],
+  allowHeaders: ['content-type', 'authorization', 'cf-access-jwt-assertion', 'x-api-key', 'x-api-secret'],
   credentials: false,
+  maxAge: 86400,
+}));
+// The MCP server + the developer data feed are meant to be consumed from
+// anywhere (agents, third-party apps), so they get an open, read-only CORS
+// policy distinct from the same-origin app API above.
+app.use('/mcp', cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['content-type', 'authorization', 'mcp-session-id', 'mcp-protocol-version', 'accept'],
+  exposeHeaders: ['mcp-session-id'],
   maxAge: 86400,
 }));
 
@@ -147,6 +159,13 @@ app.get('/api/status', async (c) => {
     gated,
   }, 200, { 'Cache-Control': 'no-store' });
 });
+
+// Developer-facing data platform: open seismic feed + self-service registration
+// + keyed/bulk pull from our DB (src/routes/data-api.ts). Mounted before the
+// generic /api/events so /api/v1/* is matched first.
+app.route('/api/v1', dataApi);
+// MCP server (Streamable HTTP, JSON-RPC) — exposes our public datasets as tools.
+app.route('/mcp', mcp);
 
 app.route('/api/events', events);
 app.route('/api/persons', persons);

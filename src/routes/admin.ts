@@ -7,8 +7,16 @@ import { backfillUsgsHistory } from '../ingest/usgs-history';
 import { sweepCaseScores } from '../lib/case-score-sync';
 import { audit } from '../lib/audit';
 import { getUserFromRequest } from '../lib/auth';
+import { sanitizeScopes, publicClient, type ApiClient } from '../lib/apikey';
 
 export const admin = new Hono<{ Bindings: Env }>();
+
+// --- shared operator gate for the self-gating GET endpoints below ----------
+async function requireOperator(c: any) {
+  const me = await getUserFromRequest(c.env, c).catch(() => null);
+  if (!me || (me.role !== 'operator' && me.role !== 'admin')) return null;
+  return me;
+}
 
 // Manual trigger for the autonomous case re-scoring sweep (the hourly cron runs
 // it automatically). Body: { famLimit?: number } — size of the familia batch this
@@ -108,4 +116,73 @@ admin.get('/spam-stats', async (c) => {
     { today: await count(todayStart), last7d: await count(wk), total: await count(), topIp: top?.ip ?? null },
     200, { 'Cache-Control': 'no-store' }
   );
+});
+
+// ===========================================================================
+// API-client management (gated data API + MCP). Approvals/revocations are
+// write methods under /api/admin → already operator-gated in index.ts. The GET
+// listing self-gates (GET isn't write-gated).
+// ===========================================================================
+
+// GET /api/admin/api-clients?status=pending|approved|revoked — list registrations.
+admin.get('/api-clients', async (c) => {
+  if (!(await requireOperator(c))) return c.json({ error: 'unauthorized' }, 401);
+  const status = c.req.query('status');
+  const valid = ['pending', 'approved', 'revoked'];
+  const where = status && valid.includes(status) ? 'WHERE status = ?' : '';
+  const stmt = where
+    ? c.env.DB.prepare(
+        `SELECT id,name,email,org,purpose,api_key,status,scopes,rate_limit,request_count,last_used_ms,created_ms
+         FROM api_clients ${where} ORDER BY created_ms DESC LIMIT 500`
+      ).bind(status)
+    : c.env.DB.prepare(
+        `SELECT id,name,email,org,purpose,api_key,status,scopes,rate_limit,request_count,last_used_ms,created_ms
+         FROM api_clients ORDER BY created_ms DESC LIMIT 500`
+      );
+  const { results } = await stmt.all<ApiClient>();
+  return c.json(
+    { clients: (results ?? []).map(publicClient) },
+    200,
+    { 'Cache-Control': 'no-store' }
+  );
+});
+
+// POST /api/admin/api-clients/:id/approve
+// Body: { scopes?: string|string[], rate_limit?: number, note?: string }.
+// scopes omitted → keep the client's requested (default) scopes. To grant the
+// sensitive registry, include 'read:missing-persons'.
+admin.post('/api-clients/:id/approve', async (c) => {
+  const me = await getUserFromRequest(c.env, c).catch(() => null);
+  const id = c.req.param('id');
+  const b: any = await c.req.json().catch(() => ({}));
+  const row = await c.env.DB.prepare(`SELECT scopes FROM api_clients WHERE id = ?`).bind(id).first<any>();
+  if (!row) return c.json({ error: 'not_found' }, 404);
+  const scopes = b?.scopes != null ? sanitizeScopes(b.scopes) : row.scopes;
+  const rate = Number.isFinite(b?.rate_limit) ? Math.max(1, Math.min(6000, Math.floor(b.rate_limit))) : null;
+  await c.env.DB.prepare(
+    `UPDATE api_clients
+       SET status='approved', scopes=?, approved_by=?, approved_ms=?, revoked_ms=NULL,
+           note=COALESCE(NULLIF(?,''), note)${rate != null ? ', rate_limit=?' : ''}
+     WHERE id=?`
+  )
+    .bind(...(rate != null
+      ? [scopes, me?.email ?? me?.id ?? 'operator', Date.now(), String(b?.note ?? ''), rate, id]
+      : [scopes, me?.email ?? me?.id ?? 'operator', Date.now(), String(b?.note ?? ''), id]))
+    .run();
+  await audit(c, 'api_client.approve', { id, scopes });
+  const updated = await c.env.DB.prepare(
+    `SELECT id,name,email,org,purpose,api_key,status,scopes,rate_limit,request_count,last_used_ms,created_ms FROM api_clients WHERE id=?`
+  ).bind(id).first<ApiClient>();
+  return c.json({ ok: true, client: updated ? publicClient(updated) : null });
+});
+
+// POST /api/admin/api-clients/:id/revoke — disable a key (auth fails afterward).
+admin.post('/api-clients/:id/revoke', async (c) => {
+  const id = c.req.param('id');
+  const r = await c.env.DB.prepare(
+    `UPDATE api_clients SET status='revoked', revoked_ms=? WHERE id=?`
+  ).bind(Date.now(), id).run();
+  if (!r.meta.changes) return c.json({ error: 'not_found' }, 404);
+  await audit(c, 'api_client.revoke', { id });
+  return c.json({ ok: true, id, status: 'revoked' });
 });
