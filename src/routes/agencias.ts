@@ -22,7 +22,8 @@ const color = (c: string) => CATCOLOR[c] || '#00173a';
 
 function avatar(a: Agencia, size: number): string {
   const col = color(a.category);
-  const img = a.avatar ? `<img src="${e(a.avatar)}" alt="${e(a.agent_name)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '';
+  // every agent has a generated photo at /agentes/<slug>.webp; missing → initials
+  const img = `<img src="/agentes/${e(a.slug)}.webp" alt="${e(a.agent_name)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'">`;
   return `<span class="ag-av" style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;background:${col};color:#fff;font-family:'Public Sans',sans-serif;font-weight:800;font-size:${Math.round(size * 0.34)}px;flex:0 0 auto;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)">${img}${e(initials(a.agent_name))}</span>`;
 }
 
