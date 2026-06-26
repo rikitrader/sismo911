@@ -57,13 +57,13 @@
   const path = (location.pathname.replace(/\.html$/, '') || '/');
   const active = (it) => it.m.some((x) => x === '/' ? path === '/' : (path === x || path.startsWith(x + '/')));
 
-  const icon = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" style="width:17px;height:17px"><path stroke-linecap="round" stroke-linejoin="round" d="${d}"/></svg>`;
+  const icon = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" style="width:17px;height:17px;display:block"><path stroke-linecap="round" stroke-linejoin="round" d="${d}"/></svg>`;
 
   const item = (it) => {
     const on = active(it);
     if (it.alarm) {
       // Red "alarm" button — solid SECONDARY with a pulsing ring so it reads as urgent.
-      return `<a href="${it.href}" class="s911-alarm" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 1px 3px rgba(187,0,39,.4)">
+      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 1px 3px rgba(187,0,39,.4)">
       <span class="chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.18);color:#fff">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
@@ -133,16 +133,6 @@
     #s911-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1199;display:none}
     #s911-back.open{display:block}
     #s911-shell a.acct{text-decoration:none}
-    /* Red alarm nav button — pulsing ring to draw the eye to missing persons. */
-    #s911-shell a.s911-alarm{position:relative;animation:s911-alarm-pulse 1.8s ease-in-out infinite}
-    @keyframes s911-alarm-pulse{
-      0%{box-shadow:0 0 0 0 rgba(187,0,39,.55)}
-      70%{box-shadow:0 0 0 10px rgba(187,0,39,0)}
-      100%{box-shadow:0 0 0 0 rgba(187,0,39,0)}
-    }
-    @media(prefers-reduced-motion:reduce){
-      #s911-shell a.s911-alarm{animation:none}
-    }
     /* Big flashing red "REPORTAR" CTA — pulsing glow/brightness flash. */
     #s911-shell a.s911-report{position:relative;animation:s911-report-flash 1.1s ease-in-out infinite}
     @keyframes s911-report-flash{
