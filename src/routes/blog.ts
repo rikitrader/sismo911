@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { fetchBlogSources } from '../ingest/blog-sources';
+import { ingestBlog } from '../ingest/blog-cron';
 
 // Dynamic /blog ("Noticias") — a magazine of AI-written field reports, each
 // derived from a REAL scraped citizen post about the 24-J terremoto. Rendered
@@ -265,6 +266,14 @@ blog.get('/api/blog', async (c) => {
        FROM blog_posts WHERE status='published' ORDER BY published_at DESC LIMIT 1000`,
   ).all<any>();
   return c.json({ total: results.length, items: results });
+});
+
+// ---------------- run the always-on cron now (bearer-gated manual trigger) ----------------
+blog.post('/api/blog/run', async (c) => {
+  const tok = (c.req.header('authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!c.env.BLOG_INGEST_TOKEN || tok !== c.env.BLOG_INGEST_TOKEN) return c.json({ error: 'unauthorized' }, 401);
+  const summary = await ingestBlog(c.env, { force: true });
+  return c.json({ ok: true, ...summary });
 });
 
 // ---------------- free source feed (cron reads this; bearer-token gated) ----------------

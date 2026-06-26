@@ -21,8 +21,11 @@ export interface Env {
   // `wrangler secret put BLOG_INGEST_TOKEN`.
   BLOG_INGEST_TOKEN?: string;
   // YouTube Data API v3 key (free) for the blog source fetcher's video search.
-  // Optional: GDELT + Bluesky still work without it. `wrangler secret put YOUTUBE_API_KEY`.
+  // Optional: GDELT + VE-news still work without it. `wrangler secret put YOUTUBE_API_KEY`.
   YOUTUBE_API_KEY?: string;
+  // Workers AI text model the always-on blog cron writes articles with.
+  // Optional override; defaults to llama-3.3-70b-instruct-fp8-fast.
+  BLOG_AI_MODEL?: string;
   // Web Push
   VAPID_PUBLIC_KEY?: string;
   // Cloudflare Workers AI (situation reports). Optional binding.
