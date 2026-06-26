@@ -77,7 +77,9 @@ function titleCase(s) { return String(s).replace(/\b\w/g, (c) => c.toUpperCase()
 // ---------------- Apify (REST, no SDK) ----------------
 async function runActor(actor, input) {
   if (!APIFY) throw new Error('no APIFY_TOKEN');
-  const start = await fetch(`https://api.apify.com/v2/acts/${actor}/runs?token=${APIFY}`, {
+  // Apify REST identifies actors as owner~actor (tilde), not owner/actor.
+  const actorId = actor.replace('/', '~');
+  const start = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY}`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input),
   }).then((r) => r.json());
   const runId = start?.data?.id;
@@ -101,6 +103,7 @@ function tsOf(v) { const n = typeof v === 'number' ? (v < 2e12 ? v * 1000 : v) :
 
 async function scrape(cutoffMs) {
   const out = [];
+  let anyOk = false;
   const sinceDate = new Date(cutoffMs).toISOString().slice(0, 10);
   const tasks = [
     ['clockworks/tiktok-scraper', { searchQueries: KW, hashtags: TAGS, resultsPerPage: 12, oldestPostDateUnified: sinceDate }, (it) => ({
@@ -128,11 +131,12 @@ async function scrape(cutoffMs) {
   for (const [actor, input, map] of tasks) {
     try {
       const items = await runActor(actor, input);
+      anyOk = true;
       log(`  ${actor}: ${items.length} items`);
       for (const it of items) { const r = map(it); if (r.id && r.caption) out.push(r); }
     } catch (e) { log(`  ${actor} FAILED: ${e.message}`); }
   }
-  return out;
+  return { posts: out, anyOk };
 }
 
 // ---------------- article writing via `claude -p` ----------------
@@ -192,8 +196,9 @@ function slugify(s) {
     log(`  ${existing.size} posts already published`);
   } catch (e) { log(`  /api/blog read failed (continuing): ${e.message}`); }
 
-  let scraped = await scrape(cutoff);
-  log(`scraped ${scraped.length} raw posts`);
+  const { posts: scraped, anyOk } = await scrape(cutoff);
+  log(`scraped ${scraped.length} raw posts (scrape ok: ${anyOk})`);
+  if (!anyOk) { log('ABORT: every actor failed (e.g. Apify quota) — NOT advancing cutoff so the window retries next run'); return; }
 
   // normalize + geolocate + dedupe + cutoff filter
   const seen = new Set();
