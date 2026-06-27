@@ -18,6 +18,8 @@
     { label: 'DAÑOS', href: '/danos', m: ['/danos'], damage: true, d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
     // Big yellow "VOLUNTARIOS" CTA — same large shape as DAÑOS, yellow.
     { label: 'VOLUNTARIOS', href: '/voluntarios', m: ['/voluntarios'], volunteer: true, d: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z' },
+    // Big orange "MASCOTAS" CTA — same large shape as VOLUNTARIOS, orange, paw-print icon.
+    { label: 'MASCOTAS', href: '/mascotas', m: ['/mascotas'], pets: true, d: 'M4.5 12a2 2 0 100-4 2 2 0 000 4zm15 0a2 2 0 100-4 2 2 0 000 4zM9 8a2 2 0 100-4 2 2 0 000 4zm6 0a2 2 0 100-4 2 2 0 000 4zm-3 3c-2.5 0-4.5 2-4.5 4.5 0 1.5 1.5 2.5 4.5 2.5s4.5-1 4.5-2.5C16.5 13 14.5 11 12 11z' },
   ];
 
   // The rest collapse into a few accordion groups so the sidebar stays short.
@@ -100,6 +102,12 @@
       // Big yellow "VOLUNTARIOS" CTA — same large shape as DAÑOS, yellow with navy text for contrast.
       const onV = active(it);
       return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onV ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
+      ${icon(it.d)}${it.label}</a>`;
+    }
+    if (it.pets) {
+      // Big orange "MASCOTAS" CTA — same large shape as VOLUNTARIOS, orange (naranja) with white text.
+      const onP = active(it);
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#e57200;color:#fff;box-shadow:0 2px 10px rgba(229,114,0,.45)${onP ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.cta) {
