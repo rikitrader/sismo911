@@ -1,6 +1,23 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { sanitizeHtml, isSafePublicUrl } from '../src/lib/sanitize';
 import { gateUpload, gateUrl, gateRichText, looksExecutable, safeAuditDetail, gateRecord, citizenRecordSchema } from '../scripts/ingestion-gatekeeper';
+
+describe('CSP drift guard (Worker security.ts ↔ static public/_headers)', () => {
+  const sec = readFileSync('src/lib/security.ts', 'utf8');
+  const hdrs = readFileSync('public/_headers', 'utf8');
+  const scriptSrc = (s: string) => (s.match(/script-src[^;"]*/g) || []).join(' ');
+  it('neither CSP source allows unsafe-eval in script-src', () => {
+    expect(scriptSrc(sec)).not.toContain('unsafe-eval');
+    expect(scriptSrc(hdrs)).not.toContain('unsafe-eval');
+  });
+  it('public/_headers keeps the core hardening directives', () => {
+    expect(hdrs).toContain("frame-ancestors 'none'");
+    expect(hdrs).toContain("object-src 'none'");
+    expect(hdrs).toMatch(/Strict-Transport-Security:.*max-age=31536000/);
+    expect(hdrs).toContain('X-Content-Type-Options: nosniff');
+  });
+});
 
 describe('sanitizeHtml (stored-XSS defense)', () => {
   it('strips <script> and event handlers, keeps allowlisted tags', () => {
