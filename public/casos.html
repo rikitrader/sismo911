@@ -369,7 +369,6 @@ const $=s=>document.querySelector(s);
 const api=(p,o)=>fetch('/api/'+p,Object.assign({credentials:'same-origin'},o));
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 let AUTH={authenticated:false}, OP=false, ALL=[], CUR=null;
-let HOSP=[];   // hospital-admitted people (rav_reports kind=hospital) shown as tagged cases
 let PAGE=1, PAGES=1, TOTAL=0; const PAGESIZE=500;
 
 const ST={
@@ -406,19 +405,8 @@ const days=ms=>ms?Math.max(0,Math.floor((Date.now()-Number(ms))/86400000)):0;
 const ago=ms=>{if(!ms)return '—';const s=Math.floor((Date.now()-Number(ms))/1000);if(s<60)return 'ahora';const m=Math.floor(s/60);if(m<60)return 'hace '+m+' min';const h=Math.floor(m/60);if(h<24)return 'hace '+h+' h';const d=Math.floor(h/24);return 'hace '+d+' d';};
 const pill=s=>{const o=ST[s]||ST.unknown;return `<span class="pill" style="background:${o.bg};color:${o.fg}"><span class="d" style="background:${o.d}"></span>${o.es}</span>`;};
 const prioCell=p=>{if(!p)return '<span class="sub">—</span>';const o=PRIO[p]||PRIO.media;return `<span class="prio" style="color:${o.c}"><span class="bar" style="background:${o.c}"></span>${o.es}</span>`;};
-// --- Hospitalizados (rav_reports kind=hospital) merged into the docket ---
-const phoneish=x=>/^\+?\d[\d\s-]{5,}$/.test(String(x||'').trim());
-// Best-effort hospital name: a description line mentioning a health facility, else contact/city.
-function hospName(r){
-  const hit=String(r.description||'').split(/\n|\.|·|\//).map(s=>s.trim())
-    .find(s=>/hospital|cl[ií]nic|cdi|ambulatori|perif[ée]ric|materni|centro de salud|i\.?v\.?s\.?s|seguro social/i.test(s));
-  const parts=[hit,r.contact,r.city,r.state].filter(x=>x&&!phoneish(x));
-  return parts.slice(0,1)[0] || (r.contact&&!phoneish(r.contact)?r.contact:'Hospital no indicado');
-}
-const mapHosp=r=>({__hosp:true,id:'hosp-'+r.id,full_name:r.title||'—',status:'hospitalizado',
-  incident_type:'hospitalizado',hospital_name:hospName(r),photo_url:r.photo_url||'',
-  created_ms:Date.parse(r.created_at)||0,last_activity_ms:Date.parse(r.created_at)||0,
-  description:r.description||'',contact:r.contact||'',city:r.city||'',state:r.state||''});
+// Hospitalizados now come from the server union (/api/persons/cases) as cases with
+// id "hosp-…" and source==='hospital' — they paginate/search like any other case.
 const avatar=(url,cls)=>url?`<img src="${esc(url)}" class="${cls}" onerror="this.outerHTML='<div class=\\'${cls} ph\\'>👤</div>'">`:`<div class="${cls} ph">👤</div>`;
 // Triage assessment card for the case detail: badge + score bar + why (rules hit).
 function triagePanel(p){
@@ -499,7 +487,7 @@ function caseRowHtml(c){
   const dc=c.docket_count||0, ev=c.evidence_count||0;
   return `<tr data-id="${esc(c.id)}">
       <td><div class="casecell"><span class="caseno">${esc(caseNo(c))}</span>${c.source==='familia'?'<span class="sub">Familia</span>':''}</div></td>
-      <td><div class="person">${avatar(c.photo_url,'avatar')}<div><div class="nm">${esc(c.full_name||'Sin nombre')}</div><div class="sub">${c.age?c.age+' años':''}${c.sex?(c.age?' · ':'')+esc(c.sex):''}</div></div></div></td>
+      <td><div class="person">${avatar(c.photo_url,'avatar')}<div><div class="nm">${esc(c.full_name||'Sin nombre')}</div><div class="sub">${c.age?c.age+' años':''}${c.sex?(c.age?' · ':'')+esc(c.sex):''}</div>${c.hospital_match?`<span class="tag" title="Posible coincidencia con un ingreso hospitalario — verificar" style="background:#e3f6ea;color:#166534;margin-top:4px">🏥 Posible: ${esc(c.hospital_match)}</span>`:''}</div></div></td>
       <td>${pill(c.status)}</td>
       <td>${triageCell(c)}</td>
       <td><span class="sub" style="color:var(--ink);font-weight:600">${esc(typeLbl(c.incident_type))}</span></td>
@@ -529,15 +517,12 @@ function hospRowHtml(c){
 }
 function renderRows(){
   const tb=$('#rows');
-  // Hospitalizados (curated overlay) ride at the top of page 1, or alongside any search match.
-  const showHosp=$('#f_hosp') && $('#f_hosp').checked && (PAGE===1 || $('#q').value.trim()!=='');
-  const hosp=showHosp?HOSP:[];
-  const cases=sortCases(ALL);
-  if(!hosp.length && !cases.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><div class="ic">🗂️</div><div style="margin-top:6px;font-weight:600">No hay expedientes que coincidan.</div></div></td></tr>';$('#count').textContent='0 expedientes';return;}
-  tb.innerHTML=hosp.map(hospRowHtml).join('')+cases.map(caseRowHtml).join('');
-  const shown=TOTAL||cases.length;
-  $('#count').textContent=`${shown.toLocaleString('es')} expediente${shown===1?'':'s'}`+(hosp.length?` · ${hosp.length} hospitalizado${hosp.length===1?'':'s'}`:'');
-  tb.querySelectorAll('tr[data-id]').forEach(r=>r.addEventListener('click',()=>{const id=r.dataset.id;if(id.indexOf('hosp-')===0)openHospital(id);else openCase(id);}));
+  const list=sortCases(ALL);   // server already merged persons + familia + hospitalizados for this page
+  if(!list.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><div class="ic">🗂️</div><div style="margin-top:6px;font-weight:600">No hay expedientes que coincidan.</div></div></td></tr>';$('#count').textContent='0 expedientes';return;}
+  tb.innerHTML=list.map(c=>c.source==='hospital'?hospRowHtml(c):caseRowHtml(c)).join('');
+  const shown=TOTAL||list.length;
+  $('#count').textContent=`${shown.toLocaleString('es')} expediente${shown===1?'':'s'}`;
+  tb.querySelectorAll('tr[data-id]').forEach(r=>r.addEventListener('click',()=>openCase(r.dataset.id)));
 }
 async function load(){
   skeletonRows();
@@ -545,6 +530,7 @@ async function load(){
   if($('#q').value.trim())p.set('q',$('#q').value.trim());
   if($('#f_status').value)p.set('status',$('#f_status').value);
   if(OP&&$('#f_prio').value)p.set('priority',$('#f_prio').value);
+  if($('#f_hosp') && !$('#f_hosp').checked)p.set('hospital','0');   // hide hospitalizados
   p.set('sort',$('#f_sort').value);
   p.set('page',PAGE); p.set('limit',PAGESIZE);
   let data={};
@@ -561,40 +547,6 @@ async function load(){
   renderRows();
   renderPager();
   loadBalanceOficial();
-  loadHospital();
-}
-// Hospital-admitted people (rav_reports kind=hospital), fetched in parallel and
-// shown as tagged docket rows. Respects the search box so a family searching a
-// name also surfaces hospital matches.
-async function loadHospital(){
-  if($('#f_hosp') && !$('#f_hosp').checked){HOSP=[];$('#hospCnt').textContent='';renderRows();return;}
-  const q=$('#q').value.trim();
-  try{
-    const d=await (await fetch('/api/rav/reports?kind=hospital&limit=200'+(q?'&q='+encodeURIComponent(q):''))).json();
-    HOSP=(d.items||[]).map(mapHosp);
-  }catch{ HOSP=[]; }
-  $('#hospCnt').textContent=HOSP.length?('('+HOSP.length+')'):'';
-  renderRows();
-}
-// Lightweight read-only view for a hospitalized person (reuses the case modal shell).
-function openHospital(id){
-  const c=HOSP.find(x=>x.id===id); if(!c)return;
-  showCase();
-  $('#cv_caseno').textContent='HOSPITALIZADO';
-  $('#cv_hero').innerHTML=`${avatar(c.photo_url,'case-photo')}
-    <div style="flex:1;min-width:200px">
-      <div style="font:800 22px/1.15 'Public Sans';color:#fff">${esc(c.full_name)}</div>
-      <div style="font:600 13px Inter;color:#bcd0f4;margin-top:4px">🏥 ${esc(c.hospital_name)}</div>
-      <div style="margin-top:8px"><span class="pill" style="background:#dcfce7;color:#166534"><span class="d" style="background:#1f8a4c"></span>Hospitalizado · ingresado</span></div>
-    </div>`;
-  const rows=[['Persona',c.full_name],['Hospital / centro',c.hospital_name],['Ciudad',c.city||'—'],['Estado',c.state||'—'],['Contacto',c.contact||'—'],['Reportado',fmtD(c.created_ms)]];
-  $('#cv_meta').innerHTML=rows.map(([k,v])=>`<div class="fact"><div class="k">${esc(k)}</div><div class="v">${esc(v||'—')}</div></div>`).join('');
-  // Single info pane; the docket/triage tabs don't apply to a hospital intake.
-  document.querySelectorAll('.tabpane').forEach(p=>p.innerHTML='');
-  $('#cv_tabs').style.display='none';
-  $('#p_resumen').innerHTML=`<div class="note" style="background:#fff">${c.description?esc(c.description).replace(/\n/g,'<br>'):'Sin descripción adicional. Origen: reportes ciudadanos (RAV).'}</div>
-    <p class="sub" style="margin-top:10px">Persona reportada como <b>ingresada en un hospital</b> tras el sismo. Información de origen comunitario (RAV), sin verificación oficial en sitio.</p>`;
-  $('#p_resumen').classList.add('on');
 }
 // Official/press casualty toll (RAV official_stats) — shown as a distinct banner
 // above the docket KPIs so it is never confused with the docket's own "Fallecidas"
@@ -865,7 +817,7 @@ $('#q').addEventListener('input',()=>deb(reload));
 $('#f_status').addEventListener('change',reload);
 $('#f_prio').addEventListener('change',reload);
 $('#f_sort').addEventListener('change',reload);   // sort is applied server-side across the whole registry
-$('#f_hosp').addEventListener('change',loadHospital);   // toggle hospitalizados without reloading the whole docket
+$('#f_hosp').addEventListener('change',reload);   // include/exclude hospitalizados (server-side param)
 $('#pgGo').addEventListener('click',()=>goPage(+$('#pgInput').value));
 $('#pgInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();goPage(+$('#pgInput').value);}});
 document.addEventListener('keydown',e=>{
