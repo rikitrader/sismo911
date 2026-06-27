@@ -2,9 +2,13 @@
 # Assets layer so these high-traffic paths serve WITHOUT invoking the Worker.
 # 200 = rewrite (serve target content at the original URL); 301 = redirect.
 
-# Homepage is the DESAPARECIDOS registry; the old terremotos dashboard moves to /terremotos.
-/                /personas.html   200
-/terremotos      /index.html      200
+# Homepage is the DESAPARECIDOS registry. Target the clean URL (not *.html) so
+# html_handling serves personas.html in place rather than 30x-ing on the .html.
+/                /personas        200
+
+# /terremotos (old earthquake dashboard = index.html) is served by the WORKER —
+# see run_worker_first in wrangler.toml. A _redirects rewrite to /index.html gets
+# normalized to "/" by html_handling and wrongly lands on personas.
 
 # Legacy La Guaira deep-link → generalized state template (dynamic, Worker-owned).
 /la-guaira       /estado/la-guaira  301
