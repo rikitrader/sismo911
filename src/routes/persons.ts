@@ -38,6 +38,34 @@ async function isOperator(c: any): Promise<boolean> {
 const FAM = 'fam-';
 const isFam = (id: string) => id.startsWith(FAM);
 const famKey = (id: string) => id.slice(FAM.length);
+// Hospital intakes (rav_reports kind=hospital) federate into the docket as cases
+// with id "hosp-<id>", so they paginate/search alongside missing-person cases.
+const HOSP = 'hosp-';
+const isHosp = (id: string) => id.startsWith(HOSP);
+const hospKey = (id: string) => id.slice(HOSP.length);
+const hospCaseNo = (rid: string) => 'HOSP-' + String(rid).replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase();
+// Normalize a name for cross-matching a desaparecido against a hospital intake.
+const normName = (s: string | null | undefined) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+// Best-effort hospital/centro name from an intake report's free-text fields.
+function hospNameFrom(r: any): string {
+  const hit = String(r.description || '').split(/\n|\.|·|\//).map((s: string) => s.trim())
+    .find((s: string) => /hospital|cl[ií]nic|cdi|ambulatori|perif[eé]ric|materni|centro de salud|seguro social/i.test(s));
+  const parts = [hit, r.contact, r.city, r.state].filter((x: any) => x && !/^\+?\d[\d\s-]{5,}$/.test(String(x)));
+  return parts[0] || 'Hospital no indicado';
+}
+// Synthesize a case-shaped person object from a hospital intake row.
+function hospPerson(r: any, op: boolean): any {
+  const ms = Date.parse(r.created_at) || Date.now();
+  const p: any = {
+    id: HOSP + r.id, case_number: hospCaseNo(r.id), full_name: r.title || 'Hospitalizado',
+    status: 'hospitalizado', incident_type: 'hospitalizado', hospital_name: hospNameFrom(r),
+    last_seen: [r.city, r.state].filter(Boolean).join(', ') || null, photo_url: r.photo_url || null,
+    notes: r.description || null, source: 'hospital', review: 'approved',
+    created_ms: ms, updated_ms: ms, docket_count: 0, last_activity_ms: ms,
+  };
+  if (op) p.contact_phone = r.contact || null;
+  return p;
+}
 const estadoToStatus = (e: string) =>
   e === 'localizado' ? 'found_safe'
   : e === 'aparecido' ? 'aparecido'
@@ -177,11 +205,21 @@ persons.get('/cases', async (c) => {
   if (since > 0) { fWhere.push('created_at >= ?'); fBind.push(since); }
   const fW = fWhere.length ? 'WHERE ' + fWhere.join(' AND ') : '';
 
+  // ---------- filters: hospital intakes (rav_reports kind=hospital) ----------
+  // Hospitalizados are their own category; a status filter (missing/found) or a
+  // priority/review filter is about persons only, so we drop them then. The
+  // ?hospital=0 query param (the "Hospitalizados" checkbox) hides them outright.
+  const includeHosp = c.req.query('hospital') !== '0' && !status && !priority && !review && since === 0;
+  const hWhere = "kind='hospital' AND coalesce(hidden,0)=0" + (q ? ' AND title LIKE ?' : '');
+  const hBind: unknown[] = q ? [l] : [];
+
   // ---------- total filtered count (matches the union below exactly) ----------
   const pCnt: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM persons p ${pW}`).bind(...pBind).first().catch(() => ({ n: 0 }));
   let fCnt: any = { n: 0 };
   if (includeFam) fCnt = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas ${fW}`).bind(...fBind).first().catch(() => ({ n: 0 }));
-  const total = (pCnt?.n || 0) + (fCnt?.n || 0);
+  let hCnt: any = { n: 0 };
+  if (includeHosp) hCnt = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM rav_reports WHERE ${hWhere}`).bind(...hBind).first().catch(() => ({ n: 0 }));
+  const total = (pCnt?.n || 0) + (fCnt?.n || 0) + (hCnt?.n || 0);
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
   // ---------- page window: union of case ids ordered by the chosen key ----------
@@ -194,18 +232,23 @@ persons.get('/cases', async (c) => {
     name: { p: 'p.full_name', f: 'nombre', dir: 'ASC', text: true },
   };
   const sk = SORT[sort] || SORT.recent;
+  // Hospital sort key: text → title; time → created_at converted to epoch ms so it
+  // is comparable with persons' updated_ms/created_ms in the same ORDER BY.
+  const hospK = sk.text ? 'title' : "CAST(strftime('%s', coalesce(created_at,'1970-01-01T00:00:00Z')) AS INTEGER)*1000";
   const orderBy = (sk.text ? `k COLLATE NOCASE ${sk.dir}` : `k ${sk.dir}`) + ', src ASC, id DESC';
   const unionSql =
     `SELECT id, src FROM (` +
     `SELECT p.id AS id, 0 AS src, ${sk.p} AS k FROM persons p ${pW}` +
     (includeFam ? ` UNION ALL SELECT ('fam-'||id) AS id, 1 AS src, ${sk.f} AS k FROM personas ${fW}` : '') +
+    (includeHosp ? ` UNION ALL SELECT ('hosp-'||id) AS id, 2 AS src, ${hospK} AS k FROM rav_reports WHERE ${hWhere}` : '') +
     `) ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
   const { results: pageRows } = await c.env.DB.prepare(unionSql)
-    .bind(...pBind, ...(includeFam ? fBind : []), pageSize, offset).all<any>();
+    .bind(...pBind, ...(includeFam ? fBind : []), ...(includeHosp ? hBind : []), pageSize, offset).all<any>();
   const order = (pageRows ?? []).map((r) => String(r.id));
   const personIds = (pageRows ?? []).filter((r) => r.src === 0).map((r) => String(r.id));
   const famIds = (pageRows ?? []).filter((r) => r.src === 1).map((r) => String(r.id));
   const famKeys = famIds.map((id) => id.slice(FAM.length));
+  const hospKeys = (pageRows ?? []).filter((r) => r.src === 2).map((r) => hospKey(String(r.id)));
 
   // D1 caps bound parameters per query (~100) → hydrate the page's rows in chunks.
   const chunk = <T>(a: T[], n: number) => { const o: T[][] = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
@@ -277,11 +320,38 @@ persons.get('/cases', async (c) => {
     } catch (e: any) { console.error('[cases] familia bridge failed:', e?.message ?? e); }
   }
 
+  // ---------- hydrate hospital intakes on this page ----------
+  let hospCases: any[] = [];
+  if (includeHosp && hospKeys.length) {
+    try {
+      const res = await c.env.DB.batch<any>(chunk(hospKeys, 90).map((ks) => c.env.DB.prepare(
+        `SELECT id, title, description, city, state, contact, photo_url, created_at
+         FROM rav_reports WHERE id IN (${ks.map(() => '?').join(',')})`,
+      ).bind(...ks)));
+      hospCases = res.flatMap((r) => r.results ?? []).map((r: any) => hospPerson(r, op));
+    } catch (e: any) { console.error('[cases] hospital bridge failed:', e?.message ?? e); }
+  }
+
+  // ---------- cross-match: tag a desaparecido whose name matches a hospital intake ----------
+  // Conservative EXACT normalized full-name match — surfaces "posible hospitalización"
+  // on the missing person's case so families see it. Never overwrites status.
+  if (includeHosp || personIds.length || famIds.length) {
+    try {
+      const { results: hn } = await c.env.DB.prepare(
+        `SELECT title, description, contact, city, state FROM rav_reports WHERE kind='hospital' AND coalesce(hidden,0)=0`,
+      ).all<any>();
+      const hospByName: Record<string, string> = {};
+      for (const r of hn ?? []) { const k = normName(r.title); if (k && k.length > 5) hospByName[k] = hospNameFrom(r); }
+      for (const x of [...personCases, ...famCases]) { const m = hospByName[normName(x.full_name)]; if (m) x.hospital_match = m; }
+    } catch (e: any) { console.error('[cases] hospital cross-match failed:', e?.message ?? e); }
+  }
+
   // ---------- stitch back into the union order + live triage score ----------
   const nowMs = Date.now();
   const byId: any = {};
-  [...personCases, ...famCases].forEach((x) => byId[x.id] = x);
-  const cases = order.map((id) => byId[id]).filter(Boolean).map((x) => withScore(x, nowMs));
+  [...personCases, ...famCases, ...hospCases].forEach((x) => byId[x.id] = x);
+  // Hospital cases keep their own shape (no triage); persons/familia get the FEMA score.
+  const cases = order.map((id) => byId[id]).filter(Boolean).map((x) => x.source === 'hospital' ? x : withScore(x, nowMs));
 
   // ---------- global summary (whole registry, not just this page) ----------
   const sum: any = await c.env.DB.prepare(
@@ -360,6 +430,17 @@ persons.post('/docket/:eid/reject', async (c) => {
 persons.get('/:id/docket', async (c) => {
   const op = await isOperator(c);
   const id = c.req.param('id');
+  // Hospital intake → full case profile (same shell as a person case, empty docket).
+  if (isHosp(id)) {
+    const r: any = await c.env.DB.prepare(
+      `SELECT * FROM rav_reports WHERE id = ? AND kind='hospital' AND coalesce(hidden,0)=0`,
+    ).bind(hospKey(id)).first();
+    if (!r) return c.notFound();
+    const person = hospPerson(r, op);
+    const scored = withScore({ ...person, docket_count: 0, last_activity_ms: person.created_ms });
+    c.header('Cache-Control', 'no-store');
+    return c.json({ person: scored, event: null, docket: [], operator: op, hospital: true });
+  }
   let person: any; let event: any;
   if (isFam(id)) {
     person = await famPerson(c.env, id, op);
