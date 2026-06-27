@@ -47,7 +47,8 @@ events.get('/history', async (c) => {
   return edgeCached(c, 60, async () => {
   const page = Math.max(1, Number(c.req.query('page') ?? 1));
   const pageSize = Math.min(100, Math.max(1, Number(c.req.query('pageSize') ?? 30)));
-  const w: string[] = [];
+  // Always hide cross-source duplicates from the public archive (canonical view).
+  const w: string[] = ['dup_of IS NULL'];
   const b: unknown[] = [];
   const minMag = c.req.query('minMag');
   const from = c.req.query('from');

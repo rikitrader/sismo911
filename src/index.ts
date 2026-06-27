@@ -158,6 +158,24 @@ app.get('/api/ready', async (c) => {
 app.get('/api/status', async (c) => {
   const log = await c.env.DB.prepare('SELECT * FROM ingest_log').all().catch(() => ({ results: [] }));
   const env = c.env as unknown as Record<string, unknown>;
+  // Cross-source de-dup health: how many rows are canonical vs. marked as a
+  // duplicate of another source, plus any magnitude DIVERGENCES (USGS vs.
+  // FUNVISIS disagreeing on the size of the same quake) — a data-quality signal.
+  const dedup = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS total,
+            SUM(CASE WHEN dup_of IS NULL THEN 1 ELSE 0 END) AS canonical,
+            SUM(CASE WHEN dup_of IS NOT NULL THEN 1 ELSE 0 END) AS duplicates
+     FROM events`
+  ).first<any>().catch(() => null);
+  const divergences = await c.env.DB.prepare(
+    `SELECT d.id AS drop_id, d.source AS drop_source, d.mag AS drop_mag,
+            k.id AS keep_id, k.source AS keep_source, k.mag AS keep_mag,
+            ROUND(ABS(d.mag - k.mag), 2) AS d_mag, d.time_ms
+     FROM events d JOIN events k ON k.id = d.dup_of
+     WHERE d.dup_of IS NOT NULL AND d.mag IS NOT NULL AND k.mag IS NOT NULL
+       AND ABS(d.mag - k.mag) >= 1.0
+     ORDER BY d.time_ms DESC LIMIT 20`
+  ).all().catch(() => ({ results: [] }));
   // Gated integrations — honest health: configured only when their credential/binding exists.
   const gated = [
     { key: 'shakealert', label: 'ShakeAlert (alerta temprana)', configured: false, reason: 'Licencia requerida; cobertura EE.UU. (no Venezuela)' },
@@ -165,10 +183,17 @@ app.get('/api/status', async (c) => {
     { key: 'sitrep_ai', label: 'Informes IA de situación', configured: Boolean(env.AI), reason: env.AI ? 'Workers AI activo' : 'Requiere binding Workers AI' },
     { key: 'power_outage', label: 'Cortes de energía', configured: false, reason: 'API de servicios eléctricos no pública en VE' },
     { key: 'traffic', label: 'Cierres viales / tráfico', configured: false, reason: 'Feeds 511 son EE.UU.; sin equivalente público en VE' },
-    { key: 'gov_official', label: 'Datos oficiales (PC/FUNVISIS/Defensa)', configured: false, reason: 'Sin API pública — ingreso por consola / convenio' },
+    { key: 'funvisis', label: 'FUNVISIS (servicio sísmico nacional)', configured: true, reason: 'EN VIVO — feed público maravilla.json, ingerido cada hora junto a USGS' },
+    { key: 'gov_official', label: 'Otros datos oficiales (PC/Defensa Civil)', configured: false, reason: 'Sin API pública — ingreso por consola / convenio' },
   ];
   return c.json({
     ingest: log.results ?? [],
+    seismic_dedup: {
+      total: Number(dedup?.total ?? 0),
+      canonical: Number(dedup?.canonical ?? 0),
+      duplicates: Number(dedup?.duplicates ?? 0),
+      divergences: divergences.results ?? [],
+    },
     social_adapters: adapterStatus(env),
     gated,
   }, 200, { 'Cache-Control': 'no-store' });

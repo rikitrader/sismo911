@@ -40,7 +40,7 @@ export async function recordIngest(
 export async function listEvents(env: Env, limit = 100): Promise<SeismicEvent[]> {
   const { results } = await env.DB.prepare(
     `SELECT id, source, mag, place, place_es, time_ms, updated_ms, lat, lon, depth_km, mmi, alert, tsunami, felt, url
-     FROM events ORDER BY time_ms DESC LIMIT ?`
+     FROM events WHERE dup_of IS NULL ORDER BY time_ms DESC LIMIT ?`
   ).bind(limit).all<SeismicEvent>();
   return results ?? [];
 }
