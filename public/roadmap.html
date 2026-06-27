@@ -2,274 +2,371 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hoja de Ruta — SISMO911</title>
-<meta name="description" content="Hoja de ruta completa de SISMO911: todas las capacidades en producción, en beta y planificadas — incluida la Telemedicina de emergencia y la valuación de zonas con reconocimiento por IA.">
+<title>Hoja de Ruta del Producto — SISMO911</title>
+<meta name="description" content="Hoja de ruta del producto SISMO911: cada capacidad de la plataforma nacional de emergencia sísmica por estado — en producción, en beta y próximas, incluida la Telemedicina y la valuación de zonas con IA.">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="canonical" href="https://sismo911.com/roadmap">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SISMO911">
 <meta property="og:locale" content="es_VE">
-<meta property="og:title" content="Hoja de Ruta — SISMO911">
-<meta property="og:description" content="Mapa completo de capacidades de la plataforma nacional de emergencia sísmica: producción, beta y plan — con Telemedicina e IA de valuación de zonas.">
+<meta property="og:title" content="Hoja de Ruta del Producto — SISMO911">
+<meta property="og:description" content="Mapa completo de capacidades de la plataforma: en producción, en beta y próximas — con Telemedicina e IA de valuación de zonas.">
 <meta property="og:url" content="https://sismo911.com/roadmap">
 <meta property="og:image" content="https://sismo911.com/og/og-default.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css">
 <script src="/app-shell.js" defer></script>
 <style>
-  body{background:#f6f7fb;color:#101820;font-family:Inter,sans-serif}
-  .wrap{max-width:1360px;margin:0 auto;padding:24px}
-  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
-  .eyebrow{font:800 11px Public Sans,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5f6675}
-  h1{font:900 30px/1.05 Public Sans,sans-serif;color:#00173a;margin:5px 0 0}
-  .lede{font:500 14px/1.5 Inter,sans-serif;color:#44474f;max-width:640px;margin:9px 0 0}
-  .stamp{font:700 12px JetBrains Mono,monospace;color:#00173a;background:#fff;border:1px solid #c4c6d0;border-radius:8px;padding:9px 11px;white-space:nowrap}
-  .grid{display:grid;gap:14px}
-  .kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
-  .card{background:#fff;border:1px solid #d8dbe4;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-  .metric{padding:14px;border-left:5px solid var(--accent,#00173a)}
-  .metric .v{font:900 28px/1 Public Sans,sans-serif;color:#00173a;margin-top:7px}
-  .metric .s{font:600 12px/1.35 Inter,sans-serif;color:#5f6675;margin-top:6px;min-height:32px}
+  :root{
+    --ff:'Helvetica Neue',Helvetica,Arial,sans-serif;
+    --navy:#00173a; --navy-2:#0a2a63; --ink:#0c1530; --muted:#5a6378; --faint:#8a93a8;
+    --bg:#f4f6fb; --card:#ffffff; --line:#e4e8f1; --line-2:#d3d9e8;
+    --crimson:#bb0027; --crit:#c8102e; --gold:#c9a227;
+    --live:#1f8a4c; --live-bg:#e7f5ec; --beta:#d97706; --beta-bg:#fdf2e1; --plan:#2563eb; --plan-bg:#e9effd;
+    --shadow:0 1px 2px rgba(12,21,48,.05); --shadow-md:0 6px 24px rgba(12,21,48,.08); --shadow-lg:0 20px 60px rgba(0,23,58,.28);
+    --r:16px;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--ff);-webkit-font-smoothing:antialiased;font-style:normal}
+  i,em,cite,address,var,dfn,b,strong,h1,h2,h3,p,span,a,div{font-style:normal}
+  .num{font-variant-numeric:tabular-nums}
+  a{color:inherit}
 
-  /* Headline / next-up banner for the two flagship capabilities */
-  .flagships{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:14px}
-  .flag{padding:18px;border-left:5px solid var(--accent,#00173a);position:relative;overflow:hidden}
-  .flag .k{font:800 11px Public Sans,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--accent,#00173a)}
-  .flag h3{font:900 19px/1.1 Public Sans,sans-serif;color:#00173a;margin:7px 0 0}
-  .flag p{font:500 13px/1.5 Inter,sans-serif;color:#44474f;margin:8px 0 0}
-  .flag .feats{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
-  .flag .feats span{font:700 11px Public Sans,sans-serif;color:#00173a;background:#f1f3f8;border:1px solid #e1e4ec;border-radius:999px;padding:5px 9px}
+  /* ---- shell: full-bleed band + centered inner column ---- */
+  .rm{max-width:1180px;margin:0 auto;padding:0 20px 72px}
+  @media(max-width:640px){.rm{padding:0 14px 56px}}
 
-  /* Filters */
-  .filters{display:flex;gap:8px;flex-wrap:wrap;padding:14px}
-  .fbtn{border:1px solid #d8dbe4;background:#fff;border-radius:999px;padding:8px 12px;font:800 12px Public Sans,sans-serif;color:#445e91;cursor:pointer}
-  .fbtn.on{background:#00173a;color:#fff;border-color:#00173a}
+  /* ===================== HERO ===================== */
+  .hero{position:relative;overflow:hidden;background:
+      radial-gradient(120% 140% at 88% -20%, rgba(201,162,39,.18), transparent 50%),
+      radial-gradient(120% 120% at 0% 0%, rgba(187,0,39,.20), transparent 46%),
+      linear-gradient(135deg,#00112e 0%, #082453 56%, #0a2a63 100%);
+    color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}
+  .hero::before{content:"";position:absolute;inset:0;opacity:.5;pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+    background-size:46px 46px;mask-image:radial-gradient(120% 90% at 50% 0%,#000 35%,transparent 78%)}
+  .hero .seis{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:120px;opacity:.5;pointer-events:none}
+  .hero-in{position:relative;max-width:1180px;margin:0 auto;padding:46px 20px 40px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:30px;align-items:center}
+  @media(max-width:860px){.hero-in{grid-template-columns:1fr;padding:34px 16px 30px;gap:24px}}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font:700 11px var(--ff);letter-spacing:.16em;text-transform:uppercase;color:#bcd0f4}
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px rgba(201,162,39,.22)}
+  .hero h1{font:800 clamp(32px,5.2vw,52px)/1.02 var(--ff);letter-spacing:-.025em;margin:14px 0 0}
+  .hero h1 .accent{color:#ffd24a}
+  .hero p.sub{font:400 clamp(14px,1.7vw,16.5px)/1.55 var(--ff);color:#cdd9f0;max-width:560px;margin:14px 0 0}
+  .hero .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
+  .hchip{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:8px 13px;font:600 12.5px var(--ff);color:#eaf0fb}
+  .hchip b{font:700 13px var(--ff)}
+  .hchip .sw{width:9px;height:9px;border-radius:50%}
+  .stamp{display:inline-flex;align-items:center;gap:7px;margin-top:16px;font:600 11.5px var(--ff);letter-spacing:.04em;color:#9fb2d6}
+  .stamp::before{content:"";width:7px;height:7px;border-radius:50%;background:#46d07f;box-shadow:0 0 0 4px rgba(70,208,127,.18)}
 
-  /* Phase / epic columns */
-  .board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
-  .epic{padding:0}
-  .epic-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid #e3e5eb}
-  .epic-h h2{font:800 15px Public Sans,sans-serif;color:#00173a;margin:0;display:flex;align-items:center;gap:9px}
-  .epic-h svg{width:18px;height:18px;flex:0 0 auto;color:var(--accent,#00173a)}
-  .epic-h .count{font:800 11px Public Sans,sans-serif;border-radius:999px;padding:5px 8px;background:#eef2f8;color:#445e91}
-  .items{padding:6px 0}
-  .feat{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:11px 14px;border-top:1px solid #edf0f5;text-decoration:none}
-  .feat:first-child{border-top:0}
-  .feat:hover{background:#f8fafc}
+  /* completion ring */
+  .ring-card{justify-self:end;display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:20px 24px;backdrop-filter:blur(2px)}
+  @media(max-width:860px){.ring-card{justify-self:start}}
+  .ring{position:relative;width:148px;height:148px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .pct b{font:800 34px/1 var(--ff);color:#fff;font-variant-numeric:tabular-nums}
+  .ring .pct span{font:700 9.5px var(--ff);letter-spacing:.14em;text-transform:uppercase;color:#9fb2d6;margin-top:4px}
+  .ring-card .cap{font:500 11.5px var(--ff);color:#bcd0f4;text-align:center}
+  .ring-card .cap b{color:#fff;font:700 12px var(--ff)}
+
+  /* ===================== FLAGSHIP ===================== */
+  .section-h{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin:40px 0 16px}
+  .section-h h2{font:800 20px var(--ff);letter-spacing:-.01em;margin:0;color:var(--ink)}
+  .section-h .kbd{font:600 11px var(--ff);letter-spacing:.04em;color:var(--faint)}
+  .flagships{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.flagships{grid-template-columns:1fr}}
+  .flag{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:var(--shadow-md);transition:transform .18s ease,box-shadow .18s ease}
+  .flag:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+  .flag::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--ac,var(--crimson))}
+  .flag .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .flag .ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--ac,var(--crimson)),color-mix(in srgb,var(--ac,var(--crimson)) 62%,#000))}
+  .flag .ic svg{width:24px;height:24px}
+  .flag h3{font:800 21px/1.1 var(--ff);letter-spacing:-.01em;margin:15px 0 0;color:var(--ink)}
+  .flag p{font:400 13.5px/1.55 var(--ff);color:var(--muted);margin:9px 0 0}
+  .flag .feats{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+  .flag .feats span{font:600 11px var(--ff);color:var(--ink);background:#f1f4fa;border:1px solid var(--line);border-radius:999px;padding:5px 10px}
+  .flag .cta{display:inline-flex;align-items:center;gap:7px;margin-top:16px;font:700 12.5px var(--ff);color:var(--ac,var(--crimson));text-decoration:none}
+  .flag .cta svg{width:15px;height:15px;transition:transform .16s ease}
+  .flag:hover .cta svg{transform:translateX(3px)}
+  .flag .cta.soon{color:var(--faint);cursor:default}
+
+  /* status chip */
+  .st{display:inline-flex;align-items:center;gap:6px;font:700 10px var(--ff);letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:5px 9px;white-space:nowrap}
+  .st .d{width:7px;height:7px;border-radius:50%}
+  .st.live{background:var(--live-bg);color:#10632f}.st.live .d{background:var(--live)}
+  .st.beta{background:var(--beta-bg);color:#92560a}.st.beta .d{background:var(--beta)}
+  .st.plan{background:var(--plan-bg);color:#1b44b8}.st.plan .d{background:var(--plan)}
+
+  /* ===================== FILTER BAR ===================== */
+  .filterbar{position:sticky;top:8px;z-index:30;margin:24px 0 4px}
+  @media(min-width:1024px){.filterbar{top:14px}}
+  .seg{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:5px;box-shadow:var(--shadow-md);overflow-x:auto;scrollbar-width:none}
+  .seg::-webkit-scrollbar{display:none}
+  .seg button{flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;background:transparent;color:var(--muted);font:700 13px var(--ff);padding:10px 16px;border-radius:9px;cursor:pointer;white-space:nowrap;transition:background .14s,color .14s}
+  .seg button .n{font:600 11px var(--ff);color:var(--faint);font-variant-numeric:tabular-nums}
+  .seg button:hover{color:var(--ink)}
+  .seg button.on{background:var(--navy);color:#fff;box-shadow:0 2px 8px rgba(0,23,58,.25)}
+  .seg button.on .n{color:#9fb2d6}
+
+  /* ===================== EPIC BOARD ===================== */
+  .board{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;align-items:start}
+  @media(max-width:880px){.board{grid-template-columns:1fr}}
+  .epic{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;animation:rise .4s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .epic-h{display:flex;align-items:center;gap:13px;padding:16px 17px 14px;border-bottom:1px solid var(--line)}
+  .epic-h .chip{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;color:#fff;background:linear-gradient(135deg,var(--ac,var(--navy)),color-mix(in srgb,var(--ac,var(--navy)) 60%,#000))}
+  .epic-h .chip svg{width:21px;height:21px}
+  .epic-h .tt{min-width:0;flex:1}
+  .epic-h h3{font:800 15.5px var(--ff);letter-spacing:-.01em;margin:0;color:var(--ink)}
+  .epic-h .meta{display:flex;align-items:center;gap:9px;margin-top:6px}
+  .bar{flex:1;height:6px;border-radius:999px;background:#eceff6;overflow:hidden;max-width:160px}
+  .bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--live),#34b06a);transition:width .8s cubic-bezier(.2,.7,.2,1)}
+  .epic-h .pc{font:700 11px var(--ff);color:var(--muted);font-variant-numeric:tabular-nums}
+  .items{padding:5px 7px 8px}
+  .feat{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:12px 11px;border-radius:11px;text-decoration:none;transition:background .14s}
+  .feat+.feat{border-top:1px solid #f0f2f8}
+  a.feat:hover{background:#f6f8fc}
   .feat .dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:0 0 auto}
-  .feat .name{font:700 13.5px/1.25 Inter,sans-serif;color:#101820}
-  .feat .desc{font:500 11.5px/1.4 Inter,sans-serif;color:#6d7280;margin-top:3px}
-  .badge{font:800 9.5px Public Sans,sans-serif;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:4px 7px;white-space:nowrap;align-self:flex-start}
-  .b-live{background:#ecfdf5;color:#166534}
-  .b-beta{background:#fefce8;color:#a16207}
-  .b-plan{background:#eff6ff;color:#1d4ed8}
-  .dot.live{background:#16a34a}.dot.beta{background:#d97706}.dot.plan{background:#2563eb}
-  .legend{display:flex;gap:16px;flex-wrap:wrap;padding:13px 14px;border-top:1px solid #e3e5eb;font:700 12px Inter,sans-serif;color:#44474f}
-  .legend i{display:inline-flex;align-items:center;gap:7px}
-  .legend .dot{margin:0}
-  @media(max-width:1100px){.kpis{grid-template-columns:1fr 1fr}.flagships,.board{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.stamp{white-space:normal}}
+  .feat .dot.live{background:var(--live)}.feat .dot.beta{background:var(--beta)}.feat .dot.plan{background:var(--plan)}
+  .feat .nm{font:700 13.5px/1.25 var(--ff);color:var(--ink);display:flex;align-items:center;gap:7px}
+  .feat .nm .arr{opacity:0;transition:opacity .14s,transform .14s;width:13px;height:13px;color:var(--faint)}
+  a.feat:hover .nm .arr{opacity:1;transform:translateX(2px)}
+  .feat .ds{font:400 12px/1.45 var(--ff);color:var(--muted);margin-top:3px}
+  .feat .rt{display:flex;align-items:center}
+
+  /* legend + footer */
+  .legend{display:flex;flex-wrap:wrap;gap:16px 22px;margin-top:26px;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+  .legend .it{display:flex;align-items:center;gap:9px;font:600 12.5px var(--ff);color:var(--muted)}
+  .legend .it .d{width:10px;height:10px;border-radius:50%}
+  .legend .it b{color:var(--ink);font:700 12.5px var(--ff)}
+  .foot{margin-top:18px;font:400 12px/1.6 var(--ff);color:var(--faint);text-align:center}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebPage","name":"Hoja de Ruta — SISMO911","description":"Hoja de ruta completa de la plataforma nacional de emergencia sísmica SISMO911, incluida Telemedicina y valuación de zonas con IA.","url":"https://sismo911.com/roadmap","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+{"@context":"https://schema.org","@type":"WebPage","name":"Hoja de Ruta del Producto — SISMO911","description":"Hoja de ruta del producto SISMO911 por estado: en producción, en beta y próximas capacidades, incluida la Telemedicina y la valuación de zonas con IA.","url":"https://sismo911.com/roadmap","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
 </script>
 </head>
 <body>
-<main class="wrap">
-  <section class="top">
-    <div>
-      <div class="eyebrow">Plataforma · Capacidades en producción, beta y plan</div>
-      <h1>Hoja de Ruta</h1>
-      <p class="lede">El mapa completo de SISMO911 — cada capacidad que hemos construido para la respuesta sísmica nacional, lo que está en pruebas, y lo que viene: Telemedicina de emergencia y valuación de zonas con reconocimiento por IA.</p>
+<main>
+  <!-- ===================== HERO ===================== -->
+  <header class="hero">
+    <div class="hero-in">
+      <div>
+        <span class="eyebrow"><span class="dot"></span> Plataforma nacional de emergencia sísmica</span>
+        <h1>Hoja de Ruta <span class="accent">del Producto</span></h1>
+        <p class="sub">Cada capacidad que opera SISMO911 hoy, lo que está en pruebas y lo que viene — desde el monitoreo sísmico y la reunificación familiar hasta la Telemedicina y la valuación de zonas con inteligencia artificial.</p>
+        <div class="chips" id="hchips"></div>
+        <div class="stamp" id="stamp">SISTEMA EN VIVO</div>
+      </div>
+      <div class="ring-card">
+        <div class="ring">
+          <svg width="148" height="148" viewBox="0 0 148 148" aria-hidden="true">
+            <circle cx="74" cy="74" r="64" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="12"/>
+            <circle id="ringArc" cx="74" cy="74" r="64" fill="none" stroke="#46d07f" stroke-width="12" stroke-linecap="round" stroke-dasharray="402" stroke-dashoffset="402"/>
+          </svg>
+          <div class="pct"><b id="ringPct">0%</b><span>En producción</span></div>
+        </div>
+        <div class="cap"><b id="ringLive">0</b> de <b id="ringTotal">0</b> capacidades en vivo</div>
+      </div>
     </div>
-    <div class="stamp" id="updated">—</div>
-  </section>
+    <svg class="seis" viewBox="0 0 1180 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 78 L120 78 L150 78 L168 40 L186 108 L206 22 L226 92 L246 78 L520 78 L545 78 L562 52 L580 96 L598 30 L618 100 L640 64 L660 78 L980 78 L1010 78 L1028 48 L1046 100 L1064 36 L1084 90 L1104 78 L1180 78" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"/></svg>
+  </header>
 
-  <!-- KPIs -->
-  <section class="grid kpis" aria-label="Resumen de la hoja de ruta">
-    <article class="card metric" style="--accent:#166534"><div class="eyebrow">En producción</div><div class="v" id="kLive">—</div><div class="s">Capacidades en vivo y operativas hoy.</div></article>
-    <article class="card metric" style="--accent:#a16207"><div class="eyebrow">En beta</div><div class="v" id="kBeta">—</div><div class="s">En pruebas y endurecimiento de datos.</div></article>
-    <article class="card metric" style="--accent:#1d4ed8"><div class="eyebrow">Planificadas</div><div class="v" id="kPlan">—</div><div class="s">En diseño — próximas entregas.</div></article>
-    <article class="card metric" style="--accent:#bb0027"><div class="eyebrow">Capacidades totales</div><div class="v" id="kTotal">—</div><div class="s">A lo largo de toda la plataforma.</div></article>
-  </section>
+  <div class="rm">
+    <!-- ===================== FLAGSHIP ===================== -->
+    <div class="section-h"><h2>Capacidades destacadas</h2><span class="kbd">2026 · prioridad alta</span></div>
+    <section class="flagships">
+      <article class="flag" style="--ac:var(--crit)">
+        <div class="top">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="st live"><span class="d"></span> En producción</span>
+        </div>
+        <h3>Telemedicina de Emergencia</h3>
+        <p>Consulta médica gratuita a distancia: médicos voluntarios de todo el mundo atienden por video a pacientes en Venezuela cuando los hospitales están saturados o inaccesibles.</p>
+        <div class="feats"><span>Videoconsulta</span><span>Médicos voluntarios</span><span>Acceso gratuito</span><span>Sin instalar apps</span></div>
+        <a class="cta" href="/telemedicina">Abrir Telemedicina <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </article>
+      <article class="flag" style="--ac:#6d28d9">
+        <div class="top">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 3a8 8 0 108 8M3 21l6-6M14 10l6-6M3 3l4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="st plan"><span class="d"></span> Próximo</span>
+        </div>
+        <h3>Valuación de Zonas con IA</h3>
+        <p>Reconocimiento automático de zonas afectadas a partir de imágenes satelitales y reportes ciudadanos: la IA segmenta el área, clasifica el daño por manzana y estima el valor económico afectado para priorizar la ayuda.</p>
+        <div class="feats"><span>Segmentación de zona</span><span>Daño por manzana</span><span>Avalúo por sector</span><span>Priorización de ayuda</span></div>
+        <span class="cta soon">En diseño · próxima entrega</span>
+      </article>
+    </section>
 
-  <!-- Two flagship next-up capabilities the roadmap headlines -->
-  <section class="grid flagships" aria-label="Capacidades destacadas">
-    <article class="card flag" style="--accent:#bb0027">
-      <div class="k">Próximamente · Salud de emergencia</div>
-      <h3>Telemedicina de Emergencia</h3>
-      <p>Triage médico remoto cuando los hospitales están saturados o inaccesibles: consulta por video con médicos voluntarios, cola de pacientes priorizada por gravedad, recetas digitales y enlace directo con los inventarios de Suministros Médicos y la red de hospitales.</p>
-      <div class="feats"><span>Triage remoto</span><span>Video-consulta</span><span>Cola por gravedad</span><span>Recetas digitales</span><span>Enlace a hospitales</span></div>
-    </article>
-    <article class="card flag" style="--accent:#6d28d9">
-      <div class="k">Próximamente · Daños & IA</div>
-      <h3>Valuación de Zonas con IA</h3>
-      <p>Reconocimiento automático de zonas afectadas a partir de imágenes satelitales y reportes ciudadanos: la IA segmenta el área, clasifica el nivel de daño por manzana y estima el valor económico afectado — priorizando dónde enviar ayuda y produciendo avalúos preliminares por sector.</p>
-      <div class="feats"><span>Segmentación de zona</span><span>Daño por manzana</span><span>Avalúo por sector</span><span>Priorización de ayuda</span><span>Visión satelital</span></div>
-    </article>
-  </section>
-
-  <!-- Filters -->
-  <section class="card" style="margin-bottom:14px">
-    <div class="filters" id="filters">
-      <button class="fbtn on" data-f="all">Todas</button>
-      <button class="fbtn" data-f="live">En producción</button>
-      <button class="fbtn" data-f="beta">En beta</button>
-      <button class="fbtn" data-f="plan">Planificadas</button>
+    <!-- ===================== FILTER ===================== -->
+    <div class="section-h"><h2>Capacidades por área</h2><span class="kbd" id="shownCount"></span></div>
+    <div class="filterbar">
+      <div class="seg" id="seg">
+        <button data-f="all" class="on">Todas <span class="n" id="cAll">0</span></button>
+        <button data-f="live">En producción <span class="n" id="cLive">0</span></button>
+        <button data-f="beta">Beta <span class="n" id="cBeta">0</span></button>
+        <button data-f="plan">Próximas <span class="n" id="cPlan">0</span></button>
+      </div>
     </div>
-  </section>
 
-  <!-- Roadmap board -->
-  <section class="board" id="board"></section>
+    <!-- ===================== BOARD ===================== -->
+    <section class="board" id="board"></section>
 
-  <section class="card" style="margin-top:14px">
+    <!-- legend -->
     <div class="legend">
-      <i><span class="dot live"></span> En producción — en vivo hoy</i>
-      <i><span class="dot beta"></span> En beta — en pruebas</i>
-      <i><span class="dot plan"></span> Planificada — en diseño</i>
+      <div class="it"><span class="d" style="background:var(--live)"></span><b>En producción</b> — en vivo y operativa hoy</div>
+      <div class="it"><span class="d" style="background:var(--beta)"></span><b>En beta</b> — en pruebas y mejora de datos</div>
+      <div class="it"><span class="d" style="background:var(--plan)"></span><b>Próxima</b> — en diseño o desarrollo</div>
     </div>
-  </section>
+    <p class="foot">SISMO911 — plataforma abierta de respuesta sísmica para Venezuela. Esta hoja de ruta refleja el estado real de cada capacidad; las marcadas como próximas aún no están disponibles al público.</p>
+  </div>
 </main>
 
 <script>
-/* Roadmap data — every capability built (and planned) for SISMO911, grouped by
-   epic. status: live | beta | plan. href links to the live page when one exists. */
+/* Roadmap data — real SISMO911 capabilities, grouped by area. status: live | beta | plan.
+   href links ONLY to routes verified live (404 routes carry no link). */
 const EPICS = [
-  { id:'sismico', title:'Núcleo Sísmico', accent:'#bb0027',
+  { id:'sismico', title:'Núcleo Sísmico', ac:'#bb0027',
     d:'M3 12h4l2 7 4-14 2 7h6',
     items:[
       { name:'Feed USGS en vivo', desc:'Eventos sísmicos en tiempo real (FDSNWS) filtrados a Venezuela.', status:'live', href:'/terremotos' },
-      { name:'Archivo histórico', desc:'Catálogo completo de terremotos consultable.', status:'live', href:'/archivo' },
-      { name:'Alertas', desc:'Avisos automáticos por magnitud e intensidad.', status:'live', href:'/alertas' },
       { name:'Alerta PAGER', desc:'Estimación operativa de impacto al estilo USGS PAGER.', status:'live', href:'/pager' },
-      { name:'Centro Geosísmico', desc:'Vista pública de eventos, impacto y timeline.', status:'live', href:'/geosismico' },
-      { name:'Mapa de capas COP', desc:'Mapa operacional común multi-capa.', status:'live', href:'/mapa' },
-      { name:'Catálogo de capas', desc:'Manifest público de capas con privacy labels y endpoints.', status:'live', href:'/layers' },
+      { name:'Alertas', desc:'Avisos automáticos por magnitud e intensidad.', status:'live', href:'/alertas' },
+      { name:'Mapa de capas', desc:'Mapa operacional común multi-capa.', status:'live', href:'/mapa' },
+      { name:'Archivo histórico', desc:'Catálogo completo de terremotos consultable.', status:'live', href:'/archivo' },
     ] },
 
-  { id:'familia', title:'Reunificación Familiar', accent:'#bb0027',
+  { id:'familia', title:'Reunificación Familiar', ac:'#c8102e',
     d:'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8z',
     items:[
-      { name:'Registro DESAPARECIDOS', desc:'76 000+ personas; ingesta multi-fuente con deduplicación.', status:'live', href:'/personas' },
-      { name:'Expedientes', desc:'Casos de búsqueda con seguimiento y estado.', status:'live', href:'/casos' },
+      { name:'Registro de desaparecidos', desc:'76 000+ personas; ingesta multi-fuente con deduplicación.', status:'live', href:'/personas' },
+      { name:'Expedientes', desc:'Casos de búsqueda con cronología y estado.', status:'live', href:'/casos' },
       { name:'Estoy a salvo', desc:'Check-ins de seguridad de los ciudadanos.', status:'live', href:'/estoy-a-salvo' },
-      { name:'Tarjetas sociales', desc:'Enlace por persona con foto/nombre para difusión viral.', status:'live', href:'/familia' },
-      { name:'Análisis de fotos con IA', desc:'Visión de Workers AI: subtítulos, banderas y dedupe por hash.', status:'beta', href:'/personas' },
+      { name:'Tarjetas sociales', desc:'Enlace por persona con foto y nombre para difusión.', status:'live', href:'/familia' },
+      { name:'Análisis de fotos con IA', desc:'Visión por IA: subtítulos y deduplicación por contenido.', status:'beta', href:'/personas' },
     ] },
 
-  { id:'danos', title:'Daños & IA', accent:'#6d28d9',
+  { id:'salud', title:'Salud de Emergencia', ac:'#0f8a5f',
+    d:'M12 8v8m-4-4h8M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2z',
+    items:[
+      { name:'Telemedicina', desc:'Videoconsulta médica gratuita con médicos voluntarios.', status:'live', href:'/telemedicina' },
+      { name:'Red de hospitales', desc:'Estado y capacidad de la red hospitalaria.', status:'live', href:'/hospitales' },
+      { name:'Cola de triage y recetas', desc:'Priorización por gravedad y recetas digitales.', status:'plan', href:'' },
+    ] },
+
+  { id:'danos', title:'Daños & IA', ac:'#6d28d9',
     d:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z',
     items:[
       { name:'Reportar daños', desc:'Reporte ciudadano georreferenciado con fotos.', status:'live', href:'/reportar' },
-      { name:'Daños (IA)', desc:'Clasificación asistida por IA de severidad de daños.', status:'live', href:'/danos' },
+      { name:'Daños (IA)', desc:'Clasificación asistida por IA de severidad.', status:'live', href:'/danos' },
       { name:'Daños estructurales', desc:'Mapa de evaluación estructural por edificación.', status:'live', href:'/danos-estructurales' },
-      { name:'Análisis satelital GIS', desc:'Proxy de imágenes + visión IA para daño satelital.', status:'beta', href:'/satellite' },
-      { name:'Valuación de zonas con IA', desc:'Segmentación de zona, daño por manzana y avalúo por sector.', status:'plan', href:'' },
+      { name:'Análisis satelital GIS', desc:'Imágenes satelitales + visión por IA para daño.', status:'plan', href:'' },
+      { name:'Valuación de zonas con IA', desc:'Segmentación de zona, daño por manzana y avalúo.', status:'plan', href:'' },
     ] },
 
-  { id:'logistica', title:'Ayuda & Logística', accent:'#a16207',
+  { id:'logistica', title:'Ayuda & Logística', ac:'#b45309',
     d:'M3 13h2l2 5h10l2-5h2M5 13V7a2 2 0 012-2h7l4 4v4',
     items:[
       { name:'Centros de acopio', desc:'Mapa de centros de recolección y su estado.', status:'live', href:'/acopio' },
-      { name:'Comando logístico', desc:'Inventario, necesidades y envíos estilo FEMA.', status:'live', href:'/logistica' },
-      { name:'Suministros médicos', desc:'Catálogo y panel de insumos médicos.', status:'live', href:'/suministros-medicos' },
-      { name:'Operaciones logísticas', desc:'Rutas, infraestructura de transporte y mejores rutas.', status:'live', href:'/operaciones' },
+      { name:'Comando logístico', desc:'Inventario, necesidades y envíos al estilo FEMA.', status:'live', href:'/logistica' },
+      { name:'Suministros médicos', desc:'Catálogo de insumos médicos.', status:'live', href:'/suministros-medicos' },
+      { name:'Panel de suministros', desc:'Tablero de seguimiento de insumos.', status:'live', href:'/suministros-dashboard' },
+      { name:'Operaciones logísticas', desc:'Rutas e infraestructura de transporte.', status:'live', href:'/operaciones' },
       { name:'Herramientas + Cruz Roja', desc:'Directorio de herramientas y aliados.', status:'live', href:'/herramientas' },
-      { name:'Red global de ayuda', desc:'Directorio curable de organizaciones de socorro.', status:'live', href:'/red-ayuda' },
-      { name:'Donar (card→USDC)', desc:'Crowdfunding con pago por tarjeta a USDC vía Crossmint.', status:'live', href:'/donar' },
+      { name:'Red global de ayuda', desc:'Directorio de organizaciones de socorro.', status:'live', href:'/red-ayuda' },
+      { name:'Donaciones', desc:'Aportes con tarjeta a USDC vía Crossmint.', status:'live', href:'/donar' },
     ] },
 
-  { id:'comunidad', title:'Comunidad & Voluntarios', accent:'#166534',
+  { id:'comunidad', title:'Comunidad & Voluntarios', ac:'#1f8a4c',
     d:'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z',
     items:[
-      { name:'Voluntarios', desc:'Registro y emparejamiento de voluntarios por habilidades.', status:'live', href:'/voluntarios' },
+      { name:'Voluntarios', desc:'Registro y emparejamiento por habilidades.', status:'live', href:'/voluntarios' },
       { name:'Mascotas', desc:'Reporte y reunificación de mascotas perdidas.', status:'live', href:'/mascotas' },
       { name:'Canal comunitario', desc:'Mensajería y coordinación entre la comunidad.', status:'live', href:'/canal' },
       { name:'SOS', desc:'Botón de socorro georreferenciado.', status:'live', href:'/sos' },
     ] },
 
-  { id:'info', title:'Información & Comms', accent:'#1d4ed8',
+  { id:'info', title:'Información & Comunicaciones', ac:'#1d4ed8',
     d:'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13',
     items:[
       { name:'Noticias', desc:'Revista de cobertura con reportes de campo.', status:'live', href:'/blog' },
-      { name:'Información verificada', desc:'Noticias curadas y verificadas (RAV).', status:'live', href:'/informacion-verificada' },
-      { name:'Radio / Comms', desc:'Frecuencias y canales de radio de emergencia.', status:'live', href:'/comms' },
-      { name:'Hospitales', desc:'Estado y capacidad de la red hospitalaria.', status:'live', href:'/hospitales' },
+      { name:'Información verificada', desc:'Noticias curadas y verificadas.', status:'live', href:'/informacion-verificada' },
+      { name:'Radio', desc:'Frecuencias y canales de radio de emergencia.', status:'live', href:'/comms' },
+      { name:'Mapa por estados', desc:'Índice nacional con detalle por estado.', status:'live', href:'/estados' },
       { name:'Guía de emergencia', desc:'Qué hacer antes, durante y después de un sismo.', status:'live', href:'/guia' },
     ] },
 
-  { id:'salud', title:'Salud de Emergencia', accent:'#c8102e',
-    d:'M12 8v8m-4-4h8M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2z',
-    items:[
-      { name:'Telemedicina de emergencia', desc:'Triage remoto y video-consulta con médicos voluntarios.', status:'plan', href:'' },
-      { name:'Cola de pacientes', desc:'Priorización por gravedad y derivación a hospital.', status:'plan', href:'' },
-      { name:'Recetas digitales', desc:'Recetas electrónicas enlazadas a suministros médicos.', status:'plan', href:'' },
-    ] },
-
-  { id:'plataforma', title:'Plataforma & Datos', accent:'#00173a',
+  { id:'plataforma', title:'Plataforma & Datos', ac:'#00173a',
     d:'M16 18l6-6-6-6M8 6l-6 6 6 6',
     items:[
-      { name:'API pública · Developers', desc:'Endpoints abiertos documentados para terceros.', status:'live', href:'/developers' },
+      { name:'API pública', desc:'Endpoints abiertos documentados para terceros.', status:'live', href:'/developers' },
       { name:'Servidor MCP', desc:'Acceso programático vía Model Context Protocol.', status:'live', href:'/developers' },
       { name:'Consola de administración', desc:'Moderación, ingesta y operación interna.', status:'live', href:'/admin' },
-      { name:'Pipelines de ingesta (cron)', desc:'USGS, desaparecidos, RAV y fotos en flujos programados.', status:'live', href:'' },
-      { name:'PWA / offline', desc:'App instalable con service worker para baja conectividad.', status:'live', href:'' },
+      { name:'Ingesta automática (cron)', desc:'USGS, desaparecidos y fotos en flujos programados.', status:'live', href:'' },
+      { name:'App instalable (PWA)', desc:'Funciona con baja conectividad y sin tienda.', status:'live', href:'' },
     ] },
 ];
 
-const ICON = (d)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="${d}"/></svg>`;
-const BADGE = { live:['b-live','En producción'], beta:['b-beta','Beta'], plan:['b-plan','Plan'] };
+const ICON=(d)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="${d}"/></svg>`;
+const ARR=`<svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const LBL={live:'En producción',beta:'Beta',plan:'Próxima'};
+let filter='all';
 
-let filter = 'all';
+const tally=()=>{let t=0,l=0,b=0,p=0;EPICS.forEach(e=>e.items.forEach(it=>{t++;if(it.status==='live')l++;else if(it.status==='beta')b++;else p++;}));return{t,l,b,p};};
 
-function render(){
-  const board = document.getElementById('board');
-  board.innerHTML = '';
-  let nLive=0,nBeta=0,nPlan=0,nTotal=0;
-
-  EPICS.forEach(ep=>{
-    const items = ep.items.filter(it => filter==='all' || it.status===filter);
-    ep.items.forEach(it=>{ nTotal++; if(it.status==='live')nLive++; else if(it.status==='beta')nBeta++; else nPlan++; });
-    if(!items.length) return;
-    const el = document.createElement('article');
-    el.className = 'card epic';
-    el.style.setProperty('--accent', ep.accent);
-    el.innerHTML = `
+function renderBoard(){
+  const board=document.getElementById('board');board.innerHTML='';let shown=0;
+  EPICS.forEach((ep,i)=>{
+    const items=ep.items.filter(it=>filter==='all'||it.status===filter);
+    if(!items.length)return;
+    shown+=items.length;
+    const live=ep.items.filter(it=>it.status==='live').length, pc=Math.round(live/ep.items.length*100);
+    const el=document.createElement('article');el.className='epic';el.style.setProperty('--ac',ep.ac);el.style.animationDelay=(i*40)+'ms';
+    el.innerHTML=`
       <div class="epic-h">
-        <h2>${ICON(ep.d)}${ep.title}</h2>
-        <span class="count">${items.length}</span>
+        <span class="chip">${ICON(ep.d)}</span>
+        <div class="tt">
+          <h3>${ep.title}</h3>
+          <div class="meta"><span class="bar"><i style="width:${pc}%"></i></span><span class="pc">${live}/${ep.items.length} en vivo</span></div>
+        </div>
       </div>
       <div class="items">
         ${items.map(it=>{
-          const [bc,bl] = BADGE[it.status];
-          const tag = it.href ? 'a' : 'div';
-          const hrefAttr = it.href ? ` href="${it.href}"` : '';
+          const tag=it.href?'a':'div';const hrefAttr=it.href?` href="${it.href}"`:'';
           return `<${tag} class="feat"${hrefAttr}>
             <span class="dot ${it.status}"></span>
-            <span><span class="name">${it.name}</span><span class="desc">${it.desc}</span></span>
-            <span class="badge ${bc}">${bl}</span>
+            <span><span class="nm">${it.name}${it.href?ARR:''}</span><span class="ds">${it.desc}</span></span>
+            <span class="rt"><span class="st ${it.status}"><span class="d"></span>${LBL[it.status]}</span></span>
           </${tag}>`;
         }).join('')}
       </div>`;
     board.appendChild(el);
   });
-
-  document.getElementById('kLive').textContent = nLive;
-  document.getElementById('kBeta').textContent = nBeta;
-  document.getElementById('kPlan').textContent = nPlan;
-  document.getElementById('kTotal').textContent = nTotal;
+  document.getElementById('shownCount').textContent=shown+' capacidades';
 }
 
-document.getElementById('filters').addEventListener('click', e=>{
-  const b = e.target.closest('.fbtn'); if(!b) return;
-  filter = b.dataset.f;
-  document.querySelectorAll('.fbtn').forEach(x=>x.classList.toggle('on', x===b));
-  render();
-});
-
-document.getElementById('updated').textContent = 'ACTUALIZADO ' + new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
-render();
+function init(){
+  const {t,l,b,p}=tally();
+  document.getElementById('hchips').innerHTML=
+    `<span class="hchip"><span class="sw" style="background:var(--live)"></span><b>${l}</b> en producción</span>`+
+    `<span class="hchip"><span class="sw" style="background:var(--beta)"></span><b>${b}</b> en beta</span>`+
+    `<span class="hchip"><span class="sw" style="background:var(--plan)"></span><b>${p}</b> próximas</span>`+
+    `<span class="hchip"><span class="sw" style="background:var(--gold)"></span><b>${t}</b> capacidades</span>`;
+  document.getElementById('cAll').textContent=t;document.getElementById('cLive').textContent=l;
+  document.getElementById('cBeta').textContent=b;document.getElementById('cPlan').textContent=p;
+  const pct=Math.round(l/t*100), C=2*Math.PI*64;
+  document.getElementById('ringTotal').textContent=t;document.getElementById('ringLive').textContent=l;
+  const arc=document.getElementById('ringArc');arc.setAttribute('stroke-dasharray',C.toFixed(0));
+  requestAnimationFrame(()=>{arc.style.transition='stroke-dashoffset 1.1s cubic-bezier(.2,.7,.2,1)';arc.setAttribute('stroke-dashoffset',(C*(1-l/t)).toFixed(1));});
+  let cur=0;const step=()=>{cur+=Math.max(1,Math.ceil((pct-cur)/6));if(cur>=pct)cur=pct;document.getElementById('ringPct').textContent=cur+'%';if(cur<pct)requestAnimationFrame(step);};requestAnimationFrame(step);
+  document.getElementById('stamp').textContent='ACTUALIZADO '+new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+  document.getElementById('seg').addEventListener('click',e=>{const btn=e.target.closest('button');if(!btn)return;filter=btn.dataset.f;document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===btn));renderBoard();});
+  renderBoard();
+}
+init();
 </script>
 </body>
 </html>
