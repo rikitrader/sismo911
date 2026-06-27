@@ -56,6 +56,8 @@ function mapPerson(p: any, op: boolean) {
 
 // GET /api/familia/persons?q=&status=&cursor=&limit=
 familia.get('/persons', async (c) => {
+  const limited = await rateLimit(c.env, c, 'familia_browse', 90, 60);
+  if (limited) return limited;
   const op = await isOperator(c);
   // Public (redacted) responses are identical per URL, so the homepage's hottest call
   // is served from a 30s per-colo edge cache instead of recomputing from D1 on every
@@ -119,7 +121,10 @@ familia.get('/persons', async (c) => {
 });
 
 // GET /api/familia/gallery?cursor=&limit=
-familia.get('/gallery', async (c) => edgeCached(c, 60, async () => {
+familia.get('/gallery', async (c) => {
+  const limited = await rateLimit(c.env, c, 'familia_browse', 90, 60);
+  if (limited) return limited;
+  return edgeCached(c, 60, async () => {
   const limit = clampLimit(c.req.query('limit'), 30);
   // Filters from the /personas wall (all optional). status → estado; q searches
   // name+location; edo/lugar match the freeform `ubicacion`; desde/hasta bound the
@@ -152,7 +157,8 @@ familia.get('/gallery', async (c) => edgeCached(c, 60, async () => {
     photos: rows.slice(0, limit).map((p) => ({ id: p.id, full_name: p.nombre, age: p.edad, status: estadoToStatus(p.estado), last_seen: p.ubicacion, photo_url: `/api/familia/photo/${p.id}` })),
     total, nextCursor: nextCursor(rows, limit),
   };
-}));
+  });
+});
 
 // GET /api/familia/photo/:id  — serve from DESAP_FOTOS R2, fall back to the external URL
 familia.get('/photo/:id', async (c) => {
@@ -170,6 +176,8 @@ familia.get('/photo/:id', async (c) => {
 
 // GET /api/familia/person/:id  — full public detail for the click-to-open card modal.
 familia.get('/person/:id', async (c) => {
+  const limited = await rateLimit(c.env, c, 'familia_detail', 60, 60);
+  if (limited) return limited;
   const id = c.req.param('id');
   // Native operator case file (id like "per_xxxxxxxx") lives in the main DB.
   if (id.startsWith('per_')) {
