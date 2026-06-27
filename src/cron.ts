@@ -107,6 +107,11 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // months — without it the phash mode below has almost nothing to group on.
     { name: 'personas-phash-backfill', run: (env) => backfillPhashes(env, 150) },
     { name: 'personas-dedupe-phash', run: (env) => drain(() => dedupePersonas(env, { mode: 'phash', apply: true, limit: 400 })) },
+    // Perceptual-hash dedupe (collapses re-encoded same-image dups the byte-hash
+    // misses). photo_dhash is populated by the local scripts/dhash-photos-local.mjs
+    // (Workers can't decode JPEG); this cron only does the SQL GROUP/delete, which
+    // is safe-guarded to small clusters (2..6) so shared placeholders never merge.
+    { name: 'personas-dedupe-dhash', run: (env) => drain(() => dedupePersonas(env, { mode: 'dhash', apply: true, limit: 400 })) },
   ],
   // :05 — one-time historical-archive bootstrap. Self-disabling via a KV flag
   // (`history:bootstrapped`): on a fresh/empty D1 it runs the full USGS backfill
