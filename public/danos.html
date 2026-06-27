@@ -53,9 +53,11 @@
             <div><span class="sevdot" style="background:#c8102e"></span> Grave / Severo</div>
             <div><span class="sevdot" style="background:#e57200"></span> Moderado</div>
             <div><span class="sevdot" style="background:#16a34a"></span> Leve / Sin daño</div>
+            <div><span class="sevdot" style="background:#c79a00"></span> Leve (amarillo)</div>
             <div><span class="sevdot" style="background:#94a3b8"></span> Indeterminado</div>
           </div>
-          <div id="maxar-note" class="mt-3 text-on-surface-variant"></div>
+          <div id="danos-count" class="mt-3 font-semibold text-on-surface"></div>
+          <div id="maxar-note" class="mt-2 text-on-surface-variant"></div>
         </div>
       </aside>
     </div>
@@ -94,6 +96,26 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
 let map,resultLayer,aoiMarker,aoi=null;
 const YUMARE=[10.4351,-68.4716];
 
+// Daños estructurales reportados por la comunidad (sos_damage → /api/danos-estructurales).
+const DSEV={rojo:['Grave','#c8102e',8],naranja:['Moderado','#e57200',7],amarillo:['Leve','#c79a00',6]};
+const DCAT={collapsed_building:'Edificio colapsado',damaged_building:'Edificio dañado',trapped_people:'Personas atrapadas',gas_leak:'Fuga de gas',medical_need:'Necesidad médica',shelter:'Refugio',water_point:'Punto de agua',aid_point:'Punto de ayuda'};
+const inVE=(la,lo)=>typeof la==='number'&&typeof lo==='number'&&la>=0&&la<=13&&lo>=-74&&lo<=-59;
+// Plot every reported damage point into `group`; returns how many rendered.
+async function loadDamageReports(group){
+  let reports=[]; try{({reports=[]}=await fetch('/api/danos-estructurales').then(r=>r.json()));}catch{}
+  let shown=0;
+  reports.forEach(d=>{
+    if(!inVE(d.lat,d.lng))return;
+    const[lbl,hex,rad]=DSEV[d.severity]||['Reporte','#94a3b8',6];
+    const cat=DCAT[d.category]||d.category||'';
+    L.circleMarker([d.lat,d.lng],{radius:rad,color:'#fff',weight:1,fillColor:hex,fillOpacity:.85})
+     .bindPopup(`<b>${esc(d.title||cat)}</b><br><span style="display:inline-block;background:${hex};color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;margin:3px 0">${esc(lbl)}</span> <span style="font-size:11px;color:#666">${esc(cat)}${d.municipio?' · '+esc(d.municipio):''}</span><br><span style="font-size:12px">${esc((d.description||'').slice(0,220))}</span>${d.source_url?`<br><a href="${esc(d.source_url)}" target="_blank" rel="noopener" style="font-size:11px">Fuente</a>`:''}`)
+     .addTo(group);
+    shown++;
+  });
+  return shown;
+}
+
 // La Guaira GIS overlays (OpenStreetMap / Overpass). Each is an empty group in
 // the layer control until first enabled, then its geojson is fetched once
 // (roads.geojson is ~3 MB, so we never load it on page open).
@@ -125,7 +147,7 @@ function guairaLayers(){
 }
 const LAGUAIRA=[10.6,-66.9];   // estado La Guaira (foco por defecto)
 async function initGis(){
-  map=L.map('gmap',{attributionControl:false}).setView(LAGUAIRA,11);
+  map=L.map('gmap',{attributionControl:false,preferCanvas:true}).setView(LAGUAIRA,11);
   const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
   const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
   const gibs=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2026-06-24/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',{maxZoom:9});
@@ -140,12 +162,16 @@ async function initGis(){
   const layerNames=['Esri'];
   if(cfg.google){ const g=L.tileLayer('/api/sat/google/{z}/{x}/{y}',{maxZoom:20}); bases['Google satélite']=g; g.addTo(map); esri.remove(); layerNames.unshift('Google'); }
 
+  // Daños reportados por la comunidad — encendido por defecto (es el dato principal).
+  const danosLayer=L.layerGroup().addTo(map);
+
   // La Guaira GIS overlays (estado más golpeado: Catia La Mar, Playa Grande).
   // Todas activas por defecto y mapa centrado en La Guaira.
   const guaira=guairaLayers();
-  L.control.layers(bases,Object.assign({'Evaluaciones IA':resultLayer},guaira.controls),{collapsed:false}).addTo(map);
+  L.control.layers(bases,Object.assign({'Daños reportados':danosLayer,'Evaluaciones IA':resultLayer},guaira.controls),{collapsed:false}).addTo(map);
   guaira.addAll(map).then(outline=>{ if(outline){ try{map.fitBounds(outline.getBounds(),{padding:[20,20]});}catch{} } });
   map.on('overlayadd',guaira.onAdd);
+  loadDamageReports(danosLayer).then(n=>{ const el=document.getElementById('danos-count'); if(el) el.textContent=n?`${n.toLocaleString('es-VE')} daños reportados en el mapa`:''; });
   if(cfg.gibs)layerNames.push('NASA GIBS');
   document.getElementById('layerinfo').textContent=layerNames.join(' · ');
   document.getElementById('maxar-note').innerHTML=cfg.maxar?`🛰️ Maxar Open Data: <b>${esc(cfg.maxar.event)}</b> disponible para este evento.`:'Maxar Open Data: sin activación publicada para este sismo todavía.';
