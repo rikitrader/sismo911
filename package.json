@@ -9,6 +9,7 @@
     "preflight": "bash scripts/preflight.sh",
     "bootstrap:secrets": "bash scripts/bootstrap-secrets.sh",
     "secret-scan": "bash scripts/secret-scan.sh --all",
+    "security-audit": "bash scripts/security-audit.sh",
     "predeploy": "bash scripts/preflight.sh",
     "deploy": "npm run build:css && wrangler deploy",
     "typecheck": "tsc --noEmit",

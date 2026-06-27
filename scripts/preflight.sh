@@ -10,12 +10,17 @@ set -uo pipefail
 quick=false; [ "${1:-}" = "--quick" ] && quick=true
 cd "$(git rev-parse --show-toplevel)"
 
-# CRITICAL: never let an auto-loaded .env Cloudflare token override the OAuth
-# session (wrangler v4 auto-loads .env). Strip them for this process only.
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || grep -qsE '^CLOUDFLARE_(API_TOKEN|ACCOUNT_ID)=' .env 2>/dev/null; then
-  echo "ℹ︎  Cloudflare creds present in env/.env — unsetting for this run so the OAuth session is used."
+# Locally: never let an auto-loaded .env Cloudflare token override the OAuth
+# session (wrangler v4 auto-loads .env). In CI the token IS the intended auth
+# (a GitHub Secret), so DO NOT unset there.
+if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+  echo "ℹ︎  CI detected — using the provided CLOUDFLARE_API_TOKEN (not unsetting)."
+else
+  if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || grep -qsE '^CLOUDFLARE_(API_TOKEN|ACCOUNT_ID)=' .env 2>/dev/null; then
+    echo "ℹ︎  Cloudflare creds present in env/.env — unsetting for this local run so the OAuth session is used."
+  fi
+  unset CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
 fi
-unset CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
 
 WORKER="$(grep -E '^name[[:space:]]*=' wrangler.toml | head -1 | cut -d'"' -f2)"
 fails=0; warns=0
