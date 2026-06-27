@@ -117,10 +117,10 @@
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.pets) {
-      // "MASCOTAS" chip — same frame, size and spacing as the TERREMOTOS (gold) button,
-      // rendered in orange with white text/icon and its paw-print glyph.
-      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:#e8590c;color:#fff;box-shadow:0 1px 3px rgba(232,89,12,.4)">
-      <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.18);color:#fff">${icon(it.d)}</span>
+      // "MASCOTAS" chip — same frame, size, spacing AND color as the TERREMOTOS (gold)
+      // button: Venezuela-flag gold with navy text/icon, plus its paw-print glyph.
+      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${GOLD};color:${NAVY};box-shadow:0 1px 3px rgba(201,162,39,.45)">
+      <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
     if (it.superbanner) {
