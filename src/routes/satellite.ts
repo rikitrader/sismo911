@@ -26,6 +26,12 @@ function parseAssessment(text: string) {
   return { severity: sev, summary: grab('RESUMEN'), hazards: grab('PELIGROS').split(',').map((h) => h.trim()).filter(Boolean), action: grab('ACCIÓN') };
 }
 
+function readBearer(c: any): string {
+  const raw = c.req.header('authorization') || '';
+  const m = raw.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : '';
+}
+
 // ---- slippy-map tile math ----
 const lonToTileX = (lon: number, z: number) => Math.floor((lon + 180) / 360 * 2 ** z);
 const latToTileY = (lat: number, z: number) => { const r = lat * Math.PI / 180; return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z); };
@@ -90,6 +96,32 @@ async function maxarInfo(env: Env): Promise<any> {
   } catch (e: any) { console.error('[sat] maxar', e?.message ?? e); return null; }
 }
 satellite.get('/maxar', async (c) => c.json({ maxar: await maxarInfo(c.env) }));
+
+// POST /api/sat/pytorch-results — ingest external PyTorch detections.
+satellite.post('/pytorch-results', async (c) => {
+  const token = (c.env as any).SATELLITE_INGEST_TOKEN;
+  if (!token) return c.json({ error: 'ingest_token_not_configured' }, 503);
+  if (readBearer(c) !== token) return c.json({ error: 'unauthorized' }, 401);
+
+  const b = await c.req.json().catch(() => ({} as any));
+  const lat = Number(b.lat), lon = Number(b.lon);
+  if (!validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
+  const zoom = Math.min(19, Math.max(15, Number(b.zoom) || 18));
+  const severity = SEVERITIES.includes(String(b.severity)) ? String(b.severity) : 'indeterminado';
+  const summary = String(b.summary ?? '').slice(0, 2000);
+  const hazards = Array.isArray(b.hazards) ? b.hazards.map((h: unknown) => String(h).trim()).filter(Boolean) : [];
+  const model = String(b.model ?? 'pytorch:external').slice(0, 200);
+  const x = lonToTileX(lon, zoom), y = latToTileY(lat, zoom);
+  const id = uid('sat');
+  await c.env.DB.prepare(
+    `INSERT OR REPLACE INTO sat_damage (id, lat, lon, zoom, bbox_n, bbox_s, bbox_e, bbox_w, severity, summary, hazards, imagery_source, imagery_date, event_id, ai_model, analyzed_by, verification, created_ms)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+  ).bind(
+    id, lat, lon, zoom, tileToLat(y, zoom), tileToLat(y + 1, zoom), tileToLon(x + 1, zoom), tileToLon(x, zoom),
+    severity, summary, JSON.stringify(hazards), 'pytorch', null, null, model, null, 'unverified', Date.now()
+  ).run();
+  return c.json({ ok: true, id, severity, verification: 'unverified', source: 'pytorch', hazards, summary, model }, 201);
+});
 
 // POST /api/sat/analyze — assess an AOI's overhead imagery (operator-gated).
 satellite.post('/analyze', async (c) => {

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centro Humanitario — SISMO911</title>
+<meta name="description" content="Centro humanitario público SISMO911: SOS agregados, check-ins, refugios, recursos críticos, lifelines ESF y señales humanitarias sin datos personales.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/humanitario">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Centro Humanitario — SISMO911">
+<meta property="og:description" content="Vista pública agregada de ayuda humanitaria, refugios, recursos críticos y señales sin PII.">
+<meta property="og:url" content="https://sismo911.com/humanitario">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  body{background:#f6f7fb;color:#101820;font-family:Inter,sans-serif}
+  .wrap{max-width:1320px;margin:0 auto;padding:24px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+  .eyebrow{font:800 11px Public Sans,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5f6675}
+  h1{font:900 30px/1.05 Public Sans,sans-serif;color:#00173a;margin:5px 0 0}
+  .stamp{font:700 12px JetBrains Mono,monospace;color:#00173a;background:#fff;border:1px solid #c4c6d0;border-radius:8px;padding:9px 11px;white-space:nowrap}
+  .grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:14px}
+  .card{background:#fff;border:1px solid #d8dbe4;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .metric{padding:14px;border-left:5px solid var(--accent,#00173a)}
+  .metric .v{font:900 28px/1 Public Sans,sans-serif;color:#00173a;margin-top:7px}
+  .metric .s{font:600 12px/1.35 Inter,sans-serif;color:#5f6675;margin-top:6px;min-height:32px}
+  .main{grid-template-columns:minmax(0,1.2fr) minmax(340px,.8fr);align-items:start}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-bottom:1px solid #e3e5eb}
+  .panel-h h2{font:800 15px Public Sans,sans-serif;color:#00173a;margin:0}
+  .pill{font:800 11px Public Sans,sans-serif;border-radius:999px;padding:5px 8px;background:#eef2f8;color:#445e91}
+  .list{max-height:390px;overflow:auto}.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:11px 14px;border-top:1px solid #edf0f5}
+  .row:first-child{border-top:0}.badge{font:800 11px JetBrains Mono,monospace;color:#fff;background:#00173a;border-radius:6px;padding:4px 6px;white-space:nowrap}
+  .title{font:800 13px/1.25 Inter,sans-serif;color:#101820}.meta{font:600 11px/1.35 Inter,sans-serif;color:#6d7280;margin-top:3px}
+  .ops{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px}.op{padding:14px;min-height:126px}.op h3{font:800 14px Public Sans,sans-serif;color:#00173a;margin:0 0 10px}.op .v{font:900 27px/1 Public Sans,sans-serif;color:#00173a}
+  .sig{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px 14px}.sig .item{border:1px solid #e3e5eb;border-radius:8px;padding:10px;background:#fafbfe}
+  .sig b{display:block;font:900 18px/1 Public Sans,sans-serif;color:#00173a}.sig span{display:block;font:700 11px/1.3 Inter,sans-serif;color:#5f6675;margin-top:6px}
+  .empty{padding:18px 14px;color:#6d7280;font:600 13px Inter,sans-serif}.err{color:#bb0027}
+  @media(max-width:1060px){.kpis,.main,.ops,.sig{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.stamp{white-space:normal}}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Centro Humanitario — SISMO911","description":"Centro humanitario público SISMO911 con SOS agregados, check-ins, refugios, recursos críticos y lifelines ESF sin datos personales.","url":"https://sismo911.com/humanitario","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+</head>
+<body>
+<main class="wrap">
+  <section class="top">
+    <div>
+      <div class="eyebrow">ESF-6 · ESF-7 · ESF-8 · Señales públicas agregadas</div>
+      <h1>Centro Humanitario</h1>
+    </div>
+    <div class="stamp" id="updated">SIN DATOS</div>
+  </section>
+
+  <section class="grid kpis" aria-label="Indicadores humanitarios">
+    <article class="card metric" style="--accent:#bb0027"><div class="eyebrow">SOS sin resolver</div><div class="v" id="kSos">—</div><div class="s">Activos o reconocidos, agregados sin PII.</div></article>
+    <article class="card metric" style="--accent:#e57200"><div class="eyebrow">Piden ayuda</div><div class="v" id="kHelp">—</div><div class="s">Check-ins públicos con necesidad de ayuda.</div></article>
+    <article class="card metric" style="--accent:#2e7d32"><div class="eyebrow">A salvo</div><div class="v" id="kSafe">—</div><div class="s">Familias que reportaron estado seguro.</div></article>
+    <article class="card metric" style="--accent:#7c3aed"><div class="eyebrow">Recursos críticos</div><div class="v" id="kResources">—</div><div class="s">Recursos bajos o agotados.</div></article>
+    <article class="card metric" style="--accent:#445e91"><div class="eyebrow">Refugios estresados</div><div class="v" id="kShelters">—</div><div class="s">Refugios llenos o cerrados.</div></article>
+  </section>
+
+  <section class="grid main">
+    <article class="card">
+      <div class="panel-h"><h2>Postura humanitaria por estado</h2><span class="pill" id="stateSummary">Agregado estatal</span></div>
+      <div class="list" id="stateList"><div class="empty">Cargando postura por estado…</div></div>
+    </article>
+    <div class="grid" style="gap:14px">
+      <article class="card">
+        <div class="panel-h"><h2>Señales humanitarias</h2><span class="pill" id="signalSummary">0 celdas</span></div>
+        <div class="sig" id="signalGrid"><div class="empty">Cargando señales agregadas…</div></div>
+      </article>
+      <article class="card">
+        <div class="panel-h"><h2>Lifelines ESF</h2><span class="pill" id="lifeSummary">Salud · Comms · Recursos</span></div>
+        <div class="list" id="lifeList"><div class="empty">Cargando lifelines…</div></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="grid ops" aria-label="Acciones públicas">
+    <article class="card op"><h3>SOS</h3><div class="v">🆘</div><p class="meta">Emergencia con ubicación.</p><a class="meta" href="/sos">Enviar SOS →</a></article>
+    <article class="card op"><h3>Estoy a salvo</h3><div class="v">✓</div><p class="meta">Check-in familiar público.</p><a class="meta" href="/estoy-a-salvo">Reportar estado →</a></article>
+    <article class="card op"><h3>Recursos</h3><div class="v">📦</div><p class="meta">Refugios y suministros.</p><a class="meta" href="/recursos">Ver recursos →</a></article>
+    <article class="card op"><h3>Mapa COP</h3><div class="v">◎</div><p class="meta">Capas humanitarias y lifelines.</p><a class="meta" href="/mapa">Abrir mapa →</a></article>
+  </section>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=n=>Number(n||0).toLocaleString('es-VE');
+async function json(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(url+' '+r.status);return r.json();}
+function renderDashboard(d){
+  $('kSos').textContent=nf(d.sos?.unresolved);
+  $('kHelp').textContent=nf(d.checkins?.need_help);
+  $('kSafe').textContent=nf(d.checkins?.safe);
+  $('kResources').textContent=nf(Number(d.resources?.low||0)+Number(d.resources?.depleted||0));
+  $('kShelters').textContent=nf(Number(d.shelters?.full||0)+Number(d.shelters?.closed||0));
+}
+function renderStates(d){
+  const rows=(d.features||[]).filter(f=>f.properties?.layer==='state_posture').slice(0,18);
+  $('stateSummary').textContent=`${nf(rows.length)} estados · ${esc(d.privacy||'sin PII')}`;
+  const col={emergency:'#bb0027',elevated:'#e57200',watch:'#c9a227',normal:'#2e7d32'};
+  $('stateList').innerHTML=rows.length?rows.map(f=>{const p=f.properties||{},m=p.metrics||{},c=col[p.severity]||'#445e91';
+    return `<div class="row"><span class="badge" style="background:${c}">${nf(p.score)}</span><div><div class="title">${esc(p.name)}</div><div class="meta">SOS ${nf(m.unresolved_sos)} · ayuda ${nf(m.need_help_checkins)} · refugios ${nf(m.stressed_shelters)} · recursos ${nf(m.critical_resources)}</div></div><span class="meta">${esc(p.severity)}</span></div>`;
+  }).join(''):'<div class="empty">Sin señales estatales agregadas.</div>';
+}
+function renderSignals(d){
+  const rows=(d.features||[]).filter(f=>f.properties?.layer==='humanitarian_signal');
+  const by={};
+  rows.forEach(f=>{const p=f.properties||{},k=`${p.source}:${p.status}`;by[k]=(by[k]||0)+Number(p.count||0);});
+  $('signalSummary').textContent=`${nf(rows.length)} celdas · ${esc(d.privacy||'sin PII')}`;
+  const entries=Object.entries(by).sort((a,b)=>b[1]-a[1]);
+  $('signalGrid').innerHTML=entries.length?entries.map(([k,v])=>`<div class="item"><b>${nf(v)}</b><span>${esc(k.replace(':',' · '))}</span><span>ubicación aproximada 0.1°</span></div>`).join(''):'<div class="empty">Sin señales humanitarias agregadas.</div>';
+}
+function renderLifelines(d){
+  const rows=(d.features||[]).filter(f=>f.properties?.layer==='lifeline').slice(0,12);
+  $('lifeSummary').textContent=`${nf(rows.length)} de ${nf(d.counts?.lifeline||0)} · ${esc(d.privacy||'sin PII')}`;
+  const color={health:'#1f8a4c',comms:'#2563eb',resource:'#7c3aed',acopio:'#00173a'};
+  $('lifeList').innerHTML=rows.length?rows.map(f=>{const p=f.properties||{},c=color[p.category]||'#445e91';
+    return `<div class="row"><span class="badge" style="background:${c}">${esc(String(p.category||'L').slice(0,3))}</span><div><div class="title">${esc(p.name)}</div><div class="meta">${esc(p.type||'lifeline')} · ${esc(p.region||'Nacional')} · ${esc(p.status||'unknown')}</div></div><span class="meta">${p.count?nf(p.count):''}</span></div>`;
+  }).join(''):'<div class="empty">Sin lifelines publicados.</div>';
+}
+async function refresh(){
+  const settled=await Promise.allSettled([
+    json('/api/humanitarian/dashboard'),
+    json('/api/layers/state-posture?limit=25'),
+    json('/api/layers/humanitarian?include=signals&limit=300'),
+    json('/api/layers/lifelines?include=health,comms,resources,acopio&limit=800')
+  ]);
+  const [dash,states,signals,lifelines]=settled.map(x=>x.status==='fulfilled'?x.value:null);
+  if(dash)renderDashboard(dash);
+  if(states)renderStates(states);else $('stateList').innerHTML='<div class="empty err">No se pudo cargar postura estatal.</div>';
+  if(signals)renderSignals(signals);
+  if(lifelines)renderLifelines(lifelines);
+  $('updated').textContent='ACTUALIZADO '+new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+refresh();setInterval(refresh,60000);
+</script>
+</body>
+</html>

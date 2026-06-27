@@ -35,5 +35,7 @@ export function adapterStatus(env: Record<string, unknown>) {
   return Object.values(adapters).map((a) => ({
     platform: a.platform,
     configured: a.isConfigured(env),
+    live: false,
+    status: 'connector_not_enabled',
   }));
 }

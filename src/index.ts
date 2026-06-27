@@ -36,6 +36,8 @@ import { donations } from './routes/donations';
 import { botiquin } from './routes/botiquin';
 import { agencias } from './routes/agencias';
 import { estados } from './routes/estados';
+import { layers } from './routes/layers';
+import { sitrep } from './routes/sitrep';
 import { dataApi } from './routes/data-api';
 import { mcp } from './routes/mcp';
 import { runCronGroup } from './cron';
@@ -119,7 +121,7 @@ app.use('*', async (c, next) => {
   const isShelterModeration = path === '/api/shelters/queue';
   // Satellite GIS: GET config/google/maxar/damage are public reads; analyze +
   // verification writes are operator-only.
-  const isSatWrite = WRITE_METHODS.has(method) && path.startsWith('/api/sat/');
+  const isSatWrite = WRITE_METHODS.has(method) && path.startsWith('/api/sat/') && path !== '/api/sat/pytorch-results';
   // Acopio submission review queue (GET) is operator-only; approve/reject (PATCH)
   // is already covered by the /api/acopio admin-write rule above.
   const isAcopioReview = method === 'GET' && path === '/api/acopio/submissions';
@@ -195,6 +197,8 @@ app.route('/api/damage', damage);
 app.route('/api/sat', satellite);    // satellite/GIS damage analysis (imagery proxy + Workers AI vision)
 app.route('/api/reports', reports);  // citizen damage-report map + comments + reactions + moderation
 app.route('/api/chat', chat);        // community channel
+app.route('/api/layers', layers);    // COP layers catalog + public GeoJSON layers
+app.route('/api/sitrep', sitrep);    // public non-PII operational sitrep / ESF matrix
 app.route('/api/acopio', acopio);    // /api/acopio/status — live status for acopio/hospitales/PC
 app.route('/api/acopio', logistica); // /api/acopio/{inventory,needs,shipments,match,dashboard} — FEMA-style logistics (GET public, writes operator-gated)
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
@@ -228,6 +232,19 @@ const serveAsset = async (c: any, assetPath: string) => {
   res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
   return res;
 };
+export const PUBLIC_COMMAND_ASSETS: Record<string, string> = {
+  '/dashboard': '/dashboard',
+  '/geosismico': '/geosismico',
+  '/humanitario': '/humanitario',
+  '/layers': '/layers',
+  '/logistica': '/logistica',
+  '/operaciones': '/operaciones',
+  '/red-ayuda': '/red-ayuda',
+  '/satellite': '/satellite',
+};
+for (const [routePath, assetPath] of Object.entries(PUBLIC_COMMAND_ASSETS)) {
+  app.get(routePath, (c) => serveAsset(c, assetPath));
+}
 app.get('/', (c) => serveAsset(c, '/personas'));
 app.get('/terremotos', (c) => serveAsset(c, '/'));
 
@@ -321,19 +338,32 @@ app.route('/', rav);
 // /report, /queue, /events/:eid/approve|reject. The /mascota detail page is static.
 app.route('/', mascotas);
 
-// Anything not under /api and not a static asset → let ASSETS serve (404s handled by CF).
+async function fetchAsset(c: any, path: string) {
+  const req = new Request(new URL(path, c.req.url).toString(), c.req.raw);
+  return c.env.ASSETS.fetch(req);
+}
+
+// Anything not under /api and not a routed public command page → let ASSETS
+// serve. We try the raw path first, then clean-url fallbacks (`/foo` → `/foo.html`)
+// so the public HTML pages remain reachable even when the underlying asset file
+// is named with the `.html` suffix.
 app.all('*', async (c) => {
-  // Serve static assets, but re-apply the security headers — ASSETS.fetch returns
-  // a fresh Response that drops the headers set by the global middleware, so CSP,
-  // X-Frame-Options, etc. would otherwise be missing on the HTML pages.
-  const assetRes = await c.env.ASSETS.fetch(c.req.raw);
-  const res = new Response(assetRes.body, assetRes);
+  const path = new URL(c.req.url).pathname;
+  const candidates = path === '/' || path.endsWith('.html') || path.endsWith('.xml') || path.endsWith('.txt') || path.endsWith('.json') || path.endsWith('.webmanifest')
+    ? [path]
+    : [path, `${path}.html`, `${path}/index.html`];
+  let assetRes: Response | null = null;
+  for (const candidate of candidates) {
+    const res = await fetchAsset(c, candidate);
+    if (res.ok || res.status !== 404) { assetRes = res; break; }
+    if (!assetRes) assetRes = res;
+  }
+  const res = new Response((assetRes || await fetchAsset(c, path)).body, assetRes || undefined);
   setSecurityHeaders({ header: (k: string, v: string) => res.headers.set(k, v) } as any);
   // Always revalidate HTML, the service worker, and the manifest so a deploy is
   // visible immediately instead of being masked by browser/edge caching. Hashed
   // assets (CSS/JS/images) keep their default long cache.
   const ct = res.headers.get('content-type') || '';
-  const path = new URL(c.req.url).pathname;
   if (ct.includes('text/html') || path === '/sw.js' || path.endsWith('.webmanifest')) {
     res.headers.set('Cache-Control', 'no-cache, must-revalidate');
   }

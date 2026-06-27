@@ -77,6 +77,18 @@
       <button id="openQueue" class="bg-secondary text-white font-bold rounded-md px-3 py-1.5 text-xs">Revisar pendientes</button>
     </div>
 
+    <!-- same-photo review banner -->
+    <div id="photoReviewBanner" class="hidden card p-3 flex items-center justify-between gap-3 bg-slate-50" style="background:#f8fafc;border-color:#cbd5e1">
+      <div class="text-sm">
+        <div class="font-semibold">Revisión de fotos: buscadas / localizadas</div>
+        <div class="text-xs text-on-surface-variant">Control no biométrico. No es reconocimiento facial ni identificación biométrica.</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="photoReviewCount" class="chip same-photo" style="color:#0f172a;background:#e2e8f0">0</span>
+        <button id="openPhotoReview" class="bg-primary text-white font-bold rounded-md px-3 py-1.5 text-xs">Abrir revisión</button>
+      </div>
+    </div>
+
     <!-- summary -->
     <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
       <div class="card p-3"><div id="s_total" class="font-display font-black text-2xl">—</div><div class="eyebrow">Expedientes</div></div>
@@ -161,6 +173,21 @@
     </div>
   </div>
 
+  <!-- same-photo review modal -->
+  <div id="photoReviewModal" class="fixed inset-0 z-[61] hidden">
+    <div class="absolute inset-0 bg-black/40" id="photoReviewScrim"></div>
+    <div class="relative max-w-4xl mx-auto mt-10 card p-5 max-h-[80vh] overflow-y-auto">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <h2 class="font-display font-bold text-lg">Revisión de fotos: buscadas / localizadas</h2>
+          <p class="text-xs text-on-surface-variant">Control no biométrico. No es reconocimiento facial ni identificación biométrica.</p>
+        </div>
+        <button id="photoReviewClose" class="text-xl">✕</button>
+      </div>
+      <div id="photoReviewList" class="space-y-3"></div>
+    </div>
+  </div>
+
   <!-- print packet target -->
   <div id="packet"></div>
 
@@ -218,6 +245,7 @@ async function load(){
   $('#count').textContent=`${cases.length} expediente(s)`;
   tb.querySelectorAll('.row').forEach(r=>r.addEventListener('click',()=>openCase(r.dataset.id)));
   loadPendingCount();
+  loadPhotoReviewCount();
 }
 $('#refreshBtn').onclick=load;
 let t;const deb=fn=>{clearTimeout(t);t=setTimeout(fn,300);};
@@ -230,6 +258,12 @@ async function loadPendingCount(){
   $('#pendCount').textContent=updates.length;
   $('#pendingBanner').classList.toggle('hidden',!updates.length);
   return updates;
+}
+async function loadPhotoReviewCount(){
+  const {candidates=[]}=await api('persons/photo-review/candidates').then(r=>r.json()).catch(()=>({candidates:[]}));
+  $('#photoReviewCount').textContent=candidates.length;
+  $('#photoReviewBanner').classList.toggle('hidden',!candidates.length);
+  return candidates;
 }
 $('#openQueue').onclick=async()=>{
   const updates=await loadPendingCount();
@@ -251,6 +285,30 @@ $('#openQueue').onclick=async()=>{
   $('#queueModal').classList.remove('hidden');
 };
 $('#queueClose').onclick=$('#queueScrim').onclick=()=>$('#queueModal').classList.add('hidden');
+$('#openPhotoReview').onclick=async()=>{
+  const {candidates=[]}=await api('persons/photo-review/candidates').then(r=>r.json()).catch(()=>({candidates:[]}));
+  $('#photoReviewList').innerHTML=candidates.length?candidates.map(c=>`<div class="card p-3">
+    <div class="flex items-center justify-between gap-2 flex-wrap">
+      <div>
+        <div class="font-semibold">${esc(c.review_type)}</div>
+        <div class="text-[11px] text-on-surface-variant">same-photo · ${esc(c.photo_phash||'—')}</div>
+      </div>
+      <div class="flex gap-2 text-[11px] flex-wrap">
+        <span class="chip" style="color:#0f172a;background:#e2e8f0">${esc(String(c.n||0))} casos</span>
+        <span class="chip" style="color:#b45309;background:#fef3c7">${esc(String(c.missing||0))} buscadas</span>
+        <span class="chip" style="color:#15803d;background:#dcfce7">${esc(String(c.found||0))} localizadas</span>
+      </div>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
+      ${(c.cases||[]).map(p=>`<a href="/admin-casos?id=${esc(p.id)}" class="block border rounded-md p-2 hover:bg-slate-50">
+        <div class="font-semibold text-sm">${esc(p.full_name)}</div>
+        <div class="text-[11px] text-on-surface-variant">${esc(p.status||'—')} · ${esc(p.last_seen||'')}</div>
+      </a>`).join('')}
+    </div>
+  </div>`).join(''):'<p class="text-sm text-on-surface-variant text-center py-6">Sin coincidencias de same-photo.</p>';
+  $('#photoReviewModal').classList.remove('hidden');
+};
+$('#photoReviewClose').onclick=$('#photoReviewScrim').onclick=()=>$('#photoReviewModal').classList.add('hidden');
 
 // ---------------- detail overlay ----------------
 function openDetail(){$('#detail').classList.remove('hidden');document.body.style.overflow='hidden';}

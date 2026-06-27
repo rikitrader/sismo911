@@ -79,6 +79,20 @@ fetch('/api/events?limit=300').then(r=>r.json()).then(d=>{(d.events||[]).forEach
   return c.html(html);
 });
 
+// ---------- /sitemap-estados.xml : all state GIS pages ----------
+estados.get('/sitemap-estados.xml', (c) => {
+  const urls = [...ESTADOS].sort(byName).map((st) => `  <url><loc>https://sismo911.com/estado/${e(st.slug)}</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>`).join('\n');
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>
+`;
+  return c.body(xml, 200, {
+    'Content-Type': 'application/xml; charset=utf-8',
+    'Cache-Control': 'public, max-age=300',
+  });
+});
+
 // ---------- /estado/:slug : plantilla por estado ----------
 estados.get('/estado/:slug', (c) => {
   const slug = c.req.param('slug');

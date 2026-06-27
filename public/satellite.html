@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Satélite IA — SISMO911</title>
+<meta name="description" content="Panel público de inteligencia satelital SISMO911: detecciones PyTorch, severidad, verificación y disponibilidad de imagery.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/satellite">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Satélite IA — SISMO911">
+<meta property="og:description" content="Panel público de inteligencia satelital con detecciones, severidad, verificación y origen de imagery.">
+<meta property="og:url" content="https://sismo911.com/satellite">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  body{background:#f6f7fb;color:#101820;font-family:Inter,sans-serif}
+  .wrap{max-width:1420px;margin:0 auto;padding:24px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+  .eyebrow{font:800 11px Public Sans,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5f6675}
+  h1{font:900 30px/1.05 Public Sans,sans-serif;color:#00173a;margin:5px 0 0}
+  .stamp{font:700 12px JetBrains Mono,monospace;color:#00173a;background:#fff;border:1px solid #c4c6d0;border-radius:8px;padding:9px 11px;white-space:nowrap}
+  .grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:14px}
+  .card{background:#fff;border:1px solid #d8dbe4;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .metric{padding:14px;border-left:5px solid var(--accent,#00173a)}
+  .metric .v{font:900 28px/1 Public Sans,sans-serif;color:#00173a;margin-top:7px}
+  .metric .s{font:600 12px/1.35 Inter,sans-serif;color:#5f6675;margin-top:6px;min-height:32px}
+  .main{grid-template-columns:minmax(0,1.15fr) minmax(360px,.85fr);align-items:start}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-bottom:1px solid #e3e5eb}
+  .panel-h h2{font:800 15px Public Sans,sans-serif;color:#00173a;margin:0}
+  .pill{font:800 11px Public Sans,sans-serif;border-radius:999px;padding:5px 8px;background:#eef2f8;color:#445e91;white-space:nowrap}
+  #map{height:540px;border-radius:0 0 8px 8px;background:#e8edf4}
+  .list{max-height:260px;overflow:auto}
+  .row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:11px 14px;border-top:1px solid #edf0f5}
+  .row:first-child{border-top:0}
+  .badge{font:800 11px JetBrains Mono,monospace;color:#fff;background:#00173a;border-radius:6px;padding:4px 6px;white-space:nowrap}
+  .title{font:800 13px/1.25 Inter,sans-serif;color:#101820}.meta{font:600 11px/1.35 Inter,sans-serif;color:#6d7280;margin-top:3px}
+  .ops{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px}.op{padding:14px;min-height:124px}.op h3{font:800 14px Public Sans,sans-serif;color:#00173a;margin:0 0 10px}.op .v{font:900 27px/1 Public Sans,sans-serif;color:#00173a}
+  .gallery{display:grid;gap:10px;padding:14px}.item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:10px 12px;border:1px solid #e3e5eb;border-radius:8px;background:#fafbfe}
+  .chip{display:inline-flex;align-items:center;gap:5px;font:800 10px Public Sans,sans-serif;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:4px 7px;white-space:nowrap}
+  .sev-severo{background:#bb0027;color:#fff}.sev-grave{background:#e57200;color:#fff}.sev-moderado{background:#c9a227;color:#00173a}.sev-leve{background:#445e91;color:#fff}.sev-ninguno{background:#2e7d32;color:#fff}.sev-indeterminado{background:#6d7280;color:#fff}
+  .empty{padding:18px 14px;color:#6d7280;font:600 13px Inter,sans-serif}.err{color:#bb0027}
+  @media(max-width:1160px){.kpis,.main,.ops{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.stamp{white-space:normal}#map{height:420px}}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Satélite IA — SISMO911","description":"Panel público de inteligencia satelital con detecciones PyTorch, severidad y verificación.","url":"https://sismo911.com/satellite","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+</head>
+<body>
+<main class="wrap">
+  <section class="top">
+    <div>
+      <div class="eyebrow">Imagery · PyTorch · Verificación · Detecciones públicas</div>
+      <h1>Satélite IA</h1>
+    </div>
+    <div class="stamp" id="updated">SIN DATOS</div>
+  </section>
+
+  <section class="grid kpis" aria-label="Indicadores satelitales">
+    <article class="card metric" style="--accent:#7c3aed"><div class="eyebrow">Detecciones</div><div class="v" id="kTotal">—</div><div class="s">Registros públicos de daño satelital.</div></article>
+    <article class="card metric" style="--accent:#bb0027"><div class="eyebrow">Severas</div><div class="v" id="kSevere">—</div><div class="s">Severidad grave/severa en el tablero.</div></article>
+    <article class="card metric" style="--accent:#e57200"><div class="eyebrow">Sin verificar</div><div class="v" id="kUnverified">—</div><div class="s">Pendiente de revisión operativa.</div></article>
+    <article class="card metric" style="--accent:#1d4ed8"><div class="eyebrow">Imagery</div><div class="v" id="kImagery">—</div><div class="s">Fuentes disponibles para análisis.</div></article>
+    <article class="card metric" style="--accent:#2e7d32"><div class="eyebrow">Verificadas</div><div class="v" id="kVerified">—</div><div class="s">Detecciones aprobadas o revisadas.</div></article>
+  </section>
+
+  <section class="grid main">
+    <article class="card">
+      <div class="panel-h"><h2>Mapa satelital operacional</h2><span class="pill">Daño satelital IA · verificación</span></div>
+      <div id="map"></div>
+    </article>
+    <div class="grid" style="gap:14px">
+      <article class="card">
+        <div class="panel-h"><h2>Detecciones recientes</h2><span class="pill" id="detSummary">0 registros</span></div>
+        <div class="list" id="detList"><div class="empty">Cargando detecciones…</div></div>
+      </article>
+      <article class="card">
+        <div class="panel-h"><h2>Fuentes de imagery</h2><span class="pill" id="cfgSummary">Configuración</span></div>
+        <div class="gallery" id="cfgList"><div class="empty">Cargando configuración…</div></div>
+      </article>
+      <article class="card">
+        <div class="panel-h"><h2>Integración PyTorch</h2><span class="pill">Pipeline externo</span></div>
+        <div class="gallery">
+          <div class="item"><div><b>Entrada</b><span class="meta">/api/sat/pytorch-results</span></div><span class="chip" id="ingestState">Token-gated</span></div>
+          <div class="item"><div><b>Modelo</b><span class="meta">Entradas externas almacenadas como unverified</span></div><span class="chip">Revisión</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="grid ops" aria-label="Acciones satelitales">
+    <article class="card op"><h3>Geosísmico</h3><div class="eyebrow">Daño satelital</div><div class="v">◎</div><p class="meta">Integrado al mapa geosísmico y al COP.</p><a class="meta" href="/geosismico">Abrir geosísmico →</a></article>
+    <article class="card op"><h3>Capas COP</h3><div class="eyebrow">Contrato público</div><div class="v">⛯</div><p class="meta">Catálogo y endpoints de capas publicas.</p><a class="meta" href="/layers">Abrir capas →</a></article>
+    <article class="card op"><h3>Dashboard</h3><div class="eyebrow">Comando</div><div class="v">⌘</div><p class="meta">Vista nacional con satélite en el COP.</p><a class="meta" href="/dashboard">Abrir dashboard →</a></article>
+    <article class="card op"><h3>Mapa</h3><div class="eyebrow">Capas</div><div class="v">🗺</div><p class="meta">Explora la superposición operacional completa.</p><a class="meta" href="/mapa">Abrir mapa →</a></article>
+  </section>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=n=>Number(n||0).toLocaleString('es-VE');
+async function json(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(url+' '+r.status);return r.json();}
+let MAP=null, DET=[];
+const satColors={severo:'#bb0027',grave:'#e57200',moderado:'#c9a227',leve:'#445e91',ninguno:'#2e7d32',indeterminado:'#6d7280'};
+function badgeClass(sev){return 'chip sev-'+String(sev||'indeterminado');}
+function renderCfg(cfg){
+  $('cfgSummary').textContent=`${cfg.google?'Google · ':''}${cfg.esri?'Esri · ':''}${cfg.gibs?'GIBS · ':''}${cfg.maxar?'Maxar':'sin Maxar'}`;
+  $('kImagery').textContent=nf([cfg.google,cfg.esri,cfg.gibs,cfg.maxar].filter(Boolean).length);
+  $('cfgList').innerHTML=[
+    {k:'Google satellite',v:cfg.google?'Disponible':'No disponible',d:'Se sirve desde /api/sat/google cuando existe clave y sesión.'},
+    {k:'Esri World Imagery',v:cfg.esri?'Disponible':'No disponible',d:'Fallback aéreo público para el análisis visual.'},
+    {k:'NASA GIBS',v:cfg.gibs?.date?'2026-06-24':'No disponible',d:'Mosaico de referencia global.'},
+    {k:'Maxar Open Data',v:cfg.maxar?.event||'Sin evento',d:cfg.maxar?.catalog||'Sin catálogo coincidente'},
+  ].map(x=>`<div class="item"><div><b>${esc(x.k)}</b><span class="meta">${esc(x.d)}</span></div><span class="chip">${esc(String(x.v))}</span></div>`).join('');
+}
+function renderDetections(rows){
+  DET=rows||[];
+  $('kTotal').textContent=nf(DET.length);
+  $('kSevere').textContent=nf(DET.filter(x=>['grave','severo'].includes(String(x.severity))).length);
+  $('kUnverified').textContent=nf(DET.filter(x=>String(x.verification||'unverified')==='unverified').length);
+  $('kVerified').textContent=nf(DET.filter(x=>String(x.verification)=== 'verified').length);
+  $('detSummary').textContent=`${nf(DET.length)} registros · ${nf(DET.filter(x=>String(x.verification||'unverified')==='unverified').length)} sin verificar`;
+  $('detList').innerHTML=DET.length?DET.slice(0,14).map(d=>`<div class="item" data-id="${esc(d.id)}">
+    <div>
+      <b>${esc(d.summary||'Evaluación satelital')}</b>
+      <div class="meta">${esc(d.imagery_source||'imagen externa')} · ${esc(d.ai_model||'modelo')} · ${d.created_ms?new Date(d.created_ms).toLocaleString('es-VE'):'sin hora'}</div>
+      <div class="meta">${d.lat!=null&&d.lon!=null?`${Number(d.lat).toFixed(3)}, ${Number(d.lon).toFixed(3)}`:'sin coordenadas'} · ${esc(d.event_id||'sin evento')}</div>
+    </div>
+    <div><span class="${badgeClass(d.severity)}">${esc(d.severity||'indeterminado')}</span><div class="meta" style="text-align:right;margin-top:6px">${esc(d.verification||'unverified')}</div></div>
+  </div>`).join(''):'<div class="empty">Sin detecciones satelitales publicadas.</div>';
+  $('detList').querySelectorAll('[data-id]').forEach(el=>el.addEventListener('click',()=>focusDetection(el.dataset.id)));
+  drawDetections();
+}
+function drawDetections(){
+  if(!MAP) return;
+  const layer=window.__satDamageLayer || (window.__satDamageLayer=L.layerGroup().addTo(MAP));
+  layer.clearLayers();
+  const pts=[];
+  DET.forEach(d=>{if(d.lat==null||d.lon==null)return;pts.push([d.lat,d.lon]);const col=satColors[d.severity]||'#6d7280';
+    L.circleMarker([d.lat,d.lon],{radius:7,color:'#fff',weight:1,fillColor:col,fillOpacity:.92}).bindPopup(`<b>Daño satelital IA</b><br>${esc(d.summary||'Evaluación')}` + `<br>${esc(d.severity||'indeterminado')} · ${esc(d.verification||'unverified')}`).addTo(layer);
+  });
+  if(pts.length)MAP.fitBounds(pts,{padding:[30,30],maxZoom:9});
+}
+function focusDetection(id){
+  const d=DET.find(x=>String(x.id)===String(id));if(!d||!MAP)return;
+  MAP.setView([Number(d.lat||8.5),Number(d.lon||-66.5)],Math.max(15,Number(d.zoom||18)));
+}
+async function refresh(){
+  MAP=L.map('map',{attributionControl:false,scrollWheelZoom:false}).setView([8.5,-66.5],6);
+  L.control.attribution({prefix:false}).addTo(MAP);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM, © CARTO · SISMO911',maxZoom:19}).addTo(MAP);
+  window.__satDamageLayer=L.layerGroup().addTo(MAP);
+  try{
+    const [cfg,damage]=await Promise.all([json('/api/sat/config'),json('/api/sat/damage')]);
+    renderCfg(cfg);
+    renderDetections(damage.assessments||[]);
+    $('ingestState').textContent='Bearer token';
+  }catch(e){
+    $('cfgList').innerHTML='<div class="empty err">No se pudo cargar la configuración satelital.</div>';
+    $('detList').innerHTML='<div class="empty err">No se pudieron cargar las detecciones satelitales.</div>';
+  }
+  $('updated').textContent='ACTUALIZADO '+new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  setTimeout(()=>MAP.invalidateSize(),80);
+}
+refresh();
+</script>
+</body>
+</html>

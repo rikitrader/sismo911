@@ -136,7 +136,3 @@ ACCESS_AUD = ""
 ALLOWED_ORIGINS = ""
 # Web Push public key (safe to expose). Private key is a Worker secret (VAPID_PRIVATE_KEY).
 VAPID_PUBLIC_KEY = "BLWuQ5I87NCxY_PJf9vplu423M7hDMbXgp98_no9mSZ54G5h4v_hYPcynxaNFWo0-HNyGTaMtQK1l-_g5g2qtL8"
-# Invitation-only business-plan deck at /plan. Edit these codes to control access.
-# For stronger secrecy, move PLAN_SECRET to a Worker secret: `wrangler secret put PLAN_SECRET`.
-PLAN_INVITE_CODES = "SISMO911-INVEST,RELIEF-2026,TERREMOTO-VIP"
-PLAN_SECRET = "s911-plan-3f9a7c12e8b64d05a1f7-rotate"

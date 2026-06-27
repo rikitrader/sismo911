@@ -21,11 +21,11 @@
 const ROLE={citizen:['Ciudadano','bg-safe'],operator:['Operador','bg-warning'],admin:['Administrador','bg-secondary']};
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ago=t=>{if(!t)return '—';const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';};
-document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logout',{method:'POST'});location.href='/login.html';};
+document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logout',{method:'POST'});location.href='/login';};
 
 (async()=>{
   const me=await fetch('/api/auth/me').then(r=>r.json());
-  if(!me.authenticated){ location.href='/login.html?next=/cuenta.html'; return; }
+  if(!me.authenticated){ location.href='/login?next=/cuenta'; return; }
   const u=me.user; const [rl,rc]=ROLE[u.role]||ROLE.citizen;
   const initials=esc((u.name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase());
   let html=`
