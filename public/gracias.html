@@ -42,7 +42,8 @@
     border-radius:2px;pointer-events:none;
   }
   .serif{font-family:'Cormorant Garamond',Georgia,serif}
-  .display{font-family:'Playfair Display',Georgia,serif}
+  .display{font-family:Helvetica,'Helvetica Neue',Arial,sans-serif}
+  .helv{font-family:Helvetica,'Helvetica Neue',Arial,sans-serif}
   .smallcaps{font-variant:small-caps;letter-spacing:.18em}
   .body-copy p{font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;line-height:1.62;color:#22304a;margin:0 0 16px}
   .body-copy p.en{font-size:16px;color:#5a6478;font-style:italic;font-family:'Cormorant Garamond',Georgia,serif}
@@ -76,44 +77,12 @@
     <!-- Seal -->
     <div class="flex flex-col items-center text-center mb-8">
       <div class="seal-wrap mb-5">
-        <svg width="138" height="138" viewBox="0 0 200 200" role="img" aria-label="Sello de SISMO911">
-          <defs>
-            <path id="ring" d="M100,100 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0"/>
-            <path id="ringb" d="M100,100 m74,0 a74,74 0 1,0 -148,0 a74,74 0 1,0 148,0"/>
-            <radialGradient id="globe" cx="40%" cy="35%" r="75%">
-              <stop offset="0%" stop-color="#1d3c74"/><stop offset="100%" stop-color="#0a1c3d"/>
-            </radialGradient>
-          </defs>
-          <circle cx="100" cy="100" r="96" fill="#0a1c3d"/>
-          <circle cx="100" cy="100" r="95" fill="none" stroke="#c8a34a" stroke-width="2"/>
-          <circle cx="100" cy="100" r="80" fill="none" stroke="#c8a34a" stroke-width="1.2"/>
-          <circle cx="100" cy="100" r="58" fill="url(#globe)" stroke="#c8a34a" stroke-width="1.5"/>
-          <!-- globe meridians -->
-          <g stroke="#cdb86a" stroke-width=".8" fill="none" opacity=".8">
-            <ellipse cx="100" cy="100" rx="58" ry="22"/>
-            <ellipse cx="100" cy="100" rx="58" ry="40"/>
-            <ellipse cx="100" cy="100" rx="22" ry="58"/>
-            <ellipse cx="100" cy="100" rx="40" ry="58"/>
-            <line x1="42" y1="100" x2="158" y2="100"/>
-            <line x1="100" y1="42" x2="100" y2="158"/>
-          </g>
-          <!-- seismic wave across the globe -->
-          <path d="M50 100 L66 100 L74 78 L86 128 L96 86 L106 112 L114 100 L150 100"
-                fill="none" stroke="#f5c518" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
-          <!-- lone star (Venezuela) -->
-          <path d="M100 60 l3.4 7 7.6 1-5.5 5.4 1.3 7.6-6.8-3.6-6.8 3.6 1.3-7.6-5.5-5.4 7.6-1z" fill="#f5c518"/>
-          <!-- ring text -->
-          <text fill="#e8d79a" font-family="'Public Sans',sans-serif" font-weight="800" font-size="11.5" letter-spacing="2">
-            <textPath href="#ring" startOffset="50%" text-anchor="middle">★ SISMO911 · COMANDO SÍSMICO NACIONAL ★</textPath>
-          </text>
-          <text fill="#c8a34a" font-family="'Public Sans',sans-serif" font-weight="700" font-size="9" letter-spacing="2.4">
-            <textPath href="#ringb" startOffset="50%" text-anchor="middle">UNA SOLA VOZ PARA VENEZUELA · 2026</textPath>
-          </text>
-        </svg>
+        <img src="/logo.svg" width="132" height="132" alt="Logo de SISMO911"
+             style="border-radius:24px;box-shadow:0 0 0 2px #c8a34a,0 0 0 6px rgba(200,163,74,.22)">
       </div>
       <div class="smallcaps display text-[13px] text-[#9a7b2e] font-semibold">Oficina del Director Ejecutivo</div>
-      <h1 class="display text-3xl sm:text-4xl font-bold text-[#13284f] mt-1">SISMO911</h1>
-      <div class="serif text-[#5a6478] text-lg italic">Iniciativa Nacional de Respuesta Sísmica de Venezuela</div>
+      <h1 class="helv text-3xl sm:text-4xl font-extrabold text-[#13284f] mt-1 tracking-tight">SISMO911.COM</h1>
+      <div class="helv text-[#5a6478] text-lg">Iniciativa Nacional de Respuesta Sísmica de Venezuela</div>
       <div class="rule-gold w-40 mt-5"></div>
     </div>
 
@@ -138,7 +107,6 @@
       <div>
         <div class="sig">[R]</div>
         <div class="rule-gold w-56 my-2"></div>
-        <div class="display text-[#13284f] font-bold text-lg">[R]</div>
         <div class="serif text-[#5a6478] text-[15px] italic">Fundador y Director Ejecutivo (CEO)</div>
         <div class="smallcaps text-[12px] text-[#9a7b2e] font-semibold mt-1">SISMO911 · Comando Sísmico Nacional</div>
       </div>
@@ -157,8 +125,8 @@
   <section class="mt-12">
     <div class="text-center mb-7">
       <div class="smallcaps display text-[13px] text-[#9a7b2e] font-semibold">Cuadro de Honor</div>
-      <h2 class="display text-2xl sm:text-3xl font-bold text-[#13284f] mt-1">Pilares Fundamentales de SISMO911</h2>
-      <p class="serif text-[#5a6478] text-lg italic max-w-2xl mx-auto mt-2">Cada fila es una fuente que abrió sus datos para que una familia encontrara a los suyos. Pulse cualquiera para visitar a quien lo hizo posible.</p>
+      <h2 class="helv text-2xl sm:text-3xl font-extrabold text-[#13284f] mt-1 tracking-tight">Pilares Fundamentales de SISMO911.COM</h2>
+      <p class="helv text-[#5a6478] text-base max-w-2xl mx-auto mt-2">Cada fila es una fuente que abrió sus datos para que una familia encontrara a los suyos. Pulse cualquiera para visitar a quien lo hizo posible.</p>
       <div class="rule-gold w-40 mx-auto mt-4"></div>
     </div>
 
