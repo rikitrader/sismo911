@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hoja de Ruta — SISMO911</title>
+<meta name="description" content="Hoja de ruta completa de SISMO911: todas las capacidades en producción, en beta y planificadas — incluida la Telemedicina de emergencia y la valuación de zonas con reconocimiento por IA.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/roadmap">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Hoja de Ruta — SISMO911">
+<meta property="og:description" content="Mapa completo de capacidades de la plataforma nacional de emergencia sísmica: producción, beta y plan — con Telemedicina e IA de valuación de zonas.">
+<meta property="og:url" content="https://sismo911.com/roadmap">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  body{background:#f6f7fb;color:#101820;font-family:Inter,sans-serif}
+  .wrap{max-width:1360px;margin:0 auto;padding:24px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+  .eyebrow{font:800 11px Public Sans,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5f6675}
+  h1{font:900 30px/1.05 Public Sans,sans-serif;color:#00173a;margin:5px 0 0}
+  .lede{font:500 14px/1.5 Inter,sans-serif;color:#44474f;max-width:640px;margin:9px 0 0}
+  .stamp{font:700 12px JetBrains Mono,monospace;color:#00173a;background:#fff;border:1px solid #c4c6d0;border-radius:8px;padding:9px 11px;white-space:nowrap}
+  .grid{display:grid;gap:14px}
+  .kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
+  .card{background:#fff;border:1px solid #d8dbe4;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .metric{padding:14px;border-left:5px solid var(--accent,#00173a)}
+  .metric .v{font:900 28px/1 Public Sans,sans-serif;color:#00173a;margin-top:7px}
+  .metric .s{font:600 12px/1.35 Inter,sans-serif;color:#5f6675;margin-top:6px;min-height:32px}
+
+  /* Headline / next-up banner for the two flagship capabilities */
+  .flagships{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:14px}
+  .flag{padding:18px;border-left:5px solid var(--accent,#00173a);position:relative;overflow:hidden}
+  .flag .k{font:800 11px Public Sans,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--accent,#00173a)}
+  .flag h3{font:900 19px/1.1 Public Sans,sans-serif;color:#00173a;margin:7px 0 0}
+  .flag p{font:500 13px/1.5 Inter,sans-serif;color:#44474f;margin:8px 0 0}
+  .flag .feats{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+  .flag .feats span{font:700 11px Public Sans,sans-serif;color:#00173a;background:#f1f3f8;border:1px solid #e1e4ec;border-radius:999px;padding:5px 9px}
+
+  /* Filters */
+  .filters{display:flex;gap:8px;flex-wrap:wrap;padding:14px}
+  .fbtn{border:1px solid #d8dbe4;background:#fff;border-radius:999px;padding:8px 12px;font:800 12px Public Sans,sans-serif;color:#445e91;cursor:pointer}
+  .fbtn.on{background:#00173a;color:#fff;border-color:#00173a}
+
+  /* Phase / epic columns */
+  .board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+  .epic{padding:0}
+  .epic-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid #e3e5eb}
+  .epic-h h2{font:800 15px Public Sans,sans-serif;color:#00173a;margin:0;display:flex;align-items:center;gap:9px}
+  .epic-h svg{width:18px;height:18px;flex:0 0 auto;color:var(--accent,#00173a)}
+  .epic-h .count{font:800 11px Public Sans,sans-serif;border-radius:999px;padding:5px 8px;background:#eef2f8;color:#445e91}
+  .items{padding:6px 0}
+  .feat{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:11px 14px;border-top:1px solid #edf0f5;text-decoration:none}
+  .feat:first-child{border-top:0}
+  .feat:hover{background:#f8fafc}
+  .feat .dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:0 0 auto}
+  .feat .name{font:700 13.5px/1.25 Inter,sans-serif;color:#101820}
+  .feat .desc{font:500 11.5px/1.4 Inter,sans-serif;color:#6d7280;margin-top:3px}
+  .badge{font:800 9.5px Public Sans,sans-serif;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:4px 7px;white-space:nowrap;align-self:flex-start}
+  .b-live{background:#ecfdf5;color:#166534}
+  .b-beta{background:#fefce8;color:#a16207}
+  .b-plan{background:#eff6ff;color:#1d4ed8}
+  .dot.live{background:#16a34a}.dot.beta{background:#d97706}.dot.plan{background:#2563eb}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;padding:13px 14px;border-top:1px solid #e3e5eb;font:700 12px Inter,sans-serif;color:#44474f}
+  .legend i{display:inline-flex;align-items:center;gap:7px}
+  .legend .dot{margin:0}
+  @media(max-width:1100px){.kpis{grid-template-columns:1fr 1fr}.flagships,.board{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.stamp{white-space:normal}}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Hoja de Ruta — SISMO911","description":"Hoja de ruta completa de la plataforma nacional de emergencia sísmica SISMO911, incluida Telemedicina y valuación de zonas con IA.","url":"https://sismo911.com/roadmap","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+</head>
+<body>
+<main class="wrap">
+  <section class="top">
+    <div>
+      <div class="eyebrow">Plataforma · Capacidades en producción, beta y plan</div>
+      <h1>Hoja de Ruta</h1>
+      <p class="lede">El mapa completo de SISMO911 — cada capacidad que hemos construido para la respuesta sísmica nacional, lo que está en pruebas, y lo que viene: Telemedicina de emergencia y valuación de zonas con reconocimiento por IA.</p>
+    </div>
+    <div class="stamp" id="updated">—</div>
+  </section>
+
+  <!-- KPIs -->
+  <section class="grid kpis" aria-label="Resumen de la hoja de ruta">
+    <article class="card metric" style="--accent:#166534"><div class="eyebrow">En producción</div><div class="v" id="kLive">—</div><div class="s">Capacidades en vivo y operativas hoy.</div></article>
+    <article class="card metric" style="--accent:#a16207"><div class="eyebrow">En beta</div><div class="v" id="kBeta">—</div><div class="s">En pruebas y endurecimiento de datos.</div></article>
+    <article class="card metric" style="--accent:#1d4ed8"><div class="eyebrow">Planificadas</div><div class="v" id="kPlan">—</div><div class="s">En diseño — próximas entregas.</div></article>
+    <article class="card metric" style="--accent:#bb0027"><div class="eyebrow">Capacidades totales</div><div class="v" id="kTotal">—</div><div class="s">A lo largo de toda la plataforma.</div></article>
+  </section>
+
+  <!-- Two flagship next-up capabilities the roadmap headlines -->
+  <section class="grid flagships" aria-label="Capacidades destacadas">
+    <article class="card flag" style="--accent:#bb0027">
+      <div class="k">Próximamente · Salud de emergencia</div>
+      <h3>Telemedicina de Emergencia</h3>
+      <p>Triage médico remoto cuando los hospitales están saturados o inaccesibles: consulta por video con médicos voluntarios, cola de pacientes priorizada por gravedad, recetas digitales y enlace directo con los inventarios de Suministros Médicos y la red de hospitales.</p>
+      <div class="feats"><span>Triage remoto</span><span>Video-consulta</span><span>Cola por gravedad</span><span>Recetas digitales</span><span>Enlace a hospitales</span></div>
+    </article>
+    <article class="card flag" style="--accent:#6d28d9">
+      <div class="k">Próximamente · Daños & IA</div>
+      <h3>Valuación de Zonas con IA</h3>
+      <p>Reconocimiento automático de zonas afectadas a partir de imágenes satelitales y reportes ciudadanos: la IA segmenta el área, clasifica el nivel de daño por manzana y estima el valor económico afectado — priorizando dónde enviar ayuda y produciendo avalúos preliminares por sector.</p>
+      <div class="feats"><span>Segmentación de zona</span><span>Daño por manzana</span><span>Avalúo por sector</span><span>Priorización de ayuda</span><span>Visión satelital</span></div>
+    </article>
+  </section>
+
+  <!-- Filters -->
+  <section class="card" style="margin-bottom:14px">
+    <div class="filters" id="filters">
+      <button class="fbtn on" data-f="all">Todas</button>
+      <button class="fbtn" data-f="live">En producción</button>
+      <button class="fbtn" data-f="beta">En beta</button>
+      <button class="fbtn" data-f="plan">Planificadas</button>
+    </div>
+  </section>
+
+  <!-- Roadmap board -->
+  <section class="board" id="board"></section>
+
+  <section class="card" style="margin-top:14px">
+    <div class="legend">
+      <i><span class="dot live"></span> En producción — en vivo hoy</i>
+      <i><span class="dot beta"></span> En beta — en pruebas</i>
+      <i><span class="dot plan"></span> Planificada — en diseño</i>
+    </div>
+  </section>
+</main>
+
+<script>
+/* Roadmap data — every capability built (and planned) for SISMO911, grouped by
+   epic. status: live | beta | plan. href links to the live page when one exists. */
+const EPICS = [
+  { id:'sismico', title:'Núcleo Sísmico', accent:'#bb0027',
+    d:'M3 12h4l2 7 4-14 2 7h6',
+    items:[
+      { name:'Feed USGS en vivo', desc:'Eventos sísmicos en tiempo real (FDSNWS) filtrados a Venezuela.', status:'live', href:'/terremotos' },
+      { name:'Archivo histórico', desc:'Catálogo completo de terremotos consultable.', status:'live', href:'/archivo' },
+      { name:'Alertas', desc:'Avisos automáticos por magnitud e intensidad.', status:'live', href:'/alertas' },
+      { name:'Alerta PAGER', desc:'Estimación operativa de impacto al estilo USGS PAGER.', status:'live', href:'/pager' },
+      { name:'Centro Geosísmico', desc:'Vista pública de eventos, impacto y timeline.', status:'live', href:'/geosismico' },
+      { name:'Mapa de capas COP', desc:'Mapa operacional común multi-capa.', status:'live', href:'/mapa' },
+      { name:'Catálogo de capas', desc:'Manifest público de capas con privacy labels y endpoints.', status:'live', href:'/layers' },
+    ] },
+
+  { id:'familia', title:'Reunificación Familiar', accent:'#bb0027',
+    d:'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8z',
+    items:[
+      { name:'Registro DESAPARECIDOS', desc:'76 000+ personas; ingesta multi-fuente con deduplicación.', status:'live', href:'/personas' },
+      { name:'Expedientes', desc:'Casos de búsqueda con seguimiento y estado.', status:'live', href:'/casos' },
+      { name:'Estoy a salvo', desc:'Check-ins de seguridad de los ciudadanos.', status:'live', href:'/estoy-a-salvo' },
+      { name:'Tarjetas sociales', desc:'Enlace por persona con foto/nombre para difusión viral.', status:'live', href:'/familia' },
+      { name:'Análisis de fotos con IA', desc:'Visión de Workers AI: subtítulos, banderas y dedupe por hash.', status:'beta', href:'/personas' },
+    ] },
+
+  { id:'danos', title:'Daños & IA', accent:'#6d28d9',
+    d:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z',
+    items:[
+      { name:'Reportar daños', desc:'Reporte ciudadano georreferenciado con fotos.', status:'live', href:'/reportar' },
+      { name:'Daños (IA)', desc:'Clasificación asistida por IA de severidad de daños.', status:'live', href:'/danos' },
+      { name:'Daños estructurales', desc:'Mapa de evaluación estructural por edificación.', status:'live', href:'/danos-estructurales' },
+      { name:'Análisis satelital GIS', desc:'Proxy de imágenes + visión IA para daño satelital.', status:'beta', href:'/satellite' },
+      { name:'Valuación de zonas con IA', desc:'Segmentación de zona, daño por manzana y avalúo por sector.', status:'plan', href:'' },
+    ] },
+
+  { id:'logistica', title:'Ayuda & Logística', accent:'#a16207',
+    d:'M3 13h2l2 5h10l2-5h2M5 13V7a2 2 0 012-2h7l4 4v4',
+    items:[
+      { name:'Centros de acopio', desc:'Mapa de centros de recolección y su estado.', status:'live', href:'/acopio' },
+      { name:'Comando logístico', desc:'Inventario, necesidades y envíos estilo FEMA.', status:'live', href:'/logistica' },
+      { name:'Suministros médicos', desc:'Catálogo y panel de insumos médicos.', status:'live', href:'/suministros-medicos' },
+      { name:'Operaciones logísticas', desc:'Rutas, infraestructura de transporte y mejores rutas.', status:'live', href:'/operaciones' },
+      { name:'Herramientas + Cruz Roja', desc:'Directorio de herramientas y aliados.', status:'live', href:'/herramientas' },
+      { name:'Red global de ayuda', desc:'Directorio curable de organizaciones de socorro.', status:'live', href:'/red-ayuda' },
+      { name:'Donar (card→USDC)', desc:'Crowdfunding con pago por tarjeta a USDC vía Crossmint.', status:'live', href:'/donar' },
+    ] },
+
+  { id:'comunidad', title:'Comunidad & Voluntarios', accent:'#166534',
+    d:'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z',
+    items:[
+      { name:'Voluntarios', desc:'Registro y emparejamiento de voluntarios por habilidades.', status:'live', href:'/voluntarios' },
+      { name:'Mascotas', desc:'Reporte y reunificación de mascotas perdidas.', status:'live', href:'/mascotas' },
+      { name:'Canal comunitario', desc:'Mensajería y coordinación entre la comunidad.', status:'live', href:'/canal' },
+      { name:'SOS', desc:'Botón de socorro georreferenciado.', status:'live', href:'/sos' },
+    ] },
+
+  { id:'info', title:'Información & Comms', accent:'#1d4ed8',
+    d:'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13',
+    items:[
+      { name:'Noticias', desc:'Revista de cobertura con reportes de campo.', status:'live', href:'/blog' },
+      { name:'Información verificada', desc:'Noticias curadas y verificadas (RAV).', status:'live', href:'/informacion-verificada' },
+      { name:'Radio / Comms', desc:'Frecuencias y canales de radio de emergencia.', status:'live', href:'/comms' },
+      { name:'Hospitales', desc:'Estado y capacidad de la red hospitalaria.', status:'live', href:'/hospitales' },
+      { name:'Guía de emergencia', desc:'Qué hacer antes, durante y después de un sismo.', status:'live', href:'/guia' },
+    ] },
+
+  { id:'salud', title:'Salud de Emergencia', accent:'#c8102e',
+    d:'M12 8v8m-4-4h8M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2z',
+    items:[
+      { name:'Telemedicina de emergencia', desc:'Triage remoto y video-consulta con médicos voluntarios.', status:'plan', href:'' },
+      { name:'Cola de pacientes', desc:'Priorización por gravedad y derivación a hospital.', status:'plan', href:'' },
+      { name:'Recetas digitales', desc:'Recetas electrónicas enlazadas a suministros médicos.', status:'plan', href:'' },
+    ] },
+
+  { id:'plataforma', title:'Plataforma & Datos', accent:'#00173a',
+    d:'M16 18l6-6-6-6M8 6l-6 6 6 6',
+    items:[
+      { name:'API pública · Developers', desc:'Endpoints abiertos documentados para terceros.', status:'live', href:'/developers' },
+      { name:'Servidor MCP', desc:'Acceso programático vía Model Context Protocol.', status:'live', href:'/developers' },
+      { name:'Consola de administración', desc:'Moderación, ingesta y operación interna.', status:'live', href:'/admin' },
+      { name:'Pipelines de ingesta (cron)', desc:'USGS, desaparecidos, RAV y fotos en flujos programados.', status:'live', href:'' },
+      { name:'PWA / offline', desc:'App instalable con service worker para baja conectividad.', status:'live', href:'' },
+    ] },
+];
+
+const ICON = (d)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="${d}"/></svg>`;
+const BADGE = { live:['b-live','En producción'], beta:['b-beta','Beta'], plan:['b-plan','Plan'] };
+
+let filter = 'all';
+
+function render(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  let nLive=0,nBeta=0,nPlan=0,nTotal=0;
+
+  EPICS.forEach(ep=>{
+    const items = ep.items.filter(it => filter==='all' || it.status===filter);
+    ep.items.forEach(it=>{ nTotal++; if(it.status==='live')nLive++; else if(it.status==='beta')nBeta++; else nPlan++; });
+    if(!items.length) return;
+    const el = document.createElement('article');
+    el.className = 'card epic';
+    el.style.setProperty('--accent', ep.accent);
+    el.innerHTML = `
+      <div class="epic-h">
+        <h2>${ICON(ep.d)}${ep.title}</h2>
+        <span class="count">${items.length}</span>
+      </div>
+      <div class="items">
+        ${items.map(it=>{
+          const [bc,bl] = BADGE[it.status];
+          const tag = it.href ? 'a' : 'div';
+          const hrefAttr = it.href ? ` href="${it.href}"` : '';
+          return `<${tag} class="feat"${hrefAttr}>
+            <span class="dot ${it.status}"></span>
+            <span><span class="name">${it.name}</span><span class="desc">${it.desc}</span></span>
+            <span class="badge ${bc}">${bl}</span>
+          </${tag}>`;
+        }).join('')}
+      </div>`;
+    board.appendChild(el);
+  });
+
+  document.getElementById('kLive').textContent = nLive;
+  document.getElementById('kBeta').textContent = nBeta;
+  document.getElementById('kPlan').textContent = nPlan;
+  document.getElementById('kTotal').textContent = nTotal;
+}
+
+document.getElementById('filters').addEventListener('click', e=>{
+  const b = e.target.closest('.fbtn'); if(!b) return;
+  filter = b.dataset.f;
+  document.querySelectorAll('.fbtn').forEach(x=>x.classList.toggle('on', x===b));
+  render();
+});
+
+document.getElementById('updated').textContent = 'ACTUALIZADO ' + new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+render();
+</script>
+</body>
+</html>
