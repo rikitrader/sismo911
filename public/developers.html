@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>API · Desarrolladores — SISMO911</title>
-<meta name="description" content="API de datos sísmicos de Venezuela y servidor MCP. Feed público abierto de terremotos, y API con clave para extraer datos de nuestra base de datos. Regístrate para obtener una clave.">
+<meta name="description" content="API de datos sísmicos de Venezuela y servidor MCP. Acceso con clave: regístrate, un operador aprueba y usas tu clave + secreto en la API REST y en el servidor MCP.">
 <meta name="author" content="SISMO911 — Comando Sísmico Nacional">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="canonical" href="https://sismo911.com/developers">
@@ -11,7 +11,7 @@
 <meta property="og:site_name" content="SISMO911">
 <meta property="og:locale" content="es_VE">
 <meta property="og:title" content="API · Desarrolladores — SISMO911">
-<meta property="og:description" content="Feed público de sismos + servidor MCP + API con clave para extraer datos de nuestra base de datos.">
+<meta property="og:description" content="API de sismos + servidor MCP con acceso por clave (registro + aprobación). Una sola credencial para REST y MCP.">
 <meta property="og:url" content="https://sismo911.com/developers">
 <meta property="og:image" content="https://sismo911.com/og/og-default.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
@@ -38,63 +38,68 @@
 
   <!-- Hero -->
   <header>
-    <span class="inline-block text-[11px] font-bold uppercase tracking-wider text-secondary border border-secondary/30 rounded px-2 py-0.5 mb-3">Plataforma de Datos Abiertos</span>
+    <span class="inline-block text-[11px] font-bold uppercase tracking-wider text-secondary border border-secondary/30 rounded px-2 py-0.5 mb-3">Plataforma de Datos · Acceso con clave</span>
     <h1 class="font-display font-extrabold text-3xl sm:text-4xl mb-2">API &amp; MCP de SISMO911</h1>
-    <p class="text-on-surface-variant max-w-3xl">Construye sobre los datos sísmicos en vivo de Venezuela. Tenemos tres formas de acceso:
-      un <b>feed público abierto</b>, un <b>servidor MCP</b> para agentes de IA, y una <b>API con clave</b> para extraer datos en volumen de nuestra base de datos (requiere registro y aprobación).</p>
+    <p class="text-on-surface-variant max-w-3xl">Construye sobre los datos sísmicos en vivo de Venezuela. <b>Todo el acceso programático requiere registro, aprobación de un operador y una clave + secreto</b> — tanto la API REST (<span class="mono">/api/v1</span>) como el servidor MCP. Regístrate una vez y usa la misma credencial en ambos.</p>
   </header>
 
-  <!-- Three lanes -->
+  <!-- Lanes -->
   <section class="grid md:grid-cols-3 gap-4">
-    <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
-      <div class="text-safe font-display font-bold text-lg mb-1">1 · Feed público</div>
-      <p class="text-sm text-on-surface-variant">Abierto, sin clave. 60 req/min por IP. Ideal para mapas, paneles y widgets.</p>
-      <a href="#publico" class="text-secondary text-sm font-semibold mt-2 inline-block">Ver endpoints →</a>
-    </div>
     <div class="bg-white rounded-lg border border-outline-variant/60 p-5 border-l-4 border-l-secondary">
-      <div class="text-primary font-display font-bold text-lg mb-1">2 · Servidor MCP</div>
-      <p class="text-sm text-on-surface-variant">Conecta Claude o cualquier agente. Herramientas de solo lectura sobre todos nuestros datos.</p>
-      <a href="#mcp" class="text-secondary text-sm font-semibold mt-2 inline-block">Configurar MCP →</a>
+      <div class="text-warning font-display font-bold text-lg mb-1">1 · Regístrate</div>
+      <p class="text-sm text-on-surface-variant">Solicita una clave → un operador aprueba → recibes clave + secreto (el secreto se muestra una vez).</p>
+      <a href="#registro" class="text-secondary text-sm font-semibold mt-2 inline-block">Registrarme →</a>
     </div>
     <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
-      <div class="text-warning font-display font-bold text-lg mb-1">3 · API con clave</div>
-      <p class="text-sm text-on-surface-variant">Extracción en volumen desde nuestra DB. Regístrate → aprobación → clave + secreto.</p>
-      <a href="#registro" class="text-secondary text-sm font-semibold mt-2 inline-block">Registrarme →</a>
+      <div class="text-primary font-display font-bold text-lg mb-1">2 · API REST</div>
+      <p class="text-sm text-on-surface-variant">Sismos, estadísticas y export en volumen desde nuestra DB. Con clave aprobada + scope.</p>
+      <a href="#endpoints" class="text-secondary text-sm font-semibold mt-2 inline-block">Ver endpoints →</a>
+    </div>
+    <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+      <div class="text-primary font-display font-bold text-lg mb-1">3 · Servidor MCP</div>
+      <p class="text-sm text-on-surface-variant">Conecta agentes de IA. Herramientas de solo lectura — requieren la misma clave aprobada.</p>
+      <a href="#mcp" class="text-secondary text-sm font-semibold mt-2 inline-block">Configurar MCP →</a>
     </div>
   </section>
 
-  <!-- PUBLIC ENDPOINTS -->
-  <section id="publico" class="space-y-3">
-    <h2 class="font-display font-bold text-2xl">1 · Feed público <span class="text-safe text-sm font-semibold align-middle">(abierto)</span></h2>
+  <!-- SEISMIC ENDPOINTS (gated) -->
+  <section id="endpoints" class="space-y-3">
+    <h2 class="font-display font-bold text-2xl">Feed sísmico <span class="text-warning text-sm font-semibold align-middle">(requiere clave aprobada)</span></h2>
     <div class="bg-white rounded-lg border border-outline-variant/60 divide-y divide-outline-variant/50">
-      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/earthquakes</span><p class="text-sm text-on-surface-variant mt-1">Lista de sismos. Filtros: <span class="mono">minMag, from, to, q, page, pageSize</span>.</p></div>
-      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/earthquakes/:id</span><p class="text-sm text-on-surface-variant mt-1">Un sismo por id.</p></div>
-      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/latest</span><p class="text-sm text-on-surface-variant mt-1">Sismos recientes + nivel de amenaza actual calculado.</p></div>
-      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/stats</span><p class="text-sm text-on-surface-variant mt-1">Estadísticas agregadas (total, mag máx, conteos 24h/7d/30d).</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/earthquakes</span><p class="text-sm text-on-surface-variant mt-1">scope <span class="mono">read:earthquakes</span> — lista de sismos. Filtros: <span class="mono">minMag, from, to, q, page, pageSize</span>.</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/earthquakes/:id</span><p class="text-sm text-on-surface-variant mt-1">scope <span class="mono">read:earthquakes</span> — un sismo por id.</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/latest</span><p class="text-sm text-on-surface-variant mt-1">scope <span class="mono">read:earthquakes</span> — sismos recientes + nivel de amenaza actual.</p></div>
+      <div class="p-4"><span class="meth get">GET</span> <span class="mono text-sm">/api/v1/stats</span><p class="text-sm text-on-surface-variant mt-1">scope <span class="mono">read:stats</span> — estadísticas agregadas (total, mag máx, conteos 24h/7d/30d).</p></div>
     </div>
+    <p class="text-sm text-on-surface-variant">Abiertos sin clave solo: <span class="mono">GET /api/v1</span> (esta documentación), <span class="mono">POST /api/v1/register</span> y <span class="mono">GET /api/v1/me</span>.</p>
     <details class="bg-white rounded-lg border border-outline-variant/60 p-4">
-      <summary class="cursor-pointer font-semibold text-sm">Ejemplo</summary>
-      <pre class="code mt-3"><span class="k">curl</span> https://sismo911.com/api/v1/latest?limit=5</pre>
+      <summary class="cursor-pointer font-semibold text-sm">Ejemplo (con clave aprobada)</summary>
+      <pre class="code mt-3"><span class="k">curl</span> https://sismo911.com/api/v1/latest?limit=5 \
+  -H <span class="k">"X-API-Key: sk911_xxxxxxxx"</span> \
+  -H <span class="k">"X-API-Secret: &lt;tu_secreto&gt;"</span></pre>
     </details>
   </section>
 
   <!-- MCP -->
   <section id="mcp" class="space-y-3">
-    <h2 class="font-display font-bold text-2xl">2 · Servidor MCP</h2>
-    <p class="text-on-surface-variant text-sm max-w-3xl">Endpoint MCP (Streamable HTTP, JSON-RPC 2.0): <span class="mono">https://sismo911.com/mcp</span>. Solo lectura, sin clave. Herramientas:
+    <h2 class="font-display font-bold text-2xl">Servidor MCP <span class="text-warning text-sm font-semibold align-middle">(requiere clave aprobada)</span></h2>
+    <p class="text-on-surface-variant text-sm max-w-3xl">Endpoint MCP (Streamable HTTP, JSON-RPC 2.0): <span class="mono">https://sismo911.com/mcp</span>. <b>Solo lectura, con clave</b>: <span class="mono">tools/list</span> y <span class="mono">tools/call</span> requieren tu clave aprobada vía <span class="mono">Authorization: Bearer &lt;key&gt;:&lt;secret&gt;</span> (cada herramienta exige su scope). <span class="mono">initialize</span>/<span class="mono">ping</span> quedan abiertos para el handshake. Herramientas:
       <span class="mono text-xs">list_earthquakes, get_earthquake, latest_earthquakes, seismic_stats, list_shelters, list_news, search_missing_persons</span>.</p>
     <div class="bg-white rounded-lg border border-outline-variant/60 p-4">
-      <p class="text-sm font-semibold mb-2">Claude Code / Desktop (mcp.json)</p>
+      <p class="text-sm font-semibold mb-2">Claude Code / Desktop (mcp.json) — con cabecera de autorización</p>
       <pre class="code"><span class="k">{</span>
   "mcpServers": {
     "sismo911": {
       "type": "http",
-      "url": "https://sismo911.com/mcp"
+      "url": "https://sismo911.com/mcp",
+      "headers": { "Authorization": "Bearer sk911_xxxxxxxx:&lt;tu_secreto&gt;" }
     }
   }
 <span class="k">}</span></pre>
       <p class="text-sm font-semibold mt-4 mb-2">CLI</p>
-      <pre class="code">claude mcp add --transport http sismo911 https://sismo911.com/mcp</pre>
+      <pre class="code">claude mcp add --transport http sismo911 https://sismo911.com/mcp \
+  --header <span class="k">"Authorization: Bearer sk911_xxxxxxxx:&lt;tu_secreto&gt;"</span></pre>
+      <p class="text-xs text-on-surface-variant mt-3">Nota: los conectores que solo aceptan una URL (sin cabeceras) no podrán autenticarse. Usa un cliente que permita enviar la cabecera <span class="mono">Authorization</span>.</p>
     </div>
   </section>
 
