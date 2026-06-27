@@ -35,6 +35,9 @@
 
   const caracasToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
   const fmtDate = (d) => { const [y, m, dd] = d.split('-').map(Number); return `${dd} de ${MONTHS[m - 1]} de ${y}`; };
+  // 12-hour clock with AM/PM — easier for end users than 24h.
+  const to12 = (min) => { let h = Math.floor(min / 60); const m = min % 60; const ap = h < 12 ? 'AM' : 'PM'; h = h % 12 || 12; return `${h}:${String(m).padStart(2, '0')} ${ap}`; };
+  const ageFrom = (dob) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) return null; const d = new Date(dob + 'T00:00:00'), n = new Date(); let a = n.getFullYear() - d.getFullYear(); const mm = n.getMonth() - d.getMonth(); if (mm < 0 || (mm === 0 && n.getDate() < d.getDate())) a--; return (a >= 0 && a <= 120) ? a : null; };
 
   // ---------- Stepper ----------
   function renderStepper() {
@@ -148,7 +151,7 @@
       $('slotGrid').innerHTML = '<div class="empty">No hay horarios disponibles ese día.<br><button class="tm-btn tm-btn-ghost mt-3" id="reCal">Elegir otra fecha</button></div>';
       $('reCal').onclick = () => show(3); return;
     }
-    $('slotGrid').innerHTML = slots.map((s, i) => `<button class="tm-slot ${st.slot && st.slot.start_min === s.start_min ? 'sel' : ''}" data-i="${i}">${s.label}</button>`).join('');
+    $('slotGrid').innerHTML = slots.map((s, i) => `<button class="tm-slot ${st.slot && st.slot.start_min === s.start_min ? 'sel' : ''}" data-i="${i}">${to12(s.start_min)}</button>`).join('');
     $('slotGrid').querySelectorAll('.tm-slot').forEach((b) => b.addEventListener('click', () => {
       st.slot = slots[+b.dataset.i]; renderReview(); show(5);
     }));
@@ -159,13 +162,18 @@
     return `<div class="flex justify-between gap-3 px-4 py-2.5 border-b border-outline-variant/40 text-sm last:border-b-0"><span class="text-on-surface-variant">${k}</span><span class="font-semibold text-right ${accent || ''}">${esc(v)}</span></div>`;
   }
   function renderReview() {
+    const dob = $('f_dob').value, age = ageFrom(dob);
+    const demo = [age != null ? age + ' años' : '', $('f_gender').value].filter(Boolean).join(' · ');
     $('review').innerHTML =
       reviewRow('Especialidad', specLabel(st.specialty)) +
       reviewRow('Médico', 'Dr(a). ' + st.doctor.full_name) +
       reviewRow('Tipo de cita', `${st.type.label} (${st.type.duration} min)`) +
       reviewRow('Fecha', fmtDate(st.date)) +
-      reviewRow('Hora', `${st.slot.label} (hora de Venezuela)`) +
+      reviewRow('Hora', `${to12(st.slot.start_min)} (hora de Venezuela)`) +
       reviewRow('Paciente', $('f_name').value.trim() || '—') +
+      ($('f_cedula').value.trim() ? reviewRow('Cédula', $('f_cedula').value.trim()) : '') +
+      (demo ? reviewRow('Datos', demo) : '') +
+      ($('f_location').value.trim() ? reviewRow('Ubicación', $('f_location').value.trim()) : '') +
       reviewRow('Motivo', ($('f_reason').value.trim() || '—').slice(0, 120)) +
       reviewRow('Costo', 'GRATIS — $0', 'text-safe');
   }
@@ -179,6 +187,7 @@
   });
   $('backBtn').addEventListener('click', () => { if (step > 0) show(step - 1); });
   ['f_name', 'f_email', 'f_phone', 'f_reason'].forEach((id) => $(id).addEventListener('input', refreshNext));
+  $('f_dob').addEventListener('input', () => { const a = ageFrom($('f_dob').value); $('f_agehint').textContent = a != null ? `${a} años` : ''; });
 
   async function submitBooking() {
     const nb = $('nextBtn'); nb.disabled = true; nb.innerHTML = '<span class="spin"></span> Agendando…';
@@ -192,6 +201,8 @@
           patient_email: $('f_email').value.trim(), patient_phone: $('f_phone').value.trim(),
           reason: $('f_reason').value.trim(), insurance_provider: $('f_ins').value.trim(),
           insurance_member_id: $('f_insid').value.trim(), preferred_lang: 'es',
+          patient_cedula: $('f_cedula').value.trim(), patient_dob: $('f_dob').value,
+          patient_gender: $('f_gender').value, patient_location: $('f_location').value.trim(),
         }),
       });
       if (!res.ok) {

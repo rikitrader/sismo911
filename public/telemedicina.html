@@ -171,8 +171,16 @@
                 <div><label class="flbl">Teléfono / WhatsApp</label><input class="fld" id="f_phone" maxlength="60" placeholder="+58…"></div>
               </div>
               <p class="text-xs text-on-surface-variant mt-2">Indica al menos un correo o teléfono — te enviaremos el enlace de la videollamada.</p>
+              <div class="grid sm:grid-cols-2 gap-3 mt-4">
+                <div><label class="flbl">Cédula de identidad</label><input class="fld" id="f_cedula" maxlength="24" placeholder="V-12.345.678"></div>
+                <div><label class="flbl">Fecha de nacimiento</label><input class="fld" id="f_dob" type="date"><div class="text-xs text-on-surface-variant mt-1" id="f_agehint"></div></div>
+              </div>
+              <div class="grid sm:grid-cols-2 gap-3 mt-4">
+                <div><label class="flbl">Género</label><select class="fld" id="f_gender"><option value="">Selecciona…</option><option>Femenino</option><option>Masculino</option><option>Otro</option><option>Prefiero no decir</option></select></div>
+                <div><label class="flbl">Ubicación (estado / ciudad)</label><input class="fld" id="f_location" maxlength="120" placeholder="Ej. Sucre, Cumaná"></div>
+              </div>
               <label class="flbl mt-4">¿Qué necesitas? Síntomas o situación <span class="text-secondary">*</span></label>
-              <textarea class="fld" id="f_reason" maxlength="2000" placeholder="Describe lo que ocurre, desde cuándo, edad, enfermedades o medicación relevante…"></textarea>
+              <textarea class="fld" id="f_reason" maxlength="2000" placeholder="Describe lo que ocurre, desde cuándo, enfermedades o medicación relevante…"></textarea>
             </div>
             <!-- 7 Insurance / payment -->
             <div class="pane" data-step="6">
