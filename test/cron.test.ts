@@ -10,7 +10,7 @@ const ALL_JOB_NAMES = [
   'usgs', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet',
   'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-purge-rejected',
   'familia-photo-mirror', 'monitor-sheet', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
-  'social-monitor', 'blog', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash',
+  'social-monitor', 'blog', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
   'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe',
 ];
 
