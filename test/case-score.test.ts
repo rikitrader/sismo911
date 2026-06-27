@@ -28,6 +28,20 @@ describe('case-score: status overrides (found / missing / deceased)', () => {
     // A minor who would otherwise be INMEDIATA, once located, is MENOR.
     expect(scoreCase(base({ status: 'found_safe', age: 4 })).triage).toBe('minor');
   });
+
+  it('aparecido → MENOR / baja (found alive, resolved), overrides vulnerability', () => {
+    const s = scoreCase(base({ status: 'aparecido', age: 4, eventAlert: 'red', createdMs: NOW - h(2) }));
+    expect(s.triage).toBe('minor');
+    expect(s.priority).toBe('baja');
+    expect(s.reasons.join(' ')).toMatch(/con vida/i);
+  });
+
+  it('hospitalizado → MENOR / baja (found alive, medical follow-up)', () => {
+    const s = scoreCase(base({ status: 'hospitalizado', age: 70 }));
+    expect(s.triage).toBe('minor');
+    expect(s.priority).toBe('baja');
+    expect(s.reasons.join(' ')).toMatch(/hospitalizada/i);
+  });
 });
 
 describe('case-score: missing person urgency', () => {

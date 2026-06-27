@@ -89,7 +89,7 @@
     <!-- filters -->
     <div class="card p-4 grid sm:grid-cols-5 gap-3">
       <div class="sm:col-span-2"><input id="q" placeholder="Buscar nº de caso, nombre, lugar, teléfono…"></div>
-      <select id="f_status"><option value="">Todos los estados</option><option value="missing">Desaparecida</option><option value="found_safe">A salvo</option><option value="found_deceased">Fallecida</option><option value="unknown">Desconocido</option></select>
+      <select id="f_status"><option value="">Todos los estados</option><option value="missing">Desaparecida</option><option value="found_safe">A salvo</option><option value="aparecido">Apareció</option><option value="hospitalizado">Hospitalizada</option><option value="found_deceased">Fallecida</option><option value="unknown">Desconocido</option></select>
       <select id="f_priority"><option value="">Toda prioridad</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select>
       <select id="f_since"><option value="0">Cualquier fecha</option><option value="1">Últimas 24 h</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option></select>
     </div>
@@ -172,7 +172,7 @@ const fmtD=ms=>ms?new Date(Number(ms)).toLocaleDateString('es-VE',{day:'2-digit'
 const days=ms=>ms?Math.max(0,Math.floor((Date.now()-Number(ms))/86400000)):0;
 const bytes=n=>n>1048576?(n/1048576).toFixed(1)+' MB':n>1024?(n/1024).toFixed(0)+' KB':(n||0)+' B';
 
-const ST={missing:{es:'Desaparecida',c:'#b45309',bg:'#fef3c7'},found_safe:{es:'A salvo',c:'#15803d',bg:'#dcfce7'},found_deceased:{es:'Fallecida',c:'#b91c1c',bg:'#fee2e2'},unknown:{es:'Desconocido',c:'#475569',bg:'#e2e8f0'}};
+const ST={missing:{es:'Desaparecida',c:'#b45309',bg:'#fef3c7'},found_safe:{es:'A salvo',c:'#15803d',bg:'#dcfce7'},aparecido:{es:'Apareció',c:'#15803d',bg:'#dcfce7'},hospitalizado:{es:'Hospitalizada',c:'#1d4ed8',bg:'#dbeafe'},found_deceased:{es:'Fallecida',c:'#b91c1c',bg:'#fee2e2'},unknown:{es:'Desconocido',c:'#475569',bg:'#e2e8f0'}};
 const PR={alta:{es:'Alta',c:'#b91c1c',bg:'#fee2e2'},media:{es:'Media',c:'#b45309',bg:'#fef3c7'},baja:{es:'Baja',c:'#475569',bg:'#e2e8f0'}};
 const VER={unverified:{es:'Sin verificar',c:'#92600a',bg:'#fef9c3'},verified:{es:'Verificada',c:'#15803d',bg:'#dcfce7'},disputed:{es:'En disputa',c:'#b91c1c',bg:'#fee2e2'}};
 const KIND={report_filed:'Reporte recibido',status_change:'Cambio de estado',sighting:'Avistamiento',contact:'Contacto',note:'Nota',shelter:'Refugio',hospital:'Hospital',morgue:'Morgue',reunified:'Reunificación',review:'Moderación',opened:'Expediente abierto',sismo:'Sismo de referencia'};

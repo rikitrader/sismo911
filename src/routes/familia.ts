@@ -16,9 +16,17 @@ export const familia = new Hono<{ Bindings: Env }>();
 const DEFAULT_LIMIT = 24;
 
 const estadoToStatus = (e: string) =>
-  e === 'localizado' ? 'found_safe' : e === 'fallecido' ? 'found_deceased' : 'missing';
+  e === 'localizado' ? 'found_safe'
+  : e === 'aparecido' ? 'aparecido'
+  : e === 'hospitalizado' ? 'hospitalizado'
+  : e === 'fallecido' ? 'found_deceased'
+  : 'missing';
 const statusToEstado = (s: string) =>
-  s === 'found_safe' ? 'localizado' : s === 'missing' ? 'sin-contacto' : null;
+  s === 'found_safe' ? 'localizado'
+  : s === 'aparecido' ? 'aparecido'
+  : s === 'hospitalizado' ? 'hospitalizado'
+  : s === 'found_deceased' ? 'fallecido'
+  : s === 'missing' ? 'sin-contacto' : null;
 
 async function isOperator(c: any): Promise<boolean> {
   const me = await getUserFromRequest(c.env, c).catch(() => null);

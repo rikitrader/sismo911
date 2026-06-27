@@ -38,8 +38,21 @@ async function isOperator(c: any): Promise<boolean> {
 const FAM = 'fam-';
 const isFam = (id: string) => id.startsWith(FAM);
 const famKey = (id: string) => id.slice(FAM.length);
-const estadoToStatus = (e: string) => e === 'localizado' ? 'found_safe' : e === 'fallecido' ? 'found_deceased' : 'missing';
-const statusToEstado = (s: string) => s === 'found_safe' ? 'localizado' : s === 'found_deceased' ? 'fallecido' : 'sin-contacto';
+const estadoToStatus = (e: string) =>
+  e === 'localizado' ? 'found_safe'
+  : e === 'aparecido' ? 'aparecido'
+  : e === 'hospitalizado' ? 'hospitalizado'
+  : e === 'fallecido' ? 'found_deceased'
+  : 'missing';
+const statusToEstado = (s: string) =>
+  s === 'found_safe' ? 'localizado'
+  : s === 'aparecido' ? 'aparecido'
+  : s === 'hospitalizado' ? 'hospitalizado'
+  : s === 'found_deceased' ? 'fallecido'
+  : 'sin-contacto';
+// Canonical case status vocabulary (shared across PATCH, docket, /cases, /update).
+const CASE_STATUSES = ['missing', 'found_safe', 'aparecido', 'hospitalizado', 'found_deceased', 'unknown'];
+const FOUND_ALIVE = ['found_safe', 'aparecido', 'hospitalizado'];
 const famCaseNumber = (pid: string) => 'FAM-' + String(pid).replace(/[^a-zA-Z0-9]/g, '').slice(-8).toUpperCase();
 
 // The reference earthquake every case is anchored to (Yumare M7.5, 2026-06-24),
@@ -104,16 +117,18 @@ persons.get('/stats', async (c) => {
   const row: any = await c.env.DB.prepare(
     `SELECT
        SUM(CASE WHEN status='missing' THEN 1 ELSE 0 END) AS missing,
-       SUM(CASE WHEN status IN ('found_safe','found_deceased') THEN 1 ELSE 0 END) AS found,
+       SUM(CASE WHEN status IN ('found_safe','aparecido','hospitalizado','found_deceased') THEN 1 ELSE 0 END) AS found,
+       SUM(CASE WHEN status='hospitalizado' THEN 1 ELSE 0 END) AS hospitalized,
        COUNT(*) AS total
      FROM persons WHERE review='approved'`
   ).first();
   // Federate the Familia (DESAP personas) registry so /personas reflects ALL cases.
   let f: any = {};
-  try { f = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','fallecido') THEN 1 ELSE 0 END) AS found, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
+  try { f = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS found, SUM(CASE WHEN estado='hospitalizado' THEN 1 ELSE 0 END) AS hospitalized, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
   return c.json({
     missing: (row?.missing ?? 0) + (f?.missing ?? 0),
     found: (row?.found ?? 0) + (f?.found ?? 0),
+    hospitalized: (row?.hospitalized ?? 0) + (f?.hospitalized ?? 0),
     total: (row?.total ?? 0) + (f?.total ?? 0),
   });
 });
@@ -139,7 +154,7 @@ persons.get('/cases', async (c) => {
   // ---------- filters: native `persons` table ----------
   const pWhere: string[] = []; const pBind: unknown[] = [];
   if (q) { pWhere.push('(p.full_name LIKE ? OR p.last_seen LIKE ? OR p.case_number LIKE ?' + (op ? ' OR p.contact_phone LIKE ?' : '') + ')'); pBind.push(l, l, l); if (op) pBind.push(l); }
-  if (status && ['missing', 'found_safe', 'found_deceased', 'unknown'].includes(status)) { pWhere.push('p.status = ?'); pBind.push(status); }
+  if (status && CASE_STATUSES.includes(status)) { pWhere.push('p.status = ?'); pBind.push(status); }
   if (priority && ['alta', 'media', 'baja'].includes(priority)) { pWhere.push('p.priority = ?'); pBind.push(priority); }
   if (since > 0) { pWhere.push('p.created_ms >= ?'); pBind.push(since); }
   if (!op) { pWhere.push("p.review = 'approved'"); }                                  // public: approved cases only
@@ -154,8 +169,10 @@ persons.get('/cases', async (c) => {
   const fWhere: string[] = []; const fBind: unknown[] = [];
   if (q) { fWhere.push('(nombre LIKE ? OR ubicacion LIKE ?' + (op ? ' OR contacto LIKE ?' : '') + ')'); fBind.push(l, l); if (op) fBind.push(l); }
   if (status === 'found_safe') fWhere.push("estado = 'localizado'");
+  else if (status === 'aparecido') fWhere.push("estado = 'aparecido'");
+  else if (status === 'hospitalizado') fWhere.push("estado = 'hospitalizado'");
   else if (status === 'found_deceased') fWhere.push("estado = 'fallecido'");
-  else if (status === 'missing') fWhere.push("estado NOT IN ('localizado','fallecido')");
+  else if (status === 'missing') fWhere.push("estado NOT IN ('localizado','aparecido','hospitalizado','fallecido')");
   else if (status === 'unknown') fWhere.push('1=0');                                   // personas have no 'unknown' bucket
   if (since > 0) { fWhere.push('created_at >= ?'); fBind.push(since); }
   const fW = fWhere.length ? 'WHERE ' + fWhere.join(' AND ') : '';
@@ -409,7 +426,7 @@ persons.post('/:id/docket', async (c) => {
   const lat = b.lat == null ? null : Number(b.lat);
   const lon = b.lon == null ? null : Number(b.lon);
   if ((lat != null || lon != null) && !validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
-  const wantsStatus = b.status && ['missing', 'found_safe', 'found_deceased', 'unknown'].includes(b.status) && b.status !== curStatus;
+  const wantsStatus = b.status && CASE_STATUSES.includes(b.status) && b.status !== curStatus;
   let status_from: string | null = null; let status_to: string | null = null;
   if (wantsStatus) { status_from = curStatus; status_to = b.status; }
   // Operators: apply immediately + approved. Citizens: pending, status untouched.
@@ -688,7 +705,7 @@ persons.post('/', async (c) => {
 persons.patch('/:id', async (c) => {
   const b = await c.req.json().catch(() => ({}));
   if (!b.status) return c.json({ error: 'status_required' }, 400);
-  if (!['missing', 'found_safe', 'found_deceased', 'unknown'].includes(b.status)) return c.json({ error: 'bad_status' }, 400);
+  if (!CASE_STATUSES.includes(b.status)) return c.json({ error: 'bad_status' }, 400);
   const id = c.req.param('id');
   // Familia-bridged case: write status to the DESAP personas record.
   if (isFam(id)) {
@@ -709,6 +726,55 @@ persons.patch('/:id', async (c) => {
   }
   await audit(c, 'persons.status_update', { id, status: b.status });
   return c.json({ ok: true, changed: r.meta.changes });
+});
+
+// POST /api/persons/:id/update — PUBLIC status update proposal (no login needed).
+// Anyone can report that a person APARECIÓ (con vida), fue HOSPITALIZADO (con el
+// hospital), está FALLECIDA, o aportar un detalle. Lands as a PENDING docket entry
+// (review='pending') for operator approval — approving applies the status to the
+// case (see POST /docket/:eid/approve). Rate-limited + spam-gated; never applies
+// directly. Operators apply directly via PATCH /:id or POST /:id/docket.
+// NOTE: this path is intentionally OUTSIDE the operator gate in index.ts (it is
+// not /queue, not PATCH, not *.approve/reject/localizar).
+persons.post('/:id/update', async (c) => {
+  const id = c.req.param('id');
+  const b = await c.req.json().catch(() => ({} as any));
+  let curStatus: string;
+  if (isFam(id)) {
+    const row = await c.env.DB.prepare(`SELECT estado FROM personas WHERE id = ? AND moderation='approved'`).bind(famKey(id)).first<any>();
+    if (!row) return c.json({ error: 'not_found' }, 404);
+    curStatus = estadoToStatus(row.estado);
+  } else {
+    const row = await c.env.DB.prepare(`SELECT status FROM persons WHERE id = ? AND review='approved'`).bind(id).first<any>();
+    if (!row) return c.json({ error: 'not_found' }, 404);
+    curStatus = row.status;
+  }
+  const limited = await rateLimit(c.env, c, 'person_update', 8, 600);
+  if (limited) return limited;
+
+  const wantsStatus = b.status && CASE_STATUSES.includes(b.status) && b.status !== curStatus;
+  const hospital = b.hospital ? String(b.hospital).slice(0, 160) : '';
+  const detail = [hospital ? `Hospital: ${hospital}` : '', b.detail ? String(b.detail) : '']
+    .filter(Boolean).join(' — ').slice(0, 2000);
+  if (detail && (textHasLink(detail) || nameHasSpam(detail))) return c.json({ error: 'spam_blocked' }, 400);
+  if (!wantsStatus && !detail) return c.json({ error: 'nothing_to_update', hint: 'Indica un nuevo estado o un detalle.' }, 400);
+
+  const lat = b.lat == null ? null : Number(b.lat);
+  const lon = b.lon == null ? null : Number(b.lon);
+  if ((lat != null || lon != null) && !validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
+
+  const kind = b.status === 'hospitalizado' ? 'hospital' : (wantsStatus ? 'status_change' : 'note');
+  await logDocket(c, id, kind, {
+    status_from: wantsStatus ? curStatus : null,
+    status_to: wantsStatus ? b.status : null,
+    detail: detail || null,
+    location: b.location ? String(b.location).slice(0, 200) : (hospital || null),
+    lat, lon,
+    source: 'citizen',
+    review: 'pending',
+  });
+  await audit(c, 'persons.public_update', { id, status: wantsStatus ? b.status : null });
+  return c.json({ ok: true, pending: true, message: 'Gracias. Tu actualización quedó pendiente de verificación por un operador.' });
 });
 
 // POST /api/persons/:id/approve | /reject — moderation (operator-gated in index.ts).
