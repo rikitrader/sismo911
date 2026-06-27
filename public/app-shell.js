@@ -16,6 +16,8 @@
     { label: 'REPORTAR', href: '/reportar', m: ['/reportar'], report: true, d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
     // Big blue "DAÑOS" CTA — same large shape as REPORTAR, navy blue instead of red.
     { label: 'DAÑOS', href: '/danos', m: ['/danos'], damage: true, d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
+    // Big yellow "VOLUNTARIOS" CTA — same large shape as DAÑOS, yellow.
+    { label: 'VOLUNTARIOS', href: '/voluntarios', m: ['/voluntarios'], volunteer: true, d: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z' },
   ];
 
   // The rest collapse into a few accordion groups so the sidebar stays short.
@@ -97,6 +99,12 @@
       // Big blue "DAÑOS" CTA — same large shape as REPORTAR, solid navy (no flash).
       const onD = active(it);
       return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${NAVY};color:#fff;box-shadow:0 2px 10px rgba(0,23,58,.45)${onD ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      ${icon(it.d)}${it.label}</a>`;
+    }
+    if (it.volunteer) {
+      // Big yellow "VOLUNTARIOS" CTA — same large shape as DAÑOS, yellow with navy text for contrast.
+      const onV = active(it);
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onV ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.cta) {
