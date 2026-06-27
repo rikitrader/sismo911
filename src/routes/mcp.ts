@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import type { Env } from '../types';
 import {
   clampPage,
@@ -10,21 +10,37 @@ import {
   queryBlog,
   queryMissingPersons,
 } from '../lib/datasets';
+import { authenticateApiClient, type Scope } from '../lib/apikey';
 
 // ===========================================================================
 // SISMO911 MCP server — Streamable HTTP transport (stateless), JSON-RPC 2.0.
 //
-// One endpoint, POST /mcp, exposing SISMO911's public datasets as MCP tools so
-// any MCP-capable client (Claude, IDEs, agents) can read Venezuela's live
-// seismic data, shelters, news, stats and the approved missing-persons registry.
-// Read-only and public — no key required (the data is already public on the site).
-// The keyed/bulk pull lives in /api/v1/data/*.
+// One endpoint, POST /mcp, exposing SISMO911's datasets as MCP tools so any
+// MCP-capable client (IDEs, agents) can read Venezuela's seismic data, shelters,
+// news, stats and the approved missing-persons registry.
+//
+// GATED: `tools/list` and `tools/call` require an APPROVED API key+secret — the
+// same credentials as /api/v1 (Authorization: Bearer <key>:<secret>, or
+// X-API-Key + X-API-Secret headers). Each tool maps to a scope. `initialize`,
+// `ping` and notifications stay open so a client can complete the handshake.
+// Onboard at POST /api/v1/register → operator approval in /admin.
 //
 // Spec ref: modelcontextprotocol — Streamable HTTP. We respond with
 // application/json (no SSE) and require no session id (stateless).
 // ===========================================================================
 
 export const mcp = new Hono<{ Bindings: Env }>();
+
+// Each tool requires this scope on the caller's APPROVED key.
+const TOOL_SCOPES: Record<string, Scope> = {
+  list_earthquakes: 'read:earthquakes',
+  get_earthquake: 'read:earthquakes',
+  latest_earthquakes: 'read:earthquakes',
+  seismic_stats: 'read:stats',
+  list_shelters: 'read:shelters',
+  list_news: 'read:blog',
+  search_missing_persons: 'read:missing-persons',
+};
 
 const SERVER_INFO = { name: 'sismo911', title: 'SISMO911 — Datos sísmicos de Venezuela', version: '1.0.0' };
 const SUPPORTED_PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
@@ -152,9 +168,26 @@ async function callTool(env: Env, name: string, args: any): Promise<{ data: unkn
   }
 }
 
+// Auth gate for the data-bearing MCP methods. Returns null on success, or a
+// JSON-RPC error object (code -32001) to short-circuit. `scope` undefined →
+// only an APPROVED key is required (used by tools/list).
+async function mcpAuth(
+  c: Context<{ Bindings: Env }>,
+  id: JsonRpcId,
+  endpoint: string,
+  scope?: Scope
+): Promise<object | null> {
+  const r = await authenticateApiClient(c, scope ? { scope, endpoint } : { endpoint });
+  if (r.ok) return null;
+  return err(id, -32001, `unauthorized: ${r.error}`, {
+    hint: r.hint ?? 'Regístrate en POST /api/v1/register y espera la aprobación de un operador, luego envía Authorization: Bearer <key>:<secret>.',
+    status: r.status,
+  });
+}
+
 // --- JSON-RPC message handler ----------------------------------------------
 // Returns the response object, or null for notifications (no id → 202, no body).
-async function handleMessage(env: Env, msg: JsonRpcReq): Promise<object | null> {
+async function handleMessage(c: Context<{ Bindings: Env }>, msg: JsonRpcReq): Promise<object | null> {
   const id = msg?.id ?? null;
   if (!msg || msg.jsonrpc !== '2.0' || typeof msg.method !== 'string') {
     return err(id, -32600, 'Invalid Request');
@@ -173,18 +206,23 @@ async function handleMessage(env: Env, msg: JsonRpcReq): Promise<object | null> 
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER_INFO,
         instructions:
-          'Datos sísmicos y de emergencia de Venezuela (SISMO911). Herramientas de solo lectura: sismos, albergues, noticias, estadísticas y personas desaparecidas (aprobadas).',
+          'Datos sísmicos y de emergencia de Venezuela (SISMO911). Herramientas de solo lectura (requieren clave aprobada): sismos, albergues, noticias, estadísticas y personas desaparecidas (aprobadas). Regístrate en /api/v1/register.',
       });
     }
     case 'ping':
       return ok(id, {});
-    case 'tools/list':
+    case 'tools/list': {
+      const denied = await mcpAuth(c, id, 'mcp:tools/list');
+      if (denied) return denied;
       return ok(id, { tools: TOOLS });
+    }
     case 'tools/call': {
       const name = msg.params?.name;
       if (!name) return err(id, -32602, 'Invalid params: falta "name"');
+      const denied = await mcpAuth(c, id, `mcp:${name}`, TOOL_SCOPES[name]);
+      if (denied) return denied;
       try {
-        const { data, summary } = await callTool(env, name, msg.params?.arguments);
+        const { data, summary } = await callTool(c.env, name, msg.params?.arguments);
         return ok(id, {
           content: [{ type: 'text', text: `${summary}\n\n${JSON.stringify(data, null, 2)}` }],
           structuredContent: data as Record<string, unknown>,
@@ -216,13 +254,13 @@ mcp.post('/', async (c) => {
   if (Array.isArray(body)) {
     const out: object[] = [];
     for (const m of body) {
-      const r = await handleMessage(c.env, m);
+      const r = await handleMessage(c, m);
       if (r) out.push(r);
     }
     return out.length ? c.json(out) : new Response(null, { status: 202 });
   }
 
-  const r = await handleMessage(c.env, body);
+  const r = await handleMessage(c, body);
   if (!r) return new Response(null, { status: 202 }); // notification → no body
   return c.json(r);
 });

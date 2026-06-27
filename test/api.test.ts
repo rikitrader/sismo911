@@ -54,6 +54,15 @@ const fakeKv = () => {
 };
 const env = (db?: any) => ({ DB: db ?? makeDB(), CACHE: fakeKv() });
 
+// Seed an APPROVED client directly into a db and return its auth headers.
+async function approvedHeaders(db: any, scopes: string = ALL_SCOPES.join(',')) {
+  const api_key = genApiKey();
+  const secret = genSecret();
+  const secret_hash = await sha256Hex(secret);
+  db._clients.push({ id: 'cli_test', name: 't', email: 't@t.com', org: '', purpose: '', api_key, secret_hash, scopes, status: 'approved', rate_limit: 120, request_count: 0, last_used_ms: null, created_ms: 0 });
+  return { 'x-api-key': api_key, 'x-api-secret': secret };
+}
+
 // ===========================================================================
 describe('apikey: credential primitives', () => {
   it('keys + secrets have the expected shape', () => {
@@ -90,24 +99,46 @@ describe('apikey: credential primitives', () => {
 });
 
 // ===========================================================================
-describe('data API: public feed (open)', () => {
-  it('GET /earthquakes returns paginated events', async () => {
+describe('data API: seismic feed (now gated)', () => {
+  it('GET /earthquakes is 401 without a key', async () => {
     const r = await dataApi.request('/earthquakes', {}, env());
-    expect(r.status).toBe(200);
-    const j = await r.json();
-    expect(j.earthquakes.length).toBe(2);
-    expect(j.total).toBe(2);
+    expect(r.status).toBe(401);
+    expect((await r.json()).error).toBe('missing_credentials');
   });
-  it('GET /latest includes a threat assessment', async () => {
+  it('GET /latest is 401 without a key', async () => {
     const r = await dataApi.request('/latest', {}, env());
-    const j = await r.json();
-    expect(j.threat).toBeTruthy();
-    expect(j.events.length).toBe(2);
+    expect(r.status).toBe(401);
   });
-  it('GET / discovery lists the three lanes', async () => {
+  it('GET /stats is 401 without a key', async () => {
+    const r = await dataApi.request('/stats', {}, env());
+    expect(r.status).toBe(401);
+  });
+  it('an approved key reads /earthquakes, /latest and /stats', async () => {
+    const db = makeDB();
+    const e = env(db);
+    const headers = await approvedHeaders(db, 'read:earthquakes,read:stats');
+    const eq = await dataApi.request('/earthquakes', { headers }, e);
+    expect(eq.status).toBe(200);
+    expect((await eq.json()).earthquakes.length).toBe(2);
+    const latest = await dataApi.request('/latest', { headers }, e);
+    expect(latest.status).toBe(200);
+    expect((await latest.json()).threat).toBeTruthy();
+    const stats = await dataApi.request('/stats', { headers }, e);
+    expect(stats.status).toBe(200);
+  });
+  it('an approved key WITHOUT read:stats is 403 on /stats', async () => {
+    const db = makeDB();
+    const e = env(db);
+    const headers = await approvedHeaders(db, 'read:earthquakes'); // no read:stats
+    const r = await dataApi.request('/stats', { headers }, e);
+    expect(r.status).toBe(403);
+    expect((await r.json()).error).toBe('insufficient_scope');
+  });
+  it('GET / discovery stays open and documents the gated endpoints', async () => {
     const j = await (await dataApi.request('/', {}, env())).json();
-    expect(j.public).toBeTruthy();
-    expect(j.gated).toBeTruthy();
+    expect(j.public).toBeUndefined();             // no public lane anymore
+    expect(j.gated['GET /api/v1/earthquakes']).toBeTruthy();
+    expect(j.register['POST /api/v1/register']).toBeTruthy();
     expect(j.mcp).toContain('/mcp');
   });
 });
@@ -156,35 +187,54 @@ describe('data API: registration + gating', () => {
 });
 
 // ===========================================================================
-describe('MCP server (JSON-RPC over /mcp)', () => {
-  const rpc = (body: any) => mcp.request('/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, env());
+describe('MCP server (JSON-RPC over /mcp) — gated', () => {
+  // rpc(body, headers?, e?) — pass auth headers + a shared env when needed.
+  const rpc = (body: any, headers: Record<string, string> = {}, e: any = env()) =>
+    mcp.request('/', { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) }, e);
 
-  it('initialize echoes a supported protocol + serverInfo', async () => {
+  it('initialize stays open (no key) and echoes a supported protocol', async () => {
     const j = await (await rpc({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } })).json();
     expect(j.result.serverInfo.name).toBe('sismo911');
     expect(j.result.protocolVersion).toBe('2025-06-18');
-    expect(j.result.capabilities.tools).toBeTruthy();
   });
-  it('tools/list returns the full read-only tool set', async () => {
+  it('ping stays open (no key)', async () => {
+    const j = await (await rpc({ jsonrpc: '2.0', id: 9, method: 'ping' })).json();
+    expect(j.result).toEqual({});
+  });
+  it('tools/list WITHOUT a key → -32001 unauthorized', async () => {
     const j = await (await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' })).json();
-    const names = j.result.tools.map((t: any) => t.name);
-    expect(names).toContain('list_earthquakes');
-    expect(names).toContain('seismic_stats');
-    expect(names).toContain('search_missing_persons');
-    expect(j.result.tools.length).toBe(7);
+    expect(j.error.code).toBe(-32001);
   });
-  it('tools/call list_earthquakes returns structured content', async () => {
+  it('tools/call WITHOUT a key → -32001 unauthorized', async () => {
     const j = await (await rpc({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'list_earthquakes', arguments: {} } })).json();
-    expect(j.result.isError).toBe(false);
-    expect(j.result.structuredContent.total).toBe(2);
-    expect(j.result.content[0].type).toBe('text');
+    expect(j.error.code).toBe(-32001);
   });
-  it('tools/call on an unknown tool is a tool error, not a protocol error', async () => {
-    const j = await (await rpc({ jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'nope' } })).json();
+  it('an approved key lists tools and calls list_earthquakes', async () => {
+    const db = makeDB();
+    const e = env(db);
+    const headers = await approvedHeaders(db, 'read:earthquakes');
+    const list = await (await rpc({ jsonrpc: '2.0', id: 4, method: 'tools/list' }, headers, e)).json();
+    expect(list.result.tools.length).toBe(7);
+    const call = await (await rpc({ jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'list_earthquakes', arguments: {} } }, headers, e)).json();
+    expect(call.result.isError).toBe(false);
+    expect(call.result.structuredContent.total).toBe(2);
+  });
+  it('tools/call requires the matching scope (search_missing_persons → -32001 without it)', async () => {
+    const db = makeDB();
+    const e = env(db);
+    const headers = await approvedHeaders(db, 'read:earthquakes'); // no read:missing-persons
+    const j = await (await rpc({ jsonrpc: '2.0', id: 6, method: 'tools/call', params: { name: 'search_missing_persons', arguments: {} } }, headers, e)).json();
+    expect(j.error.code).toBe(-32001);
+  });
+  it('an unknown tool with a valid key is a tool error (auth passed)', async () => {
+    const db = makeDB();
+    const e = env(db);
+    const headers = await approvedHeaders(db);
+    const j = await (await rpc({ jsonrpc: '2.0', id: 7, method: 'tools/call', params: { name: 'nope' } }, headers, e)).json();
     expect(j.result.isError).toBe(true);
   });
-  it('unknown method → JSON-RPC -32601', async () => {
-    const j = await (await rpc({ jsonrpc: '2.0', id: 5, method: 'does/not/exist' })).json();
+  it('unknown method → JSON-RPC -32601 (no auth needed)', async () => {
+    const j = await (await rpc({ jsonrpc: '2.0', id: 8, method: 'does/not/exist' })).json();
     expect(j.error.code).toBe(-32601);
   });
   it('a notification (no id) is acknowledged with 202 and no body', async () => {

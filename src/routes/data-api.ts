@@ -24,14 +24,16 @@ import {
 import { requestIp } from '../lib/security';
 
 // ===========================================================================
-// SISMO911 Data API — /api/v1
+// SISMO911 Data API — /api/v1  (FULLY GATED)
 //
-//   • Public feed (open, lightly rate-limited by IP): /earthquakes, /latest,
-//     /stats — so anyone can build on Venezuela's live seismic data.
-//   • Self-service registration: POST /register → returns api_key + secret ONCE,
-//     status "pending" until an operator approves it in /admin.
-//   • Gated data pull (approved key + secret): /data/* — bulk export of our DB,
-//     including the scope-gated missing-persons registry.
+//   • Open only: GET / (discovery docs), POST /register (self-service →
+//     api_key + secret ONCE, status "pending" until an operator approves it in
+//     /admin), GET /me (own status, lenient).
+//   • Everything else requires an APPROVED key + secret + scope:
+//     /earthquakes, /earthquakes/:id, /latest, /stats AND /data/* — all via
+//     gate() → authenticateApiClient (X-API-Key+X-API-Secret or
+//     Authorization: Bearer <key>:<secret>), per-client rate-limited + logged.
+//   • The MCP server (POST /mcp) is gated the same way (see routes/mcp.ts).
 // ===========================================================================
 
 export const dataApi = new Hono<{ Bindings: Env }>();
@@ -67,29 +69,31 @@ dataApi.get('/', (c) =>
     version: VERSION,
     docs: 'https://sismo911.com/developers',
     mcp: 'https://sismo911.com/mcp',
-    public: {
-      'GET /api/v1/earthquakes': 'Sismos (filtros: minMag, from, to, q, page, pageSize)',
-      'GET /api/v1/earthquakes/:id': 'Un sismo por id',
-      'GET /api/v1/latest': 'Sismos recientes + nivel de amenaza actual',
-      'GET /api/v1/stats': 'Estadísticas sísmicas agregadas',
-    },
     register: {
       'POST /api/v1/register': 'Solicita una clave (name, email, org, purpose) → key+secret (queda pendiente de aprobación)',
       'GET /api/v1/me': 'Estado de tu clave (envía X-API-Key + X-API-Secret)',
     },
     gated: {
-      auth: 'X-API-Key + X-API-Secret  ó  Authorization: Bearer <key>:<secret>',
+      auth: 'X-API-Key + X-API-Secret  ó  Authorization: Bearer <key>:<secret>  (todos requieren clave APROBADA)',
+      'GET /api/v1/earthquakes': 'scope read:earthquakes — sismos (filtros: minMag, from, to, q, page, pageSize)',
+      'GET /api/v1/earthquakes/:id': 'scope read:earthquakes — un sismo por id',
+      'GET /api/v1/latest': 'scope read:earthquakes — sismos recientes + amenaza actual',
+      'GET /api/v1/stats': 'scope read:stats — estadísticas sísmicas',
       'GET /api/v1/data/earthquakes': 'scope read:earthquakes — export paginado',
       'GET /api/v1/data/shelters': 'scope read:shelters — albergues aprobados',
       'GET /api/v1/data/blog': 'scope read:blog — noticias publicadas',
       'GET /api/v1/data/stats': 'scope read:stats — estadísticas',
       'GET /api/v1/data/missing-persons': 'scope read:missing-persons (otorgado por operador)',
     },
+    mcp_note: 'El servidor MCP (POST /mcp) también requiere clave aprobada (Authorization: Bearer <key>:<secret>) para tools/list y tools/call.',
   })
 );
 
-// ===================== PUBLIC FEED (open) ===================================
+// ===================== SEISMIC FEED (gated: approved key + scope) ============
+// Previously open; now require an approved key (same gate() as /data/*).
 dataApi.get('/earthquakes', async (c) => {
+  const { res } = await gate(c, 'read:earthquakes', '/api/v1/earthquakes');
+  if (res) return res;
   const pg = clampPage(c.req.query('page'), c.req.query('pageSize'));
   const out = await queryEarthquakes(
     c.env,
@@ -100,17 +104,25 @@ dataApi.get('/earthquakes', async (c) => {
 });
 
 dataApi.get('/earthquakes/:id', async (c) => {
+  const { res } = await gate(c, 'read:earthquakes', '/api/v1/earthquakes/:id');
+  if (res) return res;
   const ev = await getEarthquake(c.env, c.req.param('id'));
   if (!ev) return c.json({ error: 'not_found' }, 404);
   return c.json({ earthquake: ev });
 });
 
 dataApi.get('/latest', async (c) => {
+  const { res } = await gate(c, 'read:earthquakes', '/api/v1/latest');
+  if (res) return res;
   const limit = Number(c.req.query('limit') ?? 20);
   return c.json({ source: 'sismo911', ...(await latestSeismic(c.env, limit)) });
 });
 
-dataApi.get('/stats', async (c) => c.json({ source: 'sismo911', ...(await seismicStats(c.env)) }));
+dataApi.get('/stats', async (c) => {
+  const { res } = await gate(c, 'read:stats', '/api/v1/stats');
+  if (res) return res;
+  return c.json({ source: 'sismo911', ...(await seismicStats(c.env)) });
+});
 
 // ===================== REGISTRATION =========================================
 // Public, self-service. Returns key+secret ONE TIME; the secret is then only
