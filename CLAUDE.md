@@ -22,6 +22,14 @@ Inherits all global rules from `~/CLAUDE.md` (ship cycle, worktrees, deploy wait
 - Minimum per change: `06-Sessions/YYYY-MM-DD-<slug>.md` (what/why/how, PR #, prod version, gotchas),
   `00-Indices/Decisions-Log.md` (decision + why), and `00-Indices/Followups.md` (anything pending).
 
+## Cloudflare Secret Management & Zero-Trust Deployment (HARD RULE — never violate)
+
+- **No secret in git, ever** — not in `wrangler.toml`, `.env*`, `.dev.vars`, scripts, CI YAML, tests, or docs. Runtime secrets live ONLY in **Cloudflare Worker Secrets** (`wrangler secret put`). The authoritative list is `scripts/secrets.manifest`. Only non-secret config + **documented public** keys (`VAPID_PUBLIC_KEY`, `RAV_SUPABASE_KEY` anon JWT) may sit in `wrangler.toml [vars]`.
+- **Never manipulate/rename `.env` to deploy.** Wrangler v4 auto-loads `.env`; a Cloudflare token there overrides the OAuth session → wrong-account deploys + D1 **Error 7500**. Every deploy/migration path begins with `unset CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID` (the scripts do this). Keep CF deploy creds out of the project `.env`; rely on `wrangler login`.
+- **Preflight gates every deploy:** run `npm run preflight` (or it runs via `predeploy`) — validates auth, required secrets present, D1 reachable (catches Error 7500 before migrating), versions, pending migrations. **Deploy aborts on any required failure.** Set/rotate secrets with the idempotent `npm run bootstrap:secrets` (values entered hidden, never echoed).
+- **Secret scanning:** `bash scripts/install-secret-scan-hook.sh` installs a pre-commit guard (`scripts/secret-scan.sh`) that blocks commits containing CF/AWS/GitHub/Stripe/Anthropic/OpenAI/Google/Slack tokens or private keys. Run `npm run secret-scan` in CI. Whitelist a true example with `# pragma: allowlist secret`.
+- **Least privilege:** if not using OAuth, use one scoped Cloudflare token per task (Workers/D1/KV/R2/…), never the Global API Key or an admin token; store CI creds as GitHub Environment secrets, masked. **Rotation:** signing/JWT secrets ≤90 days and immediately on suspected exposure (`bootstrap-secrets.sh --rotate <NAME>` → redeploy → revoke old). Full spec: `docs/security/cloudflare-secrets.md`.
+
 ## Project quick-reference
 
 - **Stack:** Cloudflare Workers + Hono 4 + D1 + KV + R2 + Static Assets + hourly Cron. Single Worker serves `public/*.html` + `/api/*`.
