@@ -50,11 +50,14 @@
           <p class="mt-3 text-on-surface-variant text-sm leading-6">
             Descarga directa para pruebas y distribución fuera de Google Play. Android puede pedir permiso para instalar apps de origen externo.
           </p>
-          <a id="androidDownload" href="/downloads/sismo911-latest.apk" class="mt-6 inline-flex items-center justify-center rounded-lg bg-secondary text-white font-display font-extrabold px-5 py-3 hover:bg-secondary-container transition">
-            Descargar Android
-          </a>
+          <button id="androidInstall" type="button" class="mt-6 inline-flex items-center justify-center rounded-lg bg-secondary text-white font-display font-extrabold px-5 py-3 hover:bg-secondary-container transition">
+            Instalar app (PWA)
+          </button>
           <p class="mt-3 text-xs text-on-surface-variant">
-            Archivo esperado: <code class="font-mono">/downloads/sismo911-latest.apk</code>
+            APK nativo <strong>próximamente</strong>. Por ahora instala la PWA — funciona offline, sin tienda, y se actualiza sola.
+          </p>
+          <p id="androidHint" class="mt-2 text-xs text-on-surface-variant hidden">
+            Abre el menú del navegador (⋮) y elige <strong>“Agregar a pantalla de inicio”</strong> / “Instalar app”.
           </p>
         </article>
 
@@ -116,5 +119,21 @@
       </div>
     </section>
   </main>
+  <script>
+    // PWA install: the native APK isn't built yet (see mobile/ + eas.json), so the
+    // Android button installs the PWA instead of 404-ing on a missing .apk.
+    // Build the real APK later with: cd mobile && npx eas-cli build -p android --profile preview
+    let __deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); __deferredPrompt = e; });
+    document.getElementById('androidInstall')?.addEventListener('click', async () => {
+      if (__deferredPrompt) {
+        __deferredPrompt.prompt();
+        await __deferredPrompt.userChoice.catch(() => {});
+        __deferredPrompt = null;
+      } else {
+        document.getElementById('androidHint')?.classList.remove('hidden');
+      }
+    });
+  </script>
 </body>
 </html>
