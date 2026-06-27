@@ -144,7 +144,7 @@
       </div>
       <div class="fld">
         <label for="fstatus">Estado del caso</label>
-        <select id="fstatus"><option value="">Todos</option><option value="missing">Buscadas</option><option value="found_safe">Reencontradas</option></select>
+        <select id="fstatus"><option value="">Todos</option><option value="missing">Buscadas</option><option value="found_safe">Reencontradas</option><option value="aparecido">Aparecieron</option><option value="hospitalizado">Hospitalizadas</option><option value="found_deceased">Fallecidas</option></select>
       </div>
     </div>
     <div class="filtfoot">
@@ -165,7 +165,7 @@
     <div class="flex flex-wrap gap-2 my-3">
       <input id="allq" placeholder="Buscar nombre o lugar…" class="flex-1 min-w-[180px] border border-outline-variant rounded-lg px-3 py-2 text-sm">
       <select id="allstatus" class="border border-outline-variant rounded-lg px-3 py-2 text-sm" style="width:auto">
-        <option value="">Todos</option><option value="missing">Buscadas</option><option value="found_safe">A salvo</option>
+        <option value="">Todos</option><option value="missing">Buscadas</option><option value="found_safe">A salvo</option><option value="aparecido">Apareció</option><option value="hospitalizado">Hospitalizada</option><option value="found_deceased">Fallecida</option>
       </select>
     </div>
     <div id="allList" class="divide-y divide-outline-variant/40"></div>
@@ -196,7 +196,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch
 (function(){const el=document.getElementById('pp-cron-val');if(el&&window.sismoTick)window.sismoTick(p=>el.textContent=p.clock);})();
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=id=>document.getElementById(id);
-const ST={missing:['Buscada','#c8102e'],found_safe:['A salvo','#1f8a4c'],found_deceased:['Fallecida','#5a5f6a'],unknown:['Sin datos','#7a8096']};
+const ST={missing:['Buscada','#c8102e'],found_safe:['A salvo','#1f8a4c'],aparecido:['Apareció','#1f8a4c'],hospitalizado:['Hospitalizada','#1d4ed8'],found_deceased:['Fallecida','#5a5f6a'],unknown:['Sin datos','#7a8096']};
 // Direct link to a person's case page (expediente).
 const caseUrl=p=>'/casos#caso='+encodeURIComponent(p.kind==='case'?p.id:'fam-'+p.id);
 const fmtFecha=p=>{ if(p.fecha)return String(p.fecha); if(p.updated_at){const d=new Date(Number(p.updated_at));if(!isNaN(d))return d.toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'});} return ''; };
@@ -261,7 +261,7 @@ $('clearFilters').onclick=()=>{['fq','flugar','fdesde','fhasta'].forEach(id=>$(i
 loadWall(true);
 
 // ---- Secondary: full registry incl. sin foto (/api/familia/persons) ----
-const ST2={missing:['Buscada','bg-warning'],found_safe:['A salvo','bg-safe'],found_deceased:['Fallecida','bg-on-surface-variant'],unknown:['Sin datos','bg-outline-variant']};
+const ST2={missing:['Buscada','bg-warning'],found_safe:['A salvo','bg-safe'],aparecido:['Apareció','bg-safe'],hospitalizado:['Hospitalizada','bg-primary'],found_deceased:['Fallecida','bg-on-surface-variant'],unknown:['Sin datos','bg-outline-variant']};
 let aCur=null,aLoading=false,allLoaded=false;
 async function loadAll(reset){
   if(aLoading)return; aLoading=true;
