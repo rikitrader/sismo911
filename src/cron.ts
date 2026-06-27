@@ -14,6 +14,7 @@
 
 import type { Env } from './types';
 import { ingestUsgs } from './ingest/usgs-cron';
+import { ingestFunvisis } from './ingest/funvisis-cron';
 import { bootstrapHistory } from './ingest/usgs-history';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
@@ -76,6 +77,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   // :00 — seismic core (time-sensitive, light) + the frugal case-score sweep.
   '0 * * * *': [
     { name: 'usgs', run: ingestUsgs },
+    // FUNVISIS (Venezuela's own seismic service) right after USGS: it upserts
+    // into the same `events` table AND rebuilds the all-sources /api/events
+    // snapshot the USGS job just wrote USGS-only, so both feeds render together.
+    { name: 'funvisis', run: ingestFunvisis },
     { name: 'kobo', run: ingestKobo },
     { name: 'quake-announce', run: announceQuakes },
     { name: 'sos-damage', run: ingestSosDamage },

@@ -1,13 +1,32 @@
 import type { Env } from '../types';
 import { fetchUsgs } from '../lib/usgs';
-import { upsertEvents, recordIngest } from '../lib/db';
+import { upsertEvents, recordIngest, listEvents } from '../lib/db';
 
-const CACHE_KEY = 'usgs:latest';
+// Shared hot-path snapshot for GET /api/events. Named `usgs:latest` for
+// historical reasons, but it is source-AGNOSTIC: any ingest source (USGS,
+// FUNVISIS, …) can refresh it from D1 so the public feed reflects every source.
+export const CACHE_KEY = 'usgs:latest';
 // Track the hourly cron sync (+5 min margin) so the parsed/trimmed snapshot
 // stays warm for the full hour between syncs. The expensive JSON.parse of the
 // global USGS feed then happens ONCE per hour (in the cron), and every public
 // read serves this cached snapshot instead of re-deriving it.
-const CACHE_TTL = 3900; // seconds (65 min)
+export const CACHE_TTL = 3900; // seconds (65 min)
+
+/**
+ * Rebuild the shared events snapshot from D1 (ALL sources, newest first) and
+ * write it to KV. Call after an ingest whose rows must surface on the public
+ * /api/events feed even when the USGS-only snapshot is already warm (e.g.
+ * FUNVISIS, which the hourly USGS sync would otherwise overwrite/omit).
+ */
+export async function refreshEventsCache(env: Env): Promise<number> {
+  const events = await listEvents(env, 300);
+  await env.CACHE.put(
+    CACHE_KEY,
+    JSON.stringify({ updated_ms: Date.now(), count: events.length, events }),
+    { expirationTtl: CACHE_TTL }
+  );
+  return events.length;
+}
 
 /**
  * Scheduled ingestion: pull the live USGS feed for Venezuela, cache the
