@@ -133,6 +133,10 @@
   .backbtn{display:inline-flex;align-items:center;gap:8px;font:700 12.5px Inter;color:#bcd0f4;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:9px;padding:7px 12px}
   .backbtn:hover{background:rgba(255,255,255,.15);color:#fff}
   .case-id{font:700 13px 'JetBrains Mono';color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:8px;padding:3px 9px;letter-spacing:.03em}
+  .chrono-big{display:flex;flex-direction:column;align-items:flex-end;gap:3px;background:rgba(229,114,0,.14);border:1px solid rgba(229,114,0,.45);border-radius:12px;padding:9px 14px}
+  .chrono-big .chrono-lbl{font:800 9.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#ffce9e}
+  .chrono-big .chrono-val{font:900 34px/1 'JetBrains Mono';color:#fff;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+  @media(max-width:560px){.chrono-big .chrono-val{font-size:26px}}
   .case-hero{display:flex;gap:18px;align-items:flex-start;margin-top:16px;flex-wrap:wrap}
   .case-photo{width:96px;height:96px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,255,255,.25);flex:0 0 auto;background:rgba(255,255,255,.08)}
   .case-photo.ph{display:grid;place-items:center;font-size:40px;color:#7d93c2}
@@ -331,11 +335,19 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:15px;height:15px"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Volver al docket
           </button>
-          <div style="display:flex;align-items:center;gap:9px">
-            <span class="case-id" id="cv_caseno">—</span>
-            <button class="backbtn" id="shareBtn" title="Copiar enlace del expediente" style="padding:7px 10px">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:9px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span class="case-id" id="cv_caseno">—</span>
+              <button class="backbtn" id="shareBtn" title="Copiar enlace del expediente" style="padding:7px 10px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <!-- Prominent live chronometer under the case number — counts from the
+                 reference earthquake, the clock that matters for survival. -->
+            <div class="chrono-big">
+              <span class="chrono-lbl" id="cv_chrono_lbl">⏱ Tiempo desde el sismo</span>
+              <span class="chrono-val mono" id="cv_chrono">—</span>
+            </div>
           </div>
         </div>
         <div id="cv_hero" class="case-hero"></div>
@@ -600,7 +612,7 @@ function buildTimeline(d){
   return nodes;
 }
 
-// Live chronometer: elapsed time since the case opened, ticking every second.
+// Live chronometer: elapsed time since the reference earthquake, ticking every second.
 function fmtChrono(ms){
   let s=Math.max(0,Math.floor((Date.now()-ms)/1000));
   const d=Math.floor(s/86400);s-=d*86400;
@@ -635,9 +647,12 @@ function renderCase(d){
   ];
   if(OP&&p.assigned_to)meta.push(['Asignado a',p.assigned_to]);
   if(OP&&p.contact_phone)meta.push(['Contacto',p.contact_phone]);
-  $('#cv_meta').innerHTML=meta.map(([k,v])=>`<div class="mcard"><div class="k">${esc(k)}</div><div class="vv">${esc(v)}</div></div>`).join('')
-    +`<div class="mcard"><div class="k">⏱ Cronómetro</div><div class="vv mono" id="cv_chrono" style="font-variant-numeric:tabular-nums">—</div></div>`;
-  startChrono(p.created_ms);
+  $('#cv_meta').innerHTML=meta.map(([k,v])=>`<div class="mcard"><div class="k">${esc(k)}</div><div class="vv">${esc(v)}</div></div>`).join('');
+  // Count from the reference earthquake (sismo) — the clock that matters for
+  // survival — falling back to when the case was opened if no event is linked.
+  const chronoMs=(e&&e.time_ms)?e.time_ms:p.created_ms;
+  $('#cv_chrono_lbl').textContent=(e&&e.time_ms)?'⏱ Tiempo desde el sismo':'⏱ Tiempo desde apertura';
+  startChrono(chronoMs);
   $('#tb_dock').textContent=dock.length;
   $('#tb_ev').textContent=p.evidence_count||0;
 
