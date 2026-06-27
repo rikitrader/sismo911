@@ -8,7 +8,13 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { rateLimit, nameHasSpam, textHasLink, requestIp, isImageBytes } from '../lib/security';
+import { rateLimit, subjectLimit, normEmail, normPhone, nameHasSpam, textHasLink, requestIp, isImageBytes } from '../lib/security';
+
+// Per-contact booking limits (tunable) — on top of the per-IP limit, these stop
+// one actor griefing many slots or probing the same contact across IPs.
+const BOOK_MAX_PER_EMAIL = 6;
+const BOOK_MAX_PER_PHONE = 6;
+const BOOK_WINDOW_SEC = 3600; // 1h
 import { audit } from '../lib/audit';
 import { sendEmail, randomToken, telemedScheduledEmail, telemedApptStatusEmail } from '../lib/email';
 import { notifyPatientText } from '../lib/sms';
@@ -161,6 +167,11 @@ telemedScheduling.post('/book/appointments', async (c) => {
     await audit(c, 'spam_blocked', { ip: requestIp(c), src: 'telemed_book' }).catch(() => {});
     return c.json({ error: 'spam_blocked', hint: 'No incluyas enlaces.' }, 400);
   }
+  // Per-contact rate limit (email + phone) — generic 429, never reveals existence.
+  const contactOver =
+    (await subjectLimit(c.env, 'telemed_book_email', normEmail(email), BOOK_MAX_PER_EMAIL, BOOK_WINDOW_SEC)) ||
+    (await subjectLimit(c.env, 'telemed_book_phone', normPhone(phone), BOOK_MAX_PER_PHONE, BOOK_WINDOW_SEC));
+  if (contactOver) return c.json({ error: 'rate_limited', hint: 'Demasiadas solicitudes. Intenta más tarde.' }, 429);
   const doctorId = String(b.doctor_id || '').trim().slice(0, 64);
   const doc = await c.env.DB.prepare(
     `SELECT id, full_name, email, specialty, panel_token FROM telemed_doctors WHERE id=? AND status='activo' AND moderation='approved' LIMIT 1`,

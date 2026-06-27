@@ -21,7 +21,12 @@ import {
   queryBlog,
   queryMissingPersons,
 } from '../lib/datasets';
-import { requestIp } from '../lib/security';
+import { requestIp, subjectLimit, normEmail } from '../lib/security';
+
+// Per-email registration limit (tunable) — on top of the per-IP feed limit,
+// bounds enumeration/spam of the API-client approval queue.
+const REGISTER_MAX_PER_EMAIL = 3;
+const REGISTER_WINDOW_SEC = 3600; // 1h
 
 // ===========================================================================
 // SISMO911 Data API — /api/v1  (FULLY GATED)
@@ -142,6 +147,12 @@ dataApi.post('/register', async (c) => {
   if (name.length < 2) return c.json({ error: 'name_required' }, 400);
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return c.json({ error: 'email_invalid' }, 400);
   if (purpose.length < 10) return c.json({ error: 'purpose_required', hint: 'Describe para qué usarás los datos (mín. 10 caracteres).' }, 400);
+
+  // Per-email rate limit — generic 429 (does NOT reveal whether the email exists),
+  // bounds enumeration/spam beyond the per-IP feed limit.
+  if (await subjectLimit(c.env, 'apiv1_register_email', normEmail(email), REGISTER_MAX_PER_EMAIL, REGISTER_WINDOW_SEC)) {
+    return c.json({ error: 'rate_limited' }, 429);
+  }
 
   // Soft anti-abuse: one pending request per email at a time.
   const dupe = await c.env.DB.prepare(`SELECT id FROM api_clients WHERE email = ? AND status = 'pending'`).bind(email).first();
