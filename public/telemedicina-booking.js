@@ -247,6 +247,33 @@
   const badge = (s) => `<span class="inline-block px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide ${ST_CLS[s] || 'bg-surface-container text-on-surface-variant'}">${ST_LABEL[s] || s}</span>`;
   let trackTimer = null;
 
+  // Open a clean, printable récipe in a new window (user-gesture → not popup-blocked).
+  function printRx(a, p) {
+    if (!p) return;
+    const w = window.open('', '_blank', 'width=720,height=900');
+    if (!w) { alert('Permite las ventanas emergentes para imprimir.'); return; }
+    const rows = p.items.map((it) => `<tr><td><b>${esc(it.med)}</b></td><td>${esc(it.dose || '')}</td><td>${esc(it.freq || '')}</td><td>${esc(it.duration || '')}</td></tr>`).join('');
+    const issued = new Date(p.issued_ms).toLocaleString('es-VE', { timeZone: 'America/Caracas', dateStyle: 'long', timeStyle: 'short' });
+    w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Récipe — SISMO911 Telemedicina</title>
+      <style>body{font-family:Arial,Helvetica,sans-serif;color:#1a1c1e;max-width:640px;margin:28px auto;padding:0 22px}
+      .brand{border-bottom:3px solid #00173a;padding-bottom:10px;margin-bottom:16px}
+      h1{color:#00173a;font-size:20px;margin:0;font-weight:800}.sub{color:#44474f;font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+      .meta{font-size:13px;margin:4px 0}.meta b{color:#00173a}
+      table{width:100%;border-collapse:collapse;margin:14px 0}th,td{text-align:left;padding:9px 8px;border-bottom:1px solid #c4c6d0;font-size:13px;vertical-align:top}
+      th{color:#44474f;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+      .notes{font-size:13px;color:#1a1c1e;margin-top:8px;white-space:pre-wrap}
+      .foot{margin-top:24px;font-size:11px;color:#44474f;border-top:1px solid #c4c6d0;padding-top:10px;line-height:1.5}</style></head>
+      <body><div class="brand"><h1>SISMO911 · Telemedicina</h1><div class="sub">Récipe / Indicación médica</div></div>
+      <div class="meta"><b>Paciente:</b> ${esc(a.patient_name || '—')}${a.patient_cedula ? ' · CI ' + esc(a.patient_cedula) : ''}${a.patient_age != null ? ' · ' + esc(a.patient_age) + ' años' : ''}</div>
+      <div class="meta"><b>Médico:</b> Dr(a). ${esc(a.doctor_name || '—')} · ${esc(specLabel(a.specialty))}</div>
+      <div class="meta"><b>Emitido:</b> ${issued}</div>
+      <table><thead><tr><th>Medicamento</th><th>Dosis</th><th>Frecuencia</th><th>Duración</th></tr></thead><tbody>${rows}</tbody></table>
+      ${p.notes ? `<div class="notes"><b>Notas:</b> ${esc(p.notes)}</div>` : ''}
+      <div class="foot">Indicación informativa emitida por un médico voluntario de SISMO911 Telemedicina. <b>No constituye una receta médica legal</b> ni sustituye la valoración presencial. Ante una emergencia llama al 911.</div>
+      <script>window.onload=function(){window.print()}<\/script></body></html>`);
+    w.document.close();
+  }
+
   async function loadTrack(token) {
     $('trackCard').style.display = 'block'; $('wizCard').style.display = 'none';
     const res = await api('/book/appointment/' + encodeURIComponent(token)).catch(() => ({}));
@@ -273,6 +300,10 @@
     if (['scheduled', 'checked_in', 'waiting_room'].includes(a.status)) actions += `<button class="tm-btn tm-btn-danger" data-act="cancel">Cancelar cita</button>`;
     actions += `<a class="tm-btn tm-btn-ghost" href="/api/telemedicina/appt/${esc(a.id)}/ics?t=${esc(a.manage_token)}">Calendario</a>`;
 
+    const plan = res.plan || '';
+    const rxs = res.prescriptions || [];
+    const planHtml = plan ? `<div class="rounded-lg border border-outline-variant/60 border-l-4 border-l-primary p-4 mb-5"><div class="label-caps text-on-surface-variant mb-1">Indicaciones médicas</div><div class="text-[14px] text-on-surface whitespace-pre-wrap">${esc(plan)}</div></div>` : '';
+    const rxHtml = rxs.length ? `<div class="rounded-lg border border-outline-variant/60 p-4 mb-5"><div class="label-caps text-on-surface-variant mb-2">Récipe / Indicación médica</div>${rxs.map((p, i) => `<div class="mb-3 pb-3 ${i < rxs.length - 1 ? 'border-b border-outline-variant/40' : ''}"><div class="text-[11px] text-on-surface-variant tabnum mb-1">Emitido ${new Date(p.issued_ms).toLocaleString('es-VE', { timeZone: 'America/Caracas', dateStyle: 'medium', timeStyle: 'short' })}</div>${p.items.map((it) => `<div class="text-[13.5px] text-on-surface">• <b>${esc(it.med)}</b>${it.dose ? ' · ' + esc(it.dose) : ''}${it.freq ? ' · ' + esc(it.freq) : ''}${it.duration ? ' · ' + esc(it.duration) : ''}${it.notes ? ' — ' + esc(it.notes) : ''}</div>`).join('')}${p.notes ? `<div class="text-[12.5px] text-on-surface-variant mt-1">${esc(p.notes)}</div>` : ''}<button class="tm-btn tm-btn-ghost mt-2" data-rx="${i}">Imprimir récipe</button></div>`).join('')}<p class="text-[11px] text-on-surface-variant">Indicación informativa; no sustituye una receta médica legal.</p></div>` : '';
     $('trackBox').innerHTML =
       `<div class="mb-4">${badge(a.status)}</div>
        <div class="rounded-lg border border-outline-variant/60 p-4 mb-5">
@@ -282,8 +313,10 @@
          <div class="kv"><span class="k">Cuándo</span><span class="v tabnum">${esc(a.when)}</span></div>
        </div>
        <div class="flex flex-wrap gap-3">${actions}</div>
+       ${planHtml}${rxHtml}
        <h3 class="font-display font-bold text-base text-on-surface mt-7 mb-3">Seguimiento</h3>
        <div class="timeline">${timeline}</div>`;
+    $('trackBox').querySelectorAll('[data-rx]').forEach((b) => b.addEventListener('click', () => printRx(a, rxs[+b.dataset.rx])));
 
     $('trackBox').querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', async () => {
       const act = b.dataset.act;
