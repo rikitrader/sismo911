@@ -47,6 +47,7 @@ async function loadPrefs(env: Env, doctorId: string): Promise<{ slot_minutes: nu
   if (r?.appt_types) { try { const a = JSON.parse(r.appt_types); if (Array.isArray(a) && a.length) types = a.filter(isApptType); } catch { /* keep default */ } }
   return { slot_minutes: r?.slot_minutes ?? 30, accepting: r ? !!r.accepting : true, appt_types: types };
 }
+function safeJson(s: any, fallback: any) { try { const v = JSON.parse(s); return v ?? fallback; } catch { return fallback; } }
 function icsStamp(ms: number): string { return new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z'); }
 function icsEscape(s: string): string { return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
 
@@ -243,13 +244,16 @@ telemedScheduling.get('/book/appointment/:token', async (c) => {
        LEFT JOIN telemed_doctors d ON d.id = a.doctor_id WHERE a.manage_token=? LIMIT 1`,
   ).bind(token).first<any>().catch(() => null);
   if (!a) return c.json({ error: 'not_found' }, 404);
-  const { results } = await c.env.DB.prepare(
-    `SELECT status, actor, note, at_ms FROM telemed_appt_status WHERE appointment_id=? ORDER BY at_ms ASC`,
-  ).bind(a.id).all();
+  const [hist, rx, consult] = await Promise.all([
+    c.env.DB.prepare(`SELECT status, actor, note, at_ms FROM telemed_appt_status WHERE appointment_id=? ORDER BY at_ms ASC`).bind(a.id).all(),
+    c.env.DB.prepare(`SELECT id, items, notes, issued_ms FROM telemed_prescriptions WHERE appointment_id=? ORDER BY issued_ms ASC`).bind(a.id).all(),
+    c.env.DB.prepare(`SELECT summary FROM telemed_consults WHERE appointment_id=?`).bind(a.id).first<any>().catch(() => null),
+  ]);
   return c.json({
     ok: true,
     appointment: {
       id: a.id, doctor_name: a.doctor_name, doctor_country: a.doctor_country, specialty: a.specialty,
+      patient_name: a.patient_name,
       appt_type: a.appt_type, type_label: APPT_TYPES[a.appt_type as ApptType]?.label || a.appt_type,
       date: a.date, time: minToHHMM(a.start_min), when: whenText(a.start_ms), start_ms: a.start_ms,
       status: a.status, video_url: a.video_url, reason: a.reason,
@@ -257,7 +261,10 @@ telemedScheduling.get('/book/appointment/:token', async (c) => {
       patient_location: a.patient_location, patient_cedula: a.patient_cedula,
       patient_dob: a.patient_dob, patient_gender: a.patient_gender, patient_age: a.patient_age,
     },
-    history: results ?? [],
+    history: hist.results ?? [],
+    // Clinical outputs the patient may see: the plan + their récipe(s). Doctor-only notes are NOT exposed.
+    plan: consult?.summary || '',
+    prescriptions: (rx.results ?? []).map((r: any) => ({ id: r.id, items: safeJson(r.items, []), notes: r.notes, issued_ms: r.issued_ms })),
   }, 200, { 'Cache-Control': 'no-store' });
 });
 
@@ -392,6 +399,101 @@ telemedScheduling.delete('/panel/blocks/:id', async (c) => {
   const res = await c.env.DB.prepare(`DELETE FROM telemed_blocks WHERE id=? AND doctor_id=?`).bind(id, doc.id).run();
   if (!res.meta || res.meta.changes === 0) return c.json({ error: 'not_found' }, 404);
   return c.json({ ok: true, id }, 200);
+});
+
+// ---------------------------------------------------------------------------
+// CLINICAL WORKSPACE (doctor, panel_token-gated) — history/notes, checklist,
+// and an informational prescription record. Notes + prescriptions are
+// append-only = the audit trail.
+// ---------------------------------------------------------------------------
+
+// Verify the doctor AND that the appointment is theirs. Returns {doc, appt} or null.
+async function ownAppt(c: any, body: any): Promise<{ doc: any; appt: any } | null> {
+  const doc = await verifyDoctor(c.env, String(body.doctor_id || c.req.query('doc') || ''), String(body.token || c.req.query('t') || ''));
+  if (!doc) return null;
+  const id = String(c.req.param('id') || '').trim().slice(0, 64);
+  const appt = await c.env.DB.prepare(`SELECT * FROM telemed_appointments WHERE id=? AND doctor_id=? LIMIT 1`).bind(id, doc.id).first().catch(() => null);
+  if (!appt) return null;
+  return { doc, appt };
+}
+
+// GET /panel/appointment/:id?doc=&t= — full consult workspace for one appointment.
+telemedScheduling.get('/panel/appointment/:id', async (c) => {
+  const o = await ownAppt(c, {});
+  if (!o) return c.json({ error: 'unauthorized' }, 401);
+  const id = o.appt.id;
+  const [notes, rx, consult] = await Promise.all([
+    c.env.DB.prepare(`SELECT id, body, at_ms FROM telemed_consult_notes WHERE appointment_id=? ORDER BY at_ms ASC`).bind(id).all(),
+    c.env.DB.prepare(`SELECT id, items, notes, issued_ms FROM telemed_prescriptions WHERE appointment_id=? ORDER BY issued_ms ASC`).bind(id).all(),
+    c.env.DB.prepare(`SELECT summary, checklist, updated_ms FROM telemed_consults WHERE appointment_id=?`).bind(id).first<any>().catch(() => null),
+  ]);
+  const a = o.appt;
+  return c.json({
+    ok: true,
+    appointment: {
+      id, patient_name: a.patient_name, patient_email: a.patient_email, patient_phone: a.patient_phone,
+      patient_cedula: a.patient_cedula, patient_age: a.patient_age, patient_gender: a.patient_gender,
+      patient_location: a.patient_location, patient_dob: a.patient_dob, specialty: a.specialty,
+      appt_type: a.appt_type, type_label: APPT_TYPES[a.appt_type as ApptType]?.label || a.appt_type,
+      reason: a.reason, status: a.status, when: whenText(a.start_ms), video_url: a.video_url, manage_token: a.manage_token,
+    },
+    notes: notes.results ?? [],
+    prescriptions: (rx.results ?? []).map((r: any) => ({ id: r.id, items: safeJson(r.items, []), notes: r.notes, issued_ms: r.issued_ms })),
+    consult: consult ? { summary: consult.summary, checklist: safeJson(consult.checklist, {}), updated_ms: consult.updated_ms } : { summary: '', checklist: {}, updated_ms: null },
+  }, 200, { 'Cache-Control': 'no-store' });
+});
+
+// POST /panel/appointment/:id/note — append a clinical history/notes entry (trail).
+telemedScheduling.post('/panel/appointment/:id/note', async (c) => {
+  const b: any = (await c.req.json().catch(() => ({}))) || {};
+  const o = await ownAppt(c, b);
+  if (!o) return c.json({ error: 'unauthorized' }, 401);
+  const body = String(b.body || '').trim();
+  if (body.length < 1) return c.json({ error: 'empty' }, 400);
+  const nid = uid('cn'); const now = Date.now();
+  await c.env.DB.prepare(`INSERT INTO telemed_consult_notes (id, appointment_id, doctor_id, body, at_ms) VALUES (?,?,?,?,?)`)
+    .bind(nid, o.appt.id, o.doc.id, body.slice(0, 4000), now).run();
+  await audit(c, 'telemed.consult_note', { id: o.appt.id }).catch(() => {});
+  return c.json({ ok: true, id: nid, at_ms: now }, 201);
+});
+
+// PUT /panel/appointment/:id/consult — upsert the consult summary + checklist.
+telemedScheduling.put('/panel/appointment/:id/consult', async (c) => {
+  const b: any = (await c.req.json().catch(() => ({}))) || {};
+  const o = await ownAppt(c, b);
+  if (!o) return c.json({ error: 'unauthorized' }, 401);
+  const summary = b.summary != null ? String(b.summary).slice(0, 4000) : null;
+  const checklist = b.checklist && typeof b.checklist === 'object' ? JSON.stringify(b.checklist) : '{}';
+  const now = Date.now();
+  await c.env.DB.prepare(
+    `INSERT INTO telemed_consults (appointment_id, summary, checklist, updated_ms, updated_by) VALUES (?,?,?,?,?)
+     ON CONFLICT(appointment_id) DO UPDATE SET summary=excluded.summary, checklist=excluded.checklist, updated_ms=excluded.updated_ms, updated_by=excluded.updated_by`,
+  ).bind(o.appt.id, summary, checklist, now, o.doc.id).run();
+  return c.json({ ok: true, updated_ms: now }, 200);
+});
+
+// POST /panel/appointment/:id/prescription — issue an informational récipe (trail).
+telemedScheduling.post('/panel/appointment/:id/prescription', async (c) => {
+  const b: any = (await c.req.json().catch(() => ({}))) || {};
+  const o = await ownAppt(c, b);
+  if (!o) return c.json({ error: 'unauthorized' }, 401);
+  const rawItems = Array.isArray(b.items) ? b.items : [];
+  const items = rawItems.map((it: any) => ({
+    med: String(it.med || '').slice(0, 160), dose: String(it.dose || '').slice(0, 80),
+    freq: String(it.freq || '').slice(0, 80), duration: String(it.duration || '').slice(0, 80),
+    notes: String(it.notes || '').slice(0, 200),
+  })).filter((it: any) => it.med);
+  if (!items.length) return c.json({ error: 'no_items', hint: 'Agrega al menos un medicamento.' }, 400);
+  const rid = uid('rx'); const now = Date.now();
+  await c.env.DB.prepare(`INSERT INTO telemed_prescriptions (id, appointment_id, doctor_id, items, notes, issued_ms) VALUES (?,?,?,?,?,?)`)
+    .bind(rid, o.appt.id, o.doc.id, JSON.stringify(items), b.notes ? String(b.notes).slice(0, 1000) : null, now).run();
+  await audit(c, 'telemed.prescription', { id: o.appt.id, items: items.length }).catch(() => {});
+  // Let the patient know a récipe is available.
+  if (o.appt.patient_email) c.executionCtx?.waitUntil?.(sendEmail(c.env, o.appt.patient_email, telemedApptStatusEmail({
+    toName: firstName(o.appt.patient_name), kind: 'completed', doctorName: o.doc.full_name, whenText: whenText(o.appt.start_ms),
+    manageUrl: trackUrl(c, o.appt.manage_token),
+  })).then(() => {}));
+  return c.json({ ok: true, id: rid, issued_ms: now }, 201);
 });
 
 // GET /appt/:id/ics?t=<manage_token | panel_token> — calendar invite for a booking.

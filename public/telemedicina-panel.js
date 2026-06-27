@@ -81,6 +81,7 @@
     if (!term && a.video_url) btns += `<a class="tm-btn tm-btn-primary" href="${esc(a.video_url)}" target="_blank" rel="noopener">🎥 Entrar</a>`;
     btns += acts.map(([to, label, cls]) => `<button class="tm-btn tm-btn-${cls}" data-id="${esc(a.id)}" data-to="${to}">${label}</button>`).join('');
     if (!term) btns += `<a class="tm-btn tm-btn-ghost" href="/api/telemedicina/appt/${esc(a.id)}/ics?t=${encodeURIComponent(TOKEN)}">.ics</a>`;
+    if (a.status !== 'cancelled') btns += `<button class="tm-btn tm-btn-primary" data-ws="${esc(a.id)}">📋 Consulta</button>`;
     return `<div class="prow ${term ? 'term' : ''}">
       <div class="flex justify-between items-start gap-3 flex-wrap">
         <div class="min-w-0"><div class="font-display font-extrabold text-[15px] text-on-surface">${esc(a.patient_name)} ${badge(a.status)}</div>
@@ -91,6 +92,7 @@
       ${a.reason ? `<div class="text-[13.5px] text-on-surface mt-2 leading-relaxed whitespace-pre-wrap">${esc(a.reason)}</div>` : ''}
       ${a.insurance_provider ? `<div class="text-[12.5px] text-on-surface-variant mt-1.5">Seguro: ${esc(a.insurance_provider)}</div>` : ''}
       <div class="flex flex-wrap gap-2 mt-3">${btns}</div>
+      <div class="ws" id="ws-${esc(a.id)}" style="display:none"></div>
     </div>`;
   }
 
@@ -106,6 +108,69 @@
       if (!res.ok) { b.disabled = false; alert(res.hint || res.error || 'No se pudo actualizar.'); return; }
       loadAppointments();
     }));
+    $('pane-appts').querySelectorAll('button[data-ws]').forEach((b) => b.addEventListener('click', () => {
+      const box = $('ws-' + b.dataset.ws);
+      if (box.style.display === 'none') { box.style.display = 'block'; openWorkspace(b.dataset.ws, box); }
+      else { box.style.display = 'none'; }
+    }));
+  }
+
+  // ---------- Clinical consult workspace ----------
+  const CHECKS = [['receta_emitida', 'Récipe emitido'], ['requiere_seguimiento', 'Requiere seguimiento'], ['referido_presencial', 'Referido a atención presencial']];
+  async function openWorkspace(id, box) {
+    box.innerHTML = '<div class="empty">Cargando consulta…</div>';
+    const r = await api(`/panel/appointment/${encodeURIComponent(id)}?doc=${encodeURIComponent(DOC)}&t=${encodeURIComponent(TOKEN)}`).catch(() => ({}));
+    if (!r.ok) { box.innerHTML = '<div class="msg err">No se pudo abrir la consulta.</div>'; return; }
+    const ck = r.consult.checklist || {};
+    const notesHtml = (r.notes || []).map((n) => `<div class="wsnote"><div class="text-[12px] text-on-surface-variant tabnum">${tFmt(n.at_ms)}</div><div class="text-[13.5px] text-on-surface whitespace-pre-wrap">${esc(n.body)}</div></div>`).join('') || '<div class="text-[13px] text-on-surface-variant">Sin notas todavía.</div>';
+    const rxHtml = (r.prescriptions || []).map((p) => `<div class="wsnote"><div class="text-[12px] text-on-surface-variant tabnum">Emitido ${tFmt(p.issued_ms)}</div>${p.items.map((it) => `<div class="text-[13.5px] text-on-surface"><b>${esc(it.med)}</b>${it.dose ? ' · ' + esc(it.dose) : ''}${it.freq ? ' · ' + esc(it.freq) : ''}${it.duration ? ' · ' + esc(it.duration) : ''}${it.notes ? ' — ' + esc(it.notes) : ''}</div>`).join('')}${p.notes ? `<div class="text-[12.5px] text-on-surface-variant mt-1">${esc(p.notes)}</div>` : ''}</div>`).join('') || '<div class="text-[13px] text-on-surface-variant">Aún no has emitido récipe.</div>';
+    box.innerHTML = `
+      <div class="rounded-lg border border-outline-variant/60 bg-surface p-4 mt-1">
+        <h4 class="font-display font-extrabold text-[15px] text-on-surface mb-2">Historia clínica <span class="font-normal text-on-surface-variant text-xs">· registro auditado</span></h4>
+        <div class="wslist mb-3">${notesHtml}</div>
+        <textarea class="fld" id="wsnote-${id}" placeholder="Escribe la nota de evolución / historia…"></textarea>
+        <button class="tm-btn tm-btn-go mt-2" id="wsaddnote-${id}">Agregar nota</button>
+
+        <h4 class="font-display font-extrabold text-[15px] text-on-surface mt-5 mb-2">Resumen y plan</h4>
+        <div class="flex flex-wrap gap-2 mb-2">${CHECKS.map(([k, l]) => `<label class="chk"><input type="checkbox" class="wschk" value="${k}" ${ck[k] ? 'checked' : ''}> ${l}</label>`).join('')}</div>
+        <textarea class="fld" id="wssummary-${id}" placeholder="Indicaciones / plan para el paciente (esto lo verá el paciente)…">${esc(r.consult.summary || '')}</textarea>
+        <button class="tm-btn tm-btn-go mt-2" id="wssave-${id}">Guardar resumen</button>
+
+        <h4 class="font-display font-extrabold text-[15px] text-on-surface mt-5 mb-1">Récipe / Indicación médica</h4>
+        <p class="text-[12px] text-on-surface-variant mb-2">Registro informativo con traza de auditoría — no sustituye una receta médica legal.</p>
+        <div class="wslist mb-3">${rxHtml}</div>
+        <div id="wsmeds-${id}"></div>
+        <button class="tm-btn tm-btn-ghost mt-2" id="wsaddmed-${id}">+ Medicamento</button>
+        <textarea class="fld mt-2" id="wsrxnotes-${id}" placeholder="Notas de la indicación (opcional)…"></textarea>
+        <button class="tm-btn tm-btn-done mt-2" id="wsissue-${id}">Emitir récipe</button>
+        <div class="msg" id="wsmsg-${id}"></div>
+      </div>`;
+    const meds = $('wsmeds-' + id);
+    const addMed = () => { const row = document.createElement('div'); row.className = 'wsmed flex flex-wrap gap-2 mb-2'; row.innerHTML = `<input class="fld flex-1 min-w-[140px] m-med" placeholder="Medicamento"><input class="fld w-[110px] m-dose" placeholder="Dosis"><input class="fld w-[120px] m-freq" placeholder="Frecuencia"><input class="fld w-[110px] m-dur" placeholder="Duración">`; meds.appendChild(row); };
+    addMed();
+    $('wsaddmed-' + id).onclick = addMed;
+    $('wsaddnote-' + id).onclick = async () => {
+      const body = $('wsnote-' + id).value.trim(); if (!body) return;
+      $('wsaddnote-' + id).disabled = true;
+      await api(`/panel/appointment/${encodeURIComponent(id)}/note`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doctor_id: DOC, token: TOKEN, body }) }).catch(() => {});
+      openWorkspace(id, box);
+    };
+    $('wssave-' + id).onclick = async () => {
+      const checklist = {}; box.querySelectorAll('.wschk').forEach((c) => { checklist[c.value] = c.checked; });
+      const summary = $('wssummary-' + id).value;
+      const msg = $('wsmsg-' + id); $('wssave-' + id).disabled = true;
+      const res = await api(`/panel/appointment/${encodeURIComponent(id)}/consult`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doctor_id: DOC, token: TOKEN, summary, checklist }) }).catch(() => ({}));
+      $('wssave-' + id).disabled = false; msg.className = res.ok ? 'msg ok' : 'msg err'; msg.textContent = res.ok ? '✓ Resumen guardado.' : 'No se pudo guardar.';
+    };
+    $('wsissue-' + id).onclick = async () => {
+      const items = [...box.querySelectorAll('.wsmed')].map((row) => ({ med: row.querySelector('.m-med').value.trim(), dose: row.querySelector('.m-dose').value.trim(), freq: row.querySelector('.m-freq').value.trim(), duration: row.querySelector('.m-dur').value.trim() })).filter((it) => it.med);
+      const msg = $('wsmsg-' + id);
+      if (!items.length) { msg.className = 'msg err'; msg.textContent = 'Agrega al menos un medicamento.'; return; }
+      $('wsissue-' + id).disabled = true;
+      const res = await api(`/panel/appointment/${encodeURIComponent(id)}/prescription`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doctor_id: DOC, token: TOKEN, items, notes: $('wsrxnotes-' + id).value.trim() }) }).catch(() => ({}));
+      if (!res.ok) { $('wsissue-' + id).disabled = false; msg.className = 'msg err'; msg.textContent = res.hint || 'No se pudo emitir.'; return; }
+      openWorkspace(id, box);
+    };
   }
 
   // ---------- Disponibilidad ----------
