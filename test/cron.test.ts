@@ -8,10 +8,10 @@ import { CRON_GROUPS, jobsForCron } from '../src/cron';
 
 const ALL_JOB_NAMES = [
   'usgs', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet',
-  'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-purge-rejected', 'hospital-match',
+  'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match',
   'familia-photo-mirror', 'monitor-sheet', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
   'social-monitor', 'blog', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
-  'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe',
+  'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe', 'rav-reports-dedupe-extid',
 ];
 
 describe('cron groups', () => {
@@ -39,9 +39,10 @@ describe('cron groups', () => {
     // Coarse guardrail: keep groups small so even multi-subrequest jobs stay well
     // under the ~1000/invocation cap. Tighten/loosen deliberately, not by accident.
     for (const [cron, jobs] of Object.entries(CRON_GROUPS)) {
-      // :15 carries 7 persons/familia D1 jobs (all bounded, D1-only — no external
-      // fetch), incl. the hospital cross-match. Still far under the subrequest cap.
-      expect(jobs.length, `group ${cron} has too many jobs`).toBeLessThanOrEqual(7);
+      // :15 carries 8 persons/familia D1 jobs (all bounded, D1-only — no external
+      // fetch), incl. the hospital cross-match + the ext_id dedupe. Still far under
+      // the subrequest cap.
+      expect(jobs.length, `group ${cron} has too many jobs`).toBeLessThanOrEqual(8);
     }
   });
 
@@ -58,6 +59,7 @@ describe('cron groups', () => {
       'rav-stats',
       'rav-verified',
       'rav-reports-safe',
+      'rav-reports-dedupe-extid',
       'personas-phash-backfill-05',
     ]);
   });

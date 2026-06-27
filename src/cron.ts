@@ -20,7 +20,7 @@ import { announceQuakes } from './ingest/quake-announce';
 import { ingestSosDamage } from './ingest/sos-damage';
 import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
 import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from './lib/clean';
-import { dedupePersonas } from './lib/dedupe';
+import { dedupePersonas, dedupeRavReports } from './lib/dedupe';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
 import { ingestBlog } from './ingest/blog-cron';
@@ -90,6 +90,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // clear over a single tick, not one 400-row batch per hour.
     { name: 'personas-dedupe-exact', run: (env) => drain(() => dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 })) },
     { name: 'personas-dedupe-photo', run: (env) => drain(() => dedupePersonas(env, { mode: 'photo', apply: true, limit: 400 })) },
+    // Same upstream id re-imported under different namespaced `id`s (the RAV/familia
+    // sync upserts on `id`, so it never catches this). Groups by (origen, ext_id) —
+    // the root cause of the bulk personas duplication. Convergent drain.
+    { name: 'personas-dedupe-extid', run: (env) => drain(() => dedupePersonas(env, { mode: 'extid', apply: true, limit: 400 })) },
     // PHYSICALLY drain the soft-rejected backlog (spam/junk flagged just above).
     { name: 'personas-purge-rejected', run: (env) => drain(() => purgeRejectedPersonas(env, { apply: true, limit: 400 })) },
     // Cross-match desaparecidos ↔ hospital intakes → persisted matches + pending
@@ -142,6 +146,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // RAV extra datasets: citizen reports (pets/volunteers/trapped/aid/damage) +
     // "estoy a salvo" check-ins. Both bounded + UPSERT-keyed (no dupes); one job.
     { name: 'rav-reports-safe', run: async (env) => ({ reports: await ingestRavReports(env), safe: await ingestRavSafe(env) }) },
+    // Collapse rav_reports re-imported under different `id`s (559 dup ext_id groups
+    // / ~2,526 redundant rows found in the audit). Runs right after the rav ingest
+    // so each tick's fresh dupes are caught in the same invocation. Convergent.
+    { name: 'rav-reports-dedupe-extid', run: (env) => drain(() => dedupeRavReports(env, { apply: true, limit: 400 })) },
     // 3rd phash-backfill slot (batch 400). :05's rav ingest is bounded (Supabase
     // REST pages), so there's budget. Together :05+:30+:45 hash ~950/hr → the
     // one-time ~58k backlog drains in ~2.6 days (vs ~16 at the :45-only 150/tick).

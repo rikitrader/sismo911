@@ -2,8 +2,10 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { getUserFromRequest } from '../lib/auth';
-import { rateLimit, burstLimit, isImageBytes, nameHasSpam, textHasLink, requestIp } from '../lib/security';
+import { rateLimit, burstLimit } from '../lib/security';
 import { audit } from '../lib/audit';
+import { runGate, clientMessage, recordClean } from '../security/ingestion-gate';
+import { z, nameField, textField, contactField } from '../security/validators';
 import { recomputeCaseScore } from '../lib/case-score-sync';
 import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from '../lib/clean';
 import { dedupePersonas } from '../lib/dedupe';
@@ -235,6 +237,17 @@ familia.post('/:id/report', async (c) => {
   return c.json({ ok: true });
 });
 
+// Citizen missing-person report gate. nombre strict (no link/markup/no-letter);
+// last_seen/notes free text; contact validated; photo scanned by the gate.
+const PersonReportSchema = z.object({
+  nombre: nameField(120),
+  age: z.coerce.number().int().min(0).max(130).optional(),
+  last_seen: textField(200).optional(),
+  notes: textField(1000).optional(),
+  contact_phone: contactField(80),
+});
+const PERSON_FIELDS = ['nombre', 'age', 'last_seen', 'notes', 'contact_phone'] as const;
+
 // POST /api/familia/persons  — citizen report → personas (photo → DESAP_FOTOS)
 familia.post('/persons', async (c) => {
   const burst = await burstLimit(c.env, c, 'familia_register');
@@ -250,13 +263,27 @@ familia.post('/persons', async (c) => {
   } else { b = (await c.req.json().catch(() => ({}))) || {}; }
   const nombre = b.full_name || b.nombre;
   if (!nombre) return c.json({ error: 'full_name_required' }, 400);
-  // Link-spam gate: missing-person reports never contain a website. Reject any
-  // link/domain in the name, description or contact (blocks injections like
-  // "TRUSTEDF57 - infinityhotel.it" before they reach the moderation queue).
-  if (nameHasSpam(nombre) || textHasLink(b.notes) || textHasLink(b.contact_phone)) {
-    await audit(c, 'spam_blocked', { ip: requestIp(c), src: 'familia' }).catch(() => {});
-    return c.json({ error: 'spam_blocked', hint: 'No incluyas enlaces ni sitios web en el reporte.' }, 400);
+
+  // Unified gate: normalizes + spam-SCORES nombre/notes (vs the old binary
+  // link/markup check), and SCANS the photo (magic-bytes/MIME/polyglot/size).
+  // rate limits already ran above → skipRateLimit. Rejections are audited in
+  // rejected_ingestions. We map full_name→nombre and pass only the known fields
+  // so stray form keys don't trip the strict allowlist.
+  const gate = await runGate(c.env, c, {
+    surface: 'persona',
+    schema: PersonReportSchema,
+    allowedFields: PERSON_FIELDS,
+    nameFields: ['nombre'],
+    textFields: ['last_seen', 'notes'],
+    skipRateLimit: true,
+    file: bytes ? { fieldName: 'photo', keyPrefix: 'fotos/', maxSize: 6_000_000 } : undefined,
+  }, JSON.stringify({ nombre, age: b.age, last_seen: b.last_seen, notes: b.notes, contact_phone: b.contact_phone }),
+     bytes ? { bytes, mime: ctype, filename: 'photo' } : undefined);
+  if (!gate.ok) {
+    if (gate.retryAfterSec) c.header('Retry-After', String(gate.retryAfterSec));
+    return c.json(clientMessage(gate), gate.status);
   }
+  const g = gate.data;
 
   // Anti-duplicate gate: if an identical report already exists (same name +
   // location + contact), return it instead of creating a duplicate — no photo
@@ -267,29 +294,27 @@ familia.post('/persons', async (c) => {
         AND lower(trim(coalesce(ubicacion,''))) = lower(trim(coalesce(?,'')))
         AND lower(trim(coalesce(contacto,''))) = lower(trim(coalesce(?,'')))
       LIMIT 1`
-  ).bind(String(nombre), b.last_seen ?? '', b.contact_phone ?? '').first<{ id: string }>().catch(() => null);
+  ).bind(String(g.nombre), g.last_seen ?? '', g.contact_phone ?? '').first<{ id: string }>().catch(() => null);
   if (existing?.id) return c.json({ ok: true, id: existing.id, duplicate: true }, 200);
 
   const id = uid('pc'); const now = Date.now(); let foto_r2: string | null = null;
-  if (bytes && bytes.length) {
-    if (bytes.length > 6_000_000) return c.json({ error: 'image_too_large', maxBytes: 6_000_000 }, 413);
-    ctype = ['image/jpeg', 'image/png', 'image/webp'].includes(ctype) ? ctype : 'application/octet-stream';
-    if (!isImageBytes(bytes, ctype)) return c.json({ error: 'unsupported_image_type' }, 415);
+  if (gate.file?.bytes?.length) {
     foto_r2 = `fotos/${id}.jpg`;
-    await c.env.DESAP_FOTOS.put(foto_r2, bytes, { httpMetadata: { contentType: ctype } });
+    await c.env.DESAP_FOTOS.put(foto_r2, gate.file.bytes, { httpMetadata: { contentType: `image/${gate.file.detectedType}` } });
   }
   await c.env.DB.prepare(
     `INSERT INTO personas (id, nombre, edad, ubicacion, descripcion, contacto, foto_r2, estado, moderation, created_at, updated_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
-    id, String(nombre).slice(0, 120), b.age ? Number(b.age) : null,
+    id, String(g.nombre).slice(0, 120), g.age ?? null,
     // ubicacion/descripcion/contacto are NOT NULL — coalesce missing to '' (a
     // null here is a 500: NOT NULL constraint failed).
-    b.last_seen ? String(b.last_seen).slice(0, 200) : '',
-    b.notes ? String(b.notes).slice(0, 1000) : '',
-    b.contact_phone ? String(b.contact_phone).slice(0, 80) : '',
+    g.last_seen ? String(g.last_seen).slice(0, 200) : '',
+    g.notes ? String(g.notes).slice(0, 1000) : '',
+    g.contact_phone ? String(g.contact_phone).slice(0, 80) : '',
     foto_r2, 'sin-contacto', 'pending', now, now
   ).run();
+  await recordClean(c.env, c, { correlationId: gate.correlationId, surface: 'persona', destTable: 'personas', destId: id, r2Key: foto_r2 ?? undefined, score: gate.score, payloadHash: gate.payloadHash });
   // Public submission enters moderation — not shown until an operator approves.
   return c.json({ ok: true, id, status: 'pending', message: 'Recibido. Aparecerá tras revisión.' }, 201);
 });
