@@ -103,7 +103,7 @@
       // Big flashing red "REPORTAR" CTA, set apart from the pinned buttons by
       // extra top/bottom margin.
       const onR = active(it);
-      return `<a href="${it.href}" class="s911-report" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:3px 0;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 2px 10px rgba(187,0,39,.45)${onR ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" class="s911-report" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:15px 0;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 2px 10px rgba(187,0,39,.45)${onR ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.damage) {
