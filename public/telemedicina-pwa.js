@@ -26,9 +26,9 @@
     b.setAttribute('aria-label', label);
     b.style.cssText = [
       'position:fixed', 'right:16px', 'bottom:16px', 'z-index:2147483000',
-      'background:#0e7c86', 'color:#fff', 'border:none', 'border-radius:999px',
+      'background:#00173a', 'color:#fff', 'border:none', 'border-radius:999px',
       'padding:12px 18px', 'font:800 14px/1 "Public Sans",system-ui,sans-serif',
-      'box-shadow:0 6px 20px rgba(6,48,58,.35)', 'cursor:pointer',
+      'box-shadow:0 6px 20px rgba(0,23,58,.35)', 'cursor:pointer',
       'display:inline-flex', 'align-items:center', 'gap:8px'
     ].join(';');
     document.body.appendChild(b);
@@ -64,7 +64,7 @@
   if (isIOS && isSafari) {
     try { if (localStorage.getItem('tm-ios-install-dismissed') === '1') return; } catch (_) {}
     var hint = makeBtn('Instalar: Compartir → Agregar a inicio');
-    hint.style.background = '#06303a';
+    hint.style.background = '#0b2b5b';
     hint.style.maxWidth = '92vw';
     hint.style.fontSize = '13px';
     hint.addEventListener('click', function () {
