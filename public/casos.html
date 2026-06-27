@@ -244,6 +244,9 @@
   table.dt.h8  td:nth-child(8),  table.dt.h8  th:nth-child(8) {display:none}
   table.dt.h9  td:nth-child(9),  table.dt.h9  th:nth-child(9) {display:none}
   table.dt.h10 td:nth-child(10), table.dt.h10 th:nth-child(10){display:none}
+  /* Lightweight toast for share feedback (mobile + desktop) */
+  #s911-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);background:#0a1c3d;color:#fff;font:600 13.5px Inter;padding:11px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;max-width:90vw;text-align:center;word-break:break-word}
+  #s911-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
@@ -904,9 +907,51 @@ document.querySelectorAll('#cv_tabs button').forEach(b=>b.addEventListener('clic
 
 /* ---------------- NAV / wiring ---------------- */
 $('#backBtn').addEventListener('click',()=>{history.pushState({},'','/casos');showList();});
+// Lightweight toast + copy fallbacks for the share button.
+function toast(msg,ms){
+  let t=document.getElementById('s911-toast');
+  if(!t){t=document.createElement('div');t.id='s911-toast';document.body.appendChild(t);}
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),ms||2200);
+}
+function legacyCopy(text){
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text;ta.setAttribute('readonly','');
+    ta.style.position='fixed';ta.style.top='-9999px';
+    document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,text.length);
+    const ok=document.execCommand('copy');document.body.removeChild(ta);return ok;
+  }catch{return false;}
+}
+function flashShareOk(){
+  const b=$('#shareBtn');if(!b)return;const old=b.innerHTML;
+  b.innerHTML='✓';setTimeout(()=>{b.innerHTML=old;},1200);
+}
+// Tiered share: native share sheet (mobile) → async clipboard → legacy copy → show URL.
 $('#shareBtn').addEventListener('click',async()=>{
-  const url=location.origin+'/casos#caso='+encodeURIComponent(CUR?.person?.id||'');
-  try{await navigator.clipboard.writeText(url);$('#shareBtn').innerHTML='✓';setTimeout(()=>$('#shareBtn').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13" stroke-linecap="round" stroke-linejoin="round"/></svg>',1200);}catch{}
+  const p=CUR&&CUR.person;
+  if(!p||!p.id){toast('Abre un expediente primero');return;}
+  const url=location.origin+'/casos#caso='+encodeURIComponent(p.id);
+  const name=p.full_name||'Expediente';
+  const title=name+' · SISMO911';
+  const text='Expediente '+caseNo(p)+' — '+name+' · SISMO911';
+  // Tier 1: native share sheet (must be called synchronously within the gesture, so first).
+  if(navigator.share){
+    try{await navigator.share({title,text,url});return;}
+    catch(e){if(e&&e.name==='AbortError')return;/* fall through to copy */}
+  }
+  // Tier 2: async Clipboard API.
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(url);
+      flashShareOk();toast('Enlace copiado');return;
+    }
+    throw 0;
+  }catch{
+    // Tier 3: legacy execCommand, then last-resort manual copy.
+    if(legacyCopy(url)){flashShareOk();toast('Enlace copiado');return;}
+    toast('Copia el enlace: '+url,6000);
+  }
 });
 window.addEventListener('popstate',()=>{
   const m=location.hash.match(/^#caso=(.+)$/);
