@@ -65,6 +65,12 @@ export interface Env {
     reply_to?: { email: string; name?: string };
   }): Promise<unknown> };
   EMAIL_FROM?: string;
+  // Twilio text messaging (SMS + WhatsApp) for appointment confirmations/reminders.
+  // Optional: when absent, text sends no-op gracefully (see src/lib/sms.ts).
+  TWILIO_ACCOUNT_SID?: string;
+  TWILIO_AUTH_TOKEN?: string;
+  TWILIO_SMS_FROM?: string;       // E.164, e.g. +15551234567
+  TWILIO_WHATSAPP_FROM?: string;  // E.164 of the approved WhatsApp sender
   // Invitation-only business-plan deck (/plan). Both have safe fallbacks.
   PLAN_INVITE_CODES?: string; // comma-separated valid invite codes
   PLAN_SECRET?: string;       // HMAC signing secret for the access cookie

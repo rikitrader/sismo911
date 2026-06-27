@@ -11,6 +11,7 @@ import { uid } from '../lib/db';
 import { rateLimit, nameHasSpam, textHasLink, requestIp } from '../lib/security';
 import { audit } from '../lib/audit';
 import { sendEmail, randomToken, telemedScheduledEmail, telemedApptStatusEmail } from '../lib/email';
+import { notifyPatientText } from '../lib/sms';
 import {
   APPT_TYPES, APPT_TYPE_KEYS, isApptType, type ApptType, type ApptStatus, isStatus, canTransition,
   computeSlots, localToMs, weekdayOf, minToHHMM, type Interval,
@@ -228,6 +229,11 @@ telemedScheduling.post('/book/appointments', async (c) => {
     telemedScheduledEmail({ toName: firstName(name), counterpartName: doc.full_name, whenText: when, videoUrl: video, icsUrl, manageUrl: track, forDoctor: false })).then(() => {}));
   if (doc.email) c.executionCtx?.waitUntil?.(sendEmail(c.env, doc.email,
     telemedScheduledEmail({ toName: firstName(doc.full_name), counterpartName: name, whenText: when, videoUrl: video, icsUrl, manageUrl: `${baseUrl(c)}/telemedicina-panel?doc=${doc.id}&t=${doc.panel_token}`, forDoctor: true })).then(() => {}));
+  // Text confirmation (WhatsApp + SMS) — no-ops gracefully until Twilio secrets are set.
+  if (phone) {
+    const txt = `SISMO911 Telemedicina: tu videoconsulta con Dr(a). ${doc.full_name} está agendada para ${when}. Entra al video: ${video} · Sigue tu cita: ${track}`;
+    c.executionCtx?.waitUntil?.(notifyPatientText(c.env, phone, txt).then(() => {}));
+  }
   await audit(c, 'telemed.book', { id, doctor_id: doctorId, type, date }).catch(() => {});
   return c.json({
     ok: true, id, manage_token: manageToken, manage_url: track, status: 'scheduled',
