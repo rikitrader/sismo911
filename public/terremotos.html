@@ -170,9 +170,13 @@
         <p id="bo-source" class="text-[11px] text-on-surface-variant mt-3"></p>
       </section>
       <script>
+      // One cacheable call feeds the three load-once overlays (stats + heatmap +
+      // danos). Live quakes stay on /api/events (own 90s refresh). Shared promise so
+      // the later map script reuses this single request instead of re-fetching.
+      window.__geoData = window.__geoData || fetch('/api/dashboard/geoseismic').then(r => r.json()).catch(() => null);
       (async () => {
         try {
-          const r = await fetch('/api/stats/official'); const j = await r.json(); const s = j.stats;
+          const agg = await window.__geoData; const s = agg && agg.stats && agg.stats.stats;
           if (!s) return;
           const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString('es-VE'));
           const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = fmt(v); };
@@ -330,8 +334,8 @@
     { position: 'topright', collapsed: true }
   ).addTo(map);
 
-  // Risk heat overlay from /api/heatmap
-  fetch('/api/heatmap').then(r => r.json()).then(d => {
+  // Risk heat overlay (from the aggregated /api/dashboard/geoseismic)
+  window.__geoData.then(agg => { const d = (agg && agg.heatmap) || {};
     (d.points || []).forEach(([lat, lon, w]) => L.circle([lat, lon], {
       radius: 12000 + w * 60000, stroke: false, fillColor: '#c8102e', fillOpacity: 0.08 + w * 0.18,
     }).addTo(heatLayer));
@@ -344,8 +348,8 @@
     }).bindTooltip(`${esc(f.name)} · ${esc(f.type)}`).addTo(facilityLayer));
   }).catch(() => {});
 
-  // Structural damage overlay (sosvenezuela2026 source)
-  fetch('/api/danos-estructurales').then(r => r.json()).then(d => {
+  // Structural damage overlay (from the aggregated /api/dashboard/geoseismic)
+  window.__geoData.then(agg => { const d = (agg && agg.danos) || {};
     const SC = { rojo: '#c8102e', naranja: '#e57200', amarillo: '#ffbc3d' };
     (d.reports || []).forEach(x => {
       if (x.lat == null || x.lng == null) return;
