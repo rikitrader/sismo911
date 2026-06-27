@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centro Geosísmico — SISMO911</title>
+<meta name="description" content="Centro geosísmico público SISMO911: eventos sísmicos, impacto estimado, daño satelital IA, PAGER operativo y timeline público.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/geosismico">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Centro Geosísmico — SISMO911">
+<meta property="og:description" content="Vista pública de eventos sísmicos, impacto estimado, daño satelital IA y timeline operativo.">
+<meta property="og:url" content="https://sismo911.com/geosismico">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  body{background:#f6f7fb;color:#101820;font-family:Inter,sans-serif}
+  .wrap{max-width:1460px;margin:0 auto;padding:24px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+  .eyebrow{font:800 11px Public Sans,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5f6675}
+  h1{font:900 30px/1.05 Public Sans,sans-serif;color:#00173a;margin:5px 0 0}
+  .stamp{font:700 12px JetBrains Mono,monospace;color:#00173a;background:#fff;border:1px solid #c4c6d0;border-radius:8px;padding:9px 11px;white-space:nowrap}
+  .grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:14px}
+  .card{background:#fff;border:1px solid #d8dbe4;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .metric{padding:14px;border-left:5px solid var(--accent,#00173a)}
+  .metric .v{font:900 28px/1 Public Sans,sans-serif;color:#00173a;margin-top:7px}
+  .metric .s{font:600 12px/1.35 Inter,sans-serif;color:#5f6675;margin-top:6px;min-height:32px}
+  .main{grid-template-columns:minmax(0,1.35fr) minmax(360px,.85fr);align-items:start}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-bottom:1px solid #e3e5eb}
+  .panel-h h2{font:800 15px Public Sans,sans-serif;color:#00173a;margin:0}
+  .pill{font:800 11px Public Sans,sans-serif;border-radius:999px;padding:5px 8px;background:#eef2f8;color:#445e91}
+  #map{height:560px;border-radius:0 0 8px 8px;background:#e8edf4}
+  .list{max-height:264px;overflow:auto}.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:11px 14px;border-top:1px solid #edf0f5}
+  .row:first-child{border-top:0}.badge{font:800 11px JetBrains Mono,monospace;color:#fff;background:#00173a;border-radius:6px;padding:4px 6px;white-space:nowrap}
+  .title{font:800 13px/1.25 Inter,sans-serif;color:#101820}.meta{font:600 11px/1.35 Inter,sans-serif;color:#6d7280;margin-top:3px}
+  .ops{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px}.op{padding:14px;min-height:126px}.op h3{font:800 14px Public Sans,sans-serif;color:#00173a;margin:0 0 10px}.op .v{font:900 27px/1 Public Sans,sans-serif;color:#00173a}
+  .empty{padding:18px 14px;color:#6d7280;font:600 13px Inter,sans-serif}.err{color:#bb0027}
+  @media(max-width:1160px){.kpis,.main,.ops{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.stamp{white-space:normal}#map{height:430px}}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Centro Geosísmico — SISMO911","description":"Centro geosísmico público SISMO911 con eventos, impacto estimado, daño satelital IA y timeline operativo.","url":"https://sismo911.com/geosismico","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+</head>
+<body>
+<main class="wrap">
+  <section class="top">
+    <div>
+      <div class="eyebrow">Eventos · Impacto estimado · Daño satelital IA · Timeline</div>
+      <h1>Centro Geosísmico</h1>
+    </div>
+    <div class="stamp" id="updated">SIN DATOS</div>
+  </section>
+
+  <section class="grid kpis" aria-label="Indicadores geosísmicos">
+    <article class="card metric" style="--accent:#bb0027"><div class="eyebrow">Estado COP</div><div class="v" id="kStatus">—</div><div class="s" id="kStatusMeta">Postura pública derivada del sitrep.</div></article>
+    <article class="card metric" style="--accent:#e57200"><div class="eyebrow">Magnitud máxima 24h</div><div class="v" id="kMag">—</div><div class="s" id="kMagMeta">Eventos recientes monitorizados.</div></article>
+    <article class="card metric" style="--accent:#445e91"><div class="eyebrow">Impactos</div><div class="v" id="kImpact">—</div><div class="s">Polígonos de radio provisional.</div></article>
+    <article class="card metric" style="--accent:#7c3aed"><div class="eyebrow">Satélite IA</div><div class="v" id="kSat">—</div><div class="s">Evaluaciones de daño satelital.</div></article>
+    <article class="card metric" style="--accent:#2e7d32"><div class="eyebrow">Catálogo COP</div><div class="v" id="kCatalog">—</div><div class="s">Capas geosísmicas publicadas.</div></article>
+  </section>
+
+  <section class="grid main">
+    <article class="card">
+      <div class="panel-h"><h2>Mapa geosísmico operacional</h2><span class="pill">Eventos · Impacto · Satélite IA</span></div>
+      <div id="map"></div>
+    </article>
+    <div class="grid" style="gap:14px">
+      <article class="card">
+        <div class="panel-h"><h2>Eventos recientes</h2><span class="pill" id="eventSummary">USGS/D1</span></div>
+        <div class="list" id="eventList"><div class="empty">Cargando eventos…</div></div>
+      </article>
+      <article class="card">
+        <div class="panel-h"><h2>Daño satelital IA</h2><span class="pill" id="satSummary">0 evaluaciones</span></div>
+        <div class="list" id="satList"><div class="empty">Cargando daño satelital…</div></div>
+      </article>
+      <article class="card">
+        <div class="panel-h"><h2>Timeline geosísmico</h2><span class="pill">COP público</span></div>
+        <div class="list" id="timelineList"><div class="empty">Cargando timeline…</div></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="grid ops" aria-label="Productos geosísmicos">
+    <article class="card op"><h3>PAGER</h3><div class="v">P</div><p class="meta">Impacto USGS/provisional.</p><a class="meta" href="/pager">Abrir PAGER →</a></article>
+    <article class="card op"><h3>Mapa COP</h3><div class="v">◎</div><p class="meta">Todas las capas operacionales.</p><a class="meta" href="/mapa">Abrir mapa →</a></article>
+    <article class="card op"><h3>CAP XML</h3><div class="v">XML</div><p class="meta">Alerta pública intercambiable.</p><a class="meta" href="/api/sitrep/cap">Abrir CAP →</a></article>
+    <article class="card op"><h3>ICS-209</h3><div class="v">209</div><p class="meta">Reporte de situación público.</p><a class="meta" href="/api/sitrep/ics-209">Abrir ICS →</a></article>
+  </section>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=n=>Number(n||0).toLocaleString('es-VE');
+const ago=ms=>{const s=Math.max(0,(Date.now()-Number(ms||0))/1000);if(s<60)return Math.floor(s)+'s';const m=s/60;if(m<60)return Math.floor(m)+'m';const h=m/60;if(h<24)return Math.floor(h)+'h';return Math.floor(h/24)+'d'};
+async function json(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(url+' '+r.status);return r.json();}
+
+const map=L.map('map',{attributionControl:false,scrollWheelZoom:false}).setView([8.5,-66.5],6);
+L.control.attribution({prefix:false}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM, © CARTO · SISMO911',maxZoom:19}).addTo(map);
+const quakeLayer=L.layerGroup().addTo(map),impactLayer=L.layerGroup().addTo(map),satLayer=L.layerGroup().addTo(map);
+L.control.layers({}, {'Eventos sísmicos':quakeLayer,'Impacto sísmico estimado':impactLayer,'Daño satelital IA':satLayer}).addTo(map);
+const magColor=m=>m>=6?'#bb0027':m>=4?'#e57200':m>=2.5?'#c9a227':'#2e7d32';
+function renderSitrep(d){
+  const status=String(d.readiness?.status||'normal');
+  const label={normal:'Normal',watch:'Vigilancia',elevated:'Elevado',emergency:'Emergencia'}[status]||status;
+  $('kStatus').textContent=label;
+  $('kStatusMeta').textContent=(d.readiness?.reasons||[])[0]||'Sin señales críticas agregadas.';
+  $('kMag').textContent='M '+Number(d.geoseismic?.maxMag24h||0).toFixed(1);
+  $('kMagMeta').textContent=`${nf(d.geoseismic?.last24h)} eventos 24h · ${nf(d.geoseismic?.recent)} recientes`;
+}
+function renderEvents(d){
+  const rows=d.events||[];
+  $('eventSummary').textContent=`${nf(rows.length)} eventos`;
+  $('eventList').innerHTML=rows.length?rows.slice(0,14).map(e=>`<div class="row"><span class="badge" style="background:${magColor(e.mag)}">M ${Number(e.mag||0).toFixed(1)}</span><div><div class="title">${esc(e.place_es||e.place||'Evento sísmico')}</div><div class="meta">${ago(e.time_ms)} · prof. ${Number(e.depth_km||0).toFixed(1)} km · ${Number(e.lat||0).toFixed(2)}, ${Number(e.lon||0).toFixed(2)}</div></div><span class="meta">${esc(e.alert||'')}</span></div>`).join(''):'<div class="empty">Sin eventos recientes.</div>';
+  quakeLayer.clearLayers();
+  const pts=[];
+  rows.forEach(e=>{if(e.lat==null||e.lon==null)return;pts.push([e.lat,e.lon]);const size=Math.max(8,Math.min(32,8+Number(e.mag||0)*3));L.circleMarker([e.lat,e.lon],{radius:size/2,color:'#fff',weight:1,fillColor:magColor(e.mag),fillOpacity:.92}).bindPopup(`<b>M ${Number(e.mag||0).toFixed(1)}</b><br>${esc(e.place_es||e.place)}<br>${ago(e.time_ms)}`).addTo(quakeLayer);});
+  if(pts.length)map.fitBounds(pts,{padding:[30,30],maxZoom:8});
+}
+function renderGeoseismic(d){
+  impactLayer.clearLayers();satLayer.clearLayers();
+  const counts=d.counts||{};
+  $('kImpact').textContent=nf(counts.impact);
+  $('kSat').textContent=nf(counts.satellite_damage);
+  const impactColors={critical:'#bb0027',severe:'#e57200',elevated:'#c9a227',monitor:'#445e91'};
+  const satColors={severo:'#bb0027',grave:'#e57200',moderado:'#c9a227',leve:'#445e91',ninguno:'#2e7d32',indeterminado:'#6d7280'};
+  L.geoJSON(d,{filter:f=>(f.properties||{}).layer==='impact',style:f=>{const c=impactColors[f.properties?.severity]||'#445e91';return{color:c,weight:2,fillColor:c,fillOpacity:.1,dashArray:'6 6'}},onEachFeature:(f,l)=>{const p=f.properties||{};l.bindPopup(`<b>Impacto sísmico estimado</b><br>${esc(p.place)}<br>M ${Number(p.magnitude||0).toFixed(1)} · radio ${nf(p.radius_km)} km<br>${esc(p.model||'modelo provisional')}`);}}).addTo(impactLayer);
+  L.geoJSON(d,{filter:f=>(f.properties||{}).layer==='satellite_damage',pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:7,color:'#fff',weight:1,fillColor:satColors[f.properties?.severity]||'#6d7280',fillOpacity:.95}),style:f=>{const c=satColors[f.properties?.severity]||'#6d7280';return{color:c,weight:2,fillColor:c,fillOpacity:.18}},onEachFeature:(f,l)=>{const p=f.properties||{};l.bindPopup(`<b>Daño satelital IA</b><br>${esc(p.severity)} · ${esc(p.verification||'unverified')}<br>${esc(p.summary||'Sin resumen')}`);}}).addTo(satLayer);
+  const sat=(d.features||[]).filter(f=>f.properties?.layer==='satellite_damage').slice(0,10);
+  $('satSummary').textContent=`${nf(sat.length)} de ${nf(counts.satellite_damage||0)}`;
+  $('satList').innerHTML=sat.length?sat.map(f=>{const p=f.properties||{},c=satColors[p.severity]||'#6d7280';return `<div class="row"><span class="badge" style="background:${c}">${esc(p.severity)}</span><div><div class="title">${esc(p.summary||'Evaluación satelital')}</div><div class="meta">${esc(p.verification||'unverified')} · ${esc(p.imagery_source||'imagen externa')} · ${esc(p.model||'modelo')}</div></div><span class="meta">${p.created_ms?ago(p.created_ms):''}</span></div>`}).join(''):'<div class="empty">Sin evaluaciones satelitales publicadas.</div>';
+}
+function renderTimeline(d){
+  const rows=(d.items||[]).filter(x=>x.domain==='geoseismic'||x.kind==='satellite_damage').slice(0,12);
+  const color={emergency:'#bb0027',elevated:'#e57200',watch:'#c9a227',normal:'#445e91'};
+  $('timelineList').innerHTML=rows.length?rows.map(x=>`<div class="row"><span class="badge" style="background:${color[x.severity]||'#445e91'}">${esc(x.kind||'op')}</span><div><div class="title">${esc(x.title)}</div><div class="meta">${esc(x.summary||'')} · ${x.time_ms?ago(x.time_ms):'sin hora'}</div></div><span class="meta">${esc(x.domain||'')}</span></div>`).join(''):'<div class="empty">Sin timeline geosísmico público.</div>';
+}
+function renderCatalog(d){
+  $('kCatalog').textContent=nf(d.by_domain?.geoseismic||0);
+}
+async function refresh(){
+  const settled=await Promise.allSettled([
+    json('/api/sitrep'),
+    json('/api/events?limit=300'),
+    json('/api/layers/geoseismic?include=events,impact,satellite_damage&impactMinMag=4&limit=220'),
+    json('/api/sitrep/timeline?limit=40'),
+    json('/api/layers/catalog')
+  ]);
+  const [sitrep,events,geo,timeline,catalog]=settled.map(x=>x.status==='fulfilled'?x.value:null);
+  if(sitrep)renderSitrep(sitrep);
+  if(events)renderEvents(events);else $('eventList').innerHTML='<div class="empty err">No se pudo cargar /api/events.</div>';
+  if(geo)renderGeoseismic(geo);
+  if(timeline)renderTimeline(timeline);
+  if(catalog)renderCatalog(catalog);
+  $('updated').textContent='ACTUALIZADO '+new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  setTimeout(()=>map.invalidateSize(),60);
+}
+refresh();setInterval(refresh,60000);
+</script>
+</body>
+</html>

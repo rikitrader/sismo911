@@ -18,6 +18,14 @@ describe('CSP core protections', () => {
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
   });
+
+  it('sets defensive cross-origin and browser hardening headers', () => {
+    const headers: Record<string, string> = {};
+    setSecurityHeaders({ header: (k: string, v: string) => { headers[k] = v; } } as any);
+    expect(headers['X-DNS-Prefetch-Control']).toBe('off');
+    expect(headers['Cross-Origin-Resource-Policy']).toBe('same-origin');
+    expect(headers['Origin-Agent-Cluster']).toBe('?1');
+  });
 });
 
 // REGRESSION GUARD: the Tailwind Play CDN JIT-compiles classes via eval(). If a

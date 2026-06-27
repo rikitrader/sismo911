@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capas COP — SISMO911</title>
+<meta name="description" content="Catálogo público de capas COP de SISMO911: geosísmico, humanitario, logística, lifelines y postura estatal con enlaces directos a cada API.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/layers">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Capas COP — SISMO911">
+<meta property="og:description" content="Catálogo público de capas geosísmicas, humanitarias y logísticas con privacy labels y endpoints directos.">
+<meta property="og:url" content="https://sismo911.com/layers">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  body{background:#f6f7fb;color:#101820;font-family:Inter,sans-serif}
+  .wrap{max-width:1360px;margin:0 auto;padding:24px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+  .eyebrow{font:800 11px Public Sans,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5f6675}
+  h1{font:900 30px/1.05 Public Sans,sans-serif;color:#00173a;margin:5px 0 0}
+  .stamp{font:700 12px JetBrains Mono,monospace;color:#00173a;background:#fff;border:1px solid #c4c6d0;border-radius:8px;padding:9px 11px;white-space:nowrap}
+  .grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
+  .card{background:#fff;border:1px solid #d8dbe4;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .metric{padding:14px;border-left:5px solid var(--accent,#00173a)}
+  .metric .v{font:900 28px/1 Public Sans,sans-serif;color:#00173a;margin-top:7px}
+  .metric .s{font:600 12px/1.35 Inter,sans-serif;color:#5f6675;margin-top:6px;min-height:32px}
+  .main{grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);align-items:start}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-bottom:1px solid #e3e5eb}
+  .panel-h h2{font:800 15px Public Sans,sans-serif;color:#00173a;margin:0}
+  .pill{font:800 11px Public Sans,sans-serif;border-radius:999px;padding:5px 8px;background:#eef2f8;color:#445e91;white-space:nowrap}
+  .domains{display:flex;gap:8px;flex-wrap:wrap;padding:14px}
+  .dbtn{border:1px solid #d8dbe4;background:#fff;border-radius:999px;padding:8px 11px;font:800 12px Public Sans,sans-serif;color:#445e91;cursor:pointer}
+  .dbtn.on{background:#00173a;color:#fff;border-color:#00173a}
+  .list{max-height:520px;overflow:auto}
+  .row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:12px 14px;border-top:1px solid #edf0f5}
+  .row:first-child{border-top:0}
+  .title{font:800 14px/1.2 Inter,sans-serif;color:#101820}
+  .meta{font:600 11px/1.35 Inter,sans-serif;color:#6d7280;margin-top:3px}
+  .tag{display:inline-flex;align-items:center;gap:5px;font:800 10px Public Sans,sans-serif;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:4px 7px;white-space:nowrap}
+  .tag.geoseismic{background:#fef2f2;color:#bb0027}
+  .tag.humanitarian{background:#eff6ff;color:#1d4ed8}
+  .tag.logistics{background:#fefce8;color:#a16207}
+  .tag.lifelines{background:#f5f3ff;color:#6d28d9}
+  .tag.readiness{background:#ecfdf5;color:#166534}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start}
+  .link{display:inline-flex;align-items:center;gap:6px;font:800 12px Public Sans,sans-serif;text-decoration:none;border-radius:8px;padding:7px 9px;border:1px solid #d8dbe4;color:#00173a;background:#fff}
+  .link.primary{background:#00173a;color:#fff;border-color:#00173a}
+  .empty{padding:18px 14px;color:#6d7280;font:600 13px Inter,sans-serif}.err{color:#bb0027}
+  .legend{padding:14px;display:grid;gap:10px}
+  .legend .item{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #e3e5eb;border-radius:8px}
+  .legend .item b{font:900 14px Public Sans,sans-serif;color:#00173a}
+  .legend .item span{font:600 11px Inter,sans-serif;color:#6d7280}
+  @media(max-width:1100px){.kpis,.main{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.stamp{white-space:normal}}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Capas COP — SISMO911","description":"Catálogo público de capas COP geosísmicas, humanitarias, logísticas y de lifelines con endpoints directos.","url":"https://sismo911.com/layers","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+</head>
+<body>
+<main class="wrap">
+  <section class="top">
+    <div>
+      <div class="eyebrow">Catálogo público · privacy labels · Endpoints directos</div>
+      <h1>Capas COP</h1>
+    </div>
+    <div class="stamp" id="updated">SIN DATOS</div>
+  </section>
+
+  <section class="grid kpis" aria-label="Indicadores de capas">
+    <article class="card metric" style="--accent:#bb0027"><div class="eyebrow">Capas totales</div><div class="v" id="kTotal">—</div><div class="s">Manifest público de capas COP.</div></article>
+    <article class="card metric" style="--accent:#1d4ed8"><div class="eyebrow">Geosísmicas</div><div class="v" id="kGeo">—</div><div class="s">Eventos, impacto y daño satelital IA.</div></article>
+    <article class="card metric" style="--accent:#166534"><div class="eyebrow">Humanitarias</div><div class="v" id="kHum">—</div><div class="s">SOS agregados y postura estatal.</div></article>
+    <article class="card metric" style="--accent:#6d28d9"><div class="eyebrow">Lifelines</div><div class="v" id="kLife">—</div><div class="s">ESF-2/6/7/8 y recursos públicos.</div></article>
+  </section>
+
+  <section class="grid main">
+    <article class="card">
+      <div class="panel-h"><h2>Capas disponibles</h2><span class="pill" id="scope">public_cop_layer_catalog</span></div>
+      <div class="domains" id="domains"></div>
+      <div class="list" id="layers"><div class="empty">Cargando capas…</div></div>
+    </article>
+    <aside class="grid" style="gap:14px">
+      <article class="card">
+        <div class="panel-h"><h2>Acceso rápido</h2><span class="pill">Vista pública</span></div>
+        <div class="legend">
+          <div class="item"><div><b>Geosísmico</b><span>Eventos, impacto y satélite IA</span></div><a class="link primary" href="/geosismico">Abrir</a></div>
+          <div class="item"><div><b>Humanitario</b><span>Señales humanitarias y lifelines</span></div><a class="link primary" href="/humanitario">Abrir</a></div>
+          <div class="item"><div><b>Mapa COP</b><span>Capa base operacional completa</span></div><a class="link" href="/mapa">Abrir</a></div>
+          <div class="item"><div><b>Dashboard</b><span>Panel nacional de comando</span></div><a class="link" href="/dashboard">Abrir</a></div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="panel-h"><h2>Notas de privacidad</h2><span class="pill">Sin PII</span></div>
+        <div class="legend">
+          <div class="item"><div><b>Política</b><span>Las capas publicadas no exponen nombres, teléfonos ni mensajes libres.</span></div></div>
+          <div class="item"><div><b>Frecuencia</b><span>Los metadatos se refrescan cada 30s en el catálogo.</span></div></div>
+          <div class="item"><div><b>Geografía</b><span>Use /mapa para alternar la visualización cartográfica completa.</span></div></div>
+        </div>
+      </article>
+    </aside>
+  </section>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=n=>Number(n||0).toLocaleString('es-VE');
+async function json(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(url+' '+r.status);return r.json();}
+let CAT=null, DOMAIN='all';
+function renderDomains(by){
+  const items=[['all','Todas',CAT?.count||0],['geoseismic','Geosísmicas',by.geoseismic||0],['humanitarian','Humanitarias',by.humanitarian||0],['logistics','Logísticas',by.logistics||0],['lifelines','Lifelines',by.lifelines||0],['readiness','Readiness',by.readiness||0]];
+  $('domains').innerHTML=items.map(([k,label,n])=>`<button class="dbtn${DOMAIN===k?' on':''}" data-d="${k}">${label} · ${nf(n)}</button>`).join('');
+  $('domains').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{DOMAIN=b.dataset.d;renderLayers();renderDomains(CAT.by_domain||{});});
+}
+function renderLayers(){
+  const rows=(CAT?.layers||[]).filter(l=>DOMAIN==='all'||l.domain===DOMAIN);
+  $('layers').innerHTML=rows.length?rows.map(l=>`<div class="row">
+    <div>
+      <div class="title">${esc(l.title)} <span class="tag ${esc(l.domain)}">${esc(l.domain)}</span></div>
+      <div class="meta">${esc(l.description)}</div>
+      <div class="meta mono">${esc(l.endpoint)}</div>
+      <div class="meta">Privacidad: ${esc(l.privacy)} · Refresco: ${nf(l.refresh_seconds)}s · Fuente: ${esc((l.source||[]).join(', '))}</div>
+    </div>
+    <div class="actions">
+      <a class="link primary" href="${esc(l.endpoint)}" target="_blank" rel="noopener">Abrir API</a>
+      <a class="link" href="/mapa">Ver mapa</a>
+    </div>
+  </div>`).join(''):'<div class="empty">No hay capas para este filtro.</div>';
+  $('kTotal').textContent=nf(CAT?.count||0);
+  $('kGeo').textContent=nf(CAT?.by_domain?.geoseismic||0);
+  $('kHum').textContent=nf((CAT?.by_domain?.humanitarian||0)+(CAT?.by_domain?.readiness||0));
+  $('kLife').textContent=nf((CAT?.by_domain?.lifelines||0)+(CAT?.by_domain?.logistics||0));
+  $('scope').textContent=CAT?.scope||'public_cop_layer_catalog';
+}
+async function refresh(){
+  CAT=await json('/api/layers/catalog').catch(()=>null);
+  if(!CAT){$('layers').innerHTML='<div class="empty err">No se pudo cargar /api/layers/catalog.</div>';return;}
+  renderDomains(CAT.by_domain||{});
+  renderLayers();
+  $('updated').textContent='ACTUALIZADO '+new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+refresh();
+</script>
+</body>
+</html>

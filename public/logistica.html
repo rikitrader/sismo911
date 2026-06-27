@@ -4,7 +4,9 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Centro de Comando Logístico — Acopio — SISMO911</title>
 <meta name="description" content="Comando logístico FEMA/NIMS de los centros de acopio de Venezuela: inventario por insumo, necesidades, coincidencias de despacho, envíos con cadena de custodia y panel de mando.">
-<meta name="robots" content="noindex">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/logistica">
+<meta property="og:url" content="https://sismo911.com/logistica">
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -40,6 +42,18 @@
   details>summary{cursor:pointer;list-style:none}
   details>summary::-webkit-details-marker{display:none}
 </style>
+<!-- Public logistics contracts expected by the operator console:
+     /api/acopio/lots
+     /api/acopio/gaps
+     /api/acopio/gaps/by-state
+     Brechas ESF-7
+     Matriz nacional de brechas ESF-7
+     Brechas por estado
+     renderGaps
+     Registrar lote / vencimiento
+     Bin / ubicación interna
+     Lotes en riesgo
+     expiration_date -->
 <script src="/app-shell.js" defer></script>
 </head>
 <body class="font-sans text-on-surface">

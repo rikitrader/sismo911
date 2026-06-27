@@ -11,17 +11,17 @@ import type { Env } from '../types';
  * Config (wrangler [vars] or secrets):
  *   PLAN_INVITE_CODES  comma-separated list of valid invite codes
  *   PLAN_SECRET        HMAC signing secret for the access cookie
- * Both have safe fallbacks so the route deploys without secret setup; rotate via
- * `wrangler secret put PLAN_SECRET` / edit PLAN_INVITE_CODES for real security.
+ * Both are required for live access. The route fails closed if PLAN_SECRET is
+ * missing and only accepts invite codes from env/KV.
  */
 export const plan = new Hono<{ Bindings: Env }>();
 
 const COOKIE = 'plan_access';
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-const secretOf = (env: Env) => env.PLAN_SECRET || 'sismo911-plan-fallback-secret-rotate-me';
+const secretOf = (env: Env) => env.PLAN_SECRET?.trim() || '';
 const codesOf = (env: Env) =>
-  (env.PLAN_INVITE_CODES || 'SISMO911-INVEST,RELIEF-2026,TERREMOTO-VIP')
+  (env.PLAN_INVITE_CODES || '')
     .split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
 
 const KV_PREFIX = 'plan:invite:';
@@ -60,6 +60,14 @@ async function hmacHex(secret: string, msg: string): Promise<string> {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+function requireSecret(c: any): string | Response {
+  const secret = secretOf(c.env);
+  if (!secret) {
+    return c.html('<p>PLAN_SECRET no está definido. Configura el secreto para habilitar /plan.</p>', 503);
+  }
+  return secret;
+}
+
 function timingSafeEq(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let out = 0;
@@ -91,6 +99,8 @@ function readCookie(c: any, name: string): string | undefined {
 
 // ---- GET /plan — deck if unlocked, otherwise the gate ----
 plan.get('/', async (c) => {
+  const secret = requireSecret(c);
+  if (secret instanceof Response) return secret;
   if (await tokenValid(c.env, readCookie(c, COOKIE))) {
     return c.html(deckHtml());
   }
@@ -98,6 +108,10 @@ plan.get('/', async (c) => {
 });
 
 async function grant(c: any) {
+  const secret = secretOf(c.env);
+  if (!secret) {
+    return c.html('<p>PLAN_SECRET no está definido. Configura el secreto para habilitar /plan.</p>', 503);
+  }
   const tok = await mintToken(c.env);
   c.header('Set-Cookie',
     `${COOKIE}=${encodeURIComponent(tok)}; HttpOnly; Secure; SameSite=Lax; Path=/plan; Max-Age=${TTL_MS / 1000}`);
@@ -106,6 +120,8 @@ async function grant(c: any) {
 
 // ---- POST /plan/unlock — validate invite code, set cookie ----
 plan.post('/unlock', async (c) => {
+  const secret = requireSecret(c);
+  if (secret instanceof Response) return secret;
   const body = await c.req.parseBody().catch(() => ({} as any));
   const code = String((body as any).code || '').trim().toUpperCase();
   if (!(await codeIsValid(c.env, code))) {
@@ -116,6 +132,8 @@ plan.post('/unlock', async (c) => {
 
 // ---- GET /plan/i/:code — one-click magic invite link (used in the Sheet) ----
 plan.get('/i/:code', async (c) => {
+  const secret = requireSecret(c);
+  if (secret instanceof Response) return secret;
   const code = String(c.req.param('code') || '').trim().toUpperCase();
   if (!(await codeIsValid(c.env, code))) {
     return c.html(gateHtml('Enlace de invitación no válido o expirado.'), 401);

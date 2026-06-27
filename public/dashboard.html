@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Nacional de Comando — SISMO911</title>
+<meta name="description" content="Panel nacional de comando SISMO911: sismos, alertas, daños, refugios, suministros y estado de integraciones en una sola vista operacional.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/dashboard">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Panel Nacional de Comando — SISMO911">
+<meta property="og:description" content="Vista operacional de sismos, daños, refugios, suministros y alertas de SISMO911.">
+<meta property="og:url" content="https://sismo911.com/dashboard">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
+<meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  body{background:#f6f7fb;color:#101820;font-family:Inter,sans-serif}
+  .wrap{max-width:1480px;margin:0 auto;padding:24px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+  .eyebrow{font:800 11px Public Sans,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5f6675}
+  h1{font:900 30px/1.05 Public Sans,sans-serif;color:#00173a;letter-spacing:0;margin:5px 0 0}
+  .stamp{font:700 12px JetBrains Mono,monospace;color:#00173a;background:#fff;border:1px solid #c4c6d0;border-radius:8px;padding:9px 11px;white-space:nowrap}
+  .grid{display:grid;gap:14px}
+  .kpis{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:14px}
+  .card{background:#fff;border:1px solid #d8dbe4;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .metric{padding:14px}
+  .metric .v,.op .v{font:900 27px/1 Public Sans,sans-serif;color:#00173a;margin-top:7px}
+  .metric .s{font:600 12px/1.35 Inter,sans-serif;color:#5f6675;margin-top:6px;min-height:32px}
+  .sitrep{grid-template-columns:minmax(260px,.85fr) repeat(5,minmax(0,1fr));margin-bottom:14px}
+  .posture{padding:14px;border-left:5px solid #445e91}
+  .posture.emergency{border-left-color:#bb0027}.posture.elevated{border-left-color:#e57200}.posture.watch{border-left-color:#c9a227}.posture.normal{border-left-color:#2e7d32}
+  .posture .status{font:900 24px/1 Public Sans,sans-serif;color:#00173a;text-transform:uppercase;margin-top:6px}
+  .posture ul{margin:9px 0 0;padding-left:18px;color:#5f6675;font:600 12px/1.4 Inter,sans-serif}
+  .reportlink{display:inline-flex;margin-top:10px;font:800 11px Public Sans,sans-serif;color:#00173a;text-decoration:underline;text-underline-offset:3px}
+  .sitmini{padding:14px}
+  .sitmini .v{font:900 23px/1 Public Sans,sans-serif;color:#00173a;margin-top:7px}
+  .sitmini .s{font:600 12px/1.35 Inter,sans-serif;color:#5f6675;margin-top:6px}
+  .esfgrid{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
+  .esf{padding:13px;min-height:118px;border-left:5px solid #445e91}
+  .esf.emergency{border-left-color:#bb0027}.esf.elevated{border-left-color:#e57200}.esf.watch{border-left-color:#c9a227}.esf.normal{border-left-color:#2e7d32}
+  .esf .code{font:900 12px JetBrains Mono,monospace;color:#00173a}
+  .esf .name{font:800 13px/1.25 Public Sans,sans-serif;color:#101820;margin-top:5px}
+  .esf .act{font:600 11px/1.35 Inter,sans-serif;color:#5f6675;margin-top:7px}
+  .main{grid-template-columns:minmax(0,1.5fr) minmax(360px,.9fr);align-items:start}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-bottom:1px solid #e3e5eb}
+  .panel-h h2{font:800 15px Public Sans,sans-serif;color:#00173a;margin:0}
+  .pill{font:800 11px Public Sans,sans-serif;border-radius:999px;padding:5px 8px;background:#eef2f8;color:#445e91}
+  #map{height:520px;border-radius:0 0 8px 8px;background:#e8edf4}
+  .side{display:grid;gap:14px}
+  .list{max-height:228px;overflow:auto}
+  .row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:11px 14px;border-top:1px solid #edf0f5}
+  .row:first-child{border-top:0}
+  .mag{font:800 12px JetBrains Mono,monospace;color:#fff;background:#00173a;border-radius:6px;padding:4px 6px}
+  .title{font:800 13px/1.25 Inter,sans-serif;color:#101820}
+  .meta{font:600 11px/1.35 Inter,sans-serif;color:#6d7280;margin-top:3px}
+  .sev-rojo{background:#bb0027}.sev-naranja{background:#e57200}.sev-amarillo{background:#c9a227;color:#00173a}
+  .ops{grid-template-columns:repeat(5,minmax(0,1fr));margin-top:14px}
+  .op{padding:14px;min-height:132px}
+  .op h3{font:800 14px Public Sans,sans-serif;color:#00173a;margin:0 0 10px}
+  .bar{height:7px;border-radius:999px;background:#eef0f4;overflow:hidden;margin-top:8px}
+  .bar span{display:block;height:100%;background:#00173a}
+  .gaplist{display:grid;gap:7px;padding:12px 14px}
+  .gaprow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font:700 12px/1.25 Inter,sans-serif;color:#101820}
+  .gaprow .m{font:700 11px/1.2 JetBrains Mono,monospace;color:#5f6675}
+  .gaprow.critical_shortage .m{color:#bb0027}.gaprow.shortage .m{color:#e57200}.gaprow.surplus .m{color:#2e7d32}
+  .catalog{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:12px 14px}
+  .catalog .item{border:1px solid #e3e5eb;border-radius:8px;padding:10px;background:#fafbfe;min-height:82px}
+  .catalog .item b{display:block;font:900 18px/1 Public Sans,sans-serif;color:#00173a}
+  .catalog .item span{display:block;font:700 11px/1.25 Inter,sans-serif;color:#5f6675;margin-top:6px}
+  .empty{padding:18px 14px;color:#6d7280;font:600 13px Inter,sans-serif}
+  .err{color:#bb0027}
+  @media(max-width:1180px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.sitrep,.esfgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.posture{grid-column:1/-1}.main,.ops,.catalog{grid-template-columns:1fr}}
+  @media(max-width:640px){.wrap{padding:16px}.top{align-items:flex-start;flex-direction:column}.kpis{grid-template-columns:1fr}#map{height:430px}.stamp{white-space:normal}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="top">
+    <div>
+      <div class="eyebrow">Comando nacional · Situación operacional</div>
+      <h1>Panel Nacional de Comando</h1>
+    </div>
+    <div class="stamp" id="updated">SIN DATOS</div>
+  </section>
+
+  <section class="grid kpis" aria-label="Indicadores nacionales">
+    <article class="card metric"><div class="eyebrow">Estado</div><div class="v" id="threat">—</div><div class="s" id="threatReason">Calculando amenaza sísmica.</div></article>
+    <article class="card metric"><div class="eyebrow">Sismos</div><div class="v" id="quakeCount">—</div><div class="s">Eventos recientes en la región monitorizada.</div></article>
+    <article class="card metric"><div class="eyebrow">Daños críticos</div><div class="v" id="criticalReports">—</div><div class="s">Reportes ciudadanos aprobados en severidad roja.</div></article>
+    <article class="card metric"><div class="eyebrow">Refugios activos</div><div class="v" id="activeShelters">—</div><div class="s">Albergues publicados con estado activo.</div></article>
+    <article class="card metric"><div class="eyebrow">Integraciones</div><div class="v" id="liveFeeds">—</div><div class="s">Fuentes configuradas y honestamente reportadas.</div></article>
+  </section>
+
+  <section class="grid sitrep" aria-label="Reporte de situación común">
+    <article class="card posture normal" id="sitrepCard">
+      <div class="eyebrow">Common Operating Picture</div>
+      <div class="status" id="sitrepStatus">SIN DATOS</div>
+      <ul id="sitrepPriorities"><li>Cargando prioridades de misión.</li></ul>
+      <a class="reportlink" href="/api/sitrep/ics-209" target="_blank" rel="noopener">Abrir ICS-209-Lite</a>
+      <a class="reportlink" href="/api/sitrep/cap" target="_blank" rel="noopener">Abrir CAP XML</a>
+    </article>
+    <article class="card sitmini"><div class="eyebrow">Geosísmico 24h</div><div class="v" id="sitrepGeo">—</div><div class="s" id="sitrepGeoMeta">Eventos y magnitud máxima.</div></article>
+    <article class="card sitmini"><div class="eyebrow">Logística crítica</div><div class="v" id="sitrepLog">—</div><div class="s" id="sitrepLogMeta">Necesidades prioridad 1 y lotes en riesgo.</div></article>
+    <article class="card sitmini"><div class="eyebrow">Satélite IA</div><div class="v" id="sitrepSat">—</div><div class="s" id="sitrepSatMeta">Daño grave/severo y verificación.</div></article>
+    <article class="card sitmini"><div class="eyebrow">Humanitario</div><div class="v" id="sitrepHuman">—</div><div class="s" id="sitrepHumanMeta">SOS y solicitudes de ayuda.</div></article>
+    <article class="card sitmini"><div class="eyebrow">Feeds</div><div class="v" id="sitrepFeeds">—</div><div class="s" id="sitrepFeedsMeta">Ingesta y conectores configurados.</div></article>
+  </section>
+
+  <section class="grid esfgrid" id="esfGrid" aria-label="Matriz ESF FEMA">
+    <article class="card esf normal"><div class="eyebrow">ESF</div><div class="name">Cargando matriz de misión.</div><div class="act">Derivada de /api/sitrep.</div></article>
+  </section>
+
+  <section class="grid main">
+    <article class="card">
+      <div class="panel-h"><h2>Mapa operacional</h2><span class="pill">Sismos · Daños · Refugios · Logística</span></div>
+      <div id="map"></div>
+    </article>
+    <div class="side">
+      <article class="card">
+        <div class="panel-h"><h2>Actividad sísmica</h2><span class="pill" id="quakeSource">API</span></div>
+        <div class="list" id="quakeList"><div class="empty">Cargando sismos…</div></div>
+      </article>
+      <article class="card">
+        <div class="panel-h"><h2>Alertas multiagencia</h2><span class="pill">USGS · NOAA · FEMA</span></div>
+        <div class="list" id="alertList"><div class="empty">Cargando alertas…</div></div>
+      </article>
+      <article class="card">
+        <div class="panel-h"><h2>Timeline operacional</h2><span class="pill">COP · NIMS</span></div>
+        <div class="list" id="timelineList"><div class="empty">Cargando timeline…</div></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="grid ops" aria-label="Bloques de operación">
+    <article class="card op"><h3>Logística ESF-7</h3><div class="eyebrow">Cobertura de necesidades</div><div class="v" id="logMatch">—</div><div class="bar"><span id="logBar" style="width:0"></span></div><p class="meta" id="logMeta">Inventario, necesidades y despachos.</p></article>
+    <article class="card op"><h3>Humanitario</h3><div class="eyebrow">SOS sin resolver</div><div class="v" id="humanSos">—</div><p class="meta" id="humanMeta">Check-ins, recursos y refugios.</p></article>
+    <article class="card op"><h3>Reportes ciudadanos</h3><div class="eyebrow">Pendientes de moderación</div><div class="v" id="pendingReports">—</div><p class="meta" id="reportMeta">Daños, atrapados y puntos de ayuda.</p></article>
+    <article class="card op"><h3>Refugios</h3><div class="eyebrow">Llenos / cerrados</div><div class="v" id="shelterStress">—</div><p class="meta">Señales públicas aprobadas por operadores.</p></article>
+    <article class="card op"><h3>Salud de datos</h3><div class="eyebrow">Gated feeds</div><div class="v" id="gatedFeeds">—</div><p class="meta" id="gatedMeta">Integraciones no disponibles se muestran como no configuradas.</p></article>
+  </section>
+
+  <section class="card" aria-label="Matriz de brechas de suministros" style="margin-top:14px">
+    <div class="panel-h"><h2>Matriz de brechas ESF-7</h2><span class="pill" id="gapSummary">Inventario vs necesidades</span></div>
+    <div class="gaplist" id="gapList"><div class="empty">Cargando brechas de suministros…</div></div>
+  </section>
+
+  <section class="card" aria-label="Catálogo de capas COP" style="margin-top:14px">
+    <div class="panel-h"><h2>Catálogo de capas COP</h2><span class="pill" id="catalogSummary">Contrato público</span></div>
+    <div class="catalog" id="catalogList"><div class="empty">Cargando catálogo de capas…</div></div>
+  </section>
+</main>
+
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ago=ms=>{const s=Math.max(0,(Date.now()-Number(ms||0))/1000);if(s<60)return Math.floor(s)+'s';const m=s/60;if(m<60)return Math.floor(m)+'m';const h=m/60;if(h<24)return Math.floor(h)+'h';return Math.floor(h/24)+'d'};
+const magColor=m=>m>=6?'#bb0027':m>=4?'#e57200':m>=2.5?'#c9a227':'#2e7d32';
+const sevColor=s=>({rojo:'#bb0027',naranja:'#e57200',amarillo:'#c9a227',critical:'#bb0027',warning:'#e57200',advisory:'#445e91'}[s]||'#445e91');
+
+const map=L.map('map',{attributionControl:false,scrollWheelZoom:false}).setView([8.5,-66.5],6);
+L.control.attribution({prefix:false}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM, © CARTO · SISMO911',maxZoom:19}).addTo(map);
+const quakeLayer=L.layerGroup().addTo(map), statePostureLayer=L.layerGroup().addTo(map), lifelineLayer=L.layerGroup().addTo(map), impactLayer=L.layerGroup().addTo(map), satDamageLayer=L.layerGroup().addTo(map), humanSignalLayer=L.layerGroup().addTo(map), reportLayer=L.layerGroup().addTo(map), shelterLayer=L.layerGroup().addTo(map), acopioLayer=L.layerGroup().addTo(map), needsLayer=L.layerGroup().addTo(map), shipmentsLayer=L.layerGroup().addTo(map), resourceLayer=L.layerGroup().addTo(map);
+L.control.layers({}, {'Sismos':quakeLayer,'Postura por estado':statePostureLayer,'Lifelines ESF':lifelineLayer,'Impacto sísmico estimado':impactLayer,'Daño satelital IA':satDamageLayer,'Señales humanitarias':humanSignalLayer,'Daños':reportLayer,'Refugios':shelterLayer,'Centros de acopio':acopioLayer,'Necesidades logísticas':needsLayer,'Envíos activos':shipmentsLayer,'Recursos públicos':resourceLayer}).addTo(map);
+
+async function json(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(url+' '+r.status);return r.json();}
+function renderQuakes(d){
+  const ev=d.events||[];
+  $('quakeSource').textContent=d.source||'API';
+  $('quakeCount').textContent=ev.length;
+  $('threat').textContent=d.threat?.label||'Vigilancia';
+  $('threatReason').textContent=d.threat?.reason||'Sin amenaza crítica calculada.';
+  quakeLayer.clearLayers();
+  $('quakeList').innerHTML=ev.length?ev.slice(0,14).map(e=>`<div class="row"><span class="mag" style="background:${magColor(e.mag)}">M ${Number(e.mag||0).toFixed(1)}</span><div><div class="title">${esc(e.place_es||e.place||'Evento sísmico')}</div><div class="meta">${ago(e.time_ms)} · prof. ${Number(e.depth_km||0).toFixed(1)} km</div></div><span class="meta">${Number(e.lat).toFixed(1)}, ${Number(e.lon).toFixed(1)}</span></div>`).join(''):'<div class="empty">Sin eventos recientes.</div>';
+  ev.forEach(e=>{if(e.lat==null||e.lon==null)return;const size=Math.max(8,Math.min(30,8+Number(e.mag||0)*3));L.circleMarker([e.lat,e.lon],{radius:size/2,color:'#fff',weight:1,fillColor:magColor(e.mag),fillOpacity:.9}).bindPopup(`<b>M ${Number(e.mag||0).toFixed(1)}</b><br>${esc(e.place_es||e.place)}<br>${ago(e.time_ms)}`).addTo(quakeLayer);});
+}
+function renderGeoseismicLayers(d){
+  impactLayer.clearLayers();satDamageLayer.clearLayers();
+  const colors={critical:'#bb0027',severe:'#e57200',elevated:'#c9a227',monitor:'#445e91'};
+  const satColors={severo:'#bb0027',grave:'#e57200',moderado:'#c9a227',leve:'#445e91',ninguno:'#2e7d32',indeterminado:'#6d7280'};
+  L.geoJSON(d,{filter:f=>(f.properties||{}).layer==='impact',style:f=>{const col=colors[f.properties?.severity]||'#445e91';return{color:col,weight:2,fillColor:col,fillOpacity:.1,dashArray:'6 6'}},onEachFeature:(f,l)=>{const p=f.properties||{};l.bindPopup(`<b>Impacto sísmico estimado</b><br>${esc(p.place)}<br>M ${Number(p.magnitude||0).toFixed(1)} · radio ${Number(p.radius_km||0).toLocaleString('es-VE')} km<br>${esc(p.advisory||'Estimación provisional')}`);}}).addTo(impactLayer);
+  L.geoJSON(d,{filter:f=>(f.properties||{}).layer==='satellite_damage',pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:7,color:'#fff',weight:1,fillColor:satColors[f.properties?.severity]||'#6d7280',fillOpacity:.95}),style:f=>{const col=satColors[f.properties?.severity]||'#6d7280';return{color:col,weight:2,fillColor:col,fillOpacity:.18}},onEachFeature:(f,l)=>{const p=f.properties||{};l.bindPopup(`<b>Daño satelital IA</b><br>Severidad: ${esc(p.severity)} · ${esc(p.verification||'unverified')}<br>${esc(p.summary||'Sin resumen')}<br>${esc(p.imagery_source||'imagen externa')} · ${esc(p.model||'modelo')}`);}}).addTo(satDamageLayer);
+}
+function renderHumanitarianLayers(d){
+  humanSignalLayer.clearLayers();
+  const statusColor={active:'#bb0027',new:'#bb0027',need_help:'#e57200',unknown:'#445e91',safe:'#2e7d32'};
+  (d.features||[]).forEach(f=>{const p=f.properties||{},g=f.geometry||{};if(p.layer!=='humanitarian_signal'||g.type!=='Point')return;
+    const lon=g.coordinates?.[0],lat=g.coordinates?.[1];if(lat==null||lon==null)return;
+    const count=Number(p.count||0),col=statusColor[p.status]||(p.source==='sos'?'#bb0027':'#445e91'),label=p.source==='sos'?'S':'H',size=Math.max(24,Math.min(40,22+count*4));
+    L.marker([lat,lon],{icon:L.divIcon({className:'',html:`<div style="width:${size}px;height:${size}px;border-radius:999px;background:${col};box-shadow:0 0 0 2px #fff;display:grid;place-items:center;color:white;font-weight:900;font-size:12px">${label}</div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]})}).bindPopup(`<b>Señal humanitaria agregada</b><br>Fuente: ${esc(p.source)} · Estado: ${esc(p.status)}<br>Casos en celda: <b>${count.toLocaleString('es-VE')}</b><br><span style="color:#666">Ubicación aproximada ${esc(p.precision||'0.1deg')} · sin PII</span>`).addTo(humanSignalLayer);
+  });
+}
+function renderStatePosture(d){
+  statePostureLayer.clearLayers();
+  const sevColor={emergency:'#bb0027',elevated:'#e57200',watch:'#c9a227',normal:'#2e7d32'};
+  (d.features||[]).forEach(f=>{const p=f.properties||{},g=f.geometry||{};if(p.layer!=='state_posture'||g.type!=='Point')return;
+    const lon=g.coordinates?.[0],lat=g.coordinates?.[1];if(lat==null||lon==null)return;
+    const m=p.metrics||{},score=Number(p.score||0),col=sevColor[p.severity]||'#445e91',size=Math.max(23,Math.min(44,23+score));
+    L.marker([lat,lon],{icon:L.divIcon({className:'',html:`<div style="width:${size}px;height:${size}px;border-radius:8px;background:${col};box-shadow:0 0 0 2px #fff;display:grid;place-items:center;color:white;font-weight:900;font-size:12px">${score}</div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]})}).bindPopup(`<b>${esc(p.name)}</b><br>Postura: <b>${esc(p.severity)}</b> · score ${score}<br>SOS: ${Number(m.unresolved_sos||0).toLocaleString('es-VE')} · Ayuda: ${Number(m.need_help_checkins||0).toLocaleString('es-VE')}<br>Reportes críticos: ${Number(m.critical_reports||0).toLocaleString('es-VE')} · Atrapados: ${Number(m.trapped_reports||0).toLocaleString('es-VE')}<br><span style="color:#666">Agregado estatal · sin PII</span>`).addTo(statePostureLayer);
+  });
+}
+function renderLifelines(d){
+  lifelineLayer.clearLayers();
+  const color={health:'#1f8a4c',comms:'#2563eb',resource:'#7c3aed',acopio:'#00173a'};
+  const label={health:'H',comms:'C',resource:'R',acopio:'A'};
+  (d.features||[]).forEach(f=>{const p=f.properties||{},g=f.geometry||{};if(p.layer!=='lifeline'||g.type!=='Point')return;
+    const lon=g.coordinates?.[0],lat=g.coordinates?.[1];if(lat==null||lon==null)return;
+    const col=color[p.category]||'#445e91',txt=label[p.category]||'L';
+    L.marker([lat,lon],{icon:L.divIcon({className:'',html:`<div style="width:23px;height:23px;border-radius:7px;background:${col};box-shadow:0 0 0 2px #fff;display:grid;place-items:center;color:white;font-weight:900;font-size:12px">${txt}</div>`,iconSize:[23,23],iconAnchor:[11,11]})}).bindPopup(`<b>${esc(p.name)}</b><br>${esc(p.category)} · ${esc(p.type||'lifeline')}<br>Estado: ${esc(p.status||'unknown')}${p.count?'<br>Canales/activos: '+Number(p.count).toLocaleString('es-VE'):''}<br><span style="color:#666">${esc(p.region||'Nacional')} · ${esc(p.privacy||'public_facility_no_pii')}</span>`).addTo(lifelineLayer);
+  });
+}
+function renderReports(rows, stats){
+  $('criticalReports').textContent=stats.critical??0;
+  $('pendingReports').textContent=stats.pending??0;
+  $('reportMeta').textContent=`${stats.total??0} aprobados · ${stats.trapped??0} atrapados · ${stats.resources??0} recursos`;
+  reportLayer.clearLayers();
+  (rows||[]).forEach(r=>{if(r.lat==null||r.lon==null)return;L.circleMarker([r.lat,r.lon],{radius:r.severity==='rojo'?7:5,color:'#fff',weight:1,fillColor:sevColor(r.severity),fillOpacity:.95}).bindPopup(`<b>${esc(r.title||r.category)}</b><br>${esc(r.municipio||r.estado||'')}<br><a href="/reporte?id=${encodeURIComponent(r.id)}">Abrir reporte</a>`).addTo(reportLayer);});
+}
+function renderShelters(d){
+  const rows=d.shelters||[];
+  const active=rows.filter(s=>s.status==='activo').length, full=rows.filter(s=>s.status==='lleno').length, closed=rows.filter(s=>s.status==='cerrado').length;
+  $('activeShelters').textContent=active;
+  $('shelterStress').textContent=`${full}/${closed}`;
+  shelterLayer.clearLayers();
+  rows.forEach(s=>{if(s.lat==null||s.lon==null)return;const col=s.status==='activo'?'#2e7d32':s.status==='lleno'?'#e57200':'#bb0027';L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:`<div style="width:24px;height:24px;border-radius:999px;background:${col};box-shadow:0 0 0 2px #fff;display:grid;place-items:center;color:white;font-weight:900">A</div>`,iconSize:[24,24],iconAnchor:[12,12]})}).bindPopup(`<b>${esc(s.name)}</b><br>${esc(s.status)}${s.capacity_note?'<br>'+esc(s.capacity_note):''}`).addTo(shelterLayer);});
+}
+function renderOperationalLayers(d){
+  acopioLayer.clearLayers();needsLayer.clearLayers();shipmentsLayer.clearLayers();resourceLayer.clearLayers();
+  const statusColor={operativo:'#2e7d32',saturado:'#e57200',cerrado:'#bb0027'};
+  const resourceColor={available:'#2e7d32',low:'#e57200',depleted:'#bb0027'};
+  (d.features||[]).forEach(f=>{const p=f.properties||{},g=f.geometry||{};
+    if(g.type==='Point'){
+      const lon=g.coordinates?.[0],lat=g.coordinates?.[1];if(lat==null||lon==null)return;
+      if(p.layer==='acopio'){
+        const col=statusColor[p.status]||'#00173a';
+        L.marker([lat,lon],{icon:L.divIcon({className:'',html:`<div style="width:23px;height:23px;border-radius:7px;background:${col};box-shadow:0 0 0 2px #fff;display:grid;place-items:center;color:white;font-weight:900;font-size:12px">A</div>`,iconSize:[23,23],iconAnchor:[11,11]})}).bindPopup(`<b>${esc(p.name)}</b><br>${esc(p.type||'centro')} · ${esc(p.ciudad||p.estado||'')}<br>${esc(p.status||'operativo')}`).addTo(acopioLayer);
+      } else if(p.layer==='need') {
+        const col=Number(p.priority)===1?'#bb0027':Number(p.priority)===2?'#e57200':'#445e91';
+        L.marker([lat,lon],{icon:L.divIcon({className:'',html:`<div style="width:23px;height:23px;border-radius:999px;background:${col};box-shadow:0 0 0 2px #fff;display:grid;place-items:center;color:white;font-weight:900;font-size:13px">!</div>`,iconSize:[23,23],iconAnchor:[11,11]})}).bindPopup(`<b>Necesidad abierta</b><br>${esc(p.center_name)}<br>${esc(p.commodity)} · ${Number(p.qty||0).toLocaleString('es-VE')}<br>Prioridad ${esc(p.priority)}`).addTo(needsLayer);
+      } else if(p.layer==='resource') {
+        const col=resourceColor[p.status]||'#445e91';
+        L.marker([lat,lon],{icon:L.divIcon({className:'',html:`<div style="width:23px;height:23px;border-radius:7px;background:${col};box-shadow:0 0 0 2px #fff;display:grid;place-items:center;color:white;font-weight:900;font-size:12px">R</div>`,iconSize:[23,23],iconAnchor:[11,11]})}).bindPopup(`<b>${esc(p.label||p.kind||'Recurso')}</b><br>${esc(p.kind||'recurso')} · ${Number(p.quantity||0).toLocaleString('es-VE')}<br>${esc(p.status||'available')}${p.region?'<br>'+esc(p.region):''}`).addTo(resourceLayer);
+      }
+    } else if(g.type==='LineString'&&p.layer==='shipment') {
+      const coords=(g.coordinates||[]).map(c=>[c[1],c[0]]);if(coords.length<2)return;
+      const col=p.status==='en_transito'?'#2563eb':p.status==='despachado'?'#7c3aed':'#445e91';
+      L.polyline(coords,{color:col,weight:3,opacity:.85,dashArray:'7 7'}).bindPopup(`<b>Envío activo</b><br>${esc(p.origin_name)} → ${esc(p.dest_name)}<br>${esc(p.status)}`).addTo(shipmentsLayer);
+    }
+  });
+}
+function renderAlerts(d){
+  const alerts=d.alerts||[];
+  $('alertList').innerHTML=alerts.length?alerts.slice(0,10).map(a=>`<div class="row"><span class="mag" style="background:${sevColor(a.severity)}">${esc(a.source||'src')}</span><div><div class="title">${esc(a.title)}</div><div class="meta">${esc(a.coverage||'')} · ${a.time_ms?ago(a.time_ms):'sin hora'}</div></div><span class="meta">${esc(a.kind||'')}</span></div>`).join(''):'<div class="empty">Sin alertas activas.</div>';
+}
+function renderTimeline(d){
+  const rows=d.items||[];
+  const color={emergency:'#bb0027',elevated:'#e57200',watch:'#c9a227',normal:'#445e91'};
+  $('timelineList').innerHTML=rows.length?rows.slice(0,12).map(x=>`<div class="row"><span class="mag" style="background:${color[x.severity]||'#445e91'}">${esc(x.domain||'op')}</span><div><div class="title">${esc(x.title)}</div><div class="meta">${esc(x.summary||'')} · ${x.time_ms?ago(x.time_ms):'sin hora'}</div></div><span class="meta">${esc(x.kind||'')}</span></div>`).join(''):'<div class="empty">Sin eventos operacionales públicos.</div>';
+}
+function renderStatus(d){
+  const social=d.social_adapters||[], gated=d.gated||[];
+  const live=social.filter(s=>s.live&&s.configured).length+gated.filter(g=>g.configured).length;
+  $('liveFeeds').textContent=live;
+  $('gatedFeeds').textContent=gated.filter(g=>!g.configured).length;
+  $('gatedMeta').textContent=`${gated.filter(g=>g.configured).length} configuradas · ${social.filter(s=>s.status==='connector_not_enabled').length} conectores pendientes`;
+}
+function renderLogistics(d){
+  const open=Number(d.needs?.open??0), critical=Number(d.needs?.critical??0), transit=Number(d.shipments?.in_transit??0), delivered=Number(d.shipments?.delivered??0);
+  const exp=d.expiry||{}, risk=Number(exp.expired||0)+Number(exp.within30||0)+Number(exp.quarantine||0);
+  const totalFlow=open+delivered;
+  const pct=totalFlow>0?Math.round((delivered/totalFlow)*100):0;
+  $('logMatch').textContent=totalFlow?pct+'%':'—';
+  $('logBar').style.width=pct+'%';
+  $('logMeta').textContent=`${open} necesidades abiertas · ${critical} críticas · ${transit} envíos en tránsito · ${risk} lotes en riesgo`;
+}
+function renderGaps(d){
+  const gaps=(d.gaps||[]).filter(x=>Number(x.open_need_qty||0)>0||Number(x.inventory_qty||0)>0).slice(0,10);
+  $('gapSummary').textContent=`${Number(d.counts?.critical_shortage||0)} críticas · ${Number(d.counts?.shortage||0)} brechas`;
+  $('gapList').innerHTML=gaps.length?gaps.map(x=>`<div class="gaprow ${esc(x.status)}"><div>${esc(x.label)}<div class="m">ESF-${Number(x.esf||0)} · demanda ${Number(x.open_need_qty||0).toLocaleString('es-VE')} ${esc(x.unit)} · stock ${Number(x.inventory_qty||0).toLocaleString('es-VE')} ${esc(x.unit)}</div></div><div class="m">${x.coverage_pct==null?'—':Number(x.coverage_pct).toLocaleString('es-VE')+'%'}</div></div>`).join(''):'<div class="empty">Sin demanda logística abierta.</div>';
+}
+function renderCatalog(d){
+  const domains=d.by_domain||{};
+  const rows=Object.entries(domains).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+  $('catalogSummary').textContent=`${Number(d.count||0)} capas · ${Number(d.refresh_seconds||30)}s`;
+  $('catalogList').innerHTML=rows.length?rows.map(([name,count])=>`<div class="item"><b>${Number(count||0)}</b><span>${esc(name)}</span><span>${esc((d.layers||[]).find(x=>x.domain===name)?.privacy||'public')}</span></div>`).join(''):'<div class="empty">Sin catálogo publicado.</div>';
+}
+function renderHumanitarian(d){
+  $('humanSos').textContent=Number(d.sos?.unresolved??0);
+  $('humanMeta').textContent=`${Number(d.checkins?.safe??0)} a salvo · ${Number(d.checkins?.need_help??0)} piden ayuda · ${Number(d.resources?.low??0)+Number(d.resources?.depleted??0)} recursos críticos`;
+}
+function renderSitrep(d){
+  const status=String(d.readiness?.status||'normal');
+  const labels={normal:'NORMAL',watch:'VIGILANCIA',elevated:'ELEVADO',emergency:'EMERGENCIA'};
+  $('sitrepCard').className='card posture '+status;
+  $('sitrepStatus').textContent=labels[status]||status.toUpperCase();
+  const priorities=d.readiness?.priorities||[];
+  const reasons=d.readiness?.reasons||[];
+  $('sitrepPriorities').innerHTML=(priorities.length?priorities:reasons).slice(0,4).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>Sin señales críticas agregadas.</li>';
+  $('sitrepGeo').textContent=`M ${Number(d.geoseismic?.maxMag24h||0).toFixed(1)}`;
+  $('sitrepGeoMeta').textContent=`${Number(d.geoseismic?.last24h||0)} eventos 24h · ${Number(d.geoseismic?.recent||0)} recientes`;
+  $('sitrepLog').textContent=Number(d.logistics?.needs?.critical||0);
+  $('sitrepLogMeta').textContent=`${Number(d.logistics?.needs?.open||0)} abiertas · ${Number(d.logistics?.lots?.at_risk||0)} lotes en riesgo`;
+  $('sitrepSat').textContent=Number(d.damage?.satellite?.severe||0);
+  $('sitrepSatMeta').textContent=`${Number(d.damage?.satellite?.unverified||0)} sin verificar · ${Number(d.damage?.satellite?.verified||0)} verificadas`;
+  $('sitrepHuman').textContent=Number(d.humanitarian?.sos?.unresolved||0);
+  $('sitrepHumanMeta').textContent=`${Number(d.humanitarian?.checkins?.need_help||0)} piden ayuda · ${Number(d.humanitarian?.resources?.low||0)+Number(d.humanitarian?.resources?.depleted||0)} recursos críticos`;
+  $('sitrepFeeds').textContent=Number(d.feeds?.social_live||0)+Number(d.feeds?.gated_configured||0);
+  $('sitrepFeedsMeta').textContent=`${Number(d.feeds?.ingest?.length||0)} fuentes ingest · ${Number(d.feeds?.social_configured||0)} sociales configuradas`;
+  renderEsf(d.esf);
+}
+function renderEsf(esf){
+  const rows=esf?.functions||[];
+  const labels={normal:'Normal',watch:'Vigilancia',elevated:'Elevado',emergency:'Emergencia'};
+  $('esfGrid').innerHTML=rows.length?rows.map(x=>`<article class="card esf ${esc(x.status||'normal')}"><div class="code">${esc(x.code)} · ${esc(labels[x.status]||x.status||'Normal')} · ${Number(x.score||0).toLocaleString('es-VE')}</div><div class="name">${esc(x.title)}</div><div class="act">${esc((x.actions||[])[0]||'Sin acción crítica agregada.')}</div></article>`).join(''):'<article class="card esf normal"><div class="eyebrow">ESF</div><div class="name">Sin señales críticas agregadas.</div></article>';
+}
+async function refresh(){
+  const settled=await Promise.allSettled([
+    json('/api/sitrep'),
+    json('/api/events?limit=300'),
+    json('/api/reports?limit=800'),
+    json('/api/reports/stats'),
+    json('/api/shelters'),
+    json('/api/alerts'),
+    json('/api/sitrep/timeline?limit=40'),
+    json('/api/status'),
+    json('/api/acopio/dashboard'),
+    json('/api/acopio/gaps'),
+    json('/api/layers/catalog'),
+    json('/api/layers/geoseismic?include=impact,satellite_damage&impactMinMag=4&limit=220'),
+    json('/api/layers/operational?include=acopio,needs,shipments,resources'),
+    json('/api/layers/humanitarian?include=signals&limit=300'),
+    json('/api/layers/state-posture?limit=25'),
+    json('/api/layers/lifelines?include=health,comms,resources,acopio&limit=800'),
+    json('/api/humanitarian/dashboard')
+  ]);
+  const [sitrep,events,reports,reportStats,shelters,alerts,timeline,status,logistics,gaps,catalog,geoseismic,layers,humanitarianLayers,statePosture,lifelines,humanitarian]=settled.map(x=>x.status==='fulfilled'?x.value:null);
+  if(sitrep)renderSitrep(sitrep);
+  if(events)renderQuakes(events);else $('quakeList').innerHTML='<div class="empty err">No se pudo leer /api/events.</div>';
+  if(geoseismic)renderGeoseismicLayers(geoseismic);
+  if(reports&&reportStats)renderReports(reports,reportStats);
+  if(shelters)renderShelters(shelters);
+  if(alerts)renderAlerts(alerts);
+  if(timeline)renderTimeline(timeline);
+  if(status)renderStatus(status);
+  if(logistics)renderLogistics(logistics);
+  if(gaps)renderGaps(gaps);
+  if(catalog)renderCatalog(catalog);
+  if(layers)renderOperationalLayers(layers);
+  if(humanitarianLayers)renderHumanitarianLayers(humanitarianLayers);
+  if(statePosture)renderStatePosture(statePosture);
+  if(lifelines)renderLifelines(lifelines);
+  if(humanitarian)renderHumanitarian(humanitarian);
+  $('updated').textContent='ACTUALIZADO '+new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+refresh();
+setInterval(refresh,60000);
+</script>
+</body>
+</html>

@@ -71,7 +71,8 @@ export interface Env {
   TWILIO_AUTH_TOKEN?: string;
   TWILIO_SMS_FROM?: string;       // E.164, e.g. +15551234567
   TWILIO_WHATSAPP_FROM?: string;  // E.164 of the approved WhatsApp sender
-  // Invitation-only business-plan deck (/plan). Both have safe fallbacks.
+  // Invitation-only business-plan deck (/plan). Access fails closed if the
+  // secret is missing; invite codes are sourced from env/KV only.
   PLAN_INVITE_CODES?: string; // comma-separated valid invite codes
   PLAN_SECRET?: string;       // HMAC signing secret for the access cookie
   // --- Crossmint donations (card → USDC on Base) ---

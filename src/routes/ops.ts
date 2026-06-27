@@ -9,6 +9,59 @@ import { syncSosSheet } from '../lib/sheets-sync';
 // (emergencies can't require login). Admin curation/triage is gated separately.
 export const ops = new Hono<{ Bindings: Env }>();
 
+const emptyRows = { results: [] as any[] };
+const rows = (r: any) => (r?.results ?? []) as any[];
+
+// Public humanitarian operating picture for the humanitario page.
+ops.get('/humanitarian/dashboard', async (c) => {
+  const [checkins, sos, resources, shelters] = await Promise.all([
+    c.env.DB.prepare(`SELECT status, COUNT(*) AS n FROM checkins GROUP BY status`).all().catch(() => emptyRows),
+    c.env.DB.prepare(`SELECT status, COUNT(*) AS n FROM sos_alerts GROUP BY status`).all().catch(() => emptyRows),
+    c.env.DB.prepare(`SELECT status, COUNT(*) AS n FROM resources GROUP BY status`).all().catch(() => emptyRows),
+    c.env.DB.prepare(`SELECT status, COUNT(*) AS n FROM shelter_status WHERE moderation='approved' GROUP BY status`).all().catch(() => emptyRows),
+  ]);
+
+  const checkinRows = rows(checkins);
+  const sosRows = rows(sos);
+  const resourceRows = rows(resources);
+  const shelterRows = rows(shelters);
+  const payload: any = {
+    generated_ms: Date.now(),
+    scope: 'public_non_pii',
+    checkins: {
+      by: checkinRows,
+      total: checkinRows.reduce((a, r) => a + Number(r.n ?? 0), 0),
+      safe: checkinRows.filter((r) => r.status === 'safe').reduce((a, r) => a + Number(r.n ?? 0), 0),
+      need_help: checkinRows.filter((r) => r.status === 'need_help').reduce((a, r) => a + Number(r.n ?? 0), 0),
+    },
+    sos: {
+      by: sosRows,
+      active: sosRows.filter((r) => r.status === 'active').reduce((a, r) => a + Number(r.n ?? 0), 0),
+      acknowledged: sosRows.filter((r) => r.status === 'acknowledged').reduce((a, r) => a + Number(r.n ?? 0), 0),
+      unresolved: sosRows.filter((r) => ['active', 'acknowledged'].includes(String(r.status ?? ''))).reduce((a, r) => a + Number(r.n ?? 0), 0),
+      total: 0,
+    },
+    resources: {
+      by: resourceRows,
+      available: resourceRows.filter((r) => r.status === 'available').reduce((a, r) => a + Number(r.n ?? 0), 0),
+      low: resourceRows.filter((r) => r.status === 'low').reduce((a, r) => a + Number(r.n ?? 0), 0),
+      depleted: resourceRows.filter((r) => r.status === 'depleted').reduce((a, r) => a + Number(r.n ?? 0), 0),
+      total: 0,
+    },
+    shelters: {
+      by: shelterRows,
+      active: shelterRows.filter((r) => r.status === 'activo').reduce((a, r) => a + Number(r.n ?? 0), 0),
+      full: shelterRows.filter((r) => r.status === 'lleno').reduce((a, r) => a + Number(r.n ?? 0), 0),
+      closed: shelterRows.filter((r) => r.status === 'cerrado').reduce((a, r) => a + Number(r.n ?? 0), 0),
+      total: 0,
+    },
+  };
+  payload.sos.total = sosRows.reduce((a, r) => a + Number(r.n ?? 0), 0);
+  payload.resources.total = resourceRows.reduce((a, r) => a + Number(r.n ?? 0), 0);
+  payload.shelters.total = shelterRows.reduce((a, r) => a + Number(r.n ?? 0), 0);
+  return c.json(payload, 200, { 'Cache-Control': 'public, max-age=30' });
+});
+
 // ---- Family safety check-ins ----
 ops.get('/checkins', async (c) => {
   const { results } = await c.env.DB.prepare(
