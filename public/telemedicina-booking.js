@@ -277,8 +277,12 @@
       loadTrack(token);
     }));
 
+    // Live-refresh is quota-frugal (Workers Free plan): only poll, every 60s, when
+    // updates actually matter — the appointment is mid-flight or happening today.
     clearTimeout(trackTimer);
-    if (!terminal) trackTimer = setTimeout(() => loadTrack(token), 25000); // live-refresh until closed
+    const todayCaracas = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+    const liveState = ['checked_in', 'waiting_room', 'in_progress'].includes(a.status);
+    if (!terminal && (liveState || a.date === todayCaracas)) trackTimer = setTimeout(() => loadTrack(token), 60000);
   }
 
   // Legacy ?caso= (old request-queue cases) — best-effort read-only view.
