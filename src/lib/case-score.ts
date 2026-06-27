@@ -22,7 +22,9 @@
 // The engine takes `now` as an input so tests are deterministic and so the same
 // case re-scores over time (the basis of the autonomous auto-update sweep).
 
-export type CaseStatus = 'missing' | 'found_safe' | 'found_deceased' | 'unknown';
+// found-alive statuses: found_safe (a salvo), aparecido (apareció / localizado con
+// vida), hospitalizado (localizado en un centro de salud). All resolve the case.
+export type CaseStatus = 'missing' | 'found_safe' | 'aparecido' | 'hospitalizado' | 'found_deceased' | 'unknown';
 export type Priority = 'alta' | 'media' | 'baja';
 export type Triage = 'immediate' | 'delayed' | 'minor' | 'deceased';
 
@@ -75,8 +77,11 @@ export function scoreCase(sig: CaseSignals): CaseScore {
   const now = sig.now ?? Date.now();
 
   // ---- Rule 1: status overrides ------------------------------------------
-  if (sig.status === 'found_safe') {
-    return build('minor', 5, ['Localizada a salvo — caso resuelto, sin búsqueda activa.']);
+  if (sig.status === 'found_safe' || sig.status === 'aparecido') {
+    return build('minor', 5, ['Localizada con vida — caso resuelto, sin búsqueda activa.']);
+  }
+  if (sig.status === 'hospitalizado') {
+    return build('minor', 5, ['Localizada con vida (hospitalizada) — seguimiento médico, sin búsqueda activa.']);
   }
   if (sig.status === 'found_deceased') {
     return build('deceased', 10, ['Fallecida — gestión de recuperación e identificación.']);
