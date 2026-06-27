@@ -42,10 +42,6 @@
       { label: 'Red Global de Ayuda', href: '/red-ayuda', m: ['/red-ayuda'], d: 'M12 21a9 9 0 100-18 9 9 0 000 18zm0-18c2.6 2.7 2.6 15.3 0 18M3 12h18' },
       { label: 'Donar', href: '/donar', m: ['/donar', '/campana', '/recaudar'], d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z' },
     ] },
-    { label: 'Reportes Ciudadanos', d: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6-3a3 3 0 10-3-3M9 7a3 3 0 11-3 3', items: [
-      { label: 'Mascotas Perdidas', href: '/mascotas', m: ['/mascotas'], d: 'M4.5 12a2 2 0 100-4 2 2 0 000 4zm15 0a2 2 0 100-4 2 2 0 000 4zM9 8a2 2 0 100-4 2 2 0 000 4zm6 0a2 2 0 100-4 2 2 0 000 4zm-3 3c-2.5 0-4.5 2-4.5 4.5 0 1.5 1.5 2.5 4.5 2.5s4.5-1 4.5-2.5C16.5 13 14.5 11 12 11z' },
-      { label: 'Voluntarios', href: '/voluntarios', m: ['/voluntarios'], d: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z' },
-    ] },
     { label: 'Información', d: 'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13', items: [
       { label: 'Noticias', href: '/blog', m: ['/blog'], d: 'M4 4h16v16H4z M8 8h8M8 12h8M8 16h5' },
       { label: 'Información Verificada', href: '/informacion-verificada', m: ['/informacion-verificada'], d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
