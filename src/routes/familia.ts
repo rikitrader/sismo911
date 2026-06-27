@@ -8,6 +8,7 @@ import { recomputeCaseScore } from '../lib/case-score-sync';
 import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from '../lib/clean';
 import { dedupePersonas } from '../lib/dedupe';
 import { queryByIds, deleteByIds, deletePhotos } from '../lib/sql';
+import { edgeCached } from '../lib/edge-cache';
 
 // Missing-persons registry (/familia). Reads the `personas` dataset in the main
 // (sismo911) D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
@@ -55,9 +56,15 @@ function mapPerson(p: any, op: boolean) {
 
 // GET /api/familia/persons?q=&status=&cursor=&limit=
 familia.get('/persons', async (c) => {
+  const op = await isOperator(c);
+  // Public (redacted) responses are identical per URL, so the homepage's hottest call
+  // is served from a 30s per-colo edge cache instead of recomputing from D1 on every
+  // request. Operators bypass the cache entirely — their view carries PII (contact
+  // phones), so a redacted/PII crossover is structurally impossible. Vary: Cookie keeps
+  // an operator's own browser from reusing a publicly-cached (redacted) response.
+  const build = async () => {
   const q = (c.req.query('q') || '').trim();
   const limit = clampLimit(c.req.query('limit'), DEFAULT_LIMIT);
-  const op = await isOperator(c);
   const base: string[] = []; const baseBinds: unknown[] = [];
   // Public sees only moderated rows; operators see everything (incl. pending).
   if (!op) base.push("moderation = 'approved'");
@@ -103,11 +110,16 @@ familia.get('/persons', async (c) => {
   }
 
   const persons = [...nativeCases, ...rows.slice(0, limit).map((r) => mapPerson(r, op))];
-  return c.json({ persons, total: total + nativeTotal, nextCursor: nextCursor(rows, limit), limit });
+  return { persons, total: total + nativeTotal, nextCursor: nextCursor(rows, limit), limit };
+  };
+  if (op) return c.json(await build());
+  const res = await edgeCached(c, 30, build);
+  res.headers.set('Vary', 'Cookie');
+  return res;
 });
 
 // GET /api/familia/gallery?cursor=&limit=
-familia.get('/gallery', async (c) => {
+familia.get('/gallery', async (c) => edgeCached(c, 60, async () => {
   const limit = clampLimit(c.req.query('limit'), 30);
   // Filters from the /personas wall (all optional). status → estado; q searches
   // name+location; edo/lugar match the freeform `ubicacion`; desde/hasta bound the
@@ -136,11 +148,11 @@ familia.get('/gallery', async (c) => {
      WHERE ${where.join(' AND ')} ORDER BY updated_at DESC, id DESC LIMIT ?`
   ).bind(...binds, limit + 1).all<any>();
   const rows = results ?? [];
-  return c.json({
+  return {
     photos: rows.slice(0, limit).map((p) => ({ id: p.id, full_name: p.nombre, age: p.edad, status: estadoToStatus(p.estado), last_seen: p.ubicacion, photo_url: `/api/familia/photo/${p.id}` })),
     total, nextCursor: nextCursor(rows, limit),
-  });
-});
+  };
+}));
 
 // GET /api/familia/photo/:id  — serve from DESAP_FOTOS R2, fall back to the external URL
 familia.get('/photo/:id', async (c) => {
