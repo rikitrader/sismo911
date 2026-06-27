@@ -23,6 +23,7 @@ import { acopio } from './routes/acopio';
 import { logistica } from './routes/logistica';
 import { admin } from './routes/admin';
 import { funding } from './routes/funding';
+import { dashboard } from './routes/dashboard';
 import { plan } from './routes/plan';
 import { desaparecidos } from './routes/desaparecidos';
 import { blog } from './routes/blog';
@@ -208,6 +209,7 @@ app.get('/la-guaira', (c) => c.redirect('/estado/la-guaira', 301)); // antigua U
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
 app.route('/api/funding', funding); // live funder pipeline for the supply dashboard (reads 09_Funding sheet)
+app.route('/api/dashboard', dashboard); // /api/dashboard/geoseismic — aggregate of heatmap+stats+danos for /terremotos (4→2 fetches)
 app.route('/plan', plan);  // invitation-only business-plan slide deck (own invite-code gate)
 
 // Homepage = the DESAPARECIDOS registry. The root URL serves the /personas page
