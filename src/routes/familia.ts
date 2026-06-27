@@ -101,10 +101,26 @@ familia.get('/persons', async (c) => {
 // GET /api/familia/gallery?cursor=&limit=
 familia.get('/gallery', async (c) => {
   const limit = clampLimit(c.req.query('limit'), 30);
-  // optional ?status=missing → only still-missing (estado='sin-contacto'); default = all approved photos
+  // Filters from the /personas wall (all optional). status → estado; q searches
+  // name+location; edo/lugar match the freeform `ubicacion`; desde/hasta bound the
+  // record's updated_at (ms) — the same value the card date falls back to.
   const est = statusToEstado(c.req.query('status') || '');
+  const q = (c.req.query('q') || '').trim();
+  const edo = (c.req.query('edo') || '').trim();
+  const lugar = (c.req.query('lugar') || '').trim();
+  const dayMs = (s: string, endOfDay: boolean) => {
+    const t = Date.parse(s + 'T00:00:00Z');
+    return Number.isFinite(t) ? (endOfDay ? t + 86_400_000 - 1 : t) : null;
+  };
+  const desde = dayMs((c.req.query('desde') || '').trim(), false);
+  const hasta = dayMs((c.req.query('hasta') || '').trim(), true);
   const base = ['foto_r2 IS NOT NULL', "moderation = 'approved'"]; const baseBinds: unknown[] = [];
   if (est) { base.push('estado = ?'); baseBinds.push(est); }
+  if (q) { base.push('(nombre LIKE ? OR ubicacion LIKE ?)'); baseBinds.push(`%${q}%`, `%${q}%`); }
+  if (edo) { base.push('ubicacion LIKE ?'); baseBinds.push(`%${edo}%`); }
+  if (lugar) { base.push('ubicacion LIKE ?'); baseBinds.push(`%${lugar}%`); }
+  if (desde != null) { base.push('updated_at >= ?'); baseBinds.push(desde); }
+  if (hasta != null) { base.push('updated_at <= ?'); baseBinds.push(hasta); }
   const wBase = base.join(' AND ');
   const total = ((await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${wBase}`).bind(...baseBinds).first<any>())?.n) ?? 0;
   const where = [...base]; const binds = [...baseBinds];
