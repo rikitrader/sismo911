@@ -96,6 +96,8 @@ let CHRONO_T=null;
 function startChrono(ms){if(CHRONO_T){clearInterval(CHRONO_T);CHRONO_T=null;}if(!ms)return;const tick=()=>{const el=document.getElementById('m_chrono');if(!el){clearInterval(CHRONO_T);CHRONO_T=null;return;}el.textContent=fmtChrono(ms);};tick();CHRONO_T=setInterval(tick,1000);}
 
 function pill(estado){const s=ST[estado]||ST.perdida;return`<span class="pill" style="color:${s.c};background:${s.bg}"><span class="d" style="background:${s.c}"></span>${s.es}</span>`;}
+function urgPill(s){if(!s||!s.label)return'';return`<span class="pill" style="color:${s.color};background:${s.color}22"><span class="d" style="background:${s.color}"></span>${esc(s.label)}</span>`;}
+function daysOpen(ms){if(!ms)return'—';const d=Math.floor((Date.now()-ms)/86400000);return d<=0?'Hoy':d+' día'+(d===1?'':'s');}
 let AUTH={authenticated:false},CUR=null,OP=false;
 
 async function load(){
@@ -123,12 +125,16 @@ function render(d){
   const estado=p.estado||'perdida';
   const photo=p.photo_url?`<img src="${esc(p.photo_url)}" class="case-photo" onerror="this.outerHTML='<div class=\\'case-photo\\'>🐾</div>'">`:`<div class="case-photo">🐾</div>`;
   const loc=[p.city,p.state].filter(Boolean).join(', ')||'—';
+  const movimientos=(p.movimientos!=null)?p.movimientos:ev.filter(x=>x.review==='approved').length;
+  const avistamientos=ev.filter(x=>x.kind==='avistamiento'&&x.review!=='rejected').length;
   const meta=[
     ['Estado',(ST[estado]||ST.perdida).es],
-    ['Tipo',p.category==='encontrada'?'Encontrada (busca dueño)':'Perdida'],
+    ['Días abierto',daysOpen(toMs(p.created_at))],
+    ['Movimientos',String(movimientos)],
+    ['Avistamientos',String(avistamientos)],
+    ['Fotos',String(p.fotos||0)],
+    ['Última actividad',ago(p.case_updated_ms||toMs(p.created_at))],
     ['Zona',loc],
-    ['Reportado',fmtD(p.created_at)],
-    ['Movimientos',String(ev.filter(x=>x.review!=='rejected').length)],
   ];
   if(OP&&p.contact)meta.push(['Contacto',p.contact]);
   const shareUrl=location.origin+'/mascota?id='+encodeURIComponent(p.id);
@@ -145,7 +151,7 @@ function render(d){
     </div>
     <div class="hero">${photo}
       <div style="flex:1;min-width:200px">
-        ${pill(estado)}
+        <div style="display:flex;gap:7px;flex-wrap:wrap">${pill(estado)}${urgPill(p.score)}</div>
         <h2 class="disp" style="font-weight:900;font-size:24px;letter-spacing:-.02em;margin:8px 0 4px;color:#fff">${esc(p.title||'Mascota sin nombre')}</h2>
         <div style="font:500 13px Inter;color:#bcd0f4">${esc(p.description||'').slice(0,120)}</div>
       </div>
