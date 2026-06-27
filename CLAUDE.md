@@ -7,6 +7,12 @@ Inherits all global rules from `~/CLAUDE.md` (ship cycle, worktrees, deploy wait
 - **A failure I surface is a failure I fix — "pre-existing" never survives as a reason to leave it broken.** Don't label a broken cron job, red build, failing test, 4xx/5xx, or Cloudflare **subrequest-limit** error as "pre-existing / out of scope" to defer it. Diagnose and fix it in the same task, or get explicit agreement before deferring (then leave a tracked follow-up). Full rule in `~/CLAUDE.md` → **No-Pre-Existing-Failure**.
 - **Cron / subrequests specifically:** scheduled jobs are split across STAGGERED cron triggers in `src/cron.ts` (`CRON_GROUPS`, :00/:15/:30/:45) so each invocation has its own subrequest budget — `wrangler.toml [triggers].crons` must stay in sync (enforced by `test/cron.test.ts`). If a job hits "Too many subrequests," fix it (move it to its own/lighter group, `env.DB.batch()` the writes, bound the fan-out) — do not leave it failing.
 
+## DO NOT DELETE BRANCHES UNTIL MERGE IS VERIFIED (CRITICAL — GODMODE, never violate)
+
+- **Never** delete a feature/cleanup/temp branch until the PR is verifiably **MERGED** (gh state=MERGED, mergeStateStatus not CONFLICTING/DIRTY, merge commit an ancestor of `origin/main` after `git fetch --all --prune`). Branch deletion is the **FINAL** cleanup step, never intermediate. A premature delete after a conflicted merge already orphaned an Increment-4 commit here (recovered via `git reflog` → re-PR #283).
+- **The ONLY sanctioned deletion path:** `~/.claude/scripts/safe-branch-delete.sh <branch> [main]` (fail-closed; verifies the merge first). **Never** hand-run `gh pr merge --delete-branch`, `git push origin --delete <branch>`, or `git branch -D <branch>` on a PR branch.
+- **On any merge conflict: STOP** — do not delete branches, recreate commits, or `--force`. Recover the work (`gh pr checkout <PR>` / `git fetch origin pull/<PR>/head:…` / `git reflog`), resolve on a `recovery/pr-<PR>-conflict-fix` branch keeping BOTH sides' behavior (imports/types/routes/migrations/tests), verify (no `<<<<<<<`/`=======`/`>>>>>>>` remain; tsc + tests + build green), then re-PR. Full protocol in `~/CLAUDE.md` → **Merge-Conflict Recovery**.
+
 ## Vault Recording (Enforce-Rule — imperative, never ask)
 
 - **Record EVERY change + its full history to the project vault, automatically, AFTER deploy — never asking.**
