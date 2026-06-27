@@ -286,7 +286,6 @@
         <option value="movs">Más movimientos</option>
         <option value="name">Nombre (A–Z)</option>
       </select>
-      <label class="sel" style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;font:600 13px Inter" title="Incluir personas ingresadas en hospitales"><input type="checkbox" id="f_hosp" checked style="accent-color:#1f8a4c;width:15px;height:15px"> Hospitalizados <span id="hospCnt" style="color:var(--muted)"></span></label>
       <div class="colsel">
         <button class="colsel-btn" id="colBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Mostrar u ocultar columnas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h4v16H4zM10 4h4v16h-4zM16 4h4v16h-4z" stroke-linejoin="round"/></svg>
@@ -502,27 +501,11 @@ function caseRowHtml(c){
       <td><span class="openhint">Abrir →</span></td>
     </tr>`;
 }
-// Hospital-admitted person rendered as a tagged docket row (triage/movs not applicable).
-function hospRowHtml(c){
-  return `<tr data-id="${esc(c.id)}">
-      <td><div class="casecell"><span class="caseno" style="background:#e3f6ea;color:#166534;border-color:#bfe6cc">HOSP</span><span class="sub">Ingresado</span></div></td>
-      <td><div class="person">${avatar(c.photo_url,'avatar')}<div><div class="nm">${esc(c.full_name)}</div><div class="sub" title="${esc(c.hospital_name)}">🏥 ${esc(c.hospital_name)}</div></div></div></td>
-      <td>${pill('hospitalizado')}</td>
-      <td><span class="sub">—</span></td>
-      <td><span class="sub" style="color:var(--ink);font-weight:600">Hospitalizado</span></td>
-      <td><span class="sub">—</span></td>
-      <td class="c"><span class="chipnum zero">0</span></td>
-      <td class="c"><span class="chipnum zero">0</span></td>
-      <td><div class="nm" style="font-size:12.5px;font-weight:600">${ago(c.last_activity_ms)}</div></td>
-      <td><div class="nm" style="font-size:12.5px;font-weight:600">${fmtD(c.created_ms)}</div></td>
-      <td><span class="openhint">Ver →</span></td>
-    </tr>`;
-}
 function renderRows(){
   const tb=$('#rows');
-  const list=sortCases(ALL);   // server already merged persons + familia + hospitalizados for this page
+  const list=sortCases(ALL);   // server page: real expedientes (persons + Familia) only
   if(!list.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><div class="ic">🗂️</div><div style="margin-top:6px;font-weight:600">No hay expedientes que coincidan.</div></div></td></tr>';$('#count').textContent='0 expedientes';return;}
-  tb.innerHTML=list.map(c=>c.source==='hospital'?hospRowHtml(c):caseRowHtml(c)).join('');
+  tb.innerHTML=list.map(caseRowHtml).join('');
   const shown=TOTAL||list.length;
   $('#count').textContent=`${shown.toLocaleString('es')} expediente${shown===1?'':'s'}`;
   tb.querySelectorAll('tr[data-id]').forEach(r=>r.addEventListener('click',()=>openCase(r.dataset.id)));
@@ -533,7 +516,6 @@ async function load(){
   if($('#q').value.trim())p.set('q',$('#q').value.trim());
   if($('#f_status').value)p.set('status',$('#f_status').value);
   if(OP&&$('#f_prio').value)p.set('priority',$('#f_prio').value);
-  if($('#f_hosp') && !$('#f_hosp').checked)p.set('hospital','0');   // hide hospitalizados
   p.set('sort',$('#f_sort').value);
   p.set('page',PAGE); p.set('limit',PAGESIZE);
   let data={};
@@ -836,7 +818,6 @@ $('#q').addEventListener('input',()=>deb(reload));
 $('#f_status').addEventListener('change',reload);
 $('#f_prio').addEventListener('change',reload);
 $('#f_sort').addEventListener('change',reload);   // sort is applied server-side across the whole registry
-$('#f_hosp').addEventListener('change',reload);   // include/exclude hospitalizados (server-side param)
 $('#pgGo').addEventListener('click',()=>goPage(+$('#pgInput').value));
 $('#pgInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();goPage(+$('#pgInput').value);}});
 document.addEventListener('keydown',e=>{
