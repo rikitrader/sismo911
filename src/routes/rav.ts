@@ -87,7 +87,9 @@ rav.get('/api/rav/reports', async (c) => {
   const kind = (c.req.query('kind') || '').trim().toLowerCase();
   const status = (c.req.query('status') || '').trim().toLowerCase();
   const q = (c.req.query('q') || '').trim().toLowerCase().slice(0, 80);
-  const conds: string[] = []; const binds: unknown[] = [];
+  // Hide reports flagged as duplicates (same photo content re-submitted). `hidden`
+  // is never written by the ingest upsert, so the flag survives re-sync.
+  const conds: string[] = ['coalesce(hidden,0) = 0']; const binds: unknown[] = [];
   if (kind) { conds.push('lower(coalesce(kind,\'\')) = ?'); binds.push(kind); }
   if (status) { conds.push('lower(coalesce(status,\'\')) = ?'); binds.push(status); }
   if (q) {
