@@ -11,6 +11,9 @@
     { label: 'DESAPARECIDOS', href: '/personas', m: ['/personas'], alarm: true, d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zm12.5 1.5L19 15m0 0l-2.5-2.5M19 15l2.5-2.5M19 15l-2.5 2.5' },
     { label: 'EXPEDIENTES', href: '/casos', m: ['/casos'], solid: true, d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
     { label: 'TERREMOTOS', href: '/terremotos', m: ['/terremotos'], gold: true, d: 'M3 12h4l2 7 4-14 2 7h6' },
+    // "MASCOTAS" chip — same frame, size and spacing as the TERREMOTOS button above
+    // (small chip, not a big CTA), orange with a paw-print icon. Sits directly below TERREMOTOS.
+    { label: 'MASCOTAS', href: '/mascotas', m: ['/mascotas'], pets: true, d: 'M4.5 12a2 2 0 100-4 2 2 0 000 4zm15 0a2 2 0 100-4 2 2 0 000 4zM9 8a2 2 0 100-4 2 2 0 000 4zm6 0a2 2 0 100-4 2 2 0 000 4zm-3 3c-2.5 0-4.5 2-4.5 4.5 0 1.5 1.5 2.5 4.5 2.5s4.5-1 4.5-2.5C16.5 13 14.5 11 12 11z' },
     // Big flashing red CTA pulled out of the "Familia y Reportes" submenu so a
     // damage report is always one tap away — extra top/bottom spacing.
     { label: 'REPORTAR', href: '/reportar', m: ['/reportar'], report: true, d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
@@ -18,8 +21,6 @@
     { label: 'DAÑOS', href: '/danos', m: ['/danos'], damage: true, d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
     // Big yellow "VOLUNTARIOS" CTA — same large shape as DAÑOS, yellow.
     { label: 'VOLUNTARIOS', href: '/voluntarios', m: ['/voluntarios'], volunteer: true, d: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z' },
-    // Big orange "MASCOTAS" CTA — same large shape as VOLUNTARIOS, orange, paw-print icon.
-    { label: 'MASCOTAS', href: '/mascotas', m: ['/mascotas'], pets: true, d: 'M4.5 12a2 2 0 100-4 2 2 0 000 4zm15 0a2 2 0 100-4 2 2 0 000 4zM9 8a2 2 0 100-4 2 2 0 000 4zm6 0a2 2 0 100-4 2 2 0 000 4zm-3 3c-2.5 0-4.5 2-4.5 4.5 0 1.5 1.5 2.5 4.5 2.5s4.5-1 4.5-2.5C16.5 13 14.5 11 12 11z' },
     // SUPER BANNER — big gold-gradient "AYUDA URGENTE" CTA: rotating GoFundMe-style
     // emergency spotlight profiles (/emergencia). Heart-hands icon.
     { label: 'AYUDA URGENTE', href: '/emergencia', m: ['/emergencia'], superbanner: true, d: 'M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 117.07-7.07L12 6l.43-.47a5 5 0 117.07 7.07z' },
@@ -116,10 +117,11 @@
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.pets) {
-      // Big yellow "MASCOTAS" CTA — same large shape/color as VOLUNTARIOS, yellow with navy text.
-      const onP = active(it);
-      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onP ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
-      ${icon(it.d)}${it.label}</a>`;
+      // "MASCOTAS" chip — same frame, size and spacing as the TERREMOTOS (gold) button,
+      // rendered in orange with white text/icon and its paw-print glyph.
+      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:#e8590c;color:#fff;box-shadow:0 1px 3px rgba(232,89,12,.4)">
+      <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.18);color:#fff">${icon(it.d)}</span>
+      ${it.label}</a>`;
     }
     if (it.superbanner) {
       // SUPER BANNER "AYUDA URGENTE" CTA — big solid SOS-red billboard (matches the
