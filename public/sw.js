@@ -1,8 +1,11 @@
 // SISMO911 service worker — offline shell + cached emergency guide.
-const CACHE = 'sismo911-v7';
+const CACHE = 'sismo911-v8';
 const PRECACHE = ['/', '/guia.html', '/logo.svg', '/mapa.html', '/sos.html', '/acopio.html', '/acopio-data.json',
   '/guia/00-banner.webp', '/guia/01-refuerce-casa.webp', '/guia/02-plan-familiar.webp', '/guia/03-mochila-suministros.webp',
-  '/guia/04-documentos-finanzas.webp', '/guia/05-agachese-cubrase.webp', '/guia/06-seguridad-despues.webp', '/guia/07-restablezca-radio.webp'];
+  '/guia/04-documentos-finanzas.webp', '/guia/05-agachese-cubrase.webp', '/guia/06-seguridad-despues.webp', '/guia/07-restablezca-radio.webp',
+  // Telemedicina installable-app shell — so the dedicated PWA opens offline.
+  '/telemedicina', '/telemedicina-panel', '/app.css', '/app-shell.js', '/telemedicina-pwa.js',
+  '/telemedicina.webmanifest', '/telemedicina-icon.svg', '/icons/telemedicina-192.png', '/icons/telemedicina-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
