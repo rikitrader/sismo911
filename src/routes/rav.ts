@@ -90,9 +90,10 @@ rav.get('/api/rav/reports', async (c) => {
   const kind = (c.req.query('kind') || '').trim().toLowerCase();
   const status = (c.req.query('status') || '').trim().toLowerCase();
   const q = (c.req.query('q') || '').trim().toLowerCase().slice(0, 80);
-  // Hide reports flagged as duplicates (same photo content re-submitted). `hidden`
-  // is never written by the ingest upsert, so the flag survives re-sync.
-  const conds: string[] = ['coalesce(hidden,0) = 0']; const binds: unknown[] = [];
+  // Hide reports flagged as duplicates (same photo content re-submitted) and any
+  // unapproved citizen-created reports. `hidden`/`moderation` are app-owned and
+  // never written by the ingest upsert, so the flags survive re-sync.
+  const conds: string[] = ['coalesce(hidden,0) = 0', "coalesce(moderation,'approved') = 'approved'"]; const binds: unknown[] = [];
   if (kind) { conds.push('lower(coalesce(kind,\'\')) = ?'); binds.push(kind); }
   if (status) { conds.push('lower(coalesce(status,\'\')) = ?'); binds.push(status); }
   if (q) {
@@ -102,8 +103,9 @@ rav.get('/api/rav/reports', async (c) => {
   }
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { results } = await c.env.DB.prepare(
-    `SELECT id, kind, category, title, description, city, state, area, lat, lng, contact, status, photo_url, tags, created_at
-     FROM rav_reports ${where} ORDER BY created_at DESC LIMIT ?`,
+    `SELECT id, kind, category, title, description, city, state, area, lat, lng, contact, status, photo_url, tags, created_at,
+            case_status, reunited_at, reports_count, case_updated_ms
+     FROM rav_reports ${where} ORDER BY coalesce(case_updated_ms, 0) DESC, created_at DESC LIMIT ?`,
   ).bind(...binds, limit).all();
   return c.json({ ok: true, items: results ?? [], total: results?.length ?? 0 }, 200, { 'Cache-Control': 'public, max-age=120' });
 });
