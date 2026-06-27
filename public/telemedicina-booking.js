@@ -89,7 +89,8 @@
       const initials = (d.full_name || '?').split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
       const langs = (d.languages || []).join(' · ').toUpperCase();
       const vchip = d.verified ? '<span class="inline-block ml-1.5 align-middle px-1.5 py-0.5 rounded-full bg-safe/10 text-safe text-[10px] font-extrabold uppercase tracking-wide">✓ Verificado</span>' : '';
-      return `<button class="tm-opt" data-i="${i}"><div class="flex items-start gap-3"><div class="av">${esc(initials)}</div><div class="min-w-0"><div class="t">Dr(a). ${esc(d.full_name)}${vchip}</div><div class="d">${esc(specLabel(d.specialty))}${d.country ? ' · ' + esc(d.country) : ''}</div>${langs ? `<div class="meta mt-0.5">${esc(langs)}</div>` : ''}</div></div>${d.bio ? `<div class="d mt-1">${esc(d.bio).slice(0, 120)}</div>` : ''}</button>`;
+      const noHrs = d.has_availability === false ? '<span class="inline-block ml-1.5 align-middle px-1.5 py-0.5 rounded-full bg-warning/10 text-warning text-[10px] font-extrabold uppercase tracking-wide">Sin horarios</span>' : '';
+      return `<button class="tm-opt" data-i="${i}"><div class="flex items-start gap-3"><div class="av">${esc(initials)}</div><div class="min-w-0"><div class="t">Dr(a). ${esc(d.full_name)}${vchip}${noHrs}</div><div class="d">${esc(specLabel(d.specialty))}${d.country ? ' · ' + esc(d.country) : ''}</div>${langs ? `<div class="meta mt-0.5">${esc(langs)}</div>` : ''}</div></div>${d.bio ? `<div class="d mt-1">${esc(d.bio).slice(0, 120)}</div>` : ''}</button>`;
     }).join('');
     $('docGrid').querySelectorAll('.tm-opt').forEach((b) => b.addEventListener('click', () => {
       st.doctor = items[+b.dataset.i]; st.type = null; st.date = null; st.slot = null;
