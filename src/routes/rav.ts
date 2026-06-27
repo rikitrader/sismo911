@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestRavSafe } from '../ingest/rav-cron';
-import { analyzeRavPhotos } from '../ingest/rav-photos';
+import { analyzeRavPhotos, backfillPhashes } from '../ingest/rav-photos';
 import { cleanPersonas } from '../lib/clean';
 import { dedupePersonas } from '../lib/dedupe';
 
@@ -39,6 +39,10 @@ rav.post('/api/rav/run', async (c) => {
     if (kind === 'reports' || kind === 'all') out.reports = await ingestRavReports(c.env, pages);
     if (kind === 'safe' || kind === 'all') out.safe = await ingestRavSafe(c.env);
     if (kind === 'photos' || kind === 'all') out.photos = await analyzeRavPhotos(c.env, photoBatch);
+    // AI-free SHA-256 content-hash backfill — what enables the 'phash' dedupe to
+    // collapse the same photo re-hosted at different URLs across sources (e.g. the
+    // theempire↔RAV duplicates). Drive this to clear the hash backlog fast.
+    if (kind === 'phash') out.phash = await backfillPhashes(c.env, Math.min(Math.max(Number(c.req.query('batch')) || 400, 1), 400));
     if (c.req.query('clean')) out.cleaned = await cleanPersonas(c.env, { apply: true });
     if (c.req.query('dedupe')) {
       // Namesake-safe modes only (omit `loose` = name+location, which can merge
@@ -82,9 +86,15 @@ rav.get('/api/rav/reports', async (c) => {
   const limit = Math.min(Math.max(Number(c.req.query('limit')) || 100, 1), 500);
   const kind = (c.req.query('kind') || '').trim().toLowerCase();
   const status = (c.req.query('status') || '').trim().toLowerCase();
+  const q = (c.req.query('q') || '').trim().toLowerCase().slice(0, 80);
   const conds: string[] = []; const binds: unknown[] = [];
   if (kind) { conds.push('lower(coalesce(kind,\'\')) = ?'); binds.push(kind); }
   if (status) { conds.push('lower(coalesce(status,\'\')) = ?'); binds.push(status); }
+  if (q) {
+    const like = `%${q.replace(/[%_]/g, '')}%`;
+    conds.push('(lower(coalesce(title,\'\')) LIKE ? OR lower(coalesce(description,\'\')) LIKE ? OR lower(coalesce(city,\'\')) LIKE ? OR lower(coalesce(state,\'\')) LIKE ? OR lower(coalesce(contact,\'\')) LIKE ?)');
+    binds.push(like, like, like, like, like);
+  }
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { results } = await c.env.DB.prepare(
     `SELECT id, kind, category, title, description, city, state, area, lat, lng, contact, status, photo_url, tags, created_at
@@ -104,9 +114,13 @@ rav.get('/api/rav/reports/kinds', async (c) => {
 // GET /api/rav/safe?limit= — "estoy a salvo" check-ins feed, public.
 rav.get('/api/rav/safe', async (c) => {
   const limit = Math.min(Math.max(Number(c.req.query('limit')) || 100, 1), 500);
+  const q = (c.req.query('q') || '').trim().toLowerCase().slice(0, 80);
+  const where = q ? `WHERE (lower(coalesce(name,'')) LIKE ? OR lower(coalesce(city,'')) LIKE ? OR lower(coalesce(state,'')) LIKE ?)` : '';
+  const binds: unknown[] = [];
+  if (q) { const like = `%${q.replace(/[%_]/g, '')}%`; binds.push(like, like, like); }
   const { results } = await c.env.DB.prepare(
     `SELECT id, slug, name, city, state, area, status, note, photo_url, created_at
-     FROM rav_safe_reports ORDER BY created_at DESC LIMIT ?`,
-  ).bind(limit).all();
+     FROM rav_safe_reports ${where} ORDER BY created_at DESC LIMIT ?`,
+  ).bind(...binds, limit).all();
   return c.json({ ok: true, items: results ?? [], total: results?.length ?? 0 }, 200, { 'Cache-Control': 'public, max-age=120' });
 });

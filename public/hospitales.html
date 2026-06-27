@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hospitales — Buscar Familiar Ingresado | SISMO911</title>
+<meta name="description" content="Busca a tu familiar entre las personas ingresadas en hospitales tras el terremoto de Venezuela 2026. Directorio de pacientes reportados por la comunidad.">
+<link rel="canonical" href="https://sismo911.com/hospitales">
+<meta property="og:title" content="Hospitales — Buscar Familiar Ingresado | SISMO911">
+<meta property="og:description" content="Busca a tu familiar entre las personas ingresadas en hospitales tras el terremoto.">
+<meta property="og:url" content="https://sismo911.com/hospitales">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>body{background:#f9f9fc}</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<main class="mx-auto max-w-5xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Hospitales — Familiares Ingresados</h1>
+  <p class="text-on-surface-variant mb-5 max-w-3xl">Personas reportadas como <b>ingresadas en hospitales</b> tras el terremoto. Busca por nombre, hospital o ciudad. Reportes ciudadanos agregados desde la red de emergencia — verifica siempre con el centro de salud. <span id="cnt" class="font-semibold"></span></p>
+  <div class="flex gap-2 mb-5">
+    <input id="q" type="search" placeholder="Buscar nombre, hospital o ciudad (ej: Vargas, José María…)" class="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm">
+    <button id="btn" class="bg-primary text-white font-bold rounded-lg px-5 text-sm">Buscar</button>
+  </div>
+  <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"><div class="text-on-surface-variant text-sm">Cargando…</div></div>
+</main>
+<script>
+const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const grid=document.getElementById('q')&&document.getElementById('grid');
+function card(r){
+  const hosp=[r.contact,r.city,r.state].filter(x=>x&&!/^\+?\d[\d\s-]{5,}$/.test(x)).slice(0,2).join(' · ');
+  const img=r.photo_url?`<img src="${esc(r.photo_url)}" loading="lazy" class="w-full h-40 object-cover rounded-t-lg" onerror="this.style.display='none'">`:'';
+  return `<div class="bg-white rounded-lg border border-outline-variant/60 overflow-hidden">${img}
+    <div class="p-4">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="text-[10px] font-bold uppercase tracking-wide bg-safe/10 text-safe px-2 py-0.5 rounded">${esc(r.category||'ingresado')}</span>
+      </div>
+      <h3 class="font-display font-bold text-base leading-snug">${esc(r.title||'—')}</h3>
+      ${hosp?`<p class="text-sm text-primary font-semibold mt-1">${esc(hosp)}</p>`:''}
+      ${r.description?`<p class="text-sm text-on-surface-variant mt-1">${esc(r.description)}</p>`:''}
+    </div></div>`;
+}
+async function search(){
+  const q=document.getElementById('q').value.trim();
+  document.getElementById('grid').innerHTML='<div class="text-on-surface-variant text-sm">Buscando…</div>';
+  try{
+    const r=await fetch('/api/rav/reports?kind=hospital&limit=200'+(q?'&q='+encodeURIComponent(q):''));
+    const d=await r.json(); const items=d.items||[];
+    document.getElementById('cnt').textContent=items.length?('· '+items.length+(items.length===200?'+':'')+' resultados'):'';
+    document.getElementById('grid').innerHTML=items.length?items.map(card).join(''):'<p class="text-on-surface-variant text-sm col-span-full">Sin coincidencias. Prueba otro nombre u hospital.</p>';
+  }catch(e){ document.getElementById('grid').innerHTML='<p class="text-on-surface-variant text-sm">No se pudo cargar.</p>'; }
+}
+document.getElementById('btn').onclick=search;
+document.getElementById('q').addEventListener('keydown',(e)=>{if(e.key==='Enter')search();});
+search();
+</script>
+</body>
+</html>
