@@ -205,21 +205,17 @@ persons.get('/cases', async (c) => {
   if (since > 0) { fWhere.push('created_at >= ?'); fBind.push(since); }
   const fW = fWhere.length ? 'WHERE ' + fWhere.join(' AND ') : '';
 
-  // ---------- filters: hospital intakes (rav_reports kind=hospital) ----------
-  // Hospitalizados are their own category; a status filter (missing/found) or a
-  // priority/review filter is about persons only, so we drop them then. The
-  // ?hospital=0 query param (the "Hospitalizados" checkbox) hides them outright.
-  const includeHosp = c.req.query('hospital') !== '0' && !status && !priority && !review && since === 0;
-  const hWhere = "kind='hospital' AND coalesce(hidden,0)=0" + (q ? ' AND title LIKE ?' : '');
-  const hBind: unknown[] = q ? [l] : [];
+  // /casos is the REAL expediente docket: native `persons` + federated Familia
+  // `personas` only. Crowdsourced hospital reports are NOT merged as pseudo-rows;
+  // a matched report is surfaced as a `hospital_match` badge + pending docket note
+  // on the real expediente (persisted in hospital_matches by the hospital-match
+  // cron), and unmatched ones live on /hospitales. This keeps the count honest.
 
   // ---------- total filtered count (matches the union below exactly) ----------
   const pCnt: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM persons p ${pW}`).bind(...pBind).first().catch(() => ({ n: 0 }));
   let fCnt: any = { n: 0 };
   if (includeFam) fCnt = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas ${fW}`).bind(...fBind).first().catch(() => ({ n: 0 }));
-  let hCnt: any = { n: 0 };
-  if (includeHosp) hCnt = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM rav_reports WHERE ${hWhere}`).bind(...hBind).first().catch(() => ({ n: 0 }));
-  const total = (pCnt?.n || 0) + (fCnt?.n || 0) + (hCnt?.n || 0);
+  const total = (pCnt?.n || 0) + (fCnt?.n || 0);
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
   // ---------- page window: union of case ids ordered by the chosen key ----------
@@ -232,23 +228,18 @@ persons.get('/cases', async (c) => {
     name: { p: 'p.full_name', f: 'nombre', dir: 'ASC', text: true },
   };
   const sk = SORT[sort] || SORT.recent;
-  // Hospital sort key: text → title; time → created_at converted to epoch ms so it
-  // is comparable with persons' updated_ms/created_ms in the same ORDER BY.
-  const hospK = sk.text ? 'title' : "CAST(strftime('%s', coalesce(created_at,'1970-01-01T00:00:00Z')) AS INTEGER)*1000";
   const orderBy = (sk.text ? `k COLLATE NOCASE ${sk.dir}` : `k ${sk.dir}`) + ', src ASC, id DESC';
   const unionSql =
     `SELECT id, src FROM (` +
     `SELECT p.id AS id, 0 AS src, ${sk.p} AS k FROM persons p ${pW}` +
     (includeFam ? ` UNION ALL SELECT ('fam-'||id) AS id, 1 AS src, ${sk.f} AS k FROM personas ${fW}` : '') +
-    (includeHosp ? ` UNION ALL SELECT ('hosp-'||id) AS id, 2 AS src, ${hospK} AS k FROM rav_reports WHERE ${hWhere}` : '') +
     `) ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
   const { results: pageRows } = await c.env.DB.prepare(unionSql)
-    .bind(...pBind, ...(includeFam ? fBind : []), ...(includeHosp ? hBind : []), pageSize, offset).all<any>();
+    .bind(...pBind, ...(includeFam ? fBind : []), pageSize, offset).all<any>();
   const order = (pageRows ?? []).map((r) => String(r.id));
   const personIds = (pageRows ?? []).filter((r) => r.src === 0).map((r) => String(r.id));
   const famIds = (pageRows ?? []).filter((r) => r.src === 1).map((r) => String(r.id));
   const famKeys = famIds.map((id) => id.slice(FAM.length));
-  const hospKeys = (pageRows ?? []).filter((r) => r.src === 2).map((r) => hospKey(String(r.id)));
 
   // D1 caps bound parameters per query (~100) → hydrate the page's rows in chunks.
   const chunk = <T>(a: T[], n: number) => { const o: T[][] = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
@@ -320,18 +311,6 @@ persons.get('/cases', async (c) => {
     } catch (e: any) { console.error('[cases] familia bridge failed:', e?.message ?? e); }
   }
 
-  // ---------- hydrate hospital intakes on this page ----------
-  let hospCases: any[] = [];
-  if (includeHosp && hospKeys.length) {
-    try {
-      const res = await c.env.DB.batch<any>(chunk(hospKeys, 90).map((ks) => c.env.DB.prepare(
-        `SELECT id, title, description, city, state, contact, photo_url, created_at
-         FROM rav_reports WHERE id IN (${ks.map(() => '?').join(',')})`,
-      ).bind(...ks)));
-      hospCases = res.flatMap((r) => r.results ?? []).map((r: any) => hospPerson(r, op));
-    } catch (e: any) { console.error('[cases] hospital bridge failed:', e?.message ?? e); }
-  }
-
   // ---------- cross-match badge: read persisted hospital_matches for this page ----------
   // The match is computed durably by the hospital-match backfill (cron-drained) and
   // stored in hospital_matches, so here we only join the page's case ids — cheap,
@@ -354,9 +333,8 @@ persons.get('/cases', async (c) => {
   // ---------- stitch back into the union order + live triage score ----------
   const nowMs = Date.now();
   const byId: any = {};
-  [...personCases, ...famCases, ...hospCases].forEach((x) => byId[x.id] = x);
-  // Hospital cases keep their own shape (no triage); persons/familia get the FEMA score.
-  const cases = order.map((id) => byId[id]).filter(Boolean).map((x) => x.source === 'hospital' ? x : withScore(x, nowMs));
+  [...personCases, ...famCases].forEach((x) => byId[x.id] = x);
+  const cases = order.map((id) => byId[id]).filter(Boolean).map((x) => withScore(x, nowMs));
 
   // ---------- global summary (whole registry, not just this page) ----------
   const sum: any = await c.env.DB.prepare(
@@ -369,7 +347,7 @@ persons.get('/cases', async (c) => {
      FROM persons${op ? '' : " WHERE review='approved'"}`
   ).first();
   let fsum: any = {};
-  try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado='localizado' THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
+  try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
   const summary = {
     missing: (sum?.missing || 0) + (fsum?.missing || 0),
     found_safe: (sum?.found_safe || 0) + (fsum?.found_safe || 0),
