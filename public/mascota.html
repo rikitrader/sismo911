@@ -147,6 +147,7 @@ function render(d){
   <div class="tabs">
     <button data-t="resumen" class="on">Perfil</button>
     <button data-t="cronologia">Cronología <span style="opacity:.6">${ev.filter(x=>x.review!=='rejected').length}</span></button>
+    <button data-t="docs">Documentos / Archivos</button>
     <button data-t="aportar">Reportar avistamiento</button>
   </div>
 
@@ -187,6 +188,32 @@ function render(d){
           ${n.location?`<div class="loc">📍 ${esc(n.location)}</div>`:''}
         </div>`).join('')||'<div style="color:var(--muted);font:500 13px Inter">Aún no hay movimientos. Sé el primero en reportar un avistamiento.</div>'}
       </div>
+    </div>
+  </div>
+
+  <div id="p_docs" class="tabpane">
+    <div class="card">
+      <h3>📎 Documentos y fotos del caso</h3>
+      <p style="font:500 13px Inter;color:var(--muted);margin:-4px 0 10px">Fotos adicionales, volantes, informes veterinarios u otros archivos. ${OP?'Como operador, tus archivos se publican de inmediato.':'Lo que subas quedará visible tras la revisión de un moderador.'}</p>
+      <div id="docgrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">Cargando…</div>
+    </div>
+    <div class="card contrib">
+      <h3>⬆️ Subir un documento o foto</h3>
+      <form id="df">
+        <label>Archivo (imagen, PDF o documento · máx 8 MB)</label>
+        <input type="file" name="file" accept="image/*,application/pdf,.txt" required>
+        <label>Categoría</label>
+        <select name="category">
+          <option value="foto">Foto</option>
+          <option value="volante">Volante / cartel</option>
+          <option value="veterinario">Informe veterinario</option>
+          <option value="otro">Otro</option>
+        </select>
+        <label>Descripción (opcional)</label>
+        <input name="description" maxlength="500" placeholder="Ej: foto reciente, cartel de búsqueda…">
+        <button class="btn-primary" type="submit">Subir archivo</button>
+        <div class="msg" id="dmsg"></div>
+      </form>
     </div>
   </div>
 
@@ -235,6 +262,39 @@ function render(d){
       else{m.style.display='block';m.style.color='var(--red)';m.textContent=j.error==='rate_limited'?'Demasiados envíos. Intenta más tarde.':(j.hint||'No se pudo enviar.');btn.disabled=false;btn.textContent='Enviar reporte';}
     }catch{m.style.display='block';m.style.color='var(--red)';m.textContent='Error de red. Intenta de nuevo.';btn.disabled=false;btn.textContent='Enviar reporte';}
   });
+
+  // Documentos / Archivos: load approved attachments + handle uploads.
+  loadDocs(p.id);
+  const df=document.getElementById('df'),dm=document.getElementById('dmsg');
+  df.addEventListener('submit',async ev=>{
+    ev.preventDefault();
+    const file=df.file.files[0];
+    if(!file){dm.style.display='block';dm.style.color='var(--red)';dm.textContent='Selecciona un archivo.';return;}
+    if(file.size>8000000){dm.style.display='block';dm.style.color='var(--red)';dm.textContent='El archivo supera 8 MB.';return;}
+    const fd=new FormData();fd.append('file',file);fd.append('category',df.category.value);fd.append('description',(df.description.value||'').trim());
+    const btn=df.querySelector('button');btn.disabled=true;btn.textContent='Subiendo…';
+    try{
+      const r=await fetch('/api/mascotas/'+encodeURIComponent(p.id)+'/attachments',{method:'POST',body:fd});
+      const j=await r.json();
+      if(r.ok){dm.style.display='block';dm.style.color='var(--green)';dm.textContent=j.review==='approved'?'✓ Archivo publicado.':'✓ Subido. Aparecerá tras la revisión de un moderador.';df.reset();loadDocs(p.id);}
+      else{dm.style.display='block';dm.style.color='var(--red)';dm.textContent=j.error==='rate_limited'?'Demasiados envíos. Intenta más tarde.':(j.error==='file_too_large'?'El archivo es muy grande.':(j.error==='unsupported_file_type'?'Tipo de archivo no permitido.':'No se pudo subir.'));btn.disabled=false;btn.textContent='Subir archivo';}
+    }catch{dm.style.display='block';dm.style.color='var(--red)';dm.textContent='Error de red.';btn.disabled=false;btn.textContent='Subir archivo';}
+  });
+}
+
+async function loadDocs(id){
+  const g=document.getElementById('docgrid');if(!g)return;
+  try{
+    const d=await (await fetch('/api/mascotas/'+encodeURIComponent(id)+'/attachments')).json();
+    const items=d.items||[];
+    if(!items.length){g.innerHTML='<div style="grid-column:1/-1;color:var(--muted);font:500 13px Inter">Aún no hay documentos. Sé el primero en subir una foto o archivo.</div>';return;}
+    g.innerHTML=items.map(a=>{
+      const url='/api/mascotas/'+encodeURIComponent(id)+'/attachments/'+encodeURIComponent(a.id)+'/file';
+      const pend=a.review==='pending'?'<span style="position:absolute;top:5px;left:5px;font:700 9px Inter;background:var(--amber);color:#fff;padding:2px 5px;border-radius:5px">POR REVISAR</span>':'';
+      if(a.kind==='photo')return`<a href="${url}" target="_blank" rel="noopener" style="position:relative;display:block;border-radius:10px;overflow:hidden;border:1px solid var(--line)">${pend}<img src="${url}" loading="lazy" style="width:100%;height:120px;object-fit:cover;display:block"></a>`;
+      return`<a href="${url}" target="_blank" rel="noopener" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;height:120px;border-radius:10px;border:1px solid var(--line);background:#fff;text-decoration:none;color:var(--ink);padding:8px;text-align:center">${pend}<div style="font-size:30px">📄</div><div style="font:600 11px Inter;margin-top:6px;word-break:break-word">${esc((a.filename||a.category||'Documento')).slice(0,28)}</div></a>`;
+    }).join('');
+  }catch{g.innerHTML='<div style="grid-column:1/-1;color:var(--muted)">No se pudieron cargar los documentos.</div>';}
 }
 load();
 </script>

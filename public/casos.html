@@ -641,6 +641,21 @@ function startChrono(ms){
   const tick=()=>{const el=document.getElementById('cv_chrono');if(!el){clearInterval(CHRONO_T);CHRONO_T=null;return;}el.textContent=fmtChrono(ms);};
   tick();CHRONO_T=setInterval(tick,1000);
 }
+// Public citizen "aportes" (documents/photos): load approved (+pending for operators).
+async function loadAportes(id){
+  const g=document.getElementById('aportgrid');if(!g)return;
+  try{
+    const d=await (await api('persons/'+encodeURIComponent(id)+'/aportes')).json();
+    const items=(d&&d.items)||[];
+    if(!items.length){g.innerHTML='<div style="grid-column:1/-1;color:var(--muted);font:500 13px Inter">Aún no hay documentos aportados.</div>';return;}
+    g.innerHTML=items.map(a=>{
+      const url='/api/persons/'+encodeURIComponent(id)+'/aportes/'+encodeURIComponent(a.id)+'/file';
+      const pend=a.review==='pending'?'<span style="position:absolute;top:5px;left:5px;font:700 9px Inter;background:var(--amber,#e57200);color:#fff;padding:2px 5px;border-radius:5px">POR REVISAR</span>':'';
+      if(a.kind==='photo')return`<a href="${url}" target="_blank" rel="noopener" style="position:relative;display:block;border-radius:10px;overflow:hidden;border:1px solid var(--line)">${pend}<img src="${url}" loading="lazy" style="width:100%;height:120px;object-fit:cover;display:block"></a>`;
+      return`<a href="${url}" target="_blank" rel="noopener" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;height:120px;border-radius:10px;border:1px solid var(--line);background:#fff;text-decoration:none;color:var(--ink);padding:8px;text-align:center">${pend}<div style="font-size:30px">📄</div><div style="font:600 11px Inter;margin-top:6px;word-break:break-word">${esc((a.filename||a.category||'Documento')).slice(0,28)}</div></a>`;
+    }).join('');
+  }catch{g.innerHTML='<div style="grid-column:1/-1;color:var(--muted)">No se pudieron cargar los aportes.</div>';}
+}
 function renderCase(d){
   const p=d.person, e=d.event, dock=d.docket||[];
   $('#cv_caseno').textContent=caseNo(p);
@@ -743,15 +758,34 @@ function renderCase(d){
   /* ---- EVIDENCIA ---- */
   const evc=p.evidence_count||0;
   $('#p_evidencia').innerHTML=`<div class="card">
-    <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z M4 15l5-5 4 4 3-3 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>Evidencia y adjuntos</h3>
-    <div class="facts" style="grid-template-columns:repeat(3,1fr)">
-      <div class="fact"><div class="k">Fotos</div><div class="v">${p.photo_url?1:0}</div></div>
-      <div class="fact"><div class="k">Adjuntos</div><div class="v">${evc}</div></div>
-      <div class="fact"><div class="k">Total</div><div class="v">${evc+(p.photo_url?1:0)}</div></div>
-    </div>
-    ${p.photo_url?`<div style="margin-top:14px"><img src="${esc(p.photo_url)}" style="max-width:240px;border-radius:12px;border:1px solid var(--line)"></div>`:''}
-    <div class="note" style="margin-top:14px">${OP?'La gestión de adjuntos (documentos, imágenes de dron, informes) se realiza desde la Consola del operador.':'Los adjuntos del expediente solo son visibles para personal autorizado. Si tienes una foto o evidencia, inicia sesión y usa la pestaña «Aportar».'}</div>
+    <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z M4 15l5-5 4 4 3-3 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>Documentos y fotos aportados</h3>
+    <p style="font:500 13px Inter;color:var(--muted);margin:-2px 0 12px">Fotos, volantes o documentos que ayuden a identificar o ubicar a la persona. ${OP?'Como operador, tus aportes se publican de inmediato.':'Lo que subas quedará visible tras la revisión de un moderador.'}</p>
+    <div id="aportgrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px">Cargando…</div>
+    <form id="aportf" class="contrib">
+      <label style="font:700 11px Inter;color:var(--muted);text-transform:uppercase">Archivo (imagen, PDF o documento · máx 8 MB)</label>
+      <input type="file" name="file" accept="image/*,application/pdf,.txt" required style="display:block;margin:6px 0 10px">
+      <input name="description" maxlength="500" placeholder="Descripción (opcional)" style="width:100%;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font:500 13.5px Inter">
+      <button class="btn-primary" type="submit" style="margin-top:12px">Subir aporte</button>
+      <div class="msg" id="aportmsg" style="margin-top:10px;font:600 13px Inter;display:none"></div>
+    </form>
+    ${OP?'<div class="note" style="margin-top:14px;font:500 12px Inter;color:var(--muted)">La evidencia interna confidencial (no pública) se gestiona desde la Consola del operador.</div>':''}
   </div>`;
+  loadAportes(p.id);
+  const af=document.getElementById('aportf'),am=document.getElementById('aportmsg');
+  af.addEventListener('submit',async ev=>{
+    ev.preventDefault();
+    const file=af.file.files[0];
+    if(!file){am.style.display='block';am.style.color='var(--red)';am.textContent='Selecciona un archivo.';return;}
+    if(file.size>8000000){am.style.display='block';am.style.color='var(--red)';am.textContent='El archivo supera 8 MB.';return;}
+    const fd=new FormData();fd.append('file',file);fd.append('description',(af.description.value||'').trim());
+    const btn=af.querySelector('button');btn.disabled=true;btn.textContent='Subiendo…';
+    try{
+      const r=await api('persons/'+encodeURIComponent(p.id)+'/aportes',{method:'POST',body:fd});
+      const j=await r.json();
+      if(r.ok){am.style.display='block';am.style.color='var(--green)';am.textContent=j.review==='approved'?'✓ Aporte publicado.':'✓ Subido. Aparecerá tras la revisión de un moderador.';af.reset();loadAportes(p.id);}
+      else{am.style.display='block';am.style.color='var(--red)';am.textContent=j.error==='rate_limited'?'Demasiados envíos. Intenta más tarde.':(j.error==='file_too_large'?'El archivo es muy grande.':(j.error==='unsupported_file_type'?'Tipo de archivo no permitido.':'No se pudo subir.'));btn.disabled=false;btn.textContent='Subir aporte';}
+    }catch{am.style.display='block';am.style.color='var(--red)';am.textContent='Error de red.';btn.disabled=false;btn.textContent='Subir aporte';}
+  });
 
   /* ---- RESUMEN IA ---- */
   $('#p_ia').innerHTML=`<div class="card">
