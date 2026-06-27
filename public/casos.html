@@ -268,6 +268,8 @@
         <option value="">Todos los estados</option>
         <option value="missing">Desaparecida</option>
         <option value="found_safe">Localizada (a salvo)</option>
+        <option value="aparecido">Apareció</option>
+        <option value="hospitalizado">Hospitalizada</option>
         <option value="found_deceased">Fallecida</option>
         <option value="unknown">Sin datos</option>
       </select>
@@ -374,8 +376,9 @@ let PAGE=1, PAGES=1, TOTAL=0; const PAGESIZE=500;
 const ST={
   missing:{es:'Desaparecida',fg:'#b45309',bg:'#fef3c7',d:'#e57200'},
   found_safe:{es:'Localizada · a salvo',fg:'#166534',bg:'#dcfce7',d:'#1f8a4c'},
+  aparecido:{es:'Apareció',fg:'#166534',bg:'#dcfce7',d:'#1f8a4c'},
+  hospitalizado:{es:'Hospitalizada',fg:'#1e40af',bg:'#dbeafe',d:'#1d4ed8'},
   found_deceased:{es:'Fallecida',fg:'#7f1d1d',bg:'#fee2e2',d:'#b91c1c'},
-  hospitalizado:{es:'Hospitalizado',fg:'#166534',bg:'#dcfce7',d:'#1f8a4c'},
   unknown:{es:'Sin datos',fg:'#475569',bg:'#eef2f7',d:'#64748b'}
 };
 const PRIO={alta:{es:'Alta',c:'#c8102e'},media:{es:'Media',c:'#e57200'},baja:{es:'Baja',c:'#5b6781'}};
@@ -740,36 +743,52 @@ function renderCase(d){
   </div>`;
 
   /* ---- APORTAR ---- */
-  $('#p_aportar').innerHTML=AUTH.authenticated?`<div class="card contrib" style="max-width:560px">
-    <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>Aportar información</h3>
-    <p class="sub" style="margin:-6px 0 14px">Tu aporte será <b style="color:var(--ink)">revisado por un moderador</b> antes de publicarse en el expediente.</p>
+  $('#p_aportar').innerHTML=`<div class="card contrib" style="max-width:560px">
+    <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>Aportar información / actualizar estado</h3>
+    <p class="sub" style="margin:-6px 0 14px">Cualquier persona puede reportar. Tu aporte queda <b style="color:var(--ink)">pendiente de revisión</b> antes de publicarse en el expediente.</p>
     <form id="addForm" style="display:flex;flex-direction:column;gap:10px">
       <input type="hidden" name="id" value="${esc(p.id)}">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <select name="kind"><option value="sighting">Avistamiento</option><option value="contact">Contacto</option><option value="hospital">Hospital</option><option value="shelter">Refugio</option><option value="note">Nota</option></select>
-        <select name="status"><option value="">— Sugerir estado (opcional) —</option><option value="found_safe">Localizada a salvo</option><option value="found_deceased">Fallecida</option><option value="missing">Sigue desaparecida</option></select>
-      </div>
+      <select name="status" id="apStatus">
+        <option value="">— Reportar estado (opcional) —</option>
+        <option value="aparecido">🟢 Apareció (con vida)</option>
+        <option value="hospitalizado">🏥 Hospitalizada</option>
+        <option value="found_safe">✅ Localizada a salvo</option>
+        <option value="found_deceased">⚫ Fallecida</option>
+        <option value="missing">🔴 Sigue desaparecida</option>
+      </select>
+      <input name="hospital" id="apHosp" placeholder="Nombre del hospital" style="display:none">
       <input name="location" placeholder="Lugar (opcional)">
-      <textarea name="detail" rows="3" placeholder="¿Qué sabes? Detalle del avistamiento o contacto…"></textarea>
+      <textarea name="detail" rows="3" placeholder="¿Qué sabes? Detalle del avistamiento, contacto o ingreso…"></textarea>
       <button class="btn-primary">Enviar para revisión</button>
       <p id="addMsg" style="font:600 13px Inter;text-align:center;margin:0"></p>
     </form>
-  </div>`:`<div class="card" style="max-width:560px;text-align:center">
-    <div style="font-size:30px;opacity:.6">🔐</div>
-    <p style="font:600 14px Inter;margin:10px 0 14px">¿Tienes información sobre este caso?<br><span class="sub" style="font-weight:500">Inicia sesión para aportar una actualización al expediente.</span></p>
-    <a class="btn-navy" href="/login?next=/casos${encodeURIComponent('#caso='+p.id)}">Iniciar sesión para aportar</a>
   </div>`;
   const f=$('#addForm');
-  if(f)f.addEventListener('submit',async ev=>{
-    ev.preventDefault();
-    const body={kind:f.kind.value,detail:f.detail.value||null,location:f.location.value||null};
-    if(f.status.value)body.status=f.status.value;
-    f.querySelector('button').disabled=true;
-    const res=await api('persons/'+f.id.value+'/docket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const m=$('#addMsg');
-    if(res.ok){m.textContent='✓ Enviado. Será visible tras la revisión de un moderador.';m.style.color='var(--green)';f.reset();}
-    else{const j=await res.json().catch(()=>({}));m.textContent='Error: '+(j.error||'no se pudo enviar');m.style.color='var(--crit)';f.querySelector('button').disabled=false;}
-  });
+  if(f){
+    const hosp=$('#apHosp'), stSel=$('#apStatus');
+    stSel.addEventListener('change',()=>{hosp.style.display=stSel.value==='hospitalizado'?'block':'none';});
+    f.addEventListener('submit',async ev=>{
+      ev.preventDefault();
+      const status=f.status.value, hospital=(f.hospital.value||'').trim(), location=(f.location.value||'').trim(), detail=(f.detail.value||'').trim();
+      const m=$('#addMsg');
+      if(!status && !detail){m.textContent='Indica un estado o un detalle.';m.style.color='var(--crit)';return;}
+      f.querySelector('button').disabled=true;
+      let res;
+      if(AUTH.authenticated){
+        // Operators/citizens with a session use the docket flow (operators apply directly).
+        const body={kind:status==='hospitalizado'?'hospital':'note',location:location||null,
+          detail:[hospital?('Hospital: '+hospital):'',detail].filter(Boolean).join(' — ')||null};
+        if(status)body.status=status;
+        res=await api('persons/'+f.id.value+'/docket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      } else {
+        // Anyone (no login) → public update endpoint → pending proposal.
+        res=await api('persons/'+encodeURIComponent(f.id.value)+'/update',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({status:status||undefined,hospital:hospital||undefined,location:location||undefined,detail:detail||undefined})});
+      }
+      if(res.ok){m.textContent='✓ Enviado. Quedará visible tras la revisión de un moderador.';m.style.color='var(--green)';f.reset();hosp.style.display='none';}
+      else{const j=await res.json().catch(()=>({}));m.textContent='Error: '+(j.error==='rate_limited'?'demasiados envíos, intenta luego':(j.hint||j.error||'no se pudo enviar'));m.style.color='var(--crit)';f.querySelector('button').disabled=false;}
+    });
+  }
 }
 
 /* deterministic Spanish narrative from the timeline */
