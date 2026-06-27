@@ -61,7 +61,12 @@
   .share{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
   .share a{display:inline-flex;align-items:center;gap:6px;font:700 12px Inter;text-decoration:none;border:1px solid var(--line-2);border-radius:9px;padding:7px 11px;color:var(--navy)}
   .msg{margin-top:12px;font:600 13px Inter;display:none}
+  .chrono-big{display:flex;flex-direction:column;align-items:flex-end;gap:3px;background:rgba(229,114,0,.14);border:1px solid rgba(229,114,0,.45);border-radius:12px;padding:9px 14px}
+  .chrono-big .chrono-lbl{font:800 9.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#ffce9e}
+  .chrono-big .chrono-val{font:900 34px/1 'JetBrains Mono';color:#fff;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+  @media(max-width:560px){.chrono-big .chrono-val{font-size:26px}}
 </style>
+<script src="/quake-clock.js"></script>
 <script src="/app-shell.js" defer></script>
 </head>
 <body class="font-sans text-on-surface">
@@ -85,7 +90,7 @@ function fmtD(v){if(!v)return'—';try{const d=typeof v==='number'?new Date(v):n
 function toMs(v){if(v==null)return 0;if(typeof v==='number')return v;const t=Date.parse(String(v).length<=10?v+'T00:00:00Z':v);return Number.isFinite(t)?t:0;}
 function ago(ms){if(!ms)return'—';const s=Math.floor((Date.now()-ms)/1000);if(s<60)return'hace instantes';const m=Math.floor(s/60);if(m<60)return`hace ${m} min`;const h=Math.floor(m/60);if(h<24)return`hace ${h} h`;const d=Math.floor(h/24);return`hace ${d} d`;}
 
-// Live chronometer: elapsed time since the case opened, ticking every second.
+// Live chronometer: elapsed time since the reference earthquake, ticking every second.
 function fmtChrono(ms){let s=Math.max(0,Math.floor((Date.now()-ms)/1000));const d=Math.floor(s/86400);s-=d*86400;const h=Math.floor(s/3600);s-=h*3600;const m=Math.floor(s/60);s-=m*60;const p2=(n)=>String(n).padStart(2,'0');return(d>0?d+'d ':'')+p2(h)+':'+p2(m)+':'+p2(s);}
 let CHRONO_T=null;
 function startChrono(ms){if(CHRONO_T){clearInterval(CHRONO_T);CHRONO_T=null;}if(!ms)return;const tick=()=>{const el=document.getElementById('m_chrono');if(!el){clearInterval(CHRONO_T);CHRONO_T=null;return;}el.textContent=fmtChrono(ms);};tick();CHRONO_T=setInterval(tick,1000);}
@@ -100,7 +105,9 @@ async function load(){
   let d;
   try{const r=await fetch('/api/mascotas/'+encodeURIComponent(id));if(!r.ok)throw 0;d=await r.json();}
   catch{document.getElementById('root').innerHTML='<div class="card">No se encontró este expediente. <a href="/mascotas">Ver todas las mascotas →</a></div>';return;}
-  CUR=d;OP=!!d.operator;render(d);startChrono(toMs(d.pet.created_at));
+  // Standard case clock: count from the canonical quake origin (quake-clock.js),
+  // falling back to the report time only if it is unavailable.
+  CUR=d;OP=!!d.operator;render(d);startChrono((window.SISMO_QUAKE&&SISMO_QUAKE.time)||toMs(d.pet.created_at));
 }
 
 function timeline(d){
@@ -131,6 +138,10 @@ function render(d){
   <div class="case-top"><div class="inner">
     <div class="toprow">
       <span class="caseno">MAS-${esc((p.id||'').replace(/[^a-zA-Z0-9]/g,'').slice(-8).toUpperCase()||'—')}</span>
+      <div class="chrono-big">
+        <span class="chrono-lbl">⏱ Tiempo desde el sismo</span>
+        <span class="chrono-val mono" id="m_chrono">—</span>
+      </div>
     </div>
     <div class="hero">${photo}
       <div style="flex:1;min-width:200px">
@@ -140,7 +151,6 @@ function render(d){
       </div>
     </div>
     <div class="meta" id="m_meta">${meta.map(([k,v])=>`<div class="mcard"><div class="k">${esc(k)}</div><div class="vv">${esc(v)}</div></div>`).join('')}
-      <div class="mcard"><div class="k">⏱ Cronómetro</div><div class="vv mono" id="m_chrono" style="font-variant-numeric:tabular-nums">—</div></div>
     </div>
   </div></div>
 
