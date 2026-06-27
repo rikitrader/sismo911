@@ -119,9 +119,9 @@
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.telemed) {
-      // Big teal "TELEMEDICINA" CTA — same large shape/size as VOLUNTARIOS, medical teal with white text.
+      // Big yellow "TELEMEDICINA" CTA — same large shape/size/color as VOLUNTARIOS, yellow with navy text.
       const onT = active(it);
-      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#0a9396;color:#fff;box-shadow:0 2px 10px rgba(10,147,150,.45)${onT ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onT ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.pets) {
