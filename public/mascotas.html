@@ -2,76 +2,208 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mascotas Perdidas | SISMO911</title>
-<meta name="description" content="Tablón de mascotas perdidas y encontradas tras el terremoto de Venezuela 2026. Reúne a las familias con sus animales.">
+<title>Mascotas Perdidas — Expedientes y seguimiento | SISMO911</title>
+<meta name="description" content="Tablón de expedientes de mascotas perdidas y encontradas tras el terremoto de Venezuela 2026. Sigue cada caso: estado, avistamientos, fotos y reunificación. Reporta una mascota.">
 <link rel="canonical" href="https://sismo911.com/mascotas">
-<meta property="og:title" content="Mascotas Perdidas | SISMO911">
-<meta property="og:description" content="Tablón de mascotas perdidas y encontradas tras el terremoto de Venezuela.">
+<meta property="og:title" content="Mascotas Perdidas — Expedientes | SISMO911">
+<meta property="og:description" content="Expedientes de mascotas perdidas y encontradas tras el terremoto. Sigue cada caso y reúne a las familias con sus animales.">
 <meta property="og:url" content="https://sismo911.com/mascotas">
 <meta property="og:image" content="https://sismo911.com/og/og-default.png">
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css" />
-<style>body{background:#f9f9fc}</style>
+<style>
+  :root{--bg:#eef1f7;--panel:#fff;--ink:#0b1b3a;--navy:#00173a;--red:#bb0027;--amber:#e57200;--green:#1f8a4c;--blue:#1f5fd0;
+    --muted:#5b6781;--line:#e2e6ef;--line-2:#d3d9e6;--shadow:0 1px 2px rgba(16,24,40,.06);--shadow-lg:0 10px 40px rgba(0,23,58,.16)}
+  body{background:var(--bg)}
+  .disp{font-family:'Public Sans',sans-serif}.mono{font-family:'JetBrains Mono',monospace}
+  .wrap{max-width:1140px;margin:0 auto;padding:18px 16px 60px}
+  .cmd{background:linear-gradient(135deg,#00112e 0%,#0a2c61 100%);color:#fff;border-radius:16px;box-shadow:var(--shadow-lg);padding:22px 24px;position:relative;overflow:hidden}
+  .cmd::after{content:"";position:absolute;right:-50px;top:-50px;width:240px;height:240px;background:radial-gradient(circle,rgba(255,150,40,.18),transparent 70%)}
+  .eyebrow{font:800 11px 'Public Sans';letter-spacing:.14em;text-transform:uppercase;color:#ffb869}
+  .cmd h1{font:900 30px/1.05 'Public Sans';margin:6px 0 6px;letter-spacing:-.02em}
+  .cmd p{color:#c9d6ef;max-width:680px;font-size:14px;line-height:1.5;margin:0}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:18px}
+  @media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:12px 13px}
+  .kpi .n{font:900 24px 'Public Sans';color:#fff;font-variant-numeric:tabular-nums}
+  .kpi .l{font:700 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:#9fb3d8;margin-top:3px}
+  .kpi.alta .n{color:#ff8f6b}.kpi.ok .n{color:#7ee0a3}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0 14px}
+  .toolbar input,.toolbar select{border:1px solid var(--line-2);border-radius:10px;padding:10px 13px;font:500 14px Inter;background:#fff;outline:none}
+  .toolbar input{flex:1;min-width:200px}
+  .toolbar input:focus,.toolbar select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,95,208,.13)}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line-2);background:#fff;border-radius:999px;padding:7px 13px;font:700 12.5px 'Public Sans';color:var(--muted);cursor:pointer}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .reportbar{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff7ed;border:1px solid #ffd9ab;border-radius:13px;padding:13px 16px;margin-bottom:16px;flex-wrap:wrap}
+  .reportbar .t{font:700 14px Inter;color:#7a4a08}
+  .btn-amber{background:var(--amber);color:#fff;border:none;border-radius:10px;padding:11px 16px;font:800 13.5px 'Public Sans';cursor:pointer}
+  .reg{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px;margin-bottom:18px;display:none}
+  .reg.show{display:block}
+  .reg h3{font:800 15px 'Public Sans';color:var(--navy);margin:0 0 4px}
+  .reg .two{display:grid;grid-template-columns:1fr 1fr;gap:11px}@media(max-width:480px){.reg .two{grid-template-columns:1fr}}
+  .reg label{font:700 11px Inter;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);display:block;margin-top:12px}
+  .reg input,.reg select,.reg textarea{width:100%;border:1px solid var(--line-2);border-radius:9px;padding:10px 12px;font:500 13.5px Inter;background:#fff;outline:none;margin-top:5px;box-sizing:border-box}
+  .reg input:focus,.reg select:focus,.reg textarea:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(229,114,0,.13)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:880px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.grid{grid-template-columns:1fr}}
+  .pcard{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);text-decoration:none;color:inherit;transition:box-shadow .15s,transform .15s}
+  .pcard:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+  .pcard .ph{width:100%;height:168px;object-fit:cover;background:#dde3ee;display:grid;place-items:center;font-size:46px}
+  .pcard .body{padding:13px 14px}
+  .badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+  .pill{display:inline-flex;align-items:center;gap:5px;font:800 10px 'Public Sans';letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+  .pill .d{width:6px;height:6px;border-radius:50%}
+  .pcard h3{font:800 15.5px 'Public Sans';color:var(--ink);margin:0 0 3px;line-height:1.2}
+  .pcard .desc{font:500 13px Inter;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pcard .foot{display:flex;gap:13px;align-items:center;margin-top:9px;font:600 11.5px Inter;color:var(--muted);flex-wrap:wrap}
+  .pcard .foot .x{display:inline-flex;align-items:center;gap:4px}
+  .seemore{font:800 12.5px 'Public Sans';color:var(--red);margin-top:9px;display:inline-block}
+  .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px;font:500 14px Inter}
+  .msg{margin-top:11px;font:600 13px Inter;display:none;border-radius:9px;padding:10px 13px}
+  .msg.ok{display:block;background:#e7f4ec;color:#166534}.msg.err{display:block;background:#fdeaec;color:#9b1c2e}
+</style>
 <script src="/app-shell.js" defer></script>
 </head>
 <body class="font-sans text-on-surface">
-<main class="mx-auto max-w-5xl px-4 py-8">
-  <h1 class="font-display font-extrabold text-3xl mb-1">Mascotas Perdidas</h1>
-  <p class="text-on-surface-variant mb-5 max-w-3xl">Mascotas <b>perdidas y encontradas</b> tras el terremoto. Si reconoces a alguna, contacta directamente a la persona que la reporta. <span id="cnt" class="font-semibold"></span></p>
-  <div class="flex flex-wrap gap-2 mb-5">
-    <input id="q" type="search" placeholder="Buscar (raza, color, zona…)" class="flex-1 min-w-[200px] rounded-lg border border-outline-variant px-4 py-2.5 text-sm">
-    <button id="btn" class="bg-naranja text-white font-bold rounded-lg px-5 text-sm flex items-center gap-2">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" style="width:17px;height:17px;display:block"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a2 2 0 100-4 2 2 0 000 4zm15 0a2 2 0 100-4 2 2 0 000 4zM9 8a2 2 0 100-4 2 2 0 000 4zm6 0a2 2 0 100-4 2 2 0 000 4zm-3 3c-2.5 0-4.5 2-4.5 4.5 0 1.5 1.5 2.5 4.5 2.5s4.5-1 4.5-2.5C16.5 13 14.5 11 12 11z"/></svg>
-      Buscar
-    </button>
-    <div id="chips" class="flex gap-2"></div>
+<main class="wrap">
+  <section class="cmd">
+    <div class="eyebrow">🐾 Mascotas · Comando de Reunificación</div>
+    <h1>Expedientes de mascotas perdidas</h1>
+    <p>Cada mascota perdida o encontrada tras el terremoto tiene su <b>expediente</b>: estado, cronología de avistamientos, fotos y reunificación. Sigue un caso, aporta una pista o reporta a tu mascota.</p>
+    <div class="kpis" id="kpis">
+      <div class="kpi"><div class="n" id="k_total">—</div><div class="l">Expedientes</div></div>
+      <div class="kpi alta"><div class="n" id="k_activas">—</div><div class="l">Activas</div></div>
+      <div class="kpi"><div class="n" id="k_avist">—</div><div class="l">Avistadas</div></div>
+      <div class="kpi ok"><div class="n" id="k_reunidas">—</div><div class="l">Reunidas</div></div>
+      <div class="kpi"><div class="n" id="k_recientes">—</div><div class="l">Actividad 48 h</div></div>
+    </div>
+  </section>
+
+  <div class="reportbar">
+    <div class="t">¿Perdiste a tu mascota o encontraste una? Abre su expediente.</div>
+    <button class="btn-amber" id="toggleReport">🐾 Reportar una mascota</button>
   </div>
-  <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"><div class="text-on-surface-variant text-sm">Cargando…</div></div>
+
+  <section class="reg" id="regBox">
+    <h3>Reportar una mascota perdida o encontrada</h3>
+    <p style="font:500 13px Inter;color:var(--muted);margin:2px 0 0">Tu reporte aparecerá tras la revisión de un moderador. Podrás añadir fotos desde el expediente.</p>
+    <form id="rf">
+      <div class="two">
+        <div><label>Nombre / título <span style="color:var(--red)">*</span></label><input name="title" maxlength="200" placeholder="Ej. Perro mestizo marrón «Toby»"></div>
+        <div><label>Tipo</label><select name="category"><option value="perdida">Perdida (busco a mi mascota)</option><option value="encontrada">Encontrada (busco a su dueño)</option></select></div>
+      </div>
+      <label>Descripción / señas</label>
+      <textarea name="description" rows="3" maxlength="3000" placeholder="Raza, color, tamaño, collar, dónde y cuándo se perdió, comportamiento…"></textarea>
+      <div class="two">
+        <div><label>Ciudad</label><input name="city" maxlength="120" placeholder="Ciudad"></div>
+        <div><label>Estado</label><input name="state" maxlength="120" placeholder="Estado"></div>
+      </div>
+      <div class="two">
+        <div><label>Zona / referencia</label><input name="area" maxlength="120" placeholder="Sector, calle, referencia"></div>
+        <div><label>Contacto (teléfono / WhatsApp)</label><input name="contact" maxlength="120" placeholder="Para que te contacten"></div>
+      </div>
+      <button class="btn-amber" type="submit" style="margin-top:16px;width:100%">Enviar reporte</button>
+      <div class="msg" id="rmsg"></div>
+    </form>
+  </section>
+
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Buscar (nombre, raza, color, zona…)">
+    <select id="sort">
+      <option value="reciente">Más recientes</option>
+      <option value="actividad">Más actividad</option>
+      <option value="urgencia">Mayor urgencia</option>
+    </select>
+  </div>
+  <div class="chips" id="chips" style="margin-bottom:16px"></div>
+
+  <div class="grid" id="grid"><div class="empty">Cargando expedientes…</div></div>
 </main>
+
 <script>
+const $=id=>document.getElementById(id);
 const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let ALL=[], CAT='';
-const STBADGE={
-  reunida:['bg-safe/10 text-safe','Reunida'],encontrada:['bg-safe/10 text-safe','Encontrada'],
-  avistada:['bg-primary/10 text-primary','Avistada'],en_transito:['bg-primary/10 text-primary','En tránsito'],
-  fallecida:['bg-on-surface/10 text-on-surface-variant','Fallecida'],perdida:['bg-warning/10 text-warning','Perdida'],
+const ST={
+  perdida:{es:'Perdida',c:'#e57200'},avistada:{es:'Avistada',c:'#1f5fd0'},en_transito:{es:'En tránsito',c:'#7a3fb0'},
+  reunida:{es:'Reunida',c:'#1f8a4c'},encontrada:{es:'Encontrada',c:'#1f8a4c'},fallecida:{es:'Fallecida',c:'#1f2430'},
 };
+function ago(ms){if(!ms)return'—';const s=Math.floor((Date.now()-ms)/1000);if(s<60)return'ahora';const m=Math.floor(s/60);if(m<60)return'hace '+m+' min';const h=Math.floor(m/60);if(h<24)return'hace '+h+' h';return'hace '+Math.floor(h/24)+' d';}
+function toMs(v){if(v==null)return 0;if(typeof v==='number')return v;const t=Date.parse(String(v).length<=10?v+'T00:00:00Z':v);return Number.isFinite(t)?t:0;}
+let ALL=[],FILTER='',SORT='reciente';
+
+function pill(estado){const s=ST[estado]||ST.perdida;return`<span class="pill" style="color:${s.c};background:${s.c}1a"><span class="d" style="background:${s.c}"></span>${s.es}</span>`;}
+function urg(score){if(!score)return'';return`<span class="pill" style="color:${score.color};background:${score.color}1a"><span class="d" style="background:${score.color}"></span>${esc(score.label)}</span>`;}
+
 function card(r){
-  const img=r.photo_url?`<img src="${esc(r.photo_url)}" loading="lazy" class="w-full h-48 object-cover" onerror="this.parentElement.style.display='none'">`:'<div class="w-full h-48 bg-surface-variant/40 grid place-items-center text-on-surface-variant text-4xl">🐾</div>';
-  const est=(r.case_status||(/encontr/i.test(r.category||'')?'encontrada':'perdida'));
-  const [bcls,blbl]=STBADGE[est]||STBADGE.perdida;
-  const badge=`<span class="text-[10px] font-bold uppercase ${bcls} px-2 py-0.5 rounded">${blbl}</span>`;
+  const estado=r.estado||'perdida';
+  const img=r.photo_url?`<img src="${esc(r.photo_url)}" loading="lazy" class="ph" onerror="this.outerHTML='<div class=\\'ph\\'>🐾</div>'">`:`<div class="ph">🐾</div>`;
   const loc=[r.city,r.state].filter(Boolean).join(', ');
-  const href='/mascota?id='+encodeURIComponent(r.id);
-  return `<a href="${href}" class="block bg-white rounded-lg border border-outline-variant/60 overflow-hidden hover:shadow-lg transition-shadow">${img}
-    <div class="p-4">
-      <div class="mb-1">${badge}</div>
-      <h3 class="font-display font-bold text-base leading-snug">${esc(r.title||'Mascota')}</h3>
-      ${r.description?`<p class="text-sm text-on-surface-variant mt-1 line-clamp-2">${esc(r.description)}</p>`:''}
-      ${loc?`<p class="text-xs text-on-surface-variant mt-1">📍 ${esc(loc)}</p>`:''}
-      <span class="text-primary text-sm font-semibold mt-2 inline-block">Ver expediente →</span>
+  const lastMs=r.case_updated_ms||toMs(r.created_at);
+  return `<a class="pcard" href="/mascota?id=${encodeURIComponent(r.id)}">${img}
+    <div class="body">
+      <div class="badges">${pill(estado)}${urg(r.score)}</div>
+      <h3>${esc(r.title||'Mascota')}</h3>
+      ${r.description?`<div class="desc">${esc(r.description)}</div>`:''}
+      <div class="foot">
+        ${loc?`<span class="x">📍 ${esc(loc)}</span>`:''}
+        <span class="x">🕑 ${r.movimientos||0} mov.</span>
+        <span class="x">📷 ${r.fotos||0}</span>
+        <span class="x">${ago(lastMs)}</span>
+      </div>
+      <span class="seemore">Ver expediente →</span>
     </div></a>`;
 }
+
+function applyKpis(){
+  const act=ALL.filter(r=>['perdida','en_transito'].includes(r.estado)).length;
+  const avi=ALL.filter(r=>r.estado==='avistada').length;
+  const reu=ALL.filter(r=>r.estado==='reunida').length;
+  const rec=ALL.filter(r=>(r.case_updated_ms||0)>Date.now()-48*3600000).length;
+  $('k_total').textContent=ALL.length;$('k_activas').textContent=act;$('k_avist').textContent=avi;
+  $('k_reunidas').textContent=reu;$('k_recientes').textContent=rec;
+}
 function render(){
-  const q=document.getElementById('q').value.trim().toLowerCase();
-  let items=ALL.filter(r=>!CAT|| (r.category||'').toLowerCase().includes(CAT));
-  if(q) items=items.filter(r=>(r.title+' '+r.description+' '+r.city+' '+r.contact).toLowerCase().includes(q));
-  document.getElementById('cnt').textContent=ALL.length?('· '+ALL.length+' reportes'):'';
-  document.getElementById('grid').innerHTML=items.length?items.map(card).join(''):'<p class="text-on-surface-variant text-sm col-span-full">Sin coincidencias.</p>';
+  const q=$('q').value.trim().toLowerCase();
+  let items=ALL.slice();
+  if(FILTER==='perdida')items=items.filter(r=>['perdida','avistada','en_transito'].includes(r.estado));
+  else if(FILTER==='encontrada')items=items.filter(r=>r.estado==='encontrada');
+  else if(FILTER==='reunida')items=items.filter(r=>r.estado==='reunida');
+  if(q)items=items.filter(r=>(r.title+' '+(r.description||'')+' '+(r.city||'')+' '+(r.state||'')).toLowerCase().includes(q));
+  if(SORT==='actividad')items.sort((a,b)=>(b.movimientos||0)-(a.movimientos||0)||(b.case_updated_ms||0)-(a.case_updated_ms||0));
+  else if(SORT==='urgencia')items.sort((a,b)=>(b.score?.score||0)-(a.score?.score||0));
+  else items.sort((a,b)=>(b.case_updated_ms||toMs(b.created_at))-(a.case_updated_ms||toMs(a.created_at)));
+  $('grid').innerHTML=items.length?items.map(card).join(''):'<div class="empty">Sin coincidencias. Prueba otra búsqueda o reporta una mascota.</div>';
+}
+function buildChips(){
+  const defs=[['','Todas'],['perdida','Perdidas / activas'],['encontrada','Encontradas'],['reunida','Reunidas']];
+  $('chips').innerHTML=defs.map(([v,l])=>`<button class="chip ${v===FILTER?'on':''}" data-f="${v}">${l}</button>`).join('');
+  document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f;buildChips();render();});
 }
 async function load(){
   try{
-    const d=await (await fetch('/api/rav/reports?kind=mascota&limit=500')).json();
-    ALL=d.items||[];
-    document.getElementById('chips').innerHTML=['Todas','Perdida','Encontrada'].map((l,i)=>`<button data-c="${i===0?'':l.toLowerCase().slice(0,8)}" class="chip rounded-full border px-3 py-1 text-xs font-semibold ${i===0?'bg-primary text-white border-primary':'border-outline-variant text-on-surface-variant'}">${l}</button>`).join('');
-    document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{CAT=b.dataset.c;document.querySelectorAll('.chip').forEach(x=>x.className=x.className.replace('bg-primary text-white border-primary','border-outline-variant text-on-surface-variant'));b.className=b.className.replace('border-outline-variant text-on-surface-variant','bg-primary text-white border-primary');render();});
-    render();
-  }catch(e){ document.getElementById('grid').innerHTML='<p class="text-on-surface-variant text-sm">No se pudo cargar.</p>'; }
+    const d=await (await fetch('/api/mascotas/list')).json();
+    ALL=d.items||[];applyKpis();buildChips();render();
+  }catch(e){$('grid').innerHTML='<div class="empty">No se pudo cargar. Reintenta más tarde.</div>';}
 }
-document.getElementById('q').addEventListener('input',render);
-document.getElementById('btn').onclick=render;
-document.getElementById('q').addEventListener('keydown',(e)=>{if(e.key==='Enter')render();});
+$('q').addEventListener('input',render);
+$('sort').addEventListener('change',()=>{SORT=$('sort').value;render();});
+$('toggleReport').onclick=()=>$('regBox').classList.toggle('show');
+
+$('rf').addEventListener('submit',async ev=>{
+  ev.preventDefault();const f=ev.target,m=$('rmsg');
+  const title=f.title.value.trim();
+  if(!title){m.className='msg err';m.textContent='Indica un nombre o título para la mascota.';return;}
+  const btn=f.querySelector('button');btn.disabled=true;
+  try{
+    const body={title,description:f.description.value.trim(),category:f.category.value,city:f.city.value.trim(),state:f.state.value.trim(),area:f.area.value.trim(),contact:f.contact.value.trim()};
+    const r=await fetch('/api/mascotas/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j=await r.json();
+    if(r.ok){m.className='msg ok';m.textContent='✓ Reporte recibido. Aparecerá tras la revisión de un moderador. ¡Gracias!';f.reset();btn.textContent='Enviado ✓';}
+    else{m.className='msg err';m.textContent=j.hint||(j.error==='rate_limited'?'Demasiados envíos, intenta más tarde.':'No se pudo enviar.');btn.disabled=false;}
+  }catch{m.className='msg err';m.textContent='Error de red. Intenta de nuevo.';btn.disabled=false;}
+});
 load();
 </script>
 </body>
