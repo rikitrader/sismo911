@@ -24,7 +24,7 @@ export interface DedupeEvent {
 }
 
 export interface DedupeOptions {
-  /** Max origin-time gap. FUNVISIS times are minute-rounded, so allow ≥60s. */
+  /** Max origin-time gap. FUNVISIS times are minute-rounded (worst case ~69s low), so allow ≥120s. */
   windowMs?: number;
   /** Max epicenter separation (km). */
   distKm?: number;
@@ -34,10 +34,19 @@ export interface DedupeOptions {
   divergeMag?: number;
 }
 
+// Tuned 2026-06-27 against live USGS↔FUNVISIS data. The true cross-source pair
+// sat at Δt=37s / Δd=12km; the NEXT-nearest cross-source pair in the dataset was
+// >3,000s away in time — so time is the decisive discriminator and there is a
+// huge empty gap above the real match. Even a 1,800s/100km window matched only
+// the one true pair, so widening from the original 90s/60km to 150s/70km adds
+// robustness (FUNVISIS minute-rounding worst case ~69s; offshore epicenter
+// solutions can disagree by tens of km) at ZERO false-positive cost. Distance
+// must never gate alone: several FUNVISIS events sit 4–15km from a USGS event
+// but are DAYS apart (same fault zone, different quakes) — time rejects those.
 export const DEFAULTS: Required<DedupeOptions> = {
-  windowMs: 90_000, // 90s — covers FUNVISIS minute-rounding + small disagreement
-  distKm: 60,
-  magTol: 2.5, // never merge an M2 with an M6 even if coincidentally close
+  windowMs: 150_000, // 150s — covers FUNVISIS minute-rounding (~69s) + solution/clock slop
+  distKm: 70,        // offshore epicenter solutions disagree by tens of km; time is the real gate
+  magTol: 2.5,       // never merge an M2 with an M6 even if coincidentally close in time+space
   divergeMag: 1.0,
 };
 

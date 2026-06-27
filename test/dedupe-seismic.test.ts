@@ -26,9 +26,18 @@ describe('findCrossSourceDups', () => {
   });
 
   it('does NOT merge two quakes separated in time (swarm safety)', () => {
-    // Same spot, but 200s apart — beyond the 90s window. Distinct events.
-    const later: DedupeEvent = { ...usgsMaracay, id: 'us7000later', time_ms: T + 200_000 };
+    // Same spot, but 600s apart — well beyond the 150s window. Distinct events.
+    const later: DedupeEvent = { ...usgsMaracay, id: 'us7000later', time_ms: T + 600_000 };
     expect(findCrossSourceDups([funMaracay, later])).toHaveLength(0);
+  });
+
+  it('catches a minute-rounded match the old 90s window would have missed', () => {
+    // FUNVISIS truncates to the minute → its time can sit up to ~59s before the
+    // true origin; with clock/solution slop a real pair can be ~120s apart.
+    // The tuned 150s window keeps it; the original 90s window would have dropped it.
+    const rounded: DedupeEvent = { ...usgsMaracay, id: 'us7000rounded', time_ms: T + 120_000 };
+    expect(findCrossSourceDups([funMaracay, rounded], { windowMs: 90_000 })).toHaveLength(0);
+    expect(findCrossSourceDups([funMaracay, rounded])).toHaveLength(1); // default 150s
   });
 
   it('does NOT merge distant epicenters even at the same instant', () => {
