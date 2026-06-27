@@ -16,6 +16,9 @@
   #gmap{height:72vh;min-height:460px;border-radius:.6rem;z-index:0}
   .leaflet-container{font:inherit}
   .sevdot{width:.7rem;height:.7rem;border-radius:9999px;display:inline-block}
+  /* City/town labels on the Ciudades layer — light, non-boxed. */
+  .citylbl{background:transparent;border:none;box-shadow:none;color:#0b1d2a;font:700 11px 'Public Sans';text-shadow:0 0 3px #fff,0 0 3px #fff}
+  .citylbl::before{display:none}
 </style>
 <script src="/app-shell.js" defer></script>
 </head>
@@ -108,7 +111,7 @@ async function loadDamageReports(group){
     if(!inVE(d.lat,d.lng))return;
     const[lbl,hex,rad]=DSEV[d.severity]||['Reporte','#94a3b8',6];
     const cat=DCAT[d.category]||d.category||'';
-    L.circleMarker([d.lat,d.lng],{radius:rad,color:'#fff',weight:1,fillColor:hex,fillOpacity:.85})
+    L.circleMarker([d.lat,d.lng],{pane:'danosPane',radius:rad,color:'#fff',weight:1,fillColor:hex,fillOpacity:.85})
      .bindPopup(`<b>${esc(d.title||cat)}</b><br><span style="display:inline-block;background:${hex};color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;margin:3px 0">${esc(lbl)}</span> <span style="font-size:11px;color:#666">${esc(cat)}${d.municipio?' · '+esc(d.municipio):''}</span><br><span style="font-size:12px">${esc((d.description||'').slice(0,220))}</span>${d.source_url?`<br><a href="${esc(d.source_url)}" target="_blank" rel="noopener" style="font-size:11px">Fuente</a>`:''}`)
      .addTo(group);
     shown++;
@@ -116,39 +119,40 @@ async function loadDamageReports(group){
   return shown;
 }
 
-// La Guaira GIS overlays (OpenStreetMap / Overpass). Each is an empty group in
-// the layer control until first enabled, then its geojson is fetched once
-// (roads.geojson is ~3 MB, so we never load it on page open).
-function guairaLayers(){
-  const PARR=['#ef476f','#f78c6b','#ffd166','#06d6a0','#118ab2','#8338ec','#3a86ff','#fb5607','#ff006e','#06ffa5','#caffbf'];
-  const ROAD={motorway:{color:'#ff6b6b',weight:3},trunk:{color:'#ff924c',weight:2.6},primary:{color:'#ffd166',weight:2.2},secondary:{color:'#e8eef3',weight:1.6},tertiary:{color:'#9fb3c8',weight:1.2}};
-  const defs={
-    'La Guaira · límite':{url:'/la-guaira/state.geojson',build:gj=>L.geoJSON(gj,{style:{color:'#13284f',weight:2.5,dashArray:'6 5',fill:false}})},
-    // Non-interactive so the parroquia fills don't steal clicks from the damage markers on top.
-    'La Guaira · parroquias':{url:'/la-guaira/parroquias.geojson',build:gj=>{let i=0;return L.geoJSON(gj,{interactive:false,style:()=>({color:'#13284f',weight:1.2,fillColor:PARR[(i++)%PARR.length],fillOpacity:.18})});}},
-    'La Guaira · poblados':{url:'/la-guaira/places.geojson',build:gj=>L.geoJSON(gj,{pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:f.properties.place==='city'?7:f.properties.place==='town'?5:3,color:'#13284f',weight:1,fillColor:'#3a86ff',fillOpacity:.9}),onEachFeature:(f,l)=>l.bindPopup('<b>'+esc(f.properties.name||'?')+'</b><br>'+esc(f.properties.place||''))})},
-    'La Guaira · vialidad':{url:'/la-guaira/roads.geojson',build:gj=>L.geoJSON(gj,{style:f=>ROAD[f.properties.highway]||{color:'#94a3b8',weight:.6},onEachFeature:(f,l)=>{const p=f.properties;if(p.name)l.bindPopup('<b>'+esc(p.name)+'</b><br>'+esc(p.highway||''));}})},
+// National GIS overlays (OpenStreetMap / Overpass, prebuilt in /data/estados/<slug>/).
+// Every estado with reported damage gets the same layers as La Guaira: límites,
+// municipios, calles principales y ciudades. Layers are NON-interactive (visual
+// reference) so clicks always reach the damage markers on top. No terrain layer.
+const DMG_ESTADOS=['distrito-capital','la-guaira','miranda','aragua','carabobo','bolivar','barinas','zulia','lara','falcon','anzoategui','trujillo','merida','monagas','guarico','cojedes'];
+function estadoLayers(){
+  const MUNI=['#ef476f','#f78c6b','#ffd166','#06d6a0','#118ab2','#8338ec','#3a86ff','#fb5607','#ff006e','#06ffa5','#caffbf'];
+  const ROAD={motorway:{color:'#ff6b6b',weight:2.6},trunk:{color:'#ff924c',weight:2.2},primary:{color:'#ffd166',weight:1.8},secondary:{color:'#e8eef3',weight:1.3},tertiary:{color:'#9fb3c8',weight:1}};
+  // 4 thematic layers, each merging every damaged estado's geojson into one group.
+  const types={
+    'Límites estatales':{file:'boundary.geojson',add:(g,gj)=>L.geoJSON(gj,{interactive:false,style:{color:'#0b1d2a',weight:2.4,fill:false,dashArray:'5 4'}}).addTo(g)},
+    'Municipios':{file:'municipios.geojson',add:(g,gj)=>{let i=0;return L.geoJSON(gj,{interactive:false,style:()=>({color:'#13284f',weight:1,fillColor:MUNI[(i++)%MUNI.length],fillOpacity:.12})}).addTo(g);}},
+    'Calles principales':{file:'roads-major.geojson',add:(g,gj)=>L.geoJSON(gj,{interactive:false,style:f=>ROAD[f.properties.highway]||{color:'#94a3b8',weight:.6}}).addTo(g)},
+    'Ciudades / Poblados':{file:'places.geojson',add:(g,gj)=>L.geoJSON(gj,{interactive:false,pointToLayer:(f,ll)=>{const p=f.properties.place,m=L.circleMarker(ll,{interactive:false,radius:p==='city'?6:p==='town'?4:2.5,color:'#13284f',weight:1,fillColor:'#3a86ff',fillOpacity:.9});if((p==='city'||p==='town')&&f.properties.name)m.bindTooltip(esc(f.properties.name),{permanent:true,direction:'right',className:'citylbl',opacity:.9});return m;}}).addTo(g)},
   };
   const controls={},loading={};
-  Object.keys(defs).forEach(k=>controls[k]=L.layerGroup());
-  // Promise-cached loader: one fetch per layer, shared by addAll() and onAdd().
+  Object.keys(types).forEach(k=>controls[k]=L.layerGroup());
+  // Promise-cached: fetch every damaged estado's file for this layer once, in parallel.
   const load=k=>{
     if(loading[k])return loading[k];
-    loading[k]=fetch(defs[k].url).then(r=>r.json())
-      .then(gj=>{const lyr=defs[k].build(gj);lyr.addTo(controls[k]);return lyr;})
-      .catch(()=>{delete loading[k];return null;});
+    loading[k]=Promise.all(DMG_ESTADOS.map(s=>fetch(`/data/estados/${s}/${types[k].file}`).then(r=>r.ok?r.json():null).catch(()=>null)))
+      .then(list=>{list.forEach(gj=>{if(gj&&gj.features&&gj.features.length)types[k].add(controls[k],gj);});});
     return loading[k];
   };
-  const onAdd=e=>{ if(defs[e.name]) load(e.name); };
-  // Turn every La Guaira layer on (checked) and load it; resolves with the
-  // 'límite' layer so the caller can fitBounds to the state outline.
-  const addAll=map=>Promise.all(Object.keys(defs).map(k=>{controls[k].addTo(map);return load(k).then(lyr=>[k,lyr]);}))
-    .then(rs=>{const o=rs.find(([k])=>k==='La Guaira · límite');return o&&o[1];});
+  const onAdd=e=>{ if(types[e.name]) load(e.name); };
+  // Turn every GIS layer on (checked) and load it.
+  const addAll=map=>{Object.keys(types).forEach(k=>controls[k].addTo(map));return Promise.all(Object.keys(types).map(load));};
   return {controls,onAdd,addAll};
 }
 const LAGUAIRA=[10.6,-66.9];   // estado La Guaira (foco por defecto)
 async function initGis(){
   map=L.map('gmap',{attributionControl:false,preferCanvas:true}).setView(LAGUAIRA,11);
+  // Dedicated pane so the damage markers always render above the GIS vector layers.
+  map.createPane('danosPane'); map.getPane('danosPane').style.zIndex=650;
   const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
   const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
   const gibs=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2026-06-24/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',{maxZoom:9});
@@ -166,12 +170,11 @@ async function initGis(){
   // Daños reportados por la comunidad — encendido por defecto (es el dato principal).
   const danosLayer=L.layerGroup().addTo(map);
 
-  // La Guaira GIS overlays (estado más golpeado: Catia La Mar, Playa Grande).
-  // Todas activas por defecto y mapa centrado en La Guaira.
-  const guaira=guairaLayers();
-  L.control.layers(bases,Object.assign({'Daños reportados':danosLayer,'Evaluaciones IA':resultLayer},guaira.controls),{collapsed:false}).addTo(map);
-  guaira.addAll(map).then(outline=>{ if(outline){ try{map.fitBounds(outline.getBounds(),{padding:[20,20]});}catch{} } });
-  map.on('overlayadd',guaira.onAdd);
+  // National GIS overlays for every damaged estado — todas activas por defecto.
+  const estado=estadoLayers();
+  L.control.layers(bases,Object.assign({'Daños reportados':danosLayer,'Evaluaciones IA':resultLayer},estado.controls),{collapsed:false}).addTo(map);
+  estado.addAll(map);
+  map.on('overlayadd',estado.onAdd);
   loadDamageReports(danosLayer).then(n=>{ const el=document.getElementById('danos-count'); if(el) el.textContent=n?`${n.toLocaleString('es-VE')} daños reportados en el mapa`:''; });
   if(cfg.gibs)layerNames.push('NASA GIBS');
   document.getElementById('layerinfo').textContent=layerNames.join(' · ');
