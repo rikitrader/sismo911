@@ -27,6 +27,7 @@ import { desaparecidos } from './routes/desaparecidos';
 import { blog } from './routes/blog';
 import { rav } from './routes/rav';
 import { mascotas } from './routes/mascotas';
+import { emergencia } from './routes/emergencia';
 import { monitor } from './routes/monitor';
 import { aidOrgs } from './routes/aid_orgs';
 import { donations } from './routes/donations';
@@ -67,7 +68,7 @@ app.use('/mcp', cors({
 // Admin console + curation/management writes require an authenticated operator
 // or admin session. Citizen actions (SOS, check-ins, damage reports) stay open.
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
-const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales', '/api/admin', '/api/aid-orgs'];
+const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales', '/api/admin', '/api/aid-orgs', '/api/emergencia'];
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   const method = c.req.method;
@@ -75,7 +76,10 @@ app.use('*', async (c, next) => {
   // Citizen submission of a centro de acopio stays public (moderation queue);
   // everything else under /api/acopio (status overrides, submission review) is operator-only.
   const isAcopioReport = method === 'POST' && path === '/api/acopio/report';
-  const isAdminWrite = !isAcopioReport && WRITE_METHODS.has(method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
+  // Public, rate-limited share-counter bump on an emergency profile stays open;
+  // everything else under /api/emergencia (create/edit/upload/retire) is operator-only.
+  const isEmergenciaShare = method === 'POST' && /^\/api\/emergencia\/[^/]+\/share$/.test(path);
+  const isAdminWrite = !isAcopioReport && !isEmergenciaShare && WRITE_METHODS.has(method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
   const isUnsafe = WRITE_METHODS.has(method);
   const originHdr = c.req.header('origin') || c.req.header('referer')?.split('/').slice(0, 3).join('/');
   // For state-changing methods a missing Origin/Referer is treated as NOT same-site (defense-in-depth vs CSRF).
@@ -193,6 +197,7 @@ app.route('/api/acopio', logistica); // /api/acopio/{inventory,needs,shipments,m
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
 app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET public; refresh gated; apify webhook secret-gated)
 app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directory (GET public; writes operator-gated)
+app.route('/api/emergencia', emergencia); // SUPER BANNER emergency spotlight profiles (GET public; writes operator-gated; share bump public)
 app.route('/api', donations); // crowdfunding: /api/campaigns* + /api/donations* (anonymous donate; card→USDC via Crossmint)
 app.route('/', botiquin);     // /botiquin index + /botiquin/:slug per-item pages + /api/botiquin
 app.route('/', agencias);     // FEMA-VE: /agencias mapa + ESF-15 + /agencias/:slug + /api/agencias
@@ -240,6 +245,48 @@ app.get('/familia', async (c) => {
   const desc = `Última ubicación: ${p.ubicacion || 'Venezuela'}. Ayúdanos a difundir y reunir a esta familia. #SISMO911`;
   const img = (p.foto_r2 || p.foto) ? `https://sismo911.com/api/familia/photo/${p.id}` : 'https://sismo911.com/og/og-default.png';
   const url = `https://sismo911.com/familia?persona=${p.id}`;
+  const set = (v: string) => ({ element(el: any) { el.setAttribute('content', v); } });
+  return new HTMLRewriter()
+    .on('title', { element(el) { el.setInnerContent(title); } })
+    .on('meta[property="og:title"]', set(title))
+    .on('meta[property="og:description"]', set(desc))
+    .on('meta[property="og:url"]', set(url))
+    .on('meta[property="og:image"]', set(img))
+    .on('head', { element(el) { el.append(
+      `<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${e(title)}"><meta name="twitter:description" content="${e(desc)}"><meta name="twitter:image" content="${img}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">`,
+      { html: true }); } })
+    .transform(base);
+});
+
+// SUPER BANNER emergency profile — a shareable /emergencia/:slug page whose
+// OG/Twitter meta is rewritten to THIS person's hero photo + headline, so the
+// social preview shows them (→ virality). The page shell is emergencia-perfil.html;
+// it reads the JSON from /api/emergencia/:slug client-side.
+app.get('/emergencia/:slug', async (c) => {
+  const assetRes = await c.env.ASSETS.fetch(new Request(new URL('/emergencia-perfil', c.req.url).toString(), c.req.raw));
+  const base = new Response(assetRes.body, assetRes);
+  setSecurityHeaders({ header: (k: string, v: string) => base.headers.set(k, v) } as any);
+  base.headers.set('Cache-Control', 'no-cache, must-revalidate');
+  const slug = c.req.param('slug');
+  const p = await c.env.DB.prepare(
+    `SELECT id, slug, name, age, location, headline, need_type, hero_url, status FROM emergency_profiles
+     WHERE (slug = ? OR id = ?) AND status IN ('active','resolved') LIMIT 1`,
+  ).bind(slug, slug).first<any>().catch(() => null);
+  if (!p) return base;
+  // Resolve a hero image URL for the card (external hero_url, else the hero photo row).
+  let img = p.hero_url || '';
+  if (!img) {
+    const ph = await c.env.DB.prepare(
+      `SELECT id, r2_key, url FROM emergency_photos WHERE profile_id = ? ORDER BY (kind='hero') DESC, sort ASC, created_ms ASC LIMIT 1`,
+    ).bind(p.id).first<any>().catch(() => null);
+    if (ph) img = ph.r2_key ? `https://sismo911.com/api/emergencia/photo/${ph.id}` : (ph.url || '');
+  }
+  if (!img) img = 'https://sismo911.com/og/og-default.png';
+  else if (img.startsWith('/')) img = `https://sismo911.com${img}`;
+  const e = (s: string) => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]!));
+  const title = `🆘 ${p.name}${p.age ? `, ${p.age} años` : ''} necesita ayuda urgente — SISMO911`;
+  const desc = `${p.headline || `Emergencia en ${p.location || 'Venezuela'}`}. Ayúdanos a difundir y movilizar apoyo. #SISMO911`;
+  const url = `https://sismo911.com/emergencia/${p.slug}`;
   const set = (v: string) => ({ element(el: any) { el.setAttribute('content', v); } });
   return new HTMLRewriter()
     .on('title', { element(el) { el.setInnerContent(title); } })

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMO911 — Súper Banner · Perfiles de Emergencia (Admin)</title>
+  <meta name="description" content="Consola de administración de los perfiles de emergencia (súper banner). Acceso restringido." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://sismo911.com/admin-emergencia" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#0b1830" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/app.css" />
+  <style>
+    body{background:#eef0f4;color:#0b1b3a}
+    .eoc-bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%)}
+    .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 70px}
+    .grid2{display:grid;grid-template-columns:420px 1fr;gap:20px;align-items:start}
+    @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+    .card{background:#fff;border:1px solid #d7dbe4;border-radius:.8rem;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+    .card .hd{padding:14px 16px;border-bottom:1px solid #eceef3;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .card .hd h2{font:800 14px 'Public Sans';letter-spacing:.01em}
+    .card .bd{padding:16px}
+    label{display:block;font:700 11px Inter;letter-spacing:.04em;text-transform:uppercase;color:#6b7280;margin:12px 0 5px}
+    input,select,textarea{width:100%;border:1px solid #c4c6d0;border-radius:.5rem;padding:.55rem .65rem;font:500 14px Inter;background:#fff;outline:none}
+    input:focus,select:focus,textarea:focus{border-color:#1f5fd0;box-shadow:0 0 0 3px rgba(31,95,208,.13)}
+    textarea{min-height:120px;resize:vertical;font-family:Inter}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:none;cursor:pointer;border-radius:.55rem;font:800 13.5px 'Public Sans';padding:.7rem 1rem;text-decoration:none}
+    .btn-primary{background:#13284f;color:#fff}.btn-gold{background:#c9a227;color:#1a1500}
+    .btn-ghost{background:#eef1f7;color:#13284f;border:1px solid #d3d9e6}
+    .btn-danger{background:#fff;color:#bb0027;border:1px solid #f0bcc6}
+    .btn:disabled{opacity:.55;cursor:default}
+    .chip{display:inline-flex;align-items:center;gap:.3rem;font:800 10px Inter;letter-spacing:.04em;padding:.18rem .55rem;border-radius:999px;text-transform:uppercase}
+    .c-active{background:#e6f5ec;color:#1f8a4c}.c-paused{background:#fff4e0;color:#9a6400}.c-resolved{background:#e7eefb;color:#1f5fd0}.c-archived{background:#f0f1f4;color:#6b7280}
+    .msg{font:700 13px Inter;padding:.6rem .8rem;border-radius:.5rem;margin-top:12px;display:none}
+    .msg.ok{display:block;background:#e6f5ec;color:#16703c}.msg.err{display:block;background:#fdeaed;color:#a11026}
+    .list .it{padding:12px 14px;border-bottom:1px solid #eceef3;cursor:pointer;display:flex;gap:12px;align-items:center}
+    .list .it:hover{background:#f4f7fc}.list .it.sel{background:#eef4ff}
+    .list .th{width:54px;height:54px;border-radius:8px;background:#0a1a36 center/cover no-repeat;flex:0 0 auto}
+    .list .nm{font:800 14px 'Public Sans'}
+    .list .mt{font:600 12px Inter;color:#6b7280;margin-top:2px}
+    .list .st{margin-left:auto;text-align:right;font:700 11px Inter;color:#6b7280;white-space:nowrap}
+    .star{color:#c9a227}
+    .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:10px}
+    .gal .g{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid #d7dbe4;background:#0a1a36 center/cover no-repeat}
+    .gal .g .del{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:6px;border:none;background:rgba(187,0,39,.92);color:#fff;font-size:13px;cursor:pointer;line-height:1}
+    .gal .g .hb{position:absolute;left:3px;bottom:3px;font:800 8px Inter;letter-spacing:.04em;text-transform:uppercase;background:#c9a227;color:#1a1500;padding:2px 5px;border-radius:5px}
+    .muted{font:600 12px Inter;color:#6b7280}
+    .eyebrow{font:800 10px 'Public Sans';letter-spacing:.14em;text-transform:uppercase;color:#c9a227}
+  </style>
+</head>
+<body class="font-sans">
+  <header class="eoc-bar text-white">
+    <div class="wrap" style="padding-top:12px;padding-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:12px">
+        <img src="/logo.svg" alt="SISMO911" style="height:38px;width:38px" />
+        <div>
+          <div class="eyebrow">Súper Banner · Admin</div>
+          <div style="font:900 18px 'Public Sans';line-height:1">Perfiles de Emergencia</div>
+        </div>
+      </div>
+      <nav style="display:flex;gap:16px;font:600 13.5px Inter;color:rgba(255,255,255,.85)">
+        <a href="/admin" style="color:inherit">← Consola</a>
+        <a href="/emergencia" target="_blank" style="color:inherit">Vista pública ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="grid2">
+      <!-- EDITOR -->
+      <div class="card">
+        <div class="hd">
+          <h2 id="formTitle">Nuevo perfil</h2>
+          <button class="btn btn-ghost" id="newBtn" type="button">+ Nuevo</button>
+        </div>
+        <div class="bd">
+          <form id="f">
+            <input type="hidden" name="id" />
+            <label>Nombre *</label>
+            <input name="name" maxlength="120" placeholder="Nombre y apellido" required />
+            <div class="row">
+              <div><label>Edad</label><input name="age" type="number" min="0" max="120" /></div>
+              <div><label>Tipo de necesidad</label>
+                <select name="need_type">
+                  <option value="medico">Médico</option><option value="rescate">Rescate</option>
+                  <option value="desplazado">Desplazado</option><option value="duelo">Duelo</option>
+                  <option value="reconstruccion">Reconstrucción</option><option value="otro">Otro</option>
+                </select>
+              </div>
+            </div>
+            <label>Ubicación</label>
+            <input name="location" maxlength="160" placeholder="Ciudad, estado" />
+            <label>Titular urgente (overline del banner)</label>
+            <input name="headline" maxlength="160" placeholder="Una línea que explique la urgencia" />
+            <label>Biografía / historia completa</label>
+            <textarea name="bio" maxlength="8000" placeholder="Cuenta su situación con detalle…"></textarea>
+
+            <div class="row3">
+              <div><label>Meta (monto)</label><input name="goal_amount" type="number" min="0" step="1" /></div>
+              <div><label>Recaudado</label><input name="raised_amount" type="number" min="0" step="1" /></div>
+              <div><label>Moneda</label><input name="currency" maxlength="8" value="USD" /></div>
+            </div>
+            <label>Video (YouTube / Vimeo / mp4)</label>
+            <input name="video_url" maxlength="600" placeholder="https://…" />
+            <label>Imagen de portada (URL — opcional si subes foto «hero»)</label>
+            <input name="hero_url" maxlength="600" placeholder="https://… o /api/emergencia/photo/…" />
+            <div class="row">
+              <div><label>Texto del botón CTA</label><input name="cta_label" maxlength="60" placeholder="Donar ahora" /></div>
+              <div><label>Enlace del botón CTA</label><input name="cta_url" maxlength="600" placeholder="https://…" /></div>
+            </div>
+            <label>Contacto (privado — solo operadores)</label>
+            <input name="contact" maxlength="200" placeholder="Teléfono / responsable" />
+            <label>ID de campaña (donaciones — opcional)</label>
+            <input name="campaign_id" maxlength="64" placeholder="cmp_…" />
+
+            <div class="row3">
+              <div><label>Estado</label>
+                <select name="status">
+                  <option value="active">Activo</option><option value="paused">Pausado</option>
+                  <option value="resolved">Resuelto</option><option value="archived">Archivado</option>
+                </select>
+              </div>
+              <div><label>Prioridad (0–1000)</label><input name="priority" type="number" min="0" max="1000" value="0" /></div>
+              <div><label>Rotación (seg)</label><input name="rotation_secs" type="number" min="3" max="60" value="8" /></div>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;font:600 13.5px Inter;color:#26314a;margin-top:14px">
+              <input type="checkbox" name="featured" checked style="width:auto" /> Incluir en la rotación del banner (billboard)
+            </label>
+
+            <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
+              <button class="btn btn-primary" type="submit" id="saveBtn">Guardar perfil</button>
+              <a class="btn btn-ghost" id="viewBtn" target="_blank" style="display:none">Ver público ↗</a>
+              <button class="btn btn-ghost" type="button" id="archiveBtn" style="display:none">Archivar</button>
+              <button class="btn btn-danger" type="button" id="delBtn" style="display:none">Eliminar</button>
+            </div>
+            <div class="msg" id="msg"></div>
+          </form>
+
+          <!-- PHOTO MANAGER (after a profile exists) -->
+          <div id="photoMgr" style="display:none;margin-top:20px;padding-top:18px;border-top:1px solid #eceef3">
+            <h2 style="font:800 14px 'Public Sans';margin-bottom:4px">Fotos</h2>
+            <p class="muted">Sube la portada (hero) y la galería. Máx 8 MB por imagen.</p>
+            <div class="gal" id="gal"></div>
+            <div class="row" style="margin-top:12px">
+              <div><label>Tipo</label><select id="upKind"><option value="hero">Portada (hero)</option><option value="gallery">Galería</option></select></div>
+              <div><label>Pie de foto</label><input id="upCaption" maxlength="200" /></div>
+            </div>
+            <label>Archivo de imagen</label>
+            <input type="file" id="upFile" accept="image/*" />
+            <button class="btn btn-gold" type="button" id="upBtn" style="margin-top:12px">Subir foto</button>
+            <div class="msg" id="upMsg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIST -->
+      <div class="card">
+        <div class="hd">
+          <h2>Perfiles (<span id="cnt">0</span>)</h2>
+          <span class="muted" id="hint">Clic en un perfil para editar</span>
+        </div>
+        <div class="list" id="list"><div class="bd muted">Cargando…</div></div>
+      </div>
+    </div>
+  </main>
+
+<script>
+const $=id=>document.getElementById(id);
+const f=$('f');
+const NEED={medico:'Médico',rescate:'Rescate',desplazado:'Desplazado',duelo:'Duelo',reconstruccion:'Reconstrucción',otro:'Otro'};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtNum=n=>new Intl.NumberFormat('es-VE').format(n||0);
+let DATA=[], CUR=null;
+
+function msg(el,kind,t){el.className='msg '+kind;el.textContent=t;if(kind==='ok')setTimeout(()=>{el.className='msg';},3500);}
+
+function fill(p){
+  CUR=p; f.reset();
+  f.id.value=p?p.id:'';
+  if(p){
+    f.name.value=p.name||''; f.age.value=p.age??''; f.need_type.value=p.need_type||'otro';
+    f.location.value=p.location||''; f.headline.value=p.headline||''; f.bio.value=p.bio||'';
+    f.goal_amount.value=p.goal_amount??''; f.raised_amount.value=p.raised_amount??''; f.currency.value=p.currency||'USD';
+    f.video_url.value=p.video_url||''; f.hero_url.value=(p.hero&&p.hero.startsWith('http')?p.hero:'')||'';
+    f.cta_label.value=p.cta_label||''; f.cta_url.value=p.cta_url||''; f.contact.value=p.contact||'';
+    f.campaign_id.value=p.campaign_id||''; f.status.value=p.status||'active';
+    f.priority.value=p.priority??0; f.rotation_secs.value=p.rotation_secs??8; f.featured.checked=!!p.featured;
+    $('formTitle').textContent='Editar: '+p.name;
+    $('viewBtn').style.display='inline-flex'; $('viewBtn').href='/emergencia/'+p.slug;
+    $('archiveBtn').style.display=p.status==='archived'?'none':'inline-flex';
+    $('delBtn').style.display='inline-flex';
+    $('photoMgr').style.display='block'; renderGallery(p);
+  }else{
+    f.currency.value='USD'; f.priority.value=0; f.rotation_secs.value=8; f.featured.checked=true; f.need_type.value='otro'; f.status.value='active';
+    $('formTitle').textContent='Nuevo perfil';
+    $('viewBtn').style.display='none'; $('archiveBtn').style.display='none'; $('delBtn').style.display='none';
+    $('photoMgr').style.display='none';
+  }
+  highlight();
+}
+function highlight(){[...document.querySelectorAll('.list .it')].forEach(it=>it.classList.toggle('sel',CUR&&it.dataset.id===CUR.id));}
+
+function renderGallery(p){
+  const g=$('gal'); const ph=p.gallery||[];
+  g.innerHTML=ph.length?ph.map(x=>`<div class="g" style="background-image:url('${esc(x.src)}')">
+      ${x.kind==='hero'?'<span class="hb">Hero</span>':''}
+      <button class="del" title="Eliminar" onclick="delPhoto('${esc(x.id)}')">×</button></div>`).join(''):'<div class="muted">Sin fotos todavía.</div>';
+}
+
+function body(){
+  return {
+    name:f.name.value.trim(), age:f.age.value, need_type:f.need_type.value, location:f.location.value.trim(),
+    headline:f.headline.value.trim(), bio:f.bio.value, goal_amount:f.goal_amount.value, raised_amount:f.raised_amount.value,
+    currency:f.currency.value.trim(), video_url:f.video_url.value.trim(), hero_url:f.hero_url.value.trim(),
+    cta_label:f.cta_label.value.trim(), cta_url:f.cta_url.value.trim(), contact:f.contact.value.trim(),
+    campaign_id:f.campaign_id.value.trim(), status:f.status.value, priority:f.priority.value,
+    rotation_secs:f.rotation_secs.value, featured:f.featured.checked
+  };
+}
+
+f.addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  if(!f.name.value.trim()){msg($('msg'),'err','El nombre es obligatorio.');return;}
+  const id=f.id.value; const btn=$('saveBtn'); btn.disabled=true;
+  try{
+    const r=await fetch('/api/emergencia'+(id?'/'+id:''),{method:id?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body())});
+    const j=await r.json();
+    if(r.ok){msg($('msg'),'ok','✓ Guardado.');await load(); const np=DATA.find(x=>x.id===(id||j.id)); if(np)fill(np);}
+    else msg($('msg'),'err',j.hint||j.error||'No se pudo guardar.');
+  }catch(e){msg($('msg'),'err','Error de red.');}
+  btn.disabled=false;
+});
+
+$('newBtn').onclick=()=>fill(null);
+$('archiveBtn').onclick=async()=>{
+  if(!CUR||!confirm('¿Archivar este perfil? Dejará de mostrarse al público.'))return;
+  const r=await fetch('/api/emergencia/'+CUR.id,{method:'DELETE'}); if(r.ok){msg($('msg'),'ok','Archivado.');await load();fill(null);}
+};
+$('delBtn').onclick=async()=>{
+  if(!CUR||!confirm('¿ELIMINAR definitivamente este perfil y sus fotos? No se puede deshacer.'))return;
+  const r=await fetch('/api/emergencia/'+CUR.id+'?hard=1',{method:'DELETE'}); if(r.ok){msg($('msg'),'ok','Eliminado.');await load();fill(null);}
+};
+
+$('upBtn').onclick=async()=>{
+  if(!CUR){msg($('upMsg'),'err','Guarda el perfil primero.');return;}
+  const file=$('upFile').files[0];
+  if(!file){msg($('upMsg'),'err','Selecciona una imagen.');return;}
+  const fd=new FormData(); fd.append('file',file); fd.append('kind',$('upKind').value); fd.append('caption',$('upCaption').value.trim());
+  $('upBtn').disabled=true;
+  try{
+    const r=await fetch('/api/emergencia/'+CUR.id+'/photo',{method:'POST',body:fd});
+    const j=await r.json();
+    if(r.ok){msg($('upMsg'),'ok','✓ Foto subida.');$('upFile').value='';$('upCaption').value='';await load();const np=DATA.find(x=>x.id===CUR.id);if(np){CUR=np;renderGallery(np);}}
+    else msg($('upMsg'),'err',j.hint||j.error||'No se pudo subir.');
+  }catch(e){msg($('upMsg'),'err','Error de red.');}
+  $('upBtn').disabled=false;
+};
+async function delPhoto(pid){
+  if(!CUR||!confirm('¿Eliminar esta foto?'))return;
+  const r=await fetch('/api/emergencia/'+CUR.id+'/photo/'+pid,{method:'DELETE'});
+  if(r.ok){await load();const np=DATA.find(x=>x.id===CUR.id);if(np){CUR=np;renderGallery(np);}}
+}
+window.delPhoto=delPhoto;
+
+function renderList(){
+  $('cnt').textContent=DATA.length;
+  const l=$('list');
+  if(!DATA.length){l.innerHTML='<div class="bd muted">Aún no hay perfiles. Crea el primero ←</div>';return;}
+  l.innerHTML=DATA.map(p=>{
+    const bg=p.hero?`background-image:url('${esc(p.hero)}')`:'';
+    return `<div class="it" data-id="${esc(p.id)}" onclick="pick('${esc(p.id)}')">
+      <div class="th" style="${bg}"></div>
+      <div style="min-width:0">
+        <div class="nm">${p.featured?'<span class="star">★</span> ':''}${esc(p.name)}${p.age?', '+p.age:''}</div>
+        <div class="mt">${esc(NEED[p.need_type]||'')} · ${esc(p.location||'—')} · <span class="chip c-${p.status}">${p.status}</span></div>
+      </div>
+      <div class="st">P${p.priority} · ${p.rotation_secs}s<br>${fmtNum(p.views)} 👁 · ${fmtNum(p.shares)} ↗</div>
+    </div>`;
+  }).join('');
+  highlight();
+}
+function pick(id){const p=DATA.find(x=>x.id===id);if(p)fill(p);window.scrollTo({top:0,behavior:'smooth'});}
+window.pick=pick;
+
+async function load(){
+  try{
+    const r=await fetch('/api/emergencia/admin',{headers:{'Accept':'application/json'}});
+    if(r.status===401){$('list').innerHTML='<div class="bd msg err" style="display:block">Sesión de operador requerida. <a href="/login?next=/admin-emergencia">Inicia sesión →</a></div>';return;}
+    const j=await r.json(); DATA=j.profiles||[]; renderList();
+    if(CUR){const np=DATA.find(x=>x.id===CUR.id);if(np)CUR=np;}
+  }catch(e){$('list').innerHTML='<div class="bd msg err" style="display:block">Error al cargar.</div>';}
+}
+fill(null); load();
+</script>
+</body>
+</html>
