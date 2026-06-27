@@ -50,6 +50,7 @@
       { label: 'Radio', href: '/comms', m: ['/comms'], d: 'M4 11a16 16 0 0116 0M7 14a10 10 0 0110 0M10 17a5 5 0 014 0M12 20h.01' },
       { label: 'Guía', href: '/guia', m: ['/guia'], d: 'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13' },
       { label: 'API · Desarrolladores', href: '/developers', m: ['/developers'], d: 'M16 18l6-6-6-6M8 6l-6 6 6 6' },
+      { label: 'Hoja de Ruta', href: '/roadmap', m: ['/roadmap'], d: 'M9 20l-5.4 2.7A1 1 0 012 21.8V6.6a1 1 0 01.55-.9L9 2.5m0 17.5l6 3m-6-3V2.5m6 20.5l5.45-2.72a1 1 0 00.55-.9V4.2a1 1 0 00-1.45-.9L15 5.5m0 17.5V5.5m0 0L9 2.5' },
       { label: 'Agradecimientos', href: '/gracias', m: ['/gracias'], d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z' },
     ] },
   ];
