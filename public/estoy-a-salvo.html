@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estoy a Salvo — Buscar Personas | SISMO911</title>
+<meta name="description" content="Busca a tu familiar entre las personas que han reportado estar a salvo tras el terremoto de Venezuela 2026.">
+<link rel="canonical" href="https://sismo911.com/estoy-a-salvo">
+<meta property="og:title" content="Estoy a Salvo — Buscar Personas | SISMO911">
+<meta property="og:description" content="Personas que han reportado estar a salvo tras el terremoto de Venezuela.">
+<meta property="og:url" content="https://sismo911.com/estoy-a-salvo">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>body{background:#f9f9fc}</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<main class="mx-auto max-w-4xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Estoy a Salvo</h1>
+  <p class="text-on-surface-variant mb-5 max-w-3xl">Personas que han reportado <b>estar a salvo</b> tras el terremoto. Busca a tu familiar por nombre o ciudad. <span id="cnt" class="font-semibold"></span></p>
+  <div class="flex gap-2 mb-5">
+    <input id="q" type="search" placeholder="Buscar nombre o ciudad…" class="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm">
+    <button id="btn" class="bg-safe text-white font-bold rounded-lg px-5 text-sm">Buscar</button>
+  </div>
+  <div id="list" class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div class="text-on-surface-variant text-sm">Cargando…</div></div>
+</main>
+<script>
+const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function fmtDate(s){ try{return new Date(s).toLocaleDateString('es-VE',{month:'short',day:'numeric'});}catch{return '';} }
+function card(r){
+  const loc=[r.city,r.state].filter(Boolean).join(', ');
+  return `<article class="bg-white rounded-lg border border-outline-variant/60 border-l-4 border-l-safe p-4">
+    <div class="flex items-center justify-between gap-2">
+      <h3 class="font-display font-bold text-base leading-snug">${esc(r.name||'—')}</h3>
+      <span class="text-[10px] font-bold uppercase tracking-wide bg-safe/10 text-safe px-2 py-0.5 rounded whitespace-nowrap">✓ ${esc(r.status||'a salvo')}</span>
+    </div>
+    ${loc?`<p class="text-sm text-on-surface-variant mt-1">📍 ${esc(loc)}</p>`:''}
+    ${r.note?`<p class="text-sm text-on-surface mt-1 italic">"${esc(r.note)}"</p>`:''}
+    ${r.created_at?`<p class="text-[11px] text-on-surface-variant mt-2">${fmtDate(r.created_at)}</p>`:''}
+  </article>`;
+}
+async function search(){
+  const q=document.getElementById('q').value.trim();
+  document.getElementById('list').innerHTML='<div class="text-on-surface-variant text-sm">Buscando…</div>';
+  try{
+    const d=await (await fetch('/api/rav/safe?limit=400'+(q?'&q='+encodeURIComponent(q):''))).json();
+    const items=d.items||[];
+    document.getElementById('cnt').textContent=items.length?('· '+items.length+' personas'):'';
+    document.getElementById('list').innerHTML=items.length?items.map(card).join(''):'<p class="text-on-surface-variant text-sm col-span-full">Sin coincidencias.</p>';
+  }catch(e){ document.getElementById('list').innerHTML='<p class="text-on-surface-variant text-sm">No se pudo cargar.</p>'; }
+}
+document.getElementById('btn').onclick=search;
+document.getElementById('q').addEventListener('keydown',(e)=>{if(e.key==='Enter')search();});
+search();
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mascotas Perdidas | SISMO911</title>
+<meta name="description" content="Tablón de mascotas perdidas y encontradas tras el terremoto de Venezuela 2026. Reúne a las familias con sus animales.">
+<link rel="canonical" href="https://sismo911.com/mascotas">
+<meta property="og:title" content="Mascotas Perdidas | SISMO911">
+<meta property="og:description" content="Tablón de mascotas perdidas y encontradas tras el terremoto de Venezuela.">
+<meta property="og:url" content="https://sismo911.com/mascotas">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>body{background:#f9f9fc}</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<main class="mx-auto max-w-5xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Mascotas Perdidas</h1>
+  <p class="text-on-surface-variant mb-5 max-w-3xl">Mascotas <b>perdidas y encontradas</b> tras el terremoto. Si reconoces a alguna, contacta directamente a la persona que la reporta. <span id="cnt" class="font-semibold"></span></p>
+  <div class="flex flex-wrap gap-2 mb-5">
+    <input id="q" type="search" placeholder="Buscar (raza, color, zona…)" class="flex-1 min-w-[200px] rounded-lg border border-outline-variant px-4 py-2.5 text-sm">
+    <div id="chips" class="flex gap-2"></div>
+  </div>
+  <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"><div class="text-on-surface-variant text-sm">Cargando…</div></div>
+</main>
+<script>
+const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let ALL=[], CAT='';
+function card(r){
+  const img=r.photo_url?`<img src="${esc(r.photo_url)}" loading="lazy" class="w-full h-48 object-cover" onerror="this.parentElement.style.display='none'">`:'<div class="w-full h-48 bg-surface-variant/40 grid place-items-center text-on-surface-variant text-4xl">🐾</div>';
+  const badge=/encontr/i.test(r.category||'')?'<span class="text-[10px] font-bold uppercase bg-safe/10 text-safe px-2 py-0.5 rounded">Encontrada</span>':'<span class="text-[10px] font-bold uppercase bg-warning/10 text-warning px-2 py-0.5 rounded">Perdida</span>';
+  const loc=[r.city,r.state].filter(Boolean).join(', ');
+  return `<div class="bg-white rounded-lg border border-outline-variant/60 overflow-hidden">${img}
+    <div class="p-4">
+      <div class="mb-1">${badge}</div>
+      <h3 class="font-display font-bold text-base leading-snug">${esc(r.title||'Mascota')}</h3>
+      ${r.description?`<p class="text-sm text-on-surface-variant mt-1">${esc(r.description)}</p>`:''}
+      ${loc?`<p class="text-xs text-on-surface-variant mt-1">📍 ${esc(loc)}</p>`:''}
+      ${r.contact?`<p class="text-sm font-semibold text-secondary mt-2">📞 ${esc(r.contact)}</p>`:''}
+    </div></div>`;
+}
+function render(){
+  const q=document.getElementById('q').value.trim().toLowerCase();
+  let items=ALL.filter(r=>!CAT|| (r.category||'').toLowerCase().includes(CAT));
+  if(q) items=items.filter(r=>(r.title+' '+r.description+' '+r.city+' '+r.contact).toLowerCase().includes(q));
+  document.getElementById('cnt').textContent=ALL.length?('· '+ALL.length+' reportes'):'';
+  document.getElementById('grid').innerHTML=items.length?items.map(card).join(''):'<p class="text-on-surface-variant text-sm col-span-full">Sin coincidencias.</p>';
+}
+async function load(){
+  try{
+    const d=await (await fetch('/api/rav/reports?kind=mascota&limit=500')).json();
+    ALL=d.items||[];
+    document.getElementById('chips').innerHTML=['Todas','Perdida','Encontrada'].map((l,i)=>`<button data-c="${i===0?'':l.toLowerCase().slice(0,8)}" class="chip rounded-full border px-3 py-1 text-xs font-semibold ${i===0?'bg-primary text-white border-primary':'border-outline-variant text-on-surface-variant'}">${l}</button>`).join('');
+    document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{CAT=b.dataset.c;document.querySelectorAll('.chip').forEach(x=>x.className=x.className.replace('bg-primary text-white border-primary','border-outline-variant text-on-surface-variant'));b.className=b.className.replace('border-outline-variant text-on-surface-variant','bg-primary text-white border-primary');render();});
+    render();
+  }catch(e){ document.getElementById('grid').innerHTML='<p class="text-on-surface-variant text-sm">No se pudo cargar.</p>'; }
+}
+document.getElementById('q').addEventListener('input',render);
+load();
+</script>
+</body>
+</html>

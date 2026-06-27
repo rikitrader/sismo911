@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voluntarios | SISMO911</title>
+<meta name="description" content="Voluntarios que ofrecen ayuda tras el terremoto de Venezuela 2026: traducción, transporte, apoyo remoto, alojamiento y más.">
+<link rel="canonical" href="https://sismo911.com/voluntarios">
+<meta property="og:title" content="Voluntarios | SISMO911">
+<meta property="og:description" content="Personas que ofrecen ayuda tras el terremoto de Venezuela.">
+<meta property="og:url" content="https://sismo911.com/voluntarios">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>body{background:#f9f9fc}</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<main class="mx-auto max-w-4xl px-4 py-8">
+  <h1 class="font-display font-extrabold text-3xl mb-1">Voluntarios</h1>
+  <p class="text-on-surface-variant mb-5 max-w-3xl">Personas que <b>ofrecen ayuda</b> tras el terremoto — traducción, transporte, apoyo remoto, alojamiento, digitalización y más. Contacta directamente. <span id="cnt" class="font-semibold"></span></p>
+  <div class="flex gap-2 mb-5">
+    <input id="q" type="search" placeholder="Buscar (habilidad, ciudad…)" class="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm">
+    <button id="btn" class="bg-primary text-white font-bold rounded-lg px-5 text-sm">Buscar</button>
+  </div>
+  <div id="list" class="space-y-3"><div class="text-on-surface-variant text-sm">Cargando…</div></div>
+</main>
+<script>
+const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function row(r){
+  const loc=[r.city,r.state].filter(Boolean).join(', ');
+  return `<article class="bg-white rounded-lg border border-outline-variant/60 p-4 flex gap-3">
+    <div class="w-9 h-9 rounded-full bg-primary/10 text-primary grid place-items-center font-bold shrink-0">🙋</div>
+    <div class="min-w-0">
+      <h3 class="font-display font-bold text-base leading-snug">${esc(r.title||'Voluntario')}</h3>
+      ${r.description?`<p class="text-sm text-on-surface-variant mt-1">${esc(r.description)}</p>`:''}
+      <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
+        ${loc?`<span class="text-on-surface-variant text-xs">📍 ${esc(loc)}</span>`:''}
+        ${r.contact?`<span class="font-semibold text-secondary">📞 ${esc(r.contact)}</span>`:''}
+      </div>
+    </div></article>`;
+}
+async function search(){
+  const q=document.getElementById('q').value.trim();
+  document.getElementById('list').innerHTML='<div class="text-on-surface-variant text-sm">Buscando…</div>';
+  try{
+    const d=await (await fetch('/api/rav/reports?kind=voluntario&limit=400'+(q?'&q='+encodeURIComponent(q):''))).json();
+    const items=d.items||[];
+    document.getElementById('cnt').textContent=items.length?('· '+items.length+' voluntarios'):'';
+    document.getElementById('list').innerHTML=items.length?items.map(row).join(''):'<p class="text-on-surface-variant text-sm">Sin coincidencias.</p>';
+  }catch(e){ document.getElementById('list').innerHTML='<p class="text-on-surface-variant text-sm">No se pudo cargar.</p>'; }
+}
+document.getElementById('btn').onclick=search;
+document.getElementById('q').addEventListener('keydown',(e)=>{if(e.key==='Enter')search();});
+search();
+</script>
+</body>
+</html>
