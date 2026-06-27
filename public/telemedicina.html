@@ -43,6 +43,8 @@
   .pane{display:none}.pane.on{display:block;animation:tmfade .18s ease}
   @keyframes tmfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   .optgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:12px}
+  /* Mobile: step option cards stack full-width + aligned (no half-width orphan card). */
+  @media(max-width:640px){.optgrid{grid-template-columns:1fr}}
   .tm-opt{text-align:left;border:1.5px solid var(--line);border-radius:12px;padding:16px;background:#fff;cursor:pointer;transition:.12s;display:flex;flex-direction:column;gap:6px;font-family:Inter,sans-serif}
   .tm-opt:hover{border-color:var(--navy);background:#fbfcff}
   .tm-opt:focus-visible{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,23,58,.18)}
