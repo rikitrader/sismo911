@@ -1,0 +1,10 @@
+# Remaps the Worker used to do (src/index.ts serveAsset), now handled by the
+# Assets layer so these high-traffic paths serve WITHOUT invoking the Worker.
+# 200 = rewrite (serve target content at the original URL); 301 = redirect.
+
+# Homepage is the DESAPARECIDOS registry; the old terremotos dashboard moves to /terremotos.
+/                /personas.html   200
+/terremotos      /index.html      200
+
+# Legacy La Guaira deep-link → generalized state template (dynamic, Worker-owned).
+/la-guaira       /estado/la-guaira  301
