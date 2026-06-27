@@ -130,7 +130,7 @@
 <script>
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ago=t=>{if(!t)return '';const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';};
-const ST={missing:['Desaparecida','bg-secondary'],found_safe:['Hallada a salvo','bg-safe'],found_deceased:['Fallecida','bg-on-surface'],unknown:['Sin estado','bg-warning']};
+const ST={missing:['Desaparecida','bg-secondary'],found_safe:['Hallada a salvo','bg-safe'],aparecido:['Apareció','bg-safe'],hospitalizado:['Hospitalizada','bg-primary'],found_deceased:['Fallecida','bg-on-surface'],unknown:['Sin estado','bg-warning']};
 const moreBtn=(id)=>`<button id="${id}" class="px-4 py-2 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>`;
 
 const tabs=document.querySelectorAll('.tab');
@@ -232,7 +232,7 @@ const pClose=()=>{pModal.classList.add('hidden');if(location.search.includes('pe
 document.getElementById('pClose').onclick=pClose;
 pModal.addEventListener('click',e=>{if(e.target===pModal)pClose();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!pModal.classList.contains('hidden'))pClose();});
-const PSTAT={'sin-contacto':['Sin contacto','#bb0027','#e7f3ec'],'localizado':['Localizada','#2e7d32','#e7f3ec'],'fallecido':['Fallecida','#44474f','#eef0f3']};
+const PSTAT={'sin-contacto':['Sin contacto','#bb0027','#e7f3ec'],'localizado':['Localizada','#2e7d32','#e7f3ec'],'aparecido':['Apareció','#2e7d32','#e7f3ec'],'hospitalizado':['Hospitalizada','#00173a','#e7ecf3'],'fallecido':['Fallecida','#44474f','#eef0f3']};
 const initials=n=>(n||'?').split(/\s+/).map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
 const fmtD=s=>{if(!s)return '';const d=new Date(s);return isNaN(d)?esc(s):d.toLocaleDateString('es-VE',{day:'numeric',month:'short',year:'numeric'});};
 function toast(msg){let el=document.getElementById('s911toast');if(!el){el=document.createElement('div');el.id='s911toast';el.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#00173a;color:#fff;padding:10px 18px;border-radius:10px;font:600 13px Inter,sans-serif;z-index:3000;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:opacity .3s';document.body.appendChild(el);}el.textContent=msg;el.style.opacity='1';clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity='0',2400);}
@@ -264,11 +264,20 @@ window.openPerson=async function(id){
         <span class="text-primary text-lg leading-none">→</span></a>
       ${p.reporter?`<div class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3 mt-2 text-sm"><span class="label-caps text-on-surface-variant text-[10px]">👥 Reporta</span> ${esc(p.reporter)}</div>`:''}
       ${p.description?`<p class="text-sm text-on-surface-variant mt-3">${esc(p.description)}</p>`:''}
-      ${p.estado!=='localizado'?`<div class="bg-safe/10 border border-safe/30 rounded-xl p-4 mt-4">
-        <div class="font-display font-bold text-safe">¿Ya lograste comunicarte?</div>
-        <p class="text-sm text-on-surface-variant mt-0.5 mb-3">Márcala como localizada y su familia podrá respirar tranquila.</p>
-        <button id="pFound" class="inline-flex items-center gap-2 bg-safe text-white font-display font-bold px-4 py-2.5 rounded-lg hover:opacity-90">✓ Marcar como localizada</button>
-        <p id="pFoundMsg" class="text-sm mt-2"></p></div>`:`<div class="bg-safe/10 border border-safe/30 rounded-xl p-4 mt-4 text-safe font-semibold">✓ Marcada como localizada.</div>`}
+      <div class="bg-primary/5 border border-primary/20 rounded-xl p-4 mt-4">
+        <div class="font-display font-bold text-primary">¿Tienes información de esta persona?</div>
+        <p class="text-sm text-on-surface-variant mt-0.5 mb-3">Reporta su estado. Tu actualización queda <b>pendiente de verificación</b> por un operador.</p>
+        <div class="flex flex-wrap gap-2" id="pUpd">
+          <button type="button" data-st="aparecido" class="ubtn border border-outline-variant rounded-full px-3.5 py-2 text-sm font-display font-bold">🟢 Apareció</button>
+          <button type="button" data-st="hospitalizado" class="ubtn border border-outline-variant rounded-full px-3.5 py-2 text-sm font-display font-bold">🏥 Hospitalizada</button>
+          <button type="button" data-st="found_safe" class="ubtn border border-outline-variant rounded-full px-3.5 py-2 text-sm font-display font-bold">✅ A salvo</button>
+          <button type="button" data-st="found_deceased" class="ubtn border border-outline-variant rounded-full px-3.5 py-2 text-sm font-display font-bold">⚫ Fallecida</button>
+        </div>
+        <input id="pHosp" class="hidden mt-2 w-full rounded-lg border border-outline-variant px-3 py-2 text-sm" placeholder="Nombre del hospital">
+        <textarea id="pDet" rows="2" class="mt-2 w-full rounded-lg border border-outline-variant px-3 py-2 text-sm" placeholder="Detalle (opcional): dónde / cómo lo sabes"></textarea>
+        <button id="pUpdSend" class="mt-2 inline-flex items-center gap-2 bg-primary text-white font-display font-bold px-4 py-2.5 rounded-lg hover:opacity-90 disabled:opacity-50" disabled>Enviar actualización</button>
+        <p id="pUpdMsg" class="text-sm mt-2"></p>
+      </div>
       <div class="border-t border-outline-variant/50 mt-5 pt-4">
         <div class="label-caps text-on-surface-variant text-[10px] mb-2">Ayuda a difundir</div>
         <div class="flex flex-wrap gap-2">
@@ -286,11 +295,24 @@ window.openPerson=async function(id){
   window.pShare=()=>navigator.share({title:p.full_name,text,url}).catch(()=>{});
   window.pCopy=()=>{navigator.clipboard&&navigator.clipboard.writeText(url);toast('Enlace copiado');};
   window.pIG=()=>{navigator.clipboard&&navigator.clipboard.writeText(text+' '+url);toast('Texto copiado — pégalo en tu historia de Instagram');window.open('https://www.instagram.com/','_blank','noopener');};
-  const fb=document.getElementById('pFound');
-  if(fb)fb.onclick=async()=>{const m=document.getElementById('pFoundMsg');m.textContent='Guardando…';
-    const r=await fetch('/api/familia/'+id+'/localizar',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(x=>x.json()).catch(()=>({}));
-    if(r.ok){m.className='text-sm mt-2 text-safe';m.textContent='✓ Marcada como localizada.';setTimeout(()=>openPerson(id),900);}
-    else{m.className='text-sm mt-2 text-on-surface-variant';m.textContent='Solo operadores confirman. Si tienes información, compártela arriba o repórtala.';}};
+  // Public status-update widget → POST /api/persons/:id/update (lands pending).
+  let pSt='';
+  const pHosp=document.getElementById('pHosp'),pSend=document.getElementById('pUpdSend'),pMsg=document.getElementById('pUpdMsg');
+  document.querySelectorAll('#pUpd .ubtn').forEach(btn=>btn.onclick=()=>{
+    pSt=btn.dataset.st;
+    document.querySelectorAll('#pUpd .ubtn').forEach(b=>b.classList.remove('bg-primary','text-white'));
+    btn.classList.add('bg-primary','text-white');
+    pHosp.classList.toggle('hidden',pSt!=='hospitalizado');
+    if(pSend)pSend.disabled=false;
+  });
+  if(pSend)pSend.onclick=async()=>{
+    if(!pSt){pMsg.textContent='Elige un estado.';return;}
+    pSend.disabled=true;pMsg.className='text-sm mt-2 text-on-surface-variant';pMsg.textContent='Enviando…';
+    const body={status:pSt,hospital:pHosp.value.trim()||undefined,detail:document.getElementById('pDet').value.trim()||undefined};
+    const r=await fetch('/api/persons/'+encodeURIComponent(docketId)+'/update',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(x=>x.json()).catch(()=>({}));
+    if(r.ok){pMsg.className='text-sm mt-2 text-safe';pMsg.textContent='✓ '+(r.message||'Actualización enviada. Queda pendiente de verificación.');}
+    else{pSend.disabled=false;pMsg.className='text-sm mt-2 text-secondary';pMsg.textContent=r.error==='rate_limited'?'Demasiados envíos, intenta más tarde.':(r.hint||'No se pudo enviar. Intenta de nuevo.');}
+  };
   const rb=document.getElementById('pReport');
   if(rb)rb.onclick=async()=>{if(!confirm('¿Reportar esta publicación como contenido inapropiado?'))return;await fetch('/api/familia/'+id+'/report',{method:'POST'}).catch(()=>{});toast('Gracias, lo revisaremos.');};
 };
