@@ -117,10 +117,10 @@
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.superbanner) {
-      // SUPER BANNER "AYUDA URGENTE" CTA — big gold→amber gradient, navy text, to
-      // read as a premium billboard spotlight distinct from the flat-colour CTAs.
+      // SUPER BANNER "AYUDA URGENTE" CTA — big solid SOS-red billboard (matches the
+      // "Emergencia / SOS" + REPORTAR red CTAs) so urgent help reads as an emergency.
       const onS = active(it);
-      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:linear-gradient(135deg,${GOLD} 0%,#e9b949 55%,#e57200 100%);color:${NAVY};box-shadow:0 2px 14px rgba(201,162,39,.5)${onS ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 2px 14px rgba(187,0,39,.5)${onS ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.cta) {
