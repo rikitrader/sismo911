@@ -1,8 +1,8 @@
 import type { Env } from '../types';
 import { recordIngest } from '../lib/db';
 import {
-  ravFetch, RAV_PAGE, mapRavPersona, mapRavVerified, mapRavStats,
-  type RavPersonRow, type RavVerifiedRow, type RavStatsRow, type PersonaUpsert,
+  ravFetch, RAV_PAGE, mapRavPersona, mapRavVerified, mapRavStats, mapRavReport, mapRavSafe,
+  type RavPersonRow, type RavVerifiedRow, type RavStatsRow, type RavReportRow, type RavSafeRow, type PersonaUpsert,
 } from '../lib/rav';
 
 // Ingest of redayudavenezuela.com (RAV) into D1.
@@ -142,4 +142,67 @@ export async function ingestRavVerified(env: Env): Promise<number> {
     console.log(`[rav] verified_info upserted ${n} (deduped from ${rows.length})`);
     return n;
   } catch (e: any) { console.error('[rav] verified failed:', e?.message ?? e); return 0; }
+}
+
+// Citizen reports (pets/volunteers/trapped/aid/damage). PK = RAV uuid → no dupes
+// by construction. Bounded page fetch (covers the current ~9.3k; if it ever grows
+// past PAGES×1000 the tail is picked up next run). Skips empty-title junk.
+export async function ingestRavReports(env: Env, pages = 15): Promise<number> {
+  try {
+    const runIso = new Date().toISOString();
+    const first = await ravFetch<RavReportRow>(env, 'reports', { order: 'created_at.desc' });
+    const total = first.total;
+    const all = [...first.rows];
+    const want = Math.max(1, Math.min(pages, 25));
+    for (let i = 1, off = RAV_PAGE; i < want && off < total; i++, off += RAV_PAGE) {
+      all.push(...(await ravFetch<RavReportRow>(env, 'reports', { offset: off, order: 'created_at.desc' })).rows);
+    }
+    const stmts = [];
+    for (const r of all) {
+      const m = mapRavReport(r, runIso);
+      if (!m.title && !m.description) continue;   // skip empty junk
+      stmts.push(env.DB.prepare(
+        `INSERT INTO rav_reports (id, kind, category, title, description, city, state, area, lat, lng,
+            contact, status, photo_url, meta, tags, ext_id, created_at, synced_at, pulled_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         ON CONFLICT(id) DO UPDATE SET
+           kind=excluded.kind, category=excluded.category, title=excluded.title, description=excluded.description,
+           city=excluded.city, state=excluded.state, area=excluded.area, lat=excluded.lat, lng=excluded.lng,
+           contact=excluded.contact, status=excluded.status, photo_url=excluded.photo_url, meta=excluded.meta,
+           tags=excluded.tags, synced_at=excluded.synced_at, pulled_at=excluded.pulled_at`,
+      ).bind(m.id, m.kind, m.category, m.title, m.description, m.city, m.state, m.area, m.lat, m.lng,
+        m.contact, m.status, m.photo_url, m.meta, m.tags, m.ext_id, m.created_at, m.synced_at, m.pulled_at));
+    }
+    let n = 0;
+    for (let i = 0; i < stmts.length; i += 100) { await env.DB.batch(stmts.slice(i, i + 100)); n += Math.min(100, stmts.length - i); }
+    await recordIngest(env, 'rav-reports', true, n);
+    console.log(`[rav] reports upserted ${n}/${total}`);
+    return n;
+  } catch (e: any) { console.error('[rav] reports failed:', e?.message ?? e); await recordIngest(env, 'rav-reports', false, 0, String(e?.message ?? e)).catch(() => {}); return 0; }
+}
+
+// "Estoy a salvo" safe check-ins. PK = RAV uuid → no dupes. Small (~300); one page.
+export async function ingestRavSafe(env: Env): Promise<number> {
+  try {
+    const runIso = new Date().toISOString();
+    const { rows } = await ravFetch<RavSafeRow>(env, 'safe_reports', { order: 'created_at.desc' });
+    const stmts = [];
+    for (const r of rows) {
+      const m = mapRavSafe(r, runIso);
+      if (!m.name) continue;
+      stmts.push(env.DB.prepare(
+        `INSERT INTO rav_safe_reports (id, slug, name, city, state, area, status, note, photo_url, tags, created_at, synced_at, pulled_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+         ON CONFLICT(id) DO UPDATE SET
+           slug=excluded.slug, name=excluded.name, city=excluded.city, state=excluded.state, area=excluded.area,
+           status=excluded.status, note=excluded.note, photo_url=excluded.photo_url, tags=excluded.tags,
+           synced_at=excluded.synced_at, pulled_at=excluded.pulled_at`,
+      ).bind(m.id, m.slug, m.name, m.city, m.state, m.area, m.status, m.note, m.photo_url, m.tags, m.created_at, m.synced_at, m.pulled_at));
+    }
+    let n = 0;
+    for (let i = 0; i < stmts.length; i += 100) { await env.DB.batch(stmts.slice(i, i + 100)); n += Math.min(100, stmts.length - i); }
+    await recordIngest(env, 'rav-safe', true, n);
+    console.log(`[rav] safe_reports upserted ${n}`);
+    return n;
+  } catch (e: any) { console.error('[rav] safe failed:', e?.message ?? e); await recordIngest(env, 'rav-safe', false, 0, String(e?.message ?? e)).catch(() => {}); return 0; }
 }

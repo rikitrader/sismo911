@@ -156,3 +156,47 @@ export function mapRavStats(r: RavStatsRow, runIso: string) {
     pulled_at: runIso,
   };
 }
+
+// --- reports (multi-kind citizen reports: pets/volunteers/trapped/aid/damage) ---
+export interface RavReportRow {
+  id: string; kind?: string; category?: string; title?: string; description?: string;
+  city?: string; state?: string; area?: string; lat?: number | null; lng?: number | null;
+  contact?: string; status?: string; photo_url?: string | null; meta?: any;
+  source?: string | null; ext_id?: string | null; created_at?: string | null;
+}
+export function mapRavReport(r: RavReportRow, runIso: string) {
+  const kind = String(r.kind ?? '').trim().toLowerCase();
+  const cat = String(r.category ?? '').trim().toLowerCase();
+  const photo = String(r.photo_url ?? '').trim();
+  const tags = ['rav', kind ? `kind:${kind}` : 'kind:otro', cat ? `cat:${cat}` : null,
+    photo ? 'has-photo' : 'no-photo', `status:${String(r.status ?? 'activo').toLowerCase()}`].filter(Boolean);
+  const num = (v: any) => { if (v == null || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
+  return {
+    id: String(r.id), kind: kind || 'otro', category: cat || null,
+    title: String(r.title ?? '').slice(0, 300), description: String(r.description ?? '').slice(0, 3000),
+    city: String(r.city ?? '').slice(0, 120) || null, state: String(r.state ?? '').slice(0, 120) || null,
+    area: String(r.area ?? '').slice(0, 120) || null, lat: num(r.lat), lng: num(r.lng),
+    contact: String(r.contact ?? '').slice(0, 120) || null, status: String(r.status ?? '').slice(0, 40) || null,
+    photo_url: photo.slice(0, 600) || null, meta: JSON.stringify(r.meta ?? {}).slice(0, 2000),
+    tags: JSON.stringify(tags), ext_id: r.ext_id ? String(r.ext_id).slice(0, 80) : null,
+    created_at: toIso(r.created_at), synced_at: runIso, pulled_at: runIso,
+  };
+}
+
+// --- safe_reports ("estoy a salvo" citizen check-ins) ---
+export interface RavSafeRow {
+  id: string; slug?: string; name?: string; city?: string; state?: string;
+  area?: string; status?: string; note?: string | null; photo_url?: string | null; created_at?: string | null;
+}
+export function mapRavSafe(r: RavSafeRow, runIso: string) {
+  const photo = String(r.photo_url ?? '').trim();
+  return {
+    id: String(r.id), slug: String(r.slug ?? '').slice(0, 40) || null,
+    name: String(r.name ?? '').slice(0, 160), city: String(r.city ?? '').slice(0, 120) || null,
+    state: String(r.state ?? '').slice(0, 120) || null, area: String(r.area ?? '').slice(0, 120) || null,
+    status: String(r.status ?? '').slice(0, 40) || null, note: r.note ? String(r.note).slice(0, 600) : null,
+    photo_url: photo.slice(0, 600) || null,
+    tags: JSON.stringify(['rav', `status:${String(r.status ?? 'bien').toLowerCase()}`, photo ? 'has-photo' : 'no-photo']),
+    created_at: toIso(r.created_at), synced_at: runIso, pulled_at: runIso,
+  };
+}

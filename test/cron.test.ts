@@ -11,7 +11,7 @@ const ALL_JOB_NAMES = [
   'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-purge-rejected',
   'familia-photo-mirror', 'monitor-sheet', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
   'social-monitor', 'blog', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash',
-  'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30',
+  'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe',
 ];
 
 describe('cron groups', () => {
@@ -55,6 +55,7 @@ describe('cron groups', () => {
       'rav-ingest',
       'rav-stats',
       'rav-verified',
+      'rav-reports-safe',
       'personas-phash-backfill-05',
     ]);
   });
