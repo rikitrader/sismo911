@@ -23,7 +23,7 @@
 <script src="/app-shell.js" defer></script>
 <style>
   /* Component classes built strictly from SISMO911 tokens (navy/crimson/surface). */
-  :root{--navy:#00173a;--navy-c:#0b2b5b;--crimson:#bb0027;--line:#c4c6d0;--ink:#1a1c1e;--muted:#44474f;--surface:#f9f9fc;--safe:#2e7d32}
+  :root{--navy:#00173a;--navy-c:#0b2b5b;--crimson:#bb0027;--line:#c4c6d0;--ink:#1a1c1e;--muted:#44474f;--surface:#f9f9fc;--safe:#2e7d32;--blue:#2563eb;--blue-soft:rgba(37,99,235,.16)}
   body{background:var(--surface)}
   .label-caps{font:700 11px 'Public Sans',sans-serif;letter-spacing:.07em;text-transform:uppercase}
   .tabnum{font-variant-numeric:tabular-nums}
@@ -46,9 +46,9 @@
   /* Mobile: step option cards stack full-width + aligned (no half-width orphan card). */
   @media(max-width:640px){.optgrid{grid-template-columns:1fr}}
   .tm-opt{text-align:left;border:1.5px solid var(--line);border-radius:12px;padding:16px;background:#fff;cursor:pointer;transition:.12s;display:flex;flex-direction:column;gap:6px;font-family:Inter,sans-serif}
-  .tm-opt:hover{border-color:var(--navy);background:#fbfcff}
-  .tm-opt:focus-visible{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,23,58,.18)}
-  .tm-opt.sel{border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,23,58,.14);background:#f5f8fd}
+  .tm-opt:hover{border-color:var(--blue);background:#f5f8ff}
+  .tm-opt:focus-visible{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+  .tm-opt.sel{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);background:#eef4ff}
   .tm-ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:rgba(0,23,58,.07);color:var(--navy)}
   .tm-ic svg{width:21px;height:21px}
   .tm-opt .t{font:800 14.5px 'Public Sans',sans-serif;color:var(--ink)}
@@ -59,18 +59,18 @@
   .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
   .caldow{font:800 10px 'Public Sans',sans-serif;color:var(--muted);text-align:center;text-transform:uppercase;padding-bottom:2px}
   .tm-cald{aspect-ratio:1;border:1px solid transparent;border-radius:9px;background:var(--surface);font:700 13.5px Inter,sans-serif;color:var(--ink);cursor:pointer;transition:.1s;font-variant-numeric:tabular-nums}
-  .tm-cald:hover:not(:disabled){background:#e6ecf5}
+  .tm-cald:hover:not(:disabled){background:#e6efff}
   .tm-cald:disabled{opacity:.3;cursor:default}
-  .tm-cald.sel{background:var(--navy);color:#fff;font-weight:800}
+  .tm-cald.sel{background:var(--blue);color:#fff;font-weight:800}
   /* Slots */
   .slotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:9px}
   .tm-slot{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:12px 6px;font:800 14px 'Public Sans',sans-serif;color:var(--navy);cursor:pointer;font-variant-numeric:tabular-nums;transition:.1s}
-  .tm-slot:hover{border-color:var(--navy);background:#f5f8fd}
-  .tm-slot:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(0,23,58,.18)}
-  .tm-slot.sel{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .tm-slot:hover{border-color:var(--blue);background:#f5f8ff;color:var(--blue)}
+  .tm-slot:focus-visible{outline:none;box-shadow:0 0 0 3px var(--blue-soft)}
+  .tm-slot.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
   /* Inputs */
   .fld{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;font:500 14px Inter,sans-serif;color:var(--ink);background:#fff;box-sizing:border-box;transition:.12s}
-  .fld:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,23,58,.14)}
+  .fld:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
   textarea.fld{min-height:96px;resize:vertical}
   .flbl{display:block;font:700 11px 'Public Sans',sans-serif;color:var(--ink);margin:0 0 6px;text-transform:uppercase;letter-spacing:.04em}
   /* Buttons */
