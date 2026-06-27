@@ -332,18 +332,23 @@ persons.get('/cases', async (c) => {
     } catch (e: any) { console.error('[cases] hospital bridge failed:', e?.message ?? e); }
   }
 
-  // ---------- cross-match: tag a desaparecido whose name matches a hospital intake ----------
-  // Conservative EXACT normalized full-name match — surfaces "posible hospitalización"
-  // on the missing person's case so families see it. Never overwrites status.
-  if (includeHosp || personIds.length || famIds.length) {
+  // ---------- cross-match badge: read persisted hospital_matches for this page ----------
+  // The match is computed durably by the hospital-match backfill (cron-drained) and
+  // stored in hospital_matches, so here we only join the page's case ids — cheap,
+  // and consistent with the pending docket note shown on the case timeline.
+  if (personCases.length || famCases.length) {
     try {
-      const { results: hn } = await c.env.DB.prepare(
-        `SELECT title, description, contact, city, state FROM rav_reports WHERE kind='hospital' AND coalesce(hidden,0)=0`,
-      ).all<any>();
-      const hospByName: Record<string, string> = {};
-      for (const r of hn ?? []) { const k = normName(r.title); if (k && k.length > 5) hospByName[k] = hospNameFrom(r); }
-      for (const x of [...personCases, ...famCases]) { const m = hospByName[normName(x.full_name)]; if (m) x.hospital_match = m; }
-    } catch (e: any) { console.error('[cases] hospital cross-match failed:', e?.message ?? e); }
+      const pageIds = [...personCases, ...famCases].map((x) => String(x.id));
+      const found: Record<string, string> = {};
+      for (let i = 0; i < pageIds.length; i += 90) {
+        const slice = pageIds.slice(i, i + 90);
+        const { results: hm } = await c.env.DB.prepare(
+          `SELECT person_id, hospital_name FROM hospital_matches WHERE person_id IN (${slice.map(() => '?').join(',')})`,
+        ).bind(...slice).all<any>();
+        (hm ?? []).forEach((r: any) => { if (!found[r.person_id]) found[r.person_id] = r.hospital_name; });
+      }
+      for (const x of [...personCases, ...famCases]) { if (found[x.id]) x.hospital_match = found[x.id]; }
+    } catch (e: any) { console.error('[cases] hospital match badge failed:', e?.message ?? e); }
   }
 
   // ---------- stitch back into the union order + live triage score ----------

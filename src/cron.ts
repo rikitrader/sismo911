@@ -27,6 +27,19 @@ import { ingestBlog } from './ingest/blog-cron';
 import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestRavSafe } from './ingest/rav-cron';
 import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
+import { backfillHospitalMatches } from './ingest/hospital-match';
+
+// Drain the hospital cross-match a bounded number of pages per tick (whole
+// registry completes over a few ticks; thereafter it re-scans for new intakes).
+async function drainHospitalMatch(env: Env): Promise<{ passes: number; matched: number; phase: string }> {
+  let passes = 0, matched = 0, phase = 'personas';
+  for (; passes < 10; passes++) {
+    const r = await backfillHospitalMatches(env, { pages: 3 });
+    matched += r.matched; phase = r.phase;
+    if (r.done) { passes++; break; }
+  }
+  return { passes, matched, phase };
+}
 
 export interface CronJob { name: string; run: (env: Env) => Promise<unknown>; }
 
@@ -79,6 +92,9 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'personas-dedupe-photo', run: (env) => drain(() => dedupePersonas(env, { mode: 'photo', apply: true, limit: 400 })) },
     // PHYSICALLY drain the soft-rejected backlog (spam/junk flagged just above).
     { name: 'personas-purge-rejected', run: (env) => drain(() => purgeRejectedPersonas(env, { apply: true, limit: 400 })) },
+    // Cross-match desaparecidos ↔ hospital intakes → persisted matches + pending
+    // docket notes (status untouched). Drains the registry, then re-scans for new intakes.
+    { name: 'hospital-match', run: (env) => drainHospitalMatch(env) },
   ],
   // :30 — photo mirroring (external fetch + R2 puts, the heaviest) plus the
   // sheet sync and fuzzyphone dedupe. Keep RAV off this trigger: together these
