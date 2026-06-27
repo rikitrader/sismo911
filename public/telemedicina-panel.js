@@ -44,6 +44,7 @@
     document.querySelectorAll('.pane').forEach((x) => x.classList.remove('on'));
     t.classList.add('on'); $('pane-' + t.dataset.pane).classList.add('on');
   }));
+  $('patSearch').addEventListener('input', (e) => renderPatients(e.target.value));
 
   async function boot() {
     const me = await api(`/doctors/me?doc=${encodeURIComponent(DOC)}&t=${encodeURIComponent(TOKEN)}`).catch(() => ({}));
@@ -51,7 +52,47 @@
     DOCTOR = me.doctor; $('app').style.display = 'block';
     $('docName').textContent = 'Dr(a). ' + DOCTOR.full_name;
     $('docWho').textContent = specL(DOCTOR.specialty) + (DOCTOR.country ? ' · ' + DOCTOR.country : '') + (DOCTOR.verified ? ' · ✔ Verificado' : '');
-    await Promise.all([loadAppointments(), loadAvailability()]);
+    await Promise.all([loadAppointments(), loadAvailability(), loadPatients()]);
+  }
+
+  // ---------- Pacientes (registry derived from appointments) ----------
+  let PATIENTS = [];
+  async function loadPatients() {
+    const res = await api(`/panel/patients?doc=${encodeURIComponent(DOC)}&t=${encodeURIComponent(TOKEN)}`).catch(() => ({ items: [] }));
+    PATIENTS = res.items || [];
+    $('c_pat').textContent = PATIENTS.length;
+    renderPatients('');
+  }
+  function renderPatients(q) {
+    const term = q.trim().toLowerCase();
+    const list = term ? PATIENTS.filter((p) => `${p.full_name || ''} ${p.cedula || ''}`.toLowerCase().includes(term)) : PATIENTS;
+    if (!list.length) { $('patList').innerHTML = `<div class="empty">${PATIENTS.length ? 'Sin coincidencias.' : 'Aún no tienes pacientes.'}</div>`; return; }
+    $('patList').innerHTML = list.map((p) => {
+      const sub = [p.cedula ? 'CI ' + esc(p.cedula) : '', p.age != null ? esc(p.age) + ' años' : '', esc(p.gender || ''), esc(p.location || '')].filter(Boolean).join(' · ');
+      const contact = [p.email, p.phone].filter(Boolean).join(' · ');
+      return `<div class="prow">
+        <div class="flex justify-between items-start gap-3 flex-wrap">
+          <div class="min-w-0"><div class="font-display font-extrabold text-[15px] text-on-surface">${esc(p.full_name || '—')}</div>
+          ${sub ? `<div class="text-[12.5px] text-on-surface-variant mt-0.5">${sub}</div>` : ''}
+          ${contact ? `<div class="text-[12.5px] text-on-surface-variant">${esc(contact)}</div>` : ''}</div>
+          <div class="text-right"><div class="font-display font-extrabold text-lg text-primary tabnum">${p.visits}</div><div class="text-[10.5px] uppercase tracking-wide text-on-surface-variant">visita${p.visits === 1 ? '' : 's'}</div></div>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-2"><button class="tm-btn tm-btn-ghost" data-pkey="${esc(p.pkey)}">Ver historial</button></div>
+        <div class="ws" id="hist-${esc(p.pkey)}" style="display:none"></div>
+      </div>`;
+    }).join('');
+    $('patList').querySelectorAll('button[data-pkey]').forEach((b) => b.addEventListener('click', () => {
+      const box = $('hist-' + b.dataset.pkey);
+      if (box.style.display === 'none') { box.style.display = 'block'; loadHistory(b.dataset.pkey, box); }
+      else box.style.display = 'none';
+    }));
+  }
+  async function loadHistory(pkey, box) {
+    box.innerHTML = '<div class="empty">Cargando historial…</div>';
+    const res = await api(`/panel/patients/${encodeURIComponent(pkey)}/history?doc=${encodeURIComponent(DOC)}&t=${encodeURIComponent(TOKEN)}`).catch(() => ({ visits: [] }));
+    const v = res.visits || [];
+    if (!v.length) { box.innerHTML = '<div class="text-[13px] text-on-surface-variant py-2">Sin visitas.</div>'; return; }
+    box.innerHTML = `<div class="rounded-lg border border-outline-variant/60 bg-surface p-3 mt-1">${v.map((a) => `<div class="wsnote"><div class="flex justify-between gap-2 flex-wrap"><span class="font-display font-bold text-[13.5px] text-on-surface">${esc(a.type_label)} ${badge(a.status)}</span><span class="text-[12px] text-on-surface-variant tabnum">${tFmt(a.start_ms)}</span></div>${a.reason ? `<div class="text-[13px] text-on-surface mt-1">${esc(a.reason)}</div>` : ''}</div>`).join('')}</div>`;
   }
 
   // ---------- Citas ----------

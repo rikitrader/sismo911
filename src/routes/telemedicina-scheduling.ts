@@ -311,6 +311,42 @@ telemedScheduling.get('/panel/appointments', async (c) => {
   return c.json({ ok: true, items, total: items.length }, 200, { 'Cache-Control': 'no-store' });
 });
 
+// GET /panel/patients?doc=&t= — the doctor's patient registry, derived from their
+// appointments and deduped by identity (cédula → else email → else phone). Always
+// consistent (no separate table to drift).
+const PKEY = `COALESCE(NULLIF(patient_cedula,''), NULLIF(patient_email,''), patient_phone)`;
+telemedScheduling.get('/panel/patients', async (c) => {
+  const doc = await verifyDoctor(c.env, String(c.req.query('doc') || ''), String(c.req.query('t') || ''));
+  if (!doc) return c.json({ error: 'unauthorized' }, 401);
+  const { results } = await c.env.DB.prepare(
+    `SELECT ${PKEY} AS pkey,
+            MAX(patient_name) AS full_name, MAX(patient_cedula) AS cedula, MAX(patient_email) AS email,
+            MAX(patient_phone) AS phone, MAX(patient_age) AS age, MAX(patient_gender) AS gender,
+            MAX(patient_location) AS location, COUNT(*) AS visits,
+            MIN(start_ms) AS first_ms, MAX(start_ms) AS last_ms
+       FROM telemed_appointments WHERE doctor_id=? AND ${PKEY} IS NOT NULL
+      GROUP BY pkey ORDER BY last_ms DESC LIMIT 500`,
+  ).bind(doc.id).all();
+  return c.json({ ok: true, items: results ?? [], total: results?.length ?? 0 }, 200, { 'Cache-Control': 'no-store' });
+});
+
+// GET /panel/patients/:key/history?doc=&t= — one patient's full visit history.
+telemedScheduling.get('/panel/patients/:key/history', async (c) => {
+  const doc = await verifyDoctor(c.env, String(c.req.query('doc') || ''), String(c.req.query('t') || ''));
+  if (!doc) return c.json({ error: 'unauthorized' }, 401);
+  const key = String(c.req.param('key') || '').trim().slice(0, 160);
+  if (!key) return c.json({ error: 'bad_key' }, 400);
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, appt_type, specialty, date, start_min, start_ms, status, reason, patient_name,
+            patient_cedula, patient_age, patient_gender, patient_location
+       FROM telemed_appointments
+      WHERE doctor_id=? AND (patient_cedula=? OR patient_email=? OR patient_phone=?)
+      ORDER BY start_ms DESC LIMIT 200`,
+  ).bind(doc.id, key, key, key).all();
+  const visits = (results ?? []).map((a: any) => ({ ...a, time: minToHHMM(a.start_min), type_label: APPT_TYPES[a.appt_type as ApptType]?.label || a.appt_type }));
+  return c.json({ ok: true, visits, total: visits.length }, 200, { 'Cache-Control': 'no-store' });
+});
+
 // POST /panel/appointments/:id/status — doctor drives the clinical lifecycle.
 telemedScheduling.post('/panel/appointments/:id/status', async (c) => {
   const b: any = (await c.req.json().catch(() => ({}))) || {};
