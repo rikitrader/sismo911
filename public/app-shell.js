@@ -83,7 +83,8 @@
     const on = active(it);
     if (it.alarm) {
       // Red "alarm" button — solid SECONDARY with a pulsing ring so it reads as urgent.
-      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 1px 3px rgba(187,0,39,.4)">
+      // Extra 10px gap below it to separate DESAPARECIDOS from the next pinned item.
+      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 1px 3px rgba(187,0,39,.4)">
       <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.18);color:#fff">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
