@@ -99,6 +99,15 @@
   }
   .pill-av{font:700 11.5px Inter;color:var(--green);background:#e6f5ec;border-radius:7px;padding:3px 9px;white-space:nowrap}
   .contact{font:800 13.5px Inter;color:#c8102e;white-space:nowrap}
+  .cact{display:flex;gap:7px;align-items:center}
+  .cbtn{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;cursor:pointer;flex:0 0 auto;border:1px solid var(--line);background:#fff;transition:transform .08s ease,box-shadow .12s ease}
+  .cbtn svg{width:17px;height:17px}
+  .cbtn:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,23,58,.2)}
+  .cbtn:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+  .cbtn.call{color:#fff;background:var(--navy);border-color:var(--navy)}
+  .cbtn.wa{color:#fff;background:#25d366;border-color:#1faa52}
+  .cbtn.mail{color:#fff;background:#c8102e;border-color:#a60d26}
+  .cmask{font:700 11px Inter;color:var(--muted);white-space:nowrap;margin-top:1px}
   .view{font:800 12.5px 'Public Sans';color:#fff;background:var(--navy);border-radius:9px;padding:8px 13px;display:inline-flex;align-items:center;gap:6px}
   .empty{padding:26px;text-align:center;color:var(--muted);font-size:14px}
 </style>
@@ -233,13 +242,29 @@ $('vform').addEventListener('submit',async(ev)=>{
 let FILTER='', OFFSET=0, NEXT=null, LIMIT=60, LOADING=false, STATS_DONE=false;
 function initials(n){return (String(n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('')||'?').toUpperCase();}
 
+// Action-icon contact block. Phone/email stay masked in the list; the real value
+// is only fetched (per-volunteer) when a human clicks an icon — see revealCard().
+const IC_CALL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.81.36 1.6.7 2.34a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0 1 22 16.92z"/></svg>';
+const IC_WA='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.47 14.38c-.3-.15-1.74-.86-2.01-.95-.27-.1-.46-.15-.66.15-.2.3-.76.95-.93 1.14-.17.2-.34.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.05-.17-.3-.02-.46.13-.6.13-.13.3-.34.45-.51.15-.17.2-.29.3-.49.1-.2.05-.37-.02-.52-.07-.15-.66-1.6-.9-2.18-.24-.57-.48-.5-.66-.51h-.57c-.2 0-.51.07-.78.37-.27.3-1.02.99-1.02 2.4 0 1.42 1.04 2.78 1.18 2.98.15.2 2.04 3.12 4.95 4.37.69.3 1.23.48 1.65.61.69.22 1.32.19 1.82.12.55-.08 1.74-.71 1.98-1.4.24-.69.24-1.28.17-1.41-.07-.12-.27-.19-.57-.34zM12.04 2.01c-5.46 0-9.9 4.44-9.9 9.9 0 1.74.46 3.44 1.32 4.94L2 22l5.3-1.39a9.86 9.86 0 0 0 4.73 1.2h.01c5.46 0 9.9-4.44 9.9-9.9a9.82 9.82 0 0 0-2.9-7A9.82 9.82 0 0 0 12.05 2z"/></svg>';
+const IC_MAIL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+function cbtn(id,act,cls,label,svg){
+  return `<span class="cbtn ${cls}" role="button" tabindex="0" data-id="${esc(id)}" data-act="${act}" title="${label}" aria-label="${label}">${svg}</span>`;
+}
+function contactActions(v){
+  const id=v.id, b=[];
+  if(v.has_phone){ b.push(cbtn(id,'phone','call','Llamar',IC_CALL)); b.push(cbtn(id,'wa','wa','WhatsApp',IC_WA)); }
+  if(v.has_email){ b.push(cbtn(id,'email','mail','Enviar correo',IC_MAIL)); }
+  if(!b.length) return '<span class="sub">Sin contacto</span>';
+  const hint=v.contact_mask?`<span class="cmask">${esc(v.contact_mask)}</span>`:'';
+  return `<div class="cact">${b.join('')}</div>${hint}`;
+}
 function vcard(v){
   const loc=[v.city,v.state].filter(Boolean).join(', ');
   const tags=(v.skills||[]).slice(0,5).map(k=>SK[k]?`<span class="tg">${SK[k][0]} ${esc(SK[k][1])}</span>`:'').join('');
   const more=(v.skills||[]).length>5?`<span class="tg">+${v.skills.length-5}</span>`:'';
   const av=v.availability&&AV[v.availability]?`<span class="pill-av">⏱️ ${AV[v.availability]}</span>`:'';
   const veh=v.has_vehicle?'<span class="tg">🚗 Vehículo</span>':'';
-  const contact=v.has_phone?`<span class="contact">📞 ${esc(v.contact_mask||'•••')}</span>`:(v.has_email?`<span class="contact">✉️ ${esc(v.contact_mask||'Correo')}</span>`:'');
+  const contact=contactActions(v);
   const head=v.photo_url
     ? `<div class="vc-photo" style="background-image:url('${esc(v.photo_url)}')"></div>`
     : `<div class="vavatar">${esc(initials(v.full_name))}</div>`;
@@ -304,6 +329,34 @@ async function loadDir(reset){
   }catch(e){ if(reset) $('list').innerHTML='<div class="empty">No se pudo cargar el directorio.</div>'; }
   $('moreBtn').textContent='Cargar más voluntarios'; $('moreBtn').disabled=false; LOADING=false;
 }
+
+// Click-to-act on a card's contact icon: fetch the full contact ONCE per
+// volunteer (rate-limited endpoint, defeats bulk scraping), then open the
+// dialer / WhatsApp / mail. Cards are <a> to the profile, so we preventDefault
+// to stop navigation when an icon is clicked.
+const REVEAL={};
+async function revealCard(id,act){
+  let c=REVEAL[id];
+  if(!c){
+    try{ const r=await fetch('/api/voluntarios/contact/'+encodeURIComponent(id)); c=r.ok?await r.json():{}; }
+    catch{ c={}; }
+    if(!c||c.ok===false||c.error==='rate_limited'){ alert('Demasiadas solicitudes. Intenta de nuevo en unos minutos.'); return; }
+    REVEAL[id]=c;
+  }
+  if(act==='phone'&&c.phone){ location.href='tel:'+c.phone.replace(/[^0-9+]/g,''); }
+  else if(act==='wa'&&c.wa){ window.open('https://wa.me/'+c.wa,'_blank','noopener'); }
+  else if(act==='email'&&c.email){ location.href='mailto:'+c.email; }
+  else { alert('Contacto no disponible.'); }
+}
+document.addEventListener('click',(e)=>{
+  const b=e.target.closest&&e.target.closest('.cbtn[data-act]');
+  if(b){ e.preventDefault(); e.stopPropagation(); revealCard(b.dataset.id,b.dataset.act); }
+});
+document.addEventListener('keydown',(e)=>{
+  if(e.key!=='Enter'&&e.key!==' ') return;
+  const b=e.target.closest&&e.target.closest('.cbtn[data-act]');
+  if(b){ e.preventDefault(); revealCard(b.dataset.id,b.dataset.act); }
+});
 
 let qTimer;
 $('q').addEventListener('input',()=>{ clearTimeout(qTimer); qTimer=setTimeout(()=>loadDir(true),250); });
