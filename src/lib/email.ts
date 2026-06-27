@@ -166,6 +166,19 @@ export function telemedScheduledEmail(opts: { toName?: string; counterpartName: 
   return { subject: `Videoconsulta agendada — ${opts.whenText} — SISMO911`, html, text };
 }
 
+// Reminder sent to the patient ahead of their videoconsulta (telemedicine v2 cron).
+export function telemedReminderEmail(opts: { toName?: string; doctorName: string; whenText: string; videoUrl: string; manageUrl: string }): EmailMsg {
+  const hi = opts.toName ? `Hola ${opts.toName},` : 'Hola,';
+  const html = layout('Recordatorio de tu videoconsulta — SISMO911',
+    h2('⏰ Recordatorio de tu cita') +
+    p(hi) +
+    p(`Te recordamos tu videoconsulta de telemedicina con <b>Dr(a). ${opts.doctorName}</b>: <b>${opts.whenText}</b>.`) +
+    `<p style="margin:0 0 12px">${button(opts.videoUrl, 'Entrar a la videoconsulta')}</p>` +
+    p(`A la hora de la cita abre el botón desde tu teléfono o computadora. <a href="${opts.manageUrl}" style="color:#13284f;font-weight:600">Ver o gestionar mi cita</a>.`));
+  const text = `${hi}\n\nRecordatorio: videoconsulta con Dr(a). ${opts.doctorName} — ${opts.whenText}.\nEntrar: ${opts.videoUrl}\nGestionar: ${opts.manageUrl}`;
+  return { subject: `Recordatorio: tu videoconsulta — ${opts.whenText} — SISMO911`, html, text };
+}
+
 // Sent to the patient on key appointment status changes (telemedicine v2 lifecycle).
 export function telemedApptStatusEmail(opts: {
   toName?: string; kind: 'in_progress' | 'completed' | 'cancelled' | 'no_show';

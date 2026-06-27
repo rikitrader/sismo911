@@ -28,6 +28,7 @@ import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestR
 import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
 import { backfillHospitalMatches } from './ingest/hospital-match';
+import { sendTelemedReminders } from './ingest/telemed-reminders';
 
 // Drain the hospital cross-match a bounded number of pages per tick (whole
 // registry completes over a few ticks; thereafter it re-scans for new intakes).
@@ -80,6 +81,7 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'sos-damage', run: ingestSosDamage },
     { name: 'case-score-sweep', run: (env) => sweepCaseScores(env) },
     { name: 'sos-sheet', run: syncSosSheet },
+    { name: 'telemed-reminders', run: sendTelemedReminders },
   ],
   // :15 — Familia registry ingest + cleanup (D1-heavy, but chunked/batched).
   '15 * * * *': [
