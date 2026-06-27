@@ -27,7 +27,16 @@ import { execSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
-const val = (f, d) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] ? Number(args[i + 1]) : d; };
+// Numeric flag reader. A non-numeric value (e.g. a shell that didn't word-split,
+// so "90 60" arrives as one token → NaN) is a HARD error, never a silent
+// fall-through: a NaN threshold would make `dt > NaN` false and disable the gate.
+const val = (f, d) => {
+  const i = args.indexOf(f);
+  if (i < 0) return d;
+  const n = Number(args[i + 1]);
+  if (!Number.isFinite(n)) { console.error(`Bad value for ${f}: ${JSON.stringify(args[i + 1])} (expected a number)`); process.exit(2); }
+  return n;
+};
 
 const APPLY = has('--apply');
 const LOCAL = has('--local');
@@ -35,8 +44,9 @@ const RESET = has('--reset');
 const DB = 'sismo911';
 const SCOPE = LOCAL ? '--local' : '--remote';
 
-const WINDOW_MS = val('--window-sec', 90) * 1000;
-const DIST_KM = val('--dist-km', 60);
+// Defaults tuned against live data 2026-06-27 — see src/lib/dedupe-seismic.ts.
+const WINDOW_MS = val('--window-sec', 150) * 1000;
+const DIST_KM = val('--dist-km', 70);
 const MAG_TOL = val('--mag-tol', 2.5);
 const DIVERGE_MAG = val('--diverge-mag', 1.0);
 const DAYS = val('--days', 7);
@@ -49,12 +59,20 @@ function d1(sql) {
   // Flatten to one line — embedded newlines survive JSON.stringify as literal
   // "\n" through the shell and reach SQLite as a stray backslash token.
   const flat = sql.replace(/\s+/g, ' ').trim();
+  // `--env-file /dev/null`: wrangler v4 auto-loads the project .env, whose
+  // Cloudflare token lacks D1 write scope and shadows the OAuth session even
+  // after we drop it from the child env → D1 "permission" Error 7500 on writes.
   const out = execSync(
-    `npx wrangler d1 execute ${DB} ${SCOPE} --json --command ${JSON.stringify(flat)}`,
+    `npx wrangler d1 execute ${DB} ${SCOPE} --env-file /dev/null --json --command ${JSON.stringify(flat)}`,
     { encoding: 'utf8', env, stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 }
   );
   const json = JSON.parse(out);
-  return (Array.isArray(json) ? json[0] : json)?.results ?? [];
+  const node = Array.isArray(json) ? json[0] : json;
+  // Wrangler exits 0 even when the API rejects the query (returns {error}); a
+  // write that silently no-ops here once made `--reset` "succeed" without
+  // clearing anything. Treat any error node as a hard failure.
+  if (node?.error) throw new Error(`D1 query failed: ${node.error.text ?? JSON.stringify(node.error)}`);
+  return node?.results ?? [];
 }
 
 const R_KM = 6371, toRad = (d) => (d * Math.PI) / 180;
