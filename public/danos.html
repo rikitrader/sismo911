@@ -131,6 +131,9 @@ function estadoLayers(){
   const types={
     'Límites estatales':{file:'boundary.geojson',add:(g,gj)=>L.geoJSON(gj,{interactive:false,style:{color:'#0b1d2a',weight:2.4,fill:false,dashArray:'5 4'}}).addTo(g)},
     'Municipios':{file:'municipios.geojson',add:(g,gj)=>{let i=0;return L.geoJSON(gj,{interactive:false,style:()=>({color:'#13284f',weight:1,fillColor:MUNI[(i++)%MUNI.length],fillOpacity:.12})}).addTo(g);}},
+    // La Guaira is a single municipio (Vargas) but 11 parroquias — restore that finer detail
+    // (Catia La Mar, Maiquetía, Macuto, Caraballeda, Naiguatá…) from the standalone file.
+    'Parroquias · La Guaira':{urls:['/la-guaira/parroquias.geojson'],add:(g,gj)=>{let i=0;return L.geoJSON(gj,{interactive:false,style:()=>({color:'#13284f',weight:1.3,fillColor:MUNI[(i++)%MUNI.length],fillOpacity:.2})}).addTo(g);}},
     'Calles principales':{file:'roads-major.geojson',add:(g,gj)=>L.geoJSON(gj,{interactive:false,style:f=>ROAD[f.properties.highway]||{color:'#94a3b8',weight:.6}}).addTo(g)},
     'Ciudades / Poblados':{file:'places.geojson',add:(g,gj)=>L.geoJSON(gj,{interactive:false,pointToLayer:(f,ll)=>{const p=f.properties.place,m=L.circleMarker(ll,{interactive:false,radius:p==='city'?6:p==='town'?4:2.5,color:'#13284f',weight:1,fillColor:'#3a86ff',fillOpacity:.9});if((p==='city'||p==='town')&&f.properties.name)m.bindTooltip(esc(f.properties.name),{permanent:true,direction:'right',className:'citylbl',opacity:.9});return m;}}).addTo(g)},
   };
@@ -139,8 +142,11 @@ function estadoLayers(){
   // Promise-cached: fetch every damaged estado's file for this layer once, in parallel.
   const load=k=>{
     if(loading[k])return loading[k];
-    loading[k]=Promise.all(DMG_ESTADOS.map(s=>fetch(`/data/estados/${s}/${types[k].file}`).then(r=>r.ok?r.json():null).catch(()=>null)))
-      .then(list=>{list.forEach(gj=>{if(gj&&gj.features&&gj.features.length)types[k].add(controls[k],gj);});});
+    const t=types[k];
+    // Per-state file across all damaged estados, or an explicit single-file url list.
+    const urls=t.urls||DMG_ESTADOS.map(s=>`/data/estados/${s}/${t.file}`);
+    loading[k]=Promise.all(urls.map(u=>fetch(u).then(r=>r.ok?r.json():null).catch(()=>null)))
+      .then(list=>{list.forEach(gj=>{if(gj&&gj.features&&gj.features.length)t.add(controls[k],gj);});});
     return loading[k];
   };
   const onAdd=e=>{ if(types[e.name]) load(e.name); };
