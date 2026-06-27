@@ -182,6 +182,9 @@
     <div class="chips" id="chips"></div>
     <div class="result-meta"><span class="cnt" id="dirCnt"></span></div>
     <div class="vlist" id="list"><div class="empty">Cargando voluntarios…</div></div>
+    <div id="moreWrap" style="text-align:center;margin-top:16px;display:none">
+      <button id="moreBtn" type="button" style="font:800 13.5px 'Public Sans';color:var(--navy);background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 22px;cursor:pointer">Cargar más voluntarios</button>
+    </div>
   </section>
 </main>
 
@@ -223,8 +226,11 @@ $('vform').addEventListener('submit',async(ev)=>{
   btn.disabled=false; btn.textContent='Registrarme como voluntario';
 });
 
-// ── Directory + header counts (single source of truth: combined DATA) ───────
-let FILTER='', DATA=[];
+// ── Directory: server is the single source of truth ────────────────────────
+// /api/voluntarios/directory derives every tag and returns EXACT full-dataset
+// stats (header + chips) plus the filtered/sorted/paginated slice, so the header
+// stays accurate no matter how many rows exist. The client only renders + paginates.
+let FILTER='', OFFSET=0, NEXT=null, LIMIT=60, LOADING=false, STATS_DONE=false;
 function initials(n){return (String(n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('')||'?').toUpperCase();}
 
 function vcard(v){
@@ -252,58 +258,59 @@ function vcard(v){
   </a>`;
 }
 
-function applyStats(){
-  const s=VOL.statsFromData(DATA), g=s.groups;
+// Header counts + skill chips come straight from the server's exact stats (built
+// once; chips are stable across filtering). Total is the WHOLE dataset.
+function applyStats(stats){
+  const g=stats.groups||{};
   $('h_total').textContent=(g.total||0).toLocaleString('es');
   $('h_medico').textContent=(g.medico||0).toLocaleString('es');
   $('h_rescate').textContent=(g.rescate||0).toLocaleString('es');
   $('h_logistica').textContent=(g.logistica||0).toLocaleString('es');
-  const c=s.counts, order=Object.keys(SK);
-  $('chips').innerHTML='<button class="chip on" data-k="">Todas <b>'+DATA.length+'</b></button>'+
-    order.filter(k=>c[k]).map(k=>`<button class="chip" data-k="${k}">${SK[k][0]} ${esc(SK[k][1])} <b>${c[k]}</b></button>`).join('');
+  const c=stats.counts||{}, order=Object.keys(SK);
+  $('chips').innerHTML='<button class="chip'+(FILTER===''?' on':'')+'" data-k="">Todas <b>'+(stats.total||0)+'</b></button>'+
+    order.filter(k=>c[k]).map(k=>`<button class="chip${FILTER===k?' on':''}" data-k="${k}">${SK[k][0]} ${esc(SK[k][1])} <b>${c[k]}</b></button>`).join('');
   document.querySelectorAll('#chips .chip').forEach(ch=>ch.addEventListener('click',()=>{
+    if(FILTER===ch.dataset.k) return;
     document.querySelectorAll('#chips .chip').forEach(x=>x.classList.remove('on')); ch.classList.add('on');
-    FILTER=ch.dataset.k; render();
+    FILTER=ch.dataset.k; loadDir(true);
   }));
 }
 
-function render(){
-  const q=$('q').value.trim().toLowerCase();
-  const avail=$('fAvail').value;
-  const sort=$('sort').value;
-  let rows=DATA.filter(v=>{
-    if(FILTER && !(v.skills||[]).includes(FILTER)) return false;
-    if(avail && v.availability!==avail) return false;
-    if(q){ const hay=[v.full_name,v.city,v.state,v.notes,v.experience,(v.skills||[]).map(k=>SK[k]&&SK[k][1]).join(' ')].join(' ').toLowerCase(); if(!hay.includes(q))return false; }
-    return true;
-  });
-  if(sort==='name') rows=rows.slice().sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||'','es'));
-  else if(sort==='skills') rows=rows.slice().sort((a,b)=>(b.skills||[]).length-(a.skills||[]).length);
-  else rows=rows.slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
-  $('dirCnt').textContent=rows.length+' '+(rows.length===1?'voluntario':'voluntarios')+(rows.length!==DATA.length?(' de '+DATA.length):'');
-  $('list').innerHTML=rows.length?rows.map(vcard).join(''):'<div class="empty">Sin coincidencias. Ajusta la búsqueda o sé el primero en registrarte con esa habilidad.</div>';
+function qs(extra){
+  const p=new URLSearchParams();
+  const q=$('q').value.trim(); if(q) p.set('q',q);
+  if(FILTER) p.set('skill',FILTER);
+  if($('fAvail').value) p.set('availability',$('fAvail').value);
+  p.set('sort',$('sort').value||'recent');
+  p.set('limit',LIMIT); p.set('offset',extra&&extra.offset!=null?extra.offset:OFFSET);
+  return p.toString();
 }
 
-async function loadDir(){
+// reset=true → new query (replace list + refresh header/chips); false → append page.
+async function loadDir(reset){
+  if(LOADING) return; LOADING=true;
+  if(reset){ OFFSET=0; $('list').innerHTML='<div class="empty">Cargando voluntarios…</div>'; $('moreWrap').style.display='none'; }
+  else { $('moreBtn').textContent='Cargando…'; $('moreBtn').disabled=true; }
   try{
-    const [reg,rav]=await Promise.all([
-      fetch('/api/voluntarios?limit=500').then(r=>r.json()).catch(()=>({items:[]})),
-      fetch('/api/rav/reports?kind=voluntario&limit=500').then(r=>r.json()).catch(()=>({items:[]}))
-    ]);
-    const regRows=(reg.items||[]).map(v=>VOL.normalize({...v,source:'registered',
-      skills:(()=>{try{return JSON.parse(v.skills||'[]')}catch{return[]}})()}));
-    const ravRows=(rav.items||[]).map(r=>VOL.normalize({source:'rav',id:r.id,full_name:r.title||'Voluntario',
-      notes:r.description||'',city:r.city,state:r.state,area:r.area,contact_phone:r.contact,
-      photo_url:r.photo_url,lat:r.lat,lng:r.lng,created_at:r.created_at}));
-    DATA=regRows.concat(ravRows);
-    applyStats(); render();
-  }catch(e){ $('list').innerHTML='<div class="empty">No se pudo cargar el directorio.</div>'; }
+    const d=await fetch('/api/voluntarios/directory?'+qs({offset:reset?0:OFFSET})).then(r=>r.json());
+    if(!d||!d.ok) throw new Error('bad');
+    if(reset || !STATS_DONE){ applyStats(d.stats||{}); STATS_DONE=true; }
+    const html=(d.items||[]).map(vcard).join('');
+    if(reset){ $('list').innerHTML=(d.items&&d.items.length)?html:'<div class="empty">Sin coincidencias. Ajusta la búsqueda o sé el primero en registrarte con esa habilidad.</div>'; }
+    else { $('list').insertAdjacentHTML('beforeend',html); }
+    NEXT=d.nextOffset; OFFSET=(NEXT!=null)?NEXT:(d.offset+(d.items?d.items.length:0));
+    $('dirCnt').textContent=(d.filteredTotal||0)+' '+((d.filteredTotal===1)?'voluntario':'voluntarios')+((d.filteredTotal!==(d.stats&&d.stats.total))?(' de '+((d.stats&&d.stats.total)||0)):'');
+    $('moreWrap').style.display=(NEXT!=null)?'block':'none';
+  }catch(e){ if(reset) $('list').innerHTML='<div class="empty">No se pudo cargar el directorio.</div>'; }
+  $('moreBtn').textContent='Cargar más voluntarios'; $('moreBtn').disabled=false; LOADING=false;
 }
 
-$('q').addEventListener('input',render);
-$('fAvail').addEventListener('change',render);
-$('sort').addEventListener('change',render);
-loadDir();
+let qTimer;
+$('q').addEventListener('input',()=>{ clearTimeout(qTimer); qTimer=setTimeout(()=>loadDir(true),250); });
+$('fAvail').addEventListener('change',()=>loadDir(true));
+$('sort').addEventListener('change',()=>loadDir(true));
+$('moreBtn').addEventListener('click',()=>loadDir(false));
+loadDir(true);
 </script>
 </body>
 </html>
