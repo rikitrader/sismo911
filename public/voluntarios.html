@@ -239,7 +239,7 @@ function vcard(v){
   const more=(v.skills||[]).length>5?`<span class="tg">+${v.skills.length-5}</span>`:'';
   const av=v.availability&&AV[v.availability]?`<span class="pill-av">⏱️ ${AV[v.availability]}</span>`:'';
   const veh=v.has_vehicle?'<span class="tg">🚗 Vehículo</span>':'';
-  const contact=v.contact_phone?`<span class="contact">📞 ${esc(v.contact_phone)}</span>`:(v.email?`<span class="contact">✉️ Correo</span>`:'');
+  const contact=v.has_phone?`<span class="contact">📞 ${esc(v.contact_mask||'•••')}</span>`:(v.has_email?`<span class="contact">✉️ ${esc(v.contact_mask||'Correo')}</span>`:'');
   const head=v.photo_url
     ? `<div class="vc-photo" style="background-image:url('${esc(v.photo_url)}')"></div>`
     : `<div class="vavatar">${esc(initials(v.full_name))}</div>`;

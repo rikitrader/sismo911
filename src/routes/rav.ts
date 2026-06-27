@@ -4,6 +4,7 @@ import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestR
 import { analyzeRavPhotos, backfillPhashes } from '../ingest/rav-photos';
 import { cleanPersonas } from '../lib/clean';
 import { dedupePersonas } from '../lib/dedupe';
+import { maskContact } from '../lib/security';
 import { backfillHospitalMatches } from '../ingest/hospital-match';
 
 // redayudavenezuela.com (RAV) surface:
@@ -104,10 +105,20 @@ rav.get('/api/rav/reports', async (c) => {
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { results } = await c.env.DB.prepare(
     `SELECT id, kind, category, title, description, city, state, area, lat, lng, contact, status, photo_url, tags, created_at,
-            case_status, reunited_at, reports_count, case_updated_ms
+            case_status, reunited_at, reports_count, case_updated_ms, photo_r2
      FROM rav_reports ${where} ORDER BY coalesce(case_updated_ms, 0) DESC, created_at DESC LIMIT ?`,
-  ).bind(...binds, limit).all();
-  return c.json({ ok: true, items: results ?? [], total: results?.length ?? 0 }, 200, { 'Cache-Control': 'public, max-age=120' });
+  ).bind(...binds, limit).all<any>();
+  // Volunteer contacts are masked (anti-scraping) — the raw value comes only from
+  // the rate-limited /api/voluntarios/contact/:id reveal. Mascotas/hospitales keep
+  // their contact visible (people need to reach them directly). Self-hosted pet
+  // photos resolve to the R2-served URL.
+  const items = (results ?? []).map((r: any) => {
+    if (r.photo_r2) r.photo_url = `/api/mascotas/photo/${r.id}`;
+    delete r.photo_r2;
+    if (r.kind === 'voluntario') { const { contact, ...rest } = r; return { ...rest, ...maskContact(contact) }; }
+    return r;
+  });
+  return c.json({ ok: true, items, total: items.length }, 200, { 'Cache-Control': 'public, max-age=120' });
 });
 
 // GET /api/rav/reports/kinds — counts per kind (for filter chips), public.

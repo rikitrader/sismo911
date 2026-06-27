@@ -79,12 +79,13 @@ function render(p){
     : `<div class="pavatar">${esc(initials(v.full_name))}</div>`;
   const badge=v.source==='rav'?'<span class="badge rav">Se ofreció a ayudar</span>':'<span class="badge reg">Voluntario registrado</span>';
 
-  const phone=(v.contact_phone||'').trim();
-  const waNum=phone.replace(/[^0-9]/g,'');
+  // Contact is masked server-side (anti-scraping). Buttons reveal the real value on
+  // click via the rate-limited /api/voluntarios/contact/:id endpoint and open the
+  // dialer / WhatsApp / mail populated. The mask is shown as a hint.
   const cta=[];
-  if(phone) cta.push(`<a class="btn call" href="tel:${esc(phone.replace(/[^0-9+]/g,''))}">📞 Llamar</a>`);
-  if(waNum.length>=7) cta.push(`<a class="btn wa" href="https://wa.me/${esc(waNum)}" target="_blank" rel="noopener">💬 WhatsApp</a>`);
-  if(v.email) cta.push(`<a class="btn mail" href="mailto:${esc(v.email)}">✉️ Correo</a>`);
+  if(v.has_phone) cta.push(`<a class="btn call" href="#" data-reveal="phone">📞 Llamar${v.contact_mask&&v.has_phone?' · '+esc(v.contact_mask):''}</a>`);
+  if(v.has_phone) cta.push(`<a class="btn wa" href="#" data-reveal="wa">💬 WhatsApp</a>`);
+  if(v.has_email) cta.push(`<a class="btn mail" href="#" data-reveal="email">✉️ Correo</a>`);
   if(v.lat&&v.lng) cta.push(`<a class="btn map" href="https://www.google.com/maps?q=${esc(v.lat)},${esc(v.lng)}" target="_blank" rel="noopener">📍 Ver en mapa</a>`);
 
   const avail=v.availability&&AV[v.availability]?`<span class="pill-av">⏱️ ${AV[v.availability]}</span>`:'';
@@ -119,6 +120,22 @@ function render(p){
 function fail(msg){
   $('root').innerHTML=`<div class="card"><div class="state"><h2>${esc(msg)}</h2><p>Es posible que el perfil ya no esté disponible.</p><a class="back" href="/voluntarios" style="margin-top:14px">← Volver al directorio</a></div></div>`;
 }
+
+// Click-to-reveal: fetch the full contact once (rate-limited endpoint), then open
+// the dialer / WhatsApp / mail populated. Defeats bulk scraping of the list API.
+let CONTACT=null;
+async function reveal(kind){
+  if(!CONTACT){
+    try{ const r=await fetch('/api/voluntarios/contact/'+encodeURIComponent(id)); CONTACT=r.ok?await r.json():{}; }
+    catch{ CONTACT={}; }
+    if(CONTACT.error==='rate_limited'||(CONTACT.ok===false)){ alert('Demasiadas solicitudes. Intenta de nuevo en unos minutos.'); CONTACT=null; return; }
+  }
+  if(kind==='phone'&&CONTACT.phone){ location.href='tel:'+CONTACT.phone.replace(/[^0-9+]/g,''); }
+  else if(kind==='wa'&&CONTACT.wa){ window.open('https://wa.me/'+CONTACT.wa,'_blank','noopener'); }
+  else if(kind==='email'&&CONTACT.email){ location.href='mailto:'+CONTACT.email; }
+  else { alert('Contacto no disponible.'); }
+}
+document.addEventListener('click',(e)=>{ const b=e.target.closest&&e.target.closest('[data-reveal]'); if(b){ e.preventDefault(); reveal(b.dataset.reveal); } });
 
 async function load(){
   if(!id){ fail('Perfil no especificado'); return; }

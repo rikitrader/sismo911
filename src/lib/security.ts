@@ -58,6 +58,35 @@ export function requestIp(c: Context): string {
   );
 }
 
+// Mask a phone/email for public display (anti-scraping): the raw value is never
+// sent in list/profile JSON — only this mask, plus has_* flags. The full value
+// comes from a separate rate-limited reveal endpoint on a human click.
+//   phone "04129979186" → "0412•••186"   ·   email "ixela@gmail.com" → "ix•••@gmail.com"
+export function maskPhone(phone: string | null | undefined): string | null {
+  const d = String(phone ?? '').replace(/[^\d+]/g, '');
+  if (d.replace(/\D/g, '').length < 6) return d ? '•••' : null;
+  const head = d.slice(0, 4), tail = d.slice(-3);
+  return `${head}•••${tail}`;
+}
+export function maskEmail(email: string | null | undefined): string | null {
+  const e = String(email ?? '').trim();
+  const at = e.indexOf('@');
+  if (at < 1) return e ? '•••' : null;
+  const user = e.slice(0, at), dom = e.slice(at);
+  return `${user.slice(0, 2)}•••${dom}`;
+}
+// Returns {has_phone, has_email, contact_mask} for a free-text contact field that
+// may hold a phone, an email, or both. contact_mask prefers the phone.
+export function maskContact(contact: string | null | undefined): { has_phone: boolean; has_email: boolean; contact_mask: string | null } {
+  const s = String(contact ?? '').trim();
+  const emailMatch = s.match(/[^\s,;]+@[^\s,;]+\.[^\s,;]+/);
+  const phoneDigits = s.replace(/[^\d]/g, '');
+  const has_email = !!emailMatch;
+  const has_phone = phoneDigits.length >= 6;
+  const contact_mask = has_phone ? maskPhone(s.replace(/[^\d+]/g, '')) : (has_email ? maskEmail(emailMatch![0]) : null);
+  return { has_phone, has_email, contact_mask };
+}
+
 export async function rateLimit(
   env: Env,
   c: Context,
