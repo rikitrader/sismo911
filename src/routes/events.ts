@@ -6,6 +6,7 @@ import { backfillUsgsHistory } from '../ingest/usgs-history';
 import { estimatePager } from '../lib/pager';
 import { scoreThreat } from '../lib/threat';
 import { edgeCached } from '../lib/edge-cache';
+import { rateLimit } from '../lib/security';
 
 export const events = new Hono<{ Bindings: Env }>();
 
@@ -40,7 +41,10 @@ events.get('/', async (c) => {
 // Registered BEFORE /:id so "history" isn't captured as an event id.
 // Data is backfilled into the events table by the operator-triggered
 // backfillUsgsHistory (src/ingest/usgs-history.ts), wired in /admin.
-events.get('/history', async (c) => edgeCached(c, 60, async () => {
+events.get('/history', async (c) => {
+  const limited = await rateLimit(c.env, c, 'events_history', 60, 60);
+  if (limited) return limited;
+  return edgeCached(c, 60, async () => {
   const page = Math.max(1, Number(c.req.query('page') ?? 1));
   const pageSize = Math.min(100, Math.max(1, Number(c.req.query('pageSize') ?? 30)));
   const w: string[] = [];
@@ -60,7 +64,8 @@ events.get('/history', async (c) => edgeCached(c, 60, async () => {
      FROM events ${where} ORDER BY time_ms DESC LIMIT ? OFFSET ?`
   ).bind(...b, pageSize, (page - 1) * pageSize).all();
   return { total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)), events: results ?? [] };
-}));
+  });
+});
 
 // GET /api/events/:id — single event + provisional PAGER estimate.
 events.get('/:id', async (c) => {
