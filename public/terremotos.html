@@ -321,6 +321,8 @@
     .replace(/\bof\b/g, 'de').replace(/\bNW\b/g, 'NO').replace(/\bSW\b/g, 'SO')
     .replace(/\bWNW\b/g, 'ONO').replace(/\bWSW\b/g, 'OSO').replace(/\bW\b/g, 'O');
   const esc = (s) => (s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  // Feed provenance label for popups/feed (USGS vs Venezuela's FUNVISIS).
+  const srcLabel = (s) => ({ usgs: 'USGS', funvisis: 'FUNVISIS' }[String(s || '').toLowerCase()] || String(s || '').toUpperCase());
 
   // ---- Map + layer control (street / satellite / NASA GIBS / heat / refugios) ----
   const map = L.map('map', { zoomControl: true, scrollWheelZoom: false, attributionControl: false })
@@ -393,7 +395,7 @@
              <div style="font-family:'JetBrains Mono';font-weight:700;color:${HEX[s]};font-size:15px">M ${q.mag.toFixed(1)}</div>
              <div style="font-weight:600;margin:2px 0 4px">${esc(esPlace(q.place))}</div>
              <div style="font-size:11px;color:#44474f;font-family:'JetBrains Mono'">PROF ${q.depth.toFixed(1)} km · ${q.lat.toFixed(1)}°N ${Math.abs(q.lon).toFixed(1)}°O</div>
-             <div style="font-size:11px;color:#747780;margin-top:2px">${timeAgo(q.time)}</div>
+             <div style="font-size:11px;color:#747780;margin-top:2px">${timeAgo(q.time)}${q.source ? ' · <span style="font-weight:600">' + esc(srcLabel(q.source)) + '</span>' : ''}</div>
            </div>`
         );
     });
@@ -528,6 +530,7 @@
       lat: e.lat,
       lon: e.lon,
       time: e.time_ms,
+      source: e.source || null, // feed provenance: 'usgs' | 'funvisis'
       alert: e.alert || null,   // USGS PAGER: green | yellow | orange | red
       mmi: e.mmi ?? null,       // peak shaking intensity (MMI)
       felt: e.felt ?? null,     // "Did You Feel It?" responses

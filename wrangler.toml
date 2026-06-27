@@ -121,6 +121,9 @@ USGS_MAXLAT = "16"
 USGS_MINLON = "-76"
 USGS_MAXLON = "-58"
 USGS_WINDOW_DAYS = "30"
+# FUNVISIS national seismic feed (Venezuela's own service). HTTP-only public
+# GeoJSON; in-code default in src/lib/funvisis.ts — override here if it moves.
+FUNVISIS_URL = "http://www.funvisis.gob.ve/maravilla.json"
 # redayudavenezuela.com (RAV) public Supabase REST source. The anon key is public
 # (shipped in their browser bundle) so it lives here, not in secrets. RAV_INGEST_TOKEN
 # (gates POST /api/rav/run) is a secret — set via `wrangler secret put`.
