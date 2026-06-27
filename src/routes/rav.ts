@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
-import { ingestRav, ingestRavStats, ingestRavVerified } from '../ingest/rav-cron';
+import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestRavSafe } from '../ingest/rav-cron';
 import { analyzeRavPhotos } from '../ingest/rav-photos';
 import { cleanPersonas } from '../lib/clean';
 import { dedupePersonas } from '../lib/dedupe';
@@ -36,6 +36,8 @@ rav.post('/api/rav/run', async (c) => {
     if (kind === 'stats' || kind === 'all') out.stats = await ingestRavStats(c.env);
     if (kind === 'verified' || kind === 'all') out.verified = await ingestRavVerified(c.env);
     if (kind === 'persons' || kind === 'all') out.persons = await ingestRav(c.env, pages);
+    if (kind === 'reports' || kind === 'all') out.reports = await ingestRavReports(c.env, pages);
+    if (kind === 'safe' || kind === 'all') out.safe = await ingestRavSafe(c.env);
     if (kind === 'photos' || kind === 'all') out.photos = await analyzeRavPhotos(c.env, photoBatch);
     if (c.req.query('clean')) out.cleaned = await cleanPersonas(c.env, { apply: true });
     if (c.req.query('dedupe')) {
@@ -71,5 +73,40 @@ rav.get('/api/verified-info', async (c) => {
      FROM verified_info ${where} ORDER BY published_at DESC LIMIT ?`,
   );
   const { results } = await (topic ? stmt.bind(topic, limit) : stmt.bind(limit)).all();
+  return c.json({ ok: true, items: results ?? [], total: results?.length ?? 0 }, 200, { 'Cache-Control': 'public, max-age=120' });
+});
+
+// GET /api/rav/reports?kind=&status=&limit= — citizen reports feed (pets/volunteers/
+// trapped/aid/damage), public. kind filters mascota|voluntario|atrapados|ayuda_int|dano.
+rav.get('/api/rav/reports', async (c) => {
+  const limit = Math.min(Math.max(Number(c.req.query('limit')) || 100, 1), 500);
+  const kind = (c.req.query('kind') || '').trim().toLowerCase();
+  const status = (c.req.query('status') || '').trim().toLowerCase();
+  const conds: string[] = []; const binds: unknown[] = [];
+  if (kind) { conds.push('lower(coalesce(kind,\'\')) = ?'); binds.push(kind); }
+  if (status) { conds.push('lower(coalesce(status,\'\')) = ?'); binds.push(status); }
+  const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, kind, category, title, description, city, state, area, lat, lng, contact, status, photo_url, tags, created_at
+     FROM rav_reports ${where} ORDER BY created_at DESC LIMIT ?`,
+  ).bind(...binds, limit).all();
+  return c.json({ ok: true, items: results ?? [], total: results?.length ?? 0 }, 200, { 'Cache-Control': 'public, max-age=120' });
+});
+
+// GET /api/rav/reports/kinds — counts per kind (for filter chips), public.
+rav.get('/api/rav/reports/kinds', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT kind, count(*) AS n FROM rav_reports GROUP BY kind ORDER BY n DESC`,
+  ).all();
+  return c.json({ ok: true, kinds: results ?? [] }, 200, { 'Cache-Control': 'public, max-age=300' });
+});
+
+// GET /api/rav/safe?limit= — "estoy a salvo" check-ins feed, public.
+rav.get('/api/rav/safe', async (c) => {
+  const limit = Math.min(Math.max(Number(c.req.query('limit')) || 100, 1), 500);
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, slug, name, city, state, area, status, note, photo_url, created_at
+     FROM rav_safe_reports ORDER BY created_at DESC LIMIT ?`,
+  ).bind(limit).all();
   return c.json({ ok: true, items: results ?? [], total: results?.length ?? 0 }, 200, { 'Cache-Control': 'public, max-age=120' });
 });
