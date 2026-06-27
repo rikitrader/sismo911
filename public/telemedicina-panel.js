@@ -124,6 +124,10 @@
     const ck = r.consult.checklist || {};
     const notesHtml = (r.notes || []).map((n) => `<div class="wsnote"><div class="text-[12px] text-on-surface-variant tabnum">${tFmt(n.at_ms)}</div><div class="text-[13.5px] text-on-surface whitespace-pre-wrap">${esc(n.body)}</div></div>`).join('') || '<div class="text-[13px] text-on-surface-variant">Sin notas todavía.</div>';
     const rxHtml = (r.prescriptions || []).map((p) => `<div class="wsnote"><div class="text-[12px] text-on-surface-variant tabnum">Emitido ${tFmt(p.issued_ms)}</div>${p.items.map((it) => `<div class="text-[13.5px] text-on-surface"><b>${esc(it.med)}</b>${it.dose ? ' · ' + esc(it.dose) : ''}${it.freq ? ' · ' + esc(it.freq) : ''}${it.duration ? ' · ' + esc(it.duration) : ''}${it.notes ? ' — ' + esc(it.notes) : ''}</div>`).join('')}${p.notes ? `<div class="text-[12.5px] text-on-surface-variant mt-1">${esc(p.notes)}</div>` : ''}</div>`).join('') || '<div class="text-[13px] text-on-surface-variant">Aún no has emitido récipe.</div>';
+    const fileUrl = (fid) => `/api/telemedicina/appt/${encodeURIComponent(id)}/file/${encodeURIComponent(fid)}?t=${encodeURIComponent(TOKEN)}`;
+    const filesHtml = (r.files || []).length ? `<div class="flex flex-wrap gap-2">${r.files.map((f) => (f.content_type || '').startsWith('image/')
+      ? `<a href="${fileUrl(f.id)}" target="_blank" rel="noopener" title="${esc(f.filename || '')}"><img src="${fileUrl(f.id)}" alt="${esc(f.caption || f.filename || '')}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)"></a>`
+      : `<a class="tm-btn tm-btn-ghost" href="${fileUrl(f.id)}" target="_blank" rel="noopener">📄 ${esc((f.filename || 'Documento').slice(0, 24))}</a>`).join('')}</div>` : '<div class="text-[13px] text-on-surface-variant">Sin archivos.</div>';
     box.innerHTML = `
       <div class="rounded-lg border border-outline-variant/60 bg-surface p-4 mt-1">
         <h4 class="font-display font-extrabold text-[15px] text-on-surface mb-2">Historia clínica <span class="font-normal text-on-surface-variant text-xs">· registro auditado</span></h4>
@@ -144,6 +148,11 @@
         <textarea class="fld mt-2" id="wsrxnotes-${id}" placeholder="Notas de la indicación (opcional)…"></textarea>
         <button class="tm-btn tm-btn-done mt-2" id="wsissue-${id}">Emitir récipe</button>
         <div class="msg" id="wsmsg-${id}"></div>
+
+        <h4 class="font-display font-extrabold text-[15px] text-on-surface mt-5 mb-2">Archivos (fotos / documentos)</h4>
+        <div class="mb-3">${filesHtml}</div>
+        <label class="tm-btn tm-btn-ghost" style="cursor:pointer">Adjuntar archivo<input type="file" id="wsfile-${id}" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none"></label>
+        <div class="msg" id="wsfmsg-${id}"></div>
       </div>`;
     const meds = $('wsmeds-' + id);
     const addMed = () => { const row = document.createElement('div'); row.className = 'wsmed flex flex-wrap gap-2 mb-2'; row.innerHTML = `<input class="fld flex-1 min-w-[140px] m-med" placeholder="Medicamento"><input class="fld w-[110px] m-dose" placeholder="Dosis"><input class="fld w-[120px] m-freq" placeholder="Frecuencia"><input class="fld w-[110px] m-dur" placeholder="Duración">`; meds.appendChild(row); };
@@ -169,6 +178,14 @@
       $('wsissue-' + id).disabled = true;
       const res = await api(`/panel/appointment/${encodeURIComponent(id)}/prescription`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doctor_id: DOC, token: TOKEN, items, notes: $('wsrxnotes-' + id).value.trim() }) }).catch(() => ({}));
       if (!res.ok) { $('wsissue-' + id).disabled = false; msg.className = 'msg err'; msg.textContent = res.hint || 'No se pudo emitir.'; return; }
+      openWorkspace(id, box);
+    };
+    $('wsfile-' + id).onchange = async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const fmsg = $('wsfmsg-' + id); fmsg.className = 'msg ok'; fmsg.textContent = 'Subiendo…';
+      const fd = new FormData(); fd.append('file', file); fd.append('doctor_id', DOC); fd.append('token', TOKEN);
+      const res = await fetch(`/api/telemedicina/panel/appointment/${encodeURIComponent(id)}/files`, { method: 'POST', body: fd }).then((x) => x.json()).catch(() => ({}));
+      if (!res.ok) { fmsg.className = 'msg err'; fmsg.textContent = res.hint || 'No se pudo subir.'; return; }
       openWorkspace(id, box);
     };
   }
