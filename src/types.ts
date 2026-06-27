@@ -77,6 +77,28 @@ export interface Env {
   CROSSMINT_WEBHOOK_SECRET?: string; // whsec_…      (Svix HMAC signing secret)
   CROSSMINT_ENV?: string;            // 'production' (default) | 'staging'
   CROSSMINT_CHAIN?: string;          // 'base' (default)
+
+  // --- DB Ingestion Gatekeeper (src/security/*) -----------------------------
+  // All optional: the gate has safe built-in defaults and degrades gracefully.
+  // Cloudflare Turnstile server secret (verify the public widget token). When
+  // unset, Turnstile checks are SKIPPED (not failed) so existing routes keep
+  // working; set it to enforce. `wrangler secret put TURNSTILE_SECRET_KEY`.
+  TURNSTILE_SECRET_KEY?: string;
+  // Max upload size in bytes (default 8 MiB). e.g. "8388608".
+  MAX_FILE_SIZE?: string;
+  // Spam score at/above which a submission is rejected (default 100). Lower =
+  // stricter. e.g. "100".
+  SPAM_THRESHOLD?: string;
+  // Comma-separated extra email domains to block outright (joins the built-in
+  // disposable list), e.g. "spam.com,bad.net".
+  EMAIL_BLOCKLIST?: string;
+  // Comma-separated ISO country codes to BLOCK (cf.country). Empty = allow all.
+  COUNTRY_BLOCKLIST?: string;
+  // Allow SVG uploads (default off — SVG can carry script). "1"/"true" to enable.
+  ALLOW_SVG_UPLOADS?: string;
+  // Optional Durable Object namespace backing the abuse counter (rate-limit.ts).
+  // Falls back to the D1 burst limiter when unbound, so it is NOT required.
+  ABUSE_COUNTER?: DurableObjectNamespace;
 }
 
 export interface SeismicEvent {
