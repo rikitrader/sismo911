@@ -18,6 +18,7 @@
   <url><loc>https://sismo911.com/reportar</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://sismo911.com/canal</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
   <url><loc>https://sismo911.com/blog</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://sismo911.com/roadmap</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url>
     <loc>https://sismo911.com/blog/terremoto-magnitud-7-5-yumare-venezuela-24-junio-2026</loc>
     <lastmod>2026-06-25</lastmod>
