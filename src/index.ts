@@ -40,6 +40,12 @@ import { layers } from './routes/layers';
 import { sitrep } from './routes/sitrep';
 import { dataApi } from './routes/data-api';
 import { mcp } from './routes/mcp';
+import { flotaUnidades } from './routes/flota-unidades';
+import { flotaPersonal } from './routes/flota-personal';
+import { flotaFlotas } from './routes/flota-flotas';
+import { flotaMisiones } from './routes/flota-misiones';
+import { flotaRastreo } from './routes/flota-rastreo';
+import { flotaTablero } from './routes/flota-tablero';
 import { runCronGroup } from './cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
@@ -72,7 +78,7 @@ app.use('/mcp', cors({
 // Admin console + curation/management writes require an authenticated operator
 // or admin session. Citizen actions (SOS, check-ins, damage reports) stay open.
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
-const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales', '/api/admin', '/api/aid-orgs', '/api/emergencia'];
+const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales', '/api/admin', '/api/aid-orgs', '/api/emergencia', '/api/flota'];
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   const method = c.req.method;
@@ -240,6 +246,15 @@ app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep
 app.route('/api/funding', funding); // live funder pipeline for the supply dashboard (reads 09_Funding sheet)
 app.route('/api/dashboard', dashboard); // /api/dashboard/geoseismic — aggregate of heatmap+stats+danos for /terremotos (4→2 fetches)
 app.route('/plan', plan);  // invitation-only business-plan slide deck (own invite-code gate)
+
+// FLOTA — emergency-response Fleet & Dispatch (FleetOps adapted to disaster response).
+// GET public; writes operator-gated (see ADMIN_WRITE_PREFIXES '/api/flota').
+app.route('/api/flota/unidades', flotaUnidades);   // response units (vehicles) CRUD
+app.route('/api/flota/personal', flotaPersonal);   // responders/crew CRUD
+app.route('/api/flota/flotas', flotaFlotas);       // fleets (groupings of units)
+app.route('/api/flota/misiones', flotaMisiones);   // dispatch missions + lifecycle state machine + waypoints + activity
+app.route('/api/flota/rastreo', flotaRastreo);     // live unit GPS ingest + map reads
+app.route('/api/flota/tablero', flotaTablero);     // command dashboard aggregates (resumen + mapa)
 
 // Homepage = the DESAPARECIDOS registry. The root URL serves the /personas page
 // (family-reunification is the app's front door post-quake); the old TERREMOTOS
