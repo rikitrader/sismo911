@@ -34,29 +34,39 @@
   .tab.on .c{background:rgba(255,255,255,.25)}
   .pane{display:none}.pane.on{display:block}
   .row{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:11px}
+  .row.term{opacity:.72}
   .row .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
   .row .name{font:800 15px 'Public Sans';color:var(--ink)}
   .row .meta{font-size:12.5px;color:var(--muted);margin-top:2px}
   .row .desc{font-size:13.5px;color:#39435a;margin-top:8px;line-height:1.45;white-space:pre-wrap}
   .badge{display:inline-block;padding:3px 9px;border-radius:999px;font:800 11px 'Public Sans';text-transform:uppercase;letter-spacing:.04em}
-  .b-open{background:#fef3c7;color:#92600a}.b-claimed{background:#dbeafe;color:#1e40af}.b-scheduled{background:#dcfce7;color:#166534}.b-completed{background:#e5e7eb;color:#374151}
-  .b-critica{background:#fee2e2;color:#991b1b}.b-alta{background:#ffedd5;color:#9a3412}.b-normal{background:#e0e7ff;color:#3730a3}.b-baja{background:#f1f5f9;color:#475569}
   .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-  button.act{border:none;border-radius:9px;padding:9px 14px;font:800 13px 'Public Sans';cursor:pointer;color:#fff}
-  .act.claim{background:var(--teal)}.act.sched{background:var(--navy)}.act.done{background:var(--green)}.act.ghost{background:#eef1f6;color:var(--navy)}
+  button.act{border:none;border-radius:9px;padding:9px 14px;font:800 13px 'Public Sans';cursor:pointer;color:#fff;background:var(--navy)}
+  .act.go{background:var(--teal)}.act.start{background:#0e7490}.act.done{background:var(--green)}
+  .act.warn{background:#b45309}.act.danger{background:var(--red)}.act.ghost{background:#eef1f6;color:var(--navy)}
   button.act:disabled{opacity:.5;cursor:default}
   .videolink{display:inline-flex;align-items:center;gap:7px;background:var(--teal);color:#fff;text-decoration:none;font:800 13px 'Public Sans';padding:9px 14px;border-radius:9px}
   .empty{text-align:center;color:var(--muted);padding:30px;font-size:14px}
-  .sched-form{margin-top:12px;background:#f7f9fd;border:1px solid var(--line);border-radius:11px;padding:14px;display:none}
-  .sched-form.show{display:block}
-  .sched-form .two{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
-  @media(max-width:560px){.sched-form .two{grid-template-columns:1fr}}
-  label.fl{display:block;font:700 11px Inter;color:var(--ink);margin:0 0 5px;text-transform:uppercase;letter-spacing:.03em}
-  input.f,select.f{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font:500 14px Inter;box-sizing:border-box}
   .gate{max-width:460px;margin:60px auto;text-align:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:34px}
   .msg{margin-top:10px;border-radius:9px;padding:10px 13px;font-size:13px;font-weight:600;display:none}
   .msg.ok{display:block;background:#e3f6ea;color:#166534}.msg.err{display:block;background:#fdeaec;color:#9b1c2e}
-  /* calendar */
+  label.fl{display:block;font:700 11px Inter;color:var(--ink);margin:0 0 5px;text-transform:uppercase;letter-spacing:.03em}
+  input.f,select.f{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font:500 14px Inter;box-sizing:border-box}
+  /* availability */
+  .toggle{display:flex;align-items:center;gap:10px;font:700 14px 'Public Sans';color:var(--navy);margin-bottom:6px}
+  .switch{position:relative;width:46px;height:26px;flex-shrink:0}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;transition:.15s;cursor:pointer}
+  .slider::before{content:"";position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+  .switch input:checked + .slider{background:var(--teal)}
+  .switch input:checked + .slider::before{transform:translateX(20px)}
+  .opts{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+  .chk{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font:700 12.5px 'Public Sans';color:var(--navy);cursor:pointer}
+  .chk input{accent-color:var(--teal)}
+  .dayrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f4f9;flex-wrap:wrap}
+  .dayrow .dn{width:108px;font:800 13px 'Public Sans';color:var(--ink)}
+  .dayrow.off .times{opacity:.4;pointer-events:none}
+  .blkrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f4f9;flex-wrap:wrap;font-size:13.5px}
   .cal-day{font:800 13px 'Public Sans';color:var(--navy);margin:14px 0 7px;border-bottom:2px solid #eef1f6;padding-bottom:5px}
   .cal-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f4f9;flex-wrap:wrap}
   .cal-time{font:800 14px 'Public Sans';color:var(--teal);min-width:74px}
@@ -78,172 +88,56 @@
         <div class="who" id="docWho">—</div>
       </div>
       <div class="hstats">
-        <div class="hstat"><div class="n" id="s_open">—</div><div class="l">Abiertas</div></div>
-        <div class="hstat"><div class="n" id="s_mine">—</div><div class="l">Mis casos</div></div>
-        <div class="hstat"><div class="n" id="s_sched">—</div><div class="l">Agendadas</div></div>
+        <div class="hstat"><div class="n" id="s_next">—</div><div class="l">Próximas</div></div>
+        <div class="hstat"><div class="n" id="s_today">—</div><div class="l">Hoy</div></div>
+        <div class="hstat"><div class="n" id="s_done">—</div><div class="l">Completadas</div></div>
       </div>
     </section>
 
+    <div id="setup" class="card card-pad" style="display:none;border-color:#f5c518;background:#fffbeb">
+      <h2 class="sec">⚠️ Publica tu disponibilidad</h2>
+      <div style="color:#7a5200;font-size:13.5px">Aún no tienes horarios. Los pacientes solo pueden agendar contigo cuando defines tus días y horas en la pestaña <b>Disponibilidad</b>.</div>
+    </div>
+
     <section class="card card-pad">
       <div class="tabbar">
-        <button class="tab on" data-pane="open">Solicitudes abiertas <span class="c" id="c_open">0</span></button>
-        <button class="tab" data-pane="mine">Mis casos <span class="c" id="c_mine">0</span></button>
-        <button class="tab" data-pane="cal">📅 Mi calendario <span class="c" id="c_cal">0</span></button>
+        <button class="tab on" data-pane="appts">Citas <span class="c" id="c_appts">0</span></button>
+        <button class="tab" data-pane="avail">🗓️ Disponibilidad</button>
+        <button class="tab" data-pane="cal">📅 Calendario <span class="c" id="c_cal">0</span></button>
       </div>
-      <div class="pane on" id="pane-open"></div>
-      <div class="pane" id="pane-mine"></div>
-      <div class="pane" id="pane-cal"></div>
+
+      <div class="pane on" id="pane-appts"><div class="empty">Cargando…</div></div>
+
+      <div class="pane" id="pane-avail">
+        <h2 class="sec">Tu disponibilidad</h2>
+        <div class="toggle"><label class="switch"><input type="checkbox" id="av_accept" checked><span class="slider"></span></label> Acepto nuevas citas</div>
+        <label class="fl" style="margin-top:14px">Duración de cada bloque</label>
+        <select class="f" id="av_slot"><option value="15">15 min</option><option value="20">20 min</option><option value="30" selected>30 min</option><option value="45">45 min</option><option value="60">60 min</option></select>
+        <label class="fl" style="margin-top:14px">Tipos de cita que ofreces</label>
+        <div class="opts" id="av_types"></div>
+        <label class="fl" style="margin-top:14px">Horario semanal <span style="font-weight:500;text-transform:none;color:var(--muted)">(hora de Venezuela)</span></label>
+        <div id="av_days"></div>
+        <button class="act go" id="av_save" style="margin-top:16px">Guardar disponibilidad</button>
+        <div class="msg" id="av_msg"></div>
+
+        <h2 class="sec" style="margin-top:24px">Bloquear fechas</h2>
+        <div class="blkrow" style="border:0;padding-bottom:4px">
+          <input class="f" type="date" id="blk_date">
+          <span style="color:var(--muted);font-size:12.5px">(día completo si no indicas horas)</span>
+          <input class="f" type="time" id="blk_from" style="width:120px"><span>–</span><input class="f" type="time" id="blk_to" style="width:120px">
+          <button class="act ghost" id="blk_add">Añadir bloqueo</button>
+        </div>
+        <div id="blk_list"></div>
+        <div class="msg" id="blk_msg"></div>
+      </div>
+
+      <div class="pane" id="pane-cal"><div class="empty">Cargando…</div></div>
     </section>
   </div>
 
   <script src="/app-shell.js" defer></script>
   <script src="/telemedicina-pwa.js" defer></script>
-  <script>
-  const $=id=>document.getElementById(id);
-  const qs=new URLSearchParams(location.search);
-  const DOC=qs.get('doc'), TOKEN=qs.get('t');
-  const SPECS={general:'Medicina general',pediatria:'Pediatría',medicina_interna:'Medicina interna',cardiologia:'Cardiología',ginecologia:'Ginecología',traumatologia:'Traumatología',psicologia:'Psicología',psiquiatria:'Psiquiatría',dermatologia:'Dermatología',neurologia:'Neurología',nutricion:'Nutrición',enfermeria:'Enfermería',farmacia:'Farmacia',otra:'Otra'};
-  const specL=k=>SPECS[k]||k;
-  const STATUS={open:['b-open','Abierta'],claimed:['b-claimed','Aceptada'],scheduled:['b-scheduled','Agendada'],completed:['b-completed','Completada'],cancelled:['b-completed','Cancelada']};
-  let DOCTOR=null;
-
-  if(!DOC||!TOKEN){ $('gate').style.display='block'; }
-  else { boot(); }
-
-  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
-    document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
-    t.classList.add('on'); $('pane-'+t.dataset.pane).classList.add('on');
-  }));
-
-  async function api(path,opts){ return fetch(path,opts).then(r=>r.json()); }
-
-  async function boot(){
-    const me=await api(`/api/telemedicina/doctors/me?doc=${encodeURIComponent(DOC)}&t=${encodeURIComponent(TOKEN)}`).catch(()=>({}));
-    if(!me.ok){ $('gate').style.display='block'; $('gate').querySelector('p').textContent='El enlace no es válido o expiró. Vuelve a registrarte.'; return; }
-    DOCTOR=me.doctor; $('app').style.display='block';
-    $('docName').textContent='Dr(a). '+DOCTOR.full_name;
-    $('docWho').textContent=specL(DOCTOR.specialty)+(DOCTOR.country?' · '+DOCTOR.country:'')+(DOCTOR.verified?' · ✔ Verificado':'');
-    await Promise.all([loadOpen(), refreshMine(me.cases)]);
-  }
-
-  // ---- Open queue ----
-  async function loadOpen(){
-    const res=await api('/api/telemedicina/requests').catch(()=>({items:[]}));
-    const items=res.items||[]; $('s_open').textContent=items.length; $('c_open').textContent=items.length;
-    if(!items.length){ $('pane-open').innerHTML='<div class="empty">No hay solicitudes abiertas ahora. ¡Gracias por estar disponible!</div>'; return; }
-    $('pane-open').innerHTML=items.map(r=>{
-      const u=STATUS_URG(r.urgency);
-      return `<div class="row" id="open-${r.id}">
-        <div class="top">
-          <div><div class="name">${specL(r.specialty)} · <span class="badge ${u[0]}">${u[1]}</span></div>
-          <div class="meta">${[r.patient_city,r.patient_state].filter(Boolean).join(', ')||'Venezuela'}${r.requester_country?' · solicita desde '+r.requester_country:''} · ${fage(r.created_ms)}</div></div>
-        </div>
-        ${r.description?`<div class="desc">${esc(r.description)}</div>`:''}
-        <div class="actions"><button class="act claim" onclick="claim('${r.id}',this)">✋ Aceptar este caso</button></div>
-        <div class="msg" id="m-open-${r.id}"></div>
-      </div>`;
-    }).join('');
-  }
-  function STATUS_URG(u){return {critica:['b-critica','Crítica'],alta:['b-alta','Alta'],normal:['b-normal','Normal'],baja:['b-baja','Baja']}[u]||['b-normal',u];}
-
-  window.claim=async(id,btn)=>{
-    btn.disabled=true; btn.textContent='Aceptando…';
-    const res=await api(`/api/telemedicina/requests/${id}/claim`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doctor_id:DOC,token:TOKEN})}).catch(()=>({}));
-    const m=$('m-open-'+id);
-    if(!res.ok){ m.className='msg err'; m.textContent=res.hint||res.error||'No se pudo aceptar.'; btn.disabled=false; btn.textContent='✋ Aceptar este caso'; if(res.error==='already_taken'){setTimeout(loadOpen,800);} return; }
-    m.className='msg ok'; m.textContent='✓ Caso aceptado. Pasó a “Mis casos” para que agendes la videoconsulta.';
-    setTimeout(async()=>{ await reloadAll(); document.querySelector('.tab[data-pane="mine"]').click(); },700);
-  };
-
-  // ---- My cases ----
-  function refreshMine(cases){
-    const mine=(cases||[]).filter(c=>c.status!=='completed'&&c.status!=='cancelled');
-    const sched=(cases||[]).filter(c=>c.status==='scheduled');
-    $('s_mine').textContent=mine.length; $('c_mine').textContent=(cases||[]).length;
-    $('s_sched').textContent=sched.length; $('c_cal').textContent=sched.length;
-    renderMine(cases||[]); renderCal(sched);
-  }
-  function renderMine(cases){
-    if(!cases.length){ $('pane-mine').innerHTML='<div class="empty">Aún no has aceptado casos. Mira las <b>solicitudes abiertas</b>.</div>'; return; }
-    $('pane-mine').innerHTML=cases.map(r=>{
-      const st=STATUS[r.status]||['b-open',r.status];
-      const contact=[r.patient_email,r.patient_phone].filter(Boolean).join(' · ');
-      return `<div class="row" id="mine-${r.id}">
-        <div class="top">
-          <div><div class="name">${r.patient_name} <span class="badge ${st[0]}">${st[1]}</span></div>
-          <div class="meta">${specL(r.specialty)} · ${[r.patient_city,r.patient_state].filter(Boolean).join(', ')||'Venezuela'}${contact?' · '+esc(contact):''}</div></div>
-        </div>
-        ${r.description?`<div class="desc">${esc(r.description)}</div>`:''}
-        ${r.status==='scheduled'?`<div class="meta" style="margin-top:8px">📅 ${new Date(r.scheduled_start_ms).toLocaleString('es-VE',{dateStyle:'full',timeStyle:'short'})}</div>`:''}
-        <div class="actions">
-          ${r.status==='scheduled'&&r.video_url?`<a class="videolink" href="${r.video_url}" target="_blank" rel="noopener">🎥 Entrar a la videoconsulta</a>`:''}
-          ${r.status==='scheduled'?`<a class="videolink" style="background:#eef1f6;color:var(--navy)" href="/api/telemedicina/appointment/${r.id}/ics?t=${encodeURIComponent(TOKEN==null?'':r.manage_token||'')}" >📅 Descargar .ics</a>`:''}
-          <button class="act sched" onclick="toggleSched('${r.id}')">${r.status==='scheduled'?'Reagendar':'🗓️ Agendar videoconsulta'}</button>
-          ${r.status==='scheduled'?`<button class="act done" onclick="complete('${r.id}',this)">✓ Marcar completada</button>`:''}
-        </div>
-        <div class="sched-form" id="sf-${r.id}">
-          <div class="two">
-            <div><label class="fl">Fecha y hora (tu hora local)</label><input class="f" type="datetime-local" id="dt-${r.id}"></div>
-            <div><label class="fl">Duración</label><select class="f" id="dur-${r.id}"><option value="20">20 min</option><option value="30" selected>30 min</option><option value="45">45 min</option><option value="60">60 min</option></select></div>
-            <div><button class="act sched" onclick="schedule('${r.id}',this)">Confirmar</button></div>
-          </div>
-          <div class="msg" id="m-mine-${r.id}"></div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-  window.toggleSched=id=>$('sf-'+id).classList.toggle('show');
-
-  window.schedule=async(id,btn)=>{
-    const dt=$('dt-'+id).value; if(!dt){ flash(id,'err','Elige fecha y hora.'); return; }
-    const start=new Date(dt).getTime(); if(!(start>Date.now()-60000)){ flash(id,'err','Elige una fecha futura.'); return; }
-    btn.disabled=true; btn.textContent='…';
-    const res=await api(`/api/telemedicina/requests/${id}/schedule`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doctor_id:DOC,token:TOKEN,start_ms:start,duration_min:Number($('dur-'+id).value)})}).catch(()=>({}));
-    if(!res.ok){ flash(id,'err',res.hint||res.error||'No se pudo agendar.'); btn.disabled=false; btn.textContent='Confirmar'; return; }
-    flash(id,'ok','✓ Agendada. Enviamos el enlace de video y el calendario por correo a ambos.');
-    setTimeout(reloadAll,800);
-  };
-  function flash(id,k,t){const m=$('m-mine-'+id);m.className='msg '+k;m.textContent=t;}
-
-  window.complete=async(id,btn)=>{
-    btn.disabled=true; btn.textContent='…';
-    const res=await api(`/api/telemedicina/requests/${id}/complete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doctor_id:DOC,token:TOKEN})}).catch(()=>({}));
-    if(res.ok) reloadAll(); else { btn.disabled=false; btn.textContent='✓ Marcar completada'; }
-  };
-
-  // ---- Calendar ----
-  function renderCal(sched){
-    if(!sched.length){ $('pane-cal').innerHTML='<div class="empty">No tienes videoconsultas agendadas. Agenda una desde <b>Mis casos</b>.</div>'; return; }
-    sched.sort((a,b)=>a.scheduled_start_ms-b.scheduled_start_ms);
-    let html='', lastDay='';
-    for(const r of sched){
-      const d=new Date(r.scheduled_start_ms);
-      const day=d.toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-      if(day!==lastDay){ html+=`<div class="cal-day">${day}</div>`; lastDay=day; }
-      html+=`<div class="cal-item">
-        <div style="display:flex;gap:12px;align-items:center">
-          <div class="cal-time">${d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})}</div>
-          <div><div class="name">${r.patient_name}</div><div class="meta">${specL(r.specialty)}</div></div>
-        </div>
-        <div style="display:flex;gap:8px">
-          ${r.video_url?`<a class="videolink" href="${r.video_url}" target="_blank" rel="noopener">🎥 Entrar</a>`:''}
-          <a class="videolink" style="background:#eef1f6;color:var(--navy)" href="/api/telemedicina/appointment/${r.id}/ics?t=${encodeURIComponent(r.manage_token||'')}">📅 .ics</a>
-        </div>
-      </div>`;
-    }
-    $('pane-cal').innerHTML=html;
-  }
-
-  async function reloadAll(){
-    const me=await api(`/api/telemedicina/doctors/me?doc=${encodeURIComponent(DOC)}&t=${encodeURIComponent(TOKEN)}`).catch(()=>({}));
-    if(me.ok){ refreshMine(me.cases); }
-    await loadOpen();
-  }
-
-  function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
-  function fage(ms){const m=Math.floor((Date.now()-ms)/60000);if(m<1)return'ahora';if(m<60)return m+' min';const h=Math.floor(m/60);if(h<24)return h+' h';return Math.floor(h/24)+' d';}
-  </script>
+  <script src="/telemedicina-panel.js" defer></script>
 </main>
 </body>
 </html>
