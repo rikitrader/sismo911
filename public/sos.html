@@ -38,15 +38,17 @@
   <button id="sosBtn" class="sos-btn w-56 h-56 rounded-full bg-secondary text-white font-display font-black text-4xl mx-auto grid place-items-center shadow-lg active:scale-95 transition">
     SOS
   </button>
-  <p class="text-xs text-on-surface-variant mt-4">Mantén presionado para confirmar el envío.</p>
+  <p class="text-xs text-on-surface-variant mt-4">Mantén presionado <b>1 segundo</b> para enviar.</p>
+  <div id="geo" class="text-xs mt-2 min-h-[16px] text-on-surface-variant"></div>
 
   <form id="meta" class="mt-6 space-y-2 text-left">
     <input name="name" placeholder="Tu nombre (opcional)" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
-    <input name="phone" placeholder="Teléfono de contacto (opcional)" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
-    <input name="note" placeholder="¿Qué ocurre? (opcional)" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
+    <input name="phone" inputmode="tel" placeholder="Teléfono de contacto (para que te llamen)" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
+    <input name="zone" placeholder="Tu zona / sector / dirección (importante si no hay GPS)" class="w-full border border-outline-variant rounded px-3 py-2 text-sm">
+    <textarea name="note" rows="2" placeholder="¿Qué ocurre? ¿Cuántas personas? ¿Heridos?" class="w-full border border-outline-variant rounded px-3 py-2 text-sm"></textarea>
   </form>
 
-  <div id="result" class="mt-6 hidden rounded-lg p-4 text-sm"></div>
+  <div id="result" class="mt-6 hidden rounded-lg p-4 text-sm text-left"></div>
 
   <div class="mt-8 grid grid-cols-3 gap-2 font-mono">
     <a href="tel:911" class="bg-white border border-outline-variant/60 rounded-lg py-3"><div class="text-xl font-bold">911</div><div class="text-[10px] text-on-surface-variant">Emergencias</div></a>
@@ -57,24 +59,61 @@
 
 <script>
   if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
-  const btn=document.getElementById('sosBtn'), res=document.getElementById('result');
-  let holdTimer=null;
-  function getPos(){return new Promise(r=>{ if(!navigator.geolocation)return r(null);
-    navigator.geolocation.getCurrentPosition(p=>r({lat:p.coords.latitude,lon:p.coords.longitude}),()=>r(null),{timeout:8000}); }); }
+  const btn=document.getElementById('sosBtn'), res=document.getElementById('result'), geoEl=document.getElementById('geo');
+  let holdTimer=null, sending=false;
+
+  // Best-effort high-accuracy fix. Resolves {lat,lon,acc} or null — NEVER a fake
+  // location. A fabricated coordinate would send rescuers to the wrong place.
+  function getPos(){return new Promise(r=>{
+    if(!navigator.geolocation){ r(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      p=>r({lat:p.coords.latitude,lon:p.coords.longitude,acc:Math.round(p.coords.accuracy||0)}),
+      ()=>r(null),
+      {enableHighAccuracy:true,timeout:12000,maximumAge:0}); }); }
+
+  // Warm up the permission/fix as soon as the page opens so the SOS is instant.
+  navigator.geolocation&&navigator.geolocation.getCurrentPosition(
+    p=>{ geoEl.innerHTML='📍 Ubicación lista (±'+Math.round(p.coords.accuracy||0)+' m)'; geoEl.className='text-xs mt-2 text-safe'; },
+    ()=>{ geoEl.innerHTML='⚠️ Sin GPS — escribe tu <b>zona/dirección</b> abajo para que te encuentren.'; geoEl.className='text-xs mt-2 text-warning'; },
+    {enableHighAccuracy:true,timeout:12000,maximumAge:0});
+
   async function fire(){
-    btn.textContent='…'; const m=Object.fromEntries(new FormData(document.getElementById('meta')));
+    if(sending) return; sending=true;
+    btn.textContent='…'; res.classList.add('hidden');
+    geoEl.textContent='Obteniendo tu ubicación…';
+    const m=Object.fromEntries(new FormData(document.getElementById('meta')));
     const pos=await getPos();
-    const body={lat:pos?.lat??10.5,lon:pos?.lon??-66.9,name:m.name||null,phone:m.phone||null,note:m.note||null};
-    try{ const r=await fetch('/api/sos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); const d=await r.json();
-      res.className='mt-6 rounded-lg p-4 text-sm bg-safe/10 text-safe border border-safe/30';
-      res.innerHTML='✅ Alerta SOS enviada'+(pos?' con tu ubicación':' (sin GPS — usa el 911)')+'. ID: <b>'+d.id+'</b>. Mantente a salvo.';
-    }catch(e){ res.className='mt-6 rounded-lg p-4 text-sm bg-secondary/10 text-secondary border border-secondary/30'; res.textContent='No se pudo enviar. Llama al 911.'; }
-    res.classList.remove('hidden'); btn.textContent='SOS';
+    const zone=(m.zone||'').trim();
+    // Build an operator-facing note that ALWAYS states the location confidence.
+    const parts=[];
+    if(m.note&&m.note.trim()) parts.push(m.note.trim());
+    if(zone) parts.push('Zona: '+zone);
+    parts.push(pos ? ('📍 GPS ±'+pos.acc+' m') : '⚠️ SIN GPS — UBICACIÓN NO CONFIRMADA, confirmar zona al llamar');
+    const note=parts.join(' · ').slice(0,1000);
+    // With GPS: real coordinates. Without GPS: send 0,0 as an explicit "unknown"
+    // sentinel (flagged in the note) instead of a believable fake city center.
+    const body={lat:pos?pos.lat:0,lon:pos?pos.lon:0,name:m.name||null,phone:m.phone||null,note,no_gps:!pos,acc:pos?pos.acc:null,zone:zone||null};
+    try{
+      const r=await fetch('/api/sos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+      const d=await r.json();
+      if(!r.ok||!d.id) throw new Error('bad');
+      res.className='mt-6 rounded-lg p-4 text-sm text-left bg-safe/10 text-safe border border-safe/30';
+      res.innerHTML='✅ <b>Alerta SOS enviada.</b> ID: <b>'+esc(d.id)+'</b>.'
+        +(pos?' Tu ubicación fue compartida con la red de rescate.':'<br><b>No se obtuvo tu GPS.</b> Llama al 911 e indica tu zona.')
+        +'<div class="mt-3 flex gap-2"><a href="tel:911" class="flex-1 text-center bg-secondary text-white font-bold rounded-lg py-2">📞 Llamar 911</a>'
+        +'<a href="/estoy-a-salvo" class="flex-1 text-center bg-white border border-safe/40 text-safe font-bold rounded-lg py-2">Estoy a salvo</a></div>';
+      geoEl.textContent='';
+    }catch(e){
+      res.className='mt-6 rounded-lg p-4 text-sm text-left bg-secondary/10 text-secondary border border-secondary/30';
+      res.innerHTML='⚠️ <b>No se pudo enviar</b> (sin conexión). <a href="tel:911" class="underline font-bold">Llama al 911 ahora</a>.';
+    }
+    res.classList.remove('hidden'); btn.textContent='SOS'; sending=false;
   }
-  const start=()=>{ holdTimer=setTimeout(fire,800); btn.style.opacity=.7; };
-  const cancel=()=>{ clearTimeout(holdTimer); btn.style.opacity=1; };
-  btn.addEventListener('mousedown',start); btn.addEventListener('touchstart',e=>{e.preventDefault();start();});
-  btn.addEventListener('mouseup',cancel); btn.addEventListener('mouseleave',cancel); btn.addEventListener('touchend',cancel);
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  const start=(e)=>{ if(sending)return; holdTimer=setTimeout(fire,1000); btn.style.opacity=.6; btn.textContent='…'; };
+  const cancel=()=>{ if(holdTimer){clearTimeout(holdTimer);holdTimer=null;} if(!sending){btn.style.opacity=1; btn.textContent='SOS';} };
+  btn.addEventListener('mousedown',start); btn.addEventListener('touchstart',e=>{e.preventDefault();start(e);},{passive:false});
+  btn.addEventListener('mouseup',cancel); btn.addEventListener('mouseleave',cancel); btn.addEventListener('touchend',cancel); btn.addEventListener('touchcancel',cancel);
 </script>
 </body>
 </html>

@@ -305,6 +305,12 @@
 
 <script>
   const api = (p, o) => fetch('/api/' + p, o).then(r => r.json());
+  // Operator SOS triage: acknowledge / resolve / reopen, then refresh the board.
+  window.sosSet = async (id, status) => {
+    try { await fetch('/api/sos/' + encodeURIComponent(id), { method:'PATCH', headers:{'content-type':'application/json'}, body:JSON.stringify({ status }) }); }
+    catch (e) { /* best-effort; next refresh reconciles */ }
+    if (typeof refreshDashboard === 'function') refreshDashboard();
+  };
   const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const ago = t => { const s=(Date.now()-t)/1000; if(s<3600)return Math.floor(s/60)+' min'; if(s<86400)return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; };
   const num = n => (n==null?0:Number(n)).toLocaleString('es-VE');
@@ -441,7 +447,7 @@
     ensureMap();
     mapLayers.clearLayers();
     events.forEach(ev=>{ if(ev.lat==null||ev.lon==null)return; const r=Math.max(5,(ev.mag||3)*3.2); L.circleMarker([ev.lat,ev.lon],{radius:r,color:'#dc2626',weight:1.5,fillColor:'#ef4444',fillOpacity:.4}).bindPopup(`<b>M${ev.mag} ${esc(ev.place_es||ev.place||'')}</b>`).addTo(mapLayers); });
-    sosList.forEach(s=>{ if(s.lat==null||s.lon==null)return; L.circleMarker([s.lat,s.lon],{radius:5,color:'#7c3aed',weight:1.5,fillColor:'#a855f7',fillOpacity:.8}).bindPopup(`SOS · ${esc(s.status)}${s.note?'<br>'+esc(s.note):''}`).addTo(mapLayers); });
+    sosList.forEach(s=>{ if(s.lat==null||s.lon==null||(!s.lat&&!s.lon))return; L.circleMarker([s.lat,s.lon],{radius:5,color:'#7c3aed',weight:1.5,fillColor:'#a855f7',fillOpacity:.8}).bindPopup(`SOS · ${esc(s.status)}${s.phone?'<br>📞 '+esc(s.phone):''}${s.note?'<br>'+esc(s.note):''}`).addTo(mapLayers); });
     dmgList.forEach(d=>{ if(d.lat==null||d.lon==null)return; L.circleMarker([d.lat,d.lon],{radius:4,color:'#ea580c',weight:1,fillColor:'#f97316',fillOpacity:.7}).bindPopup(`Daño · ${esc(d.severity||'')}`).addTo(mapLayers); });
 
     // ---- feed health ----
@@ -455,8 +461,16 @@
     // ---- recent quakes list ----
     document.getElementById('recent-quakes').innerHTML=(events.slice(0,6).map(ev=>`<div class="feed-row"><b class="mono ${(ev.mag||0)>=5?'text-error':''}">M${ev.mag!=null?Number(ev.mag).toFixed(1):'?'}</b><span class="flex-1 truncate">${esc(ev.place_es||ev.place||'—')}</span><span class="text-on-surface-variant text-xs">${ev.time_ms?ago(ev.time_ms):''}</span></div>`).join(''))||'<div class="text-xs text-on-surface-variant py-2">Sin sismos recientes.</div>';
 
-    // ---- SOS table ----
-    document.getElementById('sos-table').innerHTML = sosList.length ? `<table class="dt"><thead><tr><th>Estado</th><th>Nombre</th><th>Nota</th><th>Hace</th></tr></thead><tbody>${sosList.slice(0,8).map(s=>`<tr><td><span class="dot" style="background:${s.status==='active'?'#dc2626':'#d97706'}"></span> ${esc(s.status)}</td><td>${esc(s.name||'—')}</td><td class="truncate max-w-[180px]">${esc(s.note||'—')}</td><td class="text-on-surface-variant">${ago(s.created_ms)}</td></tr>`).join('')}</tbody></table>` : '<div class="text-sm text-on-surface-variant py-4">Sin SOS activos. 🟢</div>';
+    // ---- SOS table (actionable: call back, locate, acknowledge/resolve) ----
+    // Active first, then acknowledged; newest within each. The 0,0 sentinel = no GPS.
+    const sosSorted=[...sosList].sort((a,b)=>(a.status==='active'?0:1)-(b.status==='active'?0:1)||(b.created_ms||0)-(a.created_ms||0));
+    document.getElementById('sos-table').innerHTML = sosSorted.length ? `<table class="dt"><thead><tr><th>Estado</th><th>Nombre</th><th>Teléfono</th><th>Nota</th><th>Ubicación</th><th>Hace</th><th>Acción</th></tr></thead><tbody>${sosSorted.slice(0,25).map(s=>{
+      const hasGps=!(s.lat==null||s.lon==null||(!s.lat&&!s.lon));
+      const loc=hasGps?`<a href="https://www.google.com/maps?q=${s.lat},${s.lon}" target="_blank" rel="noopener" class="underline text-primary">Ver mapa</a>`:'<span class="text-warning font-semibold">sin GPS</span>';
+      const tel=s.phone?`<a href="tel:${esc(String(s.phone).replace(/[^0-9+]/g,''))}" class="underline text-primary">${esc(s.phone)}</a>`:'—';
+      const act=s.status==='resolved'?'':`<button onclick="sosSet('${esc(s.id)}','${s.status==='active'?'acknowledged':'active'}')" class="px-2 py-1 rounded text-xs font-semibold border border-outline-variant mr-1">${s.status==='active'?'Atender':'Reabrir'}</button><button onclick="sosSet('${esc(s.id)}','resolved')" class="px-2 py-1 rounded text-xs font-semibold text-white" style="background:#16a34a">Resuelto</button>`;
+      return `<tr><td><span class="dot" style="background:${s.status==='active'?'#dc2626':s.status==='acknowledged'?'#d97706':'#16a34a'}"></span> ${esc(s.status)}</td><td>${esc(s.name||'—')}</td><td>${tel}</td><td class="truncate max-w-[180px]">${esc(s.note||'—')}</td><td>${loc}</td><td class="text-on-surface-variant whitespace-nowrap">${ago(s.created_ms)}</td><td class="whitespace-nowrap">${act}</td></tr>`;
+    }).join('')}</tbody></table>` : '<div class="text-sm text-on-surface-variant py-4">Sin SOS activos. 🟢</div>';
 
     // ---- damage table ----
     document.getElementById('damage-table').innerHTML = dmgList.length ? `<table class="dt"><thead><tr><th>Severidad</th><th>Resumen</th><th>Hace</th></tr></thead><tbody>${dmgList.slice(0,8).map(d=>`<tr><td class="font-semibold">${esc(d.severity||'—')}</td><td class="truncate max-w-[260px]">${esc(d.summary||'—')}</td><td class="text-on-surface-variant">${ago(d.created_ms)}</td></tr>`).join('')}</tbody></table>` : '<div class="text-sm text-on-surface-variant py-4">Sin reportes de daños.</div>';
