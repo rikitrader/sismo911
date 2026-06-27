@@ -219,7 +219,11 @@ const serveAsset = async (c: any, assetPath: string) => {
   const assetRes = await c.env.ASSETS.fetch(new Request(new URL(assetPath, c.req.url).toString(), c.req.raw));
   const res = new Response(assetRes.body, assetRes);
   setSecurityHeaders({ header: (k: string, v: string) => res.headers.set(k, v) } as any);
-  res.headers.set('Cache-Control', 'no-cache, must-revalidate');
+  // Public command-page shells (homepage /personas, /dashboard, /geosismico, ...) are
+  // identical for every visitor — their live data loads via the JSON APIs below. Let
+  // browsers + the edge hold the shell briefly so repeat loads during a traffic spike
+  // don't re-invoke the Worker; stale-while-revalidate keeps a new deploy visible ~60s.
+  res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
   return res;
 };
 app.get('/', (c) => serveAsset(c, '/personas'));

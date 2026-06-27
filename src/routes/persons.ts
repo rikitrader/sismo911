@@ -6,6 +6,7 @@ import { audit } from '../lib/audit';
 import { getUserFromRequest } from '../lib/auth';
 import { scoreCase } from '../lib/case-score';
 import { recomputeCaseScore } from '../lib/case-score-sync';
+import { edgeCached } from '../lib/edge-cache';
 
 export const persons = new Hono<{ Bindings: Env }>();
 
@@ -141,7 +142,7 @@ async function logDocket(
 }
 
 // GET /api/persons/stats — live missing/found counters (approved only).
-persons.get('/stats', async (c) => {
+persons.get('/stats', async (c) => edgeCached(c, 60, async () => {
   const row: any = await c.env.DB.prepare(
     `SELECT
        SUM(CASE WHEN status='missing' THEN 1 ELSE 0 END) AS missing,
@@ -153,13 +154,13 @@ persons.get('/stats', async (c) => {
   // Federate the Familia (DESAP personas) registry so /personas reflects ALL cases.
   let f: any = {};
   try { f = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS found, SUM(CASE WHEN estado='hospitalizado' THEN 1 ELSE 0 END) AS hospitalized, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
-  return c.json({
+  return {
     missing: (row?.missing ?? 0) + (f?.missing ?? 0),
     found: (row?.found ?? 0) + (f?.found ?? 0),
     hospitalized: (row?.hospitalized ?? 0) + (f?.hospitalized ?? 0),
     total: (row?.total ?? 0) + (f?.total ?? 0),
-  });
-});
+  };
+}));
 
 // GET /api/persons/cases — case index. PUBLIC (read-only): non-operators see only
 // approved cases with PII redacted (no phone / reporter / coordinates) and a
@@ -790,14 +791,14 @@ persons.get('/queue', async (c) => {
 });
 
 // GET /api/persons?status=missing — approved registry.
-persons.get('/', async (c) => {
+persons.get('/', async (c) => edgeCached(c, 30, async () => {
   const status = c.req.query('status');
   const q = status
     ? c.env.DB.prepare(`SELECT id,full_name,age,sex,last_seen,status,photo_url,created_ms,updated_ms FROM persons WHERE review='approved' AND status = ? ORDER BY updated_ms DESC LIMIT 500`).bind(status)
     : c.env.DB.prepare(`SELECT id,full_name,age,sex,last_seen,status,photo_url,created_ms,updated_ms FROM persons WHERE review='approved' ORDER BY updated_ms DESC LIMIT 500`);
   const { results } = await q.all();
-  return c.json({ persons: results ?? [] });
-});
+  return { persons: results ?? [] };
+}));
 
 // POST /api/persons — PUBLIC missing-person report → moderation queue (pending).
 persons.post('/', async (c) => {
