@@ -1,4 +1,5 @@
 import type { Env } from '../types';
+import { gateRavReport } from './gate-config';
 const SRC = 'https://sosvenezuela2026.com/api/reports';
 // Drop coordinates outside Venezuela's bounding box (bad geocodes in the upstream
 // feed, e.g. a La Guaira collapse published at lat 50.9 in Europe). Out-of-range
@@ -27,16 +28,26 @@ export async function ingestSosDamage(env: Env): Promise<{ count: number }> {
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(id) DO UPDATE SET category=excluded.category, severity=excluded.severity, resource_status=excluded.resource_status, verification=excluded.verification, title=excluded.title, description=excluded.description, lat=excluded.lat, lng=excluded.lng, municipio=excluded.municipio, parroquia=excluded.parroquia, building_type=excluded.building_type, people_trapped=excluded.people_trapped, source_url=excluded.source_url, image_url=excluded.image_url, synced_ms=excluded.synced_ms`
   );
-  const batch = items.map((r) => {
-    let [lat, lng] = veCoord(r.lat_pub, r.lng_pub);
-    if (lat === null && COORD_FIX[r.id]) [lat, lng] = COORD_FIX[r.id];
-    return stmt.bind(
-    r.id, r.category ?? null, r.severity ?? null, r.resource_status ?? null, r.verification ?? null,
-    r.title ?? null, r.description ?? null, lat, lng,
-    r.municipio ?? null, r.parroquia ?? null, r.building_type ?? null, r.people_trapped_count ?? null,
-    r.source_url ?? null, r.image_url ?? null, r.created_at ?? null, now
-  );
-  });
+  // Door check: drop markup / link-spam / flood rows from the upstream feed before
+  // they land (in-memory, no D1). A title-less damage report is still allowed.
+  let rejected = 0;
+  const batch = items
+    .filter((r) => {
+      if (gateRavReport({ title: r.title, description: r.description }).ok) return true;
+      rejected++;
+      return false;
+    })
+    .map((r) => {
+      let [lat, lng] = veCoord(r.lat_pub, r.lng_pub);
+      if (lat === null && COORD_FIX[r.id]) [lat, lng] = COORD_FIX[r.id];
+      return stmt.bind(
+        r.id, r.category ?? null, r.severity ?? null, r.resource_status ?? null, r.verification ?? null,
+        r.title ?? null, r.description ?? null, lat, lng,
+        r.municipio ?? null, r.parroquia ?? null, r.building_type ?? null, r.people_trapped_count ?? null,
+        r.source_url ?? null, r.image_url ?? null, r.created_at ?? null, now,
+      );
+    });
   for (let i = 0; i < batch.length; i += 500) await env.DB.batch(batch.slice(i, i + 500));
+  if (rejected) console.log(`[sos-damage] synced ${batch.length}, rejected ${rejected}`);
   return { count: batch.length };
 }

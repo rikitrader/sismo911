@@ -20,7 +20,7 @@ import type { z } from 'zod';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { requestIp } from '../lib/security';
-import { parseJsonSafely, enforceAllowlist, LIMITS } from './validators';
+import { parseJsonSafely, enforceAllowlist, normalizeString, LIMITS } from './validators';
 import { scoreSpam, type ScoreInput } from './spam-score';
 import { checkAndRecordHash, ipRateLimit, accountRateLimit } from './rate-limit';
 import { scanFile, sha256Hex, type FileScanResult, type ScanOpts } from './file-scan';
@@ -68,6 +68,10 @@ export interface GateConfig<S extends z.ZodTypeAny> {
   // File upload (multipart) handling — omit for JSON-only surfaces.
   file?: ScanOpts & { fieldName?: string; required?: boolean };
   spamThresholdOverride?: number;
+  // Skip the gate's own per-IP rate limit. Set when the calling route already
+  // rate-limits (e.g. reports/familia call rateLimit() before runGate) so we
+  // don't double-count the same request against two buckets.
+  skipRateLimit?: boolean;
 }
 
 export interface GateReject {
@@ -259,9 +263,11 @@ export async function runGate<S extends z.ZodTypeAny>(
     const blocked = (env.COUNTRY_BLOCKLIST ?? '').split(',').map((s) => s.trim()).filter(Boolean);
     if (country && blocked.includes(country)) return reject(403, REASON_CODES.COUNTRY_BLOCKED, `country ${country}`);
 
-    // 1. Rate limits.
-    const ipDec = await ipRateLimit(env, c, `gate:${cfg.surface}`, cfg.ipLimit ?? 20, cfg.ipWindowSec ?? 60);
-    if (ipDec.limited) return reject(429, REASON_CODES.RATE_LIMIT_IP, 'ip rate limit', { retryAfterSec: ipDec.retryAfterSec });
+    // 1. Rate limits (skippable when the caller already rate-limited).
+    if (!cfg.skipRateLimit) {
+      const ipDec = await ipRateLimit(env, c, `gate:${cfg.surface}`, cfg.ipLimit ?? 20, cfg.ipWindowSec ?? 60);
+      if (ipDec.limited) return reject(429, REASON_CODES.RATE_LIMIT_IP, 'ip rate limit', { retryAfterSec: ipDec.retryAfterSec });
+    }
     if (cfg.accountId) {
       const aDec = await accountRateLimit(env, cfg.accountId, `gate:${cfg.surface}`, cfg.accountLimit ?? 60, cfg.accountWindowSec ?? 3600);
       if (aDec.limited) return reject(429, REASON_CODES.RATE_LIMIT_ACCOUNT, 'account rate limit', { retryAfterSec: aDec.retryAfterSec });
@@ -376,3 +382,108 @@ export function clientMessage(r: GateReject): { error: string; ref: string } {
         : 'No pudimos procesar tu envío. Verifica los datos e intenta de nuevo.';
   return { error: friendly, ref: r.correlationId };
 }
+
+// ===========================================================================
+// gateRow — context-free, ZERO-D1 validator for cron/server ingests.
+//
+// The cron jobs (rav-cron, familia-cron, sos-damage sync) receive only `env`,
+// not a Hono Context, and process up to thousands of rows per tick — so they
+// CANNOT use runGate() (needs Context) and MUST NOT do per-row D1 work (Workers
+// subrequest budget). gateRow() runs the same validation CORE — normalize →
+// strict allowlist → zod → spam score — purely in memory. No rate limit, no
+// Turnstile, no replay ledger, no file scan. Use it to drop junk/spam/markup
+// rows before a bulk upsert.
+// ===========================================================================
+
+export interface GateRowConfig<S extends z.ZodTypeAny> {
+  schema: S;
+  allowedFields: readonly string[];
+  nameFields?: readonly string[];
+  textFields?: readonly string[];
+  emailField?: string;
+  spamThreshold?: number; // default 100
+}
+
+export type GateRowResult<T> =
+  | { ok: true; data: T; score: number; reasons: string[] }
+  | { ok: false; reason: ReasonCode; score: number; reasons: string[]; detail: string };
+
+/** Validate one already-parsed object (a mapped scrape row). Pure + sync. */
+export function gateRow<S extends z.ZodTypeAny>(
+  input: Record<string, unknown>,
+  cfg: GateRowConfig<S>,
+): GateRowResult<z.infer<S>> {
+  // 1. Strict allowlist (extra scrape fields are dropped, not rejected — sources
+  //    legitimately carry columns we don't store).
+  const al = enforceAllowlist(input, cfg.allowedFields, false);
+
+  // 2. Schema (zod normalizes/coerces; nameField/textField strip markup + cap).
+  const parsed = cfg.schema.safeParse(al.picked);
+  if (!parsed.success) {
+    const detail = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+    return { ok: false, reason: REASON_CODES.SCHEMA_INVALID, score: 0, reasons: ['schema'], detail };
+  }
+  const data = parsed.data as Record<string, unknown>;
+
+  // 3. Spam score (markup/link-spam in names, spam phrases, hidden unicode).
+  const pick = (fields?: readonly string[]) =>
+    (fields ?? []).map((f) => ({ field: f, value: (data[f] as string | undefined) ?? null }));
+  const { score, signals } = scoreSpam({
+    names: pick(cfg.nameFields),
+    texts: pick(cfg.textFields),
+    email: cfg.emailField ? ((data[cfg.emailField] as string | undefined) ?? null) : null,
+    // No request context in a cron: a present, non-bot UA is assumed. Passing a
+    // placeholder avoids the "missing UA" penalty firing on every trusted row.
+    userAgent: 'cron',
+  });
+  const reasons = signals.map((s) => s.code);
+  const threshold = cfg.spamThreshold ?? 100;
+  if (score >= threshold) {
+    return { ok: false, reason: REASON_CODES.SPAM_SCORE, score, reasons, detail: reasons.join(',') };
+  }
+  return { ok: true, data: parsed.data, score, reasons };
+}
+
+export interface RejectedRow {
+  surface: string;
+  reason: ReasonCode;
+  detail?: string;
+  score?: number;
+  sample?: string;
+}
+
+/** Batch-insert rejected cron rows in ONE D1 statement (stays within the
+ *  subrequest budget — never call per row). Best-effort; never throws. Caps the
+ *  batch so a flood can't blow the SQL variable limit. */
+export async function recordRejectedBatch(
+  env: Env,
+  rows: RejectedRow[],
+  correlationId = uid('cid'),
+): Promise<void> {
+  if (!rows.length) return;
+  const now = Date.now();
+  // 8 binds/row; keep each INSERT under D1's ~100-param cap → 10 rows/statement.
+  // One statement covers the common case; a heavy-reject tick spills to a few.
+  const capped = rows.slice(0, 30);
+  try {
+    for (let i = 0; i < capped.length; i += 10) {
+      const batch = capped.slice(i, i + 10);
+      const valuesSql = batch.map(() => '(?,?,?,?,?,?,?,?)').join(',');
+      const binds: unknown[] = [];
+      for (const r of batch) {
+        binds.push(uid('rej'), correlationId, r.surface, r.reason, (r.detail ?? '').slice(0, 1000), r.score ?? null, (r.sample ?? '').slice(0, 512), now);
+      }
+      await env.DB.prepare(
+        `INSERT INTO rejected_ingestions (id, correlation_id, surface, reason, detail, score, sample, created_ms)
+         VALUES ${valuesSql}`,
+      ).bind(...binds).run();
+    }
+  } catch {
+    // ledger best-effort; also emit a single structured log line for the batch.
+    logGate({ correlationId, outcome: 'reject-batch', count: capped.length });
+  }
+}
+
+// Re-export the row-level normalizer for cron mappers that want to clean a field
+// before building the row object.
+export { normalizeString };
