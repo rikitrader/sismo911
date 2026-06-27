@@ -43,6 +43,48 @@ voluntarios.get('/stats', async (c) => {
   return c.json({ ok: true, total, counts }, 200, { 'Cache-Control': 'public, max-age=60' });
 });
 
+// GET /api/voluntarios/profile/:id — single normalized volunteer profile for the
+// per-volunteer page. Resolves from BOTH sources: registered self-registrations
+// (id starts with "vol_") live in the volunteers table; RAV "se ofreció" reports
+// (uuid ids) live in rav_reports with kind='voluntario'. Both are flattened to the
+// same shape so /voluntario?id= renders either without branching. Skill tags are
+// derived client-side from text (shared classifier), so this returns raw fields.
+voluntarios.get('/profile/:id', async (c) => {
+  const id = String(c.req.param('id') || '').trim().slice(0, 64);
+  if (!id) return c.json({ error: 'id_required' }, 400);
+
+  if (id.startsWith('vol_')) {
+    const r = await c.env.DB.prepare(
+      `SELECT id, full_name, city, state, area, skills, availability, has_vehicle, can_travel,
+              experience, notes, contact_phone, email, created_ms
+         FROM volunteers WHERE id = ? AND moderation='approved' AND status='activo' LIMIT 1`,
+    ).bind(id).first<any>().catch(() => null);
+    if (!r) return c.json({ error: 'not_found' }, 404);
+    let skills: string[] = []; try { skills = JSON.parse(r.skills || '[]'); } catch { skills = []; }
+    return c.json({
+      ok: true, source: 'registered', id: r.id, full_name: r.full_name,
+      city: r.city, state: r.state, area: r.area, skills,
+      availability: r.availability, has_vehicle: !!r.has_vehicle, can_travel: !!r.can_travel,
+      experience: r.experience, notes: r.notes, contact_phone: r.contact_phone, email: r.email,
+      photo_url: null, lat: null, lng: null, created_at: r.created_ms ? new Date(r.created_ms).toISOString() : null,
+    }, 200, { 'Cache-Control': 'public, max-age=120' });
+  }
+
+  // RAV citizen "se ofreció" report.
+  const r = await c.env.DB.prepare(
+    `SELECT id, category, title, description, city, state, area, lat, lng, contact, photo_url, tags, created_at
+       FROM rav_reports WHERE id = ? AND lower(coalesce(kind,'')) = 'voluntario' AND coalesce(hidden,0) = 0 LIMIT 1`,
+  ).bind(id).first<any>().catch(() => null);
+  if (!r) return c.json({ error: 'not_found' }, 404);
+  return c.json({
+    ok: true, source: 'rav', id: r.id, full_name: r.title || 'Voluntario',
+    city: r.city, state: r.state, area: r.area, skills: [],
+    availability: null, has_vehicle: false, can_travel: false,
+    experience: null, notes: r.description, contact_phone: r.contact, email: null,
+    photo_url: r.photo_url, lat: r.lat, lng: r.lng, category: r.category, created_at: r.created_at,
+  }, 200, { 'Cache-Control': 'public, max-age=120' });
+});
+
 // POST /api/voluntarios/register — public self-registration (rate-limited + spam-gated).
 voluntarios.post('/register', async (c) => {
   const limited = await rateLimit(c.env, c, 'volunteer_register', 10, 300);

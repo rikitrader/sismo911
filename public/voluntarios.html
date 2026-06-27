@@ -24,21 +24,24 @@
   .hstats{display:flex;gap:26px;margin-top:18px;flex-wrap:wrap}
   .hstat .n{font:900 26px 'Public Sans';color:#fff}
   .hstat .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#9fb3d8}
-  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:22px;align-items:start;margin-bottom:40px}
-  @media(max-width:900px){.grid{grid-template-columns:1fr}}
-  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.05)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.05);margin-bottom:22px}
   .card-pad{padding:22px}
-  .sticky{position:sticky;top:16px}
   h2.sec{font:800 19px 'Public Sans';color:var(--navy);margin:0 0 3px;display:flex;align-items:center;gap:9px}
   .sub{color:var(--muted);font-size:13px}
+  /* Registration form (collapsible, full-width) */
+  details.reg{border:0}
+  details.reg>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;justify-content:space-between}
+  details.reg>summary::-webkit-details-marker{display:none}
+  .reg-cta{font:800 14px 'Public Sans';color:var(--navy);background:#eef3fb;border:1px solid #d6e1f3;border-radius:10px;padding:8px 14px;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+  details.reg[open] .reg-open{display:none}
+  .reg-body{margin-top:18px}
   label.fl{display:block;font:700 12px Inter;color:var(--ink);margin:14px 0 5px;text-transform:uppercase;letter-spacing:.03em}
   .req{color:#c8102e}
   input.f,select.f,textarea.f{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font:500 14px Inter;color:var(--ink);background:#fff;outline:none;transition:border-color .12s,box-shadow .12s}
   input.f:focus,select.f:focus,textarea.f:focus{border-color:var(--navy2);box-shadow:0 0 0 3px rgba(31,58,107,.14)}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:480px){.two{grid-template-columns:1fr}}
-  .skills{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px}
-  @media(max-width:480px){.skills{grid-template-columns:1fr}}
+  .skills{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-top:7px}
   .skill{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--ink);transition:.12s;user-select:none}
   .skill:hover{border-color:var(--navy2);background:#f7f9fd}
   .skill input{accent-color:var(--navy);width:16px;height:16px;flex:0 0 auto}
@@ -52,26 +55,52 @@
   .msg{margin-top:13px;border-radius:10px;padding:12px 14px;font-size:13.5px;font-weight:600;display:none}
   .msg.ok{display:block;background:#e3f6ea;color:#166534;border:1px solid #bfe6cc}
   .msg.err{display:block;background:#fdeaec;color:#9b1c2e;border:1px solid #f4c2c8}
-  .toolbar{display:flex;gap:9px;margin:2px 0 12px;flex-wrap:wrap}
-  .toolbar input{flex:1;min-width:170px;border:1px solid var(--line);border-radius:10px;padding:10px 13px;font:500 14px Inter;outline:none}
-  .toolbar input:focus{border-color:var(--navy2)}
-  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
-  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font:700 12px Inter;color:var(--muted);cursor:pointer;transition:.12s}
+
+  /* ── Redesigned search column ─────────────────────────────────────────── */
+  .search-bar{display:grid;grid-template-columns:1fr;gap:10px;margin:4px 0 14px}
+  @media(min-width:760px){.search-bar{grid-template-columns:1fr 210px 200px}}
+  .search-field{position:relative}
+  .search-field svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--muted);pointer-events:none}
+  .search-field input{width:100%;border:1px solid var(--line);border-radius:11px;padding:12px 14px 12px 40px;font:500 14.5px Inter;outline:none;background:#fff;transition:border-color .12s,box-shadow .12s}
+  .search-field input:focus{border-color:var(--navy2);box-shadow:0 0 0 3px rgba(31,58,107,.14)}
+  .search-bar select{border:1px solid var(--line);border-radius:11px;padding:12px 13px;font:600 13.5px Inter;color:var(--ink);background:#fff;outline:none;cursor:pointer}
+  .search-bar select:focus{border-color:var(--navy2)}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font:700 12px Inter;color:var(--muted);cursor:pointer;transition:.12s;display:inline-flex;align-items:center;gap:5px}
   .chip:hover{border-color:var(--navy2);color:var(--navy)}
   .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .vcard{border:1px solid var(--line);border-radius:13px;padding:15px 16px;background:#fff;margin-bottom:11px}
-  .vcard .top{display:flex;align-items:flex-start;gap:12px}
-  .vavatar{width:44px;height:44px;border-radius:11px;background:#eef3fb;color:var(--navy);display:grid;place-items:center;font:800 16px 'Public Sans';flex:0 0 auto}
-  .vname{font:800 16px 'Public Sans';color:var(--ink);line-height:1.2}
-  .vmeta{font-size:12.5px;color:var(--muted);margin-top:2px}
-  .badge{display:inline-flex;align-items:center;gap:5px;font:700 10.5px Inter;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:7px;margin-left:auto;flex:0 0 auto}
+  .chip b{font-weight:800;opacity:.85}
+  .result-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .result-meta .cnt{font:800 13px 'Public Sans';color:var(--navy)}
+
+  /* ── Full-width horizontal volunteer cards ────────────────────────────── */
+  .vlist{display:flex;flex-direction:column;gap:12px}
+  .vcard{display:flex;align-items:stretch;gap:0;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden;text-decoration:none;color:inherit;transition:border-color .12s,box-shadow .12s,transform .06s}
+  .vcard:hover{border-color:var(--navy2);box-shadow:0 4px 16px rgba(16,24,40,.09)}
+  .vcard:active{transform:translateY(1px)}
+  .vc-photo{width:96px;flex:0 0 96px;background-size:cover;background-position:center}
+  .vavatar{width:96px;flex:0 0 96px;background:linear-gradient(135deg,#1f3a6b,#0c1b38);color:#fff;display:grid;place-items:center;font:900 30px 'Public Sans'}
+  .vc-main{flex:1;min-width:0;padding:14px 16px;display:flex;flex-direction:column;justify-content:center}
+  .vc-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .vname{font:800 16.5px 'Public Sans';color:var(--ink);line-height:1.2}
+  .badge{display:inline-flex;align-items:center;gap:5px;font:700 10px Inter;text-transform:uppercase;letter-spacing:.04em;padding:3px 7px;border-radius:7px}
   .badge.reg{background:#eef3fb;color:var(--navy)}
   .badge.rav{background:#fff7e6;color:#9a6400}
-  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-  .tg{font:700 11.5px Inter;background:#f1f4f9;color:#33415c;border:1px solid #e4e9f1;border-radius:7px;padding:3px 8px}
-  .vfoot{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:11px;padding-top:11px;border-top:1px solid #eef1f6}
-  .vfoot .contact{font:700 13.5px Inter;color:#c8102e}
-  .pill-av{font:700 11.5px Inter;color:var(--green);background:#e6f5ec;border-radius:7px;padding:3px 9px}
+  .vmeta{font-size:12.5px;color:var(--muted);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
+  .vnotes{font-size:13px;color:#42506b;margin-top:6px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .tg{font:700 11.5px Inter;background:#f1f4f9;color:#33415c;border:1px solid #e4e9f1;border-radius:7px;padding:3px 8px;white-space:nowrap}
+  .vc-side{flex:0 0 auto;border-left:1px solid #eef1f6;padding:14px 16px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:8px;min-width:162px}
+  @media(max-width:680px){
+    .vcard{flex-wrap:wrap}
+    .vc-photo,.vavatar{width:100%;flex-basis:100%;height:10px}
+    .vavatar{font-size:0}
+    .vc-side{border-left:0;border-top:1px solid #eef1f6;width:100%;align-items:center;flex-direction:row;justify-content:space-between;min-width:0}
+  }
+  .pill-av{font:700 11.5px Inter;color:var(--green);background:#e6f5ec;border-radius:7px;padding:3px 9px;white-space:nowrap}
+  .contact{font:800 13.5px Inter;color:#c8102e;white-space:nowrap}
+  .view{font:800 12.5px 'Public Sans';color:#fff;background:var(--navy);border-radius:9px;padding:8px 13px;display:inline-flex;align-items:center;gap:6px}
+  .empty{padding:26px;text-align:center;color:var(--muted);font-size:14px}
 </style>
 <script src="/app-shell.js" defer></script>
 </head>
@@ -83,92 +112,89 @@
     <h1>Voluntarios de emergencia</h1>
     <p>Tras el terremoto, la ayuda organizada salva vidas. Regístrate con tus <b>habilidades</b> y <b>disponibilidad</b>: equipos de rescate, hospitales y centros de acopio podrán encontrarte y activarte donde más se necesite.</p>
     <div class="hstats">
-      <div class="hstat"><div class="n" id="h_total">—</div><div class="l">Voluntarios registrados</div></div>
+      <div class="hstat"><div class="n" id="h_total">—</div><div class="l">Voluntarios disponibles</div></div>
       <div class="hstat"><div class="n" id="h_medico">—</div><div class="l">Médicos / salud</div></div>
       <div class="hstat"><div class="n" id="h_rescate">—</div><div class="l">Rescate / búsqueda</div></div>
       <div class="hstat"><div class="n" id="h_logistica">—</div><div class="l">Logística / transporte</div></div>
     </div>
   </section>
 
-  <div class="grid">
-    <section class="card card-pad sticky">
-      <h2 class="sec">🙋 Regístrate como voluntario</h2>
-      <p class="sub">Toma 1 minuto. Tu contacto solo se muestra a quien necesite coordinar ayuda.</p>
-      <form id="vform" autocomplete="on" novalidate>
-        <label class="fl">Nombre y apellido <span class="req">*</span></label>
-        <input class="f" id="full_name" name="name" maxlength="120" placeholder="Ej: María Rodríguez" required>
-
-        <div class="two">
-          <div><label class="fl">Teléfono / WhatsApp</label><input class="f" id="contact_phone" inputmode="tel" maxlength="40" placeholder="+58 412 …"></div>
-          <div><label class="fl">Correo</label><input class="f" id="email" type="email" maxlength="120" placeholder="tucorreo@…"></div>
-        </div>
-        <p class="sub" style="margin-top:5px">Indica al menos un teléfono o correo.</p>
-
-        <div class="two">
-          <div><label class="fl">Estado</label>
-            <select class="f" id="state"><option value="">Selecciona…</option></select>
+  <!-- Registration (full-width, collapsible to keep the directory front-and-center) -->
+  <section class="card card-pad">
+    <details class="reg" id="regBox">
+      <summary>
+        <h2 class="sec" style="margin:0">🙋 Regístrate como voluntario</h2>
+        <span class="reg-cta reg-open">Abrir formulario ＋</span>
+      </summary>
+      <div class="reg-body">
+        <p class="sub">Toma 1 minuto. Tu contacto solo se muestra a quien necesite coordinar ayuda.</p>
+        <form id="vform" autocomplete="on" novalidate>
+          <label class="fl">Nombre y apellido <span class="req">*</span></label>
+          <input class="f" id="full_name" name="name" maxlength="120" placeholder="Ej: María Rodríguez" required>
+          <div class="two">
+            <div><label class="fl">Teléfono / WhatsApp</label><input class="f" id="contact_phone" inputmode="tel" maxlength="40" placeholder="+58 412 …"></div>
+            <div><label class="fl">Correo</label><input class="f" id="email" type="email" maxlength="120" placeholder="tucorreo@…"></div>
           </div>
-          <div><label class="fl">Ciudad</label><input class="f" id="city" maxlength="80" placeholder="Ej: La Guaira"></div>
-        </div>
-        <label class="fl">Zona / sector donde puedes ayudar</label>
-        <input class="f" id="area" maxlength="120" placeholder="Ej: Catia La Mar, Caraballeda…">
-
-        <label class="fl">¿Qué puedes hacer? (marca todas las que apliquen)</label>
-        <div class="skills" id="skills"></div>
-
-        <label class="fl">Disponibilidad</label>
-        <select class="f" id="availability">
-          <option value="">Selecciona…</option>
-          <option value="inmediata">Disponible de inmediato</option>
-          <option value="dias">En los próximos días</option>
-          <option value="fines_de_semana">Fines de semana</option>
-          <option value="remoto">Solo remoto / en línea</option>
-        </select>
-
-        <div class="chrow">
-          <label class="chk"><input type="checkbox" id="has_vehicle"> 🚗 Tengo vehículo</label>
-          <label class="chk"><input type="checkbox" id="can_travel"> 🧭 Puedo trasladarme a otra zona</label>
-        </div>
-
-        <label class="fl">Experiencia (opcional)</label>
-        <input class="f" id="experience" maxlength="200" placeholder="Ej: paramédico, bombero voluntario, 5 años en logística…">
-
-        <label class="fl">Notas (opcional)</label>
-        <textarea class="f" id="notes" rows="3" maxlength="1000" placeholder="Horarios, equipo que tienes, idiomas… (sin enlaces)"></textarea>
-
-        <button type="submit" class="submit" id="submitBtn">Registrarme como voluntario</button>
-        <div class="msg" id="formMsg"></div>
-      </form>
-    </section>
-
-    <section>
-      <div class="card card-pad">
-        <h2 class="sec">📋 Directorio de voluntarios <span class="sub" id="dirCnt" style="font-weight:600"></span></h2>
-        <p class="sub">Personas listas para ayudar. Filtra por habilidad o busca por nombre, ciudad o destreza.</p>
-        <div class="toolbar">
-          <input id="q" type="search" placeholder="Buscar por nombre, ciudad o habilidad…">
-        </div>
-        <div class="chips" id="chips"></div>
-        <div id="list"><div class="sub">Cargando voluntarios…</div></div>
+          <p class="sub" style="margin-top:5px">Indica al menos un teléfono o correo.</p>
+          <div class="two">
+            <div><label class="fl">Estado</label><select class="f" id="state"><option value="">Selecciona…</option></select></div>
+            <div><label class="fl">Ciudad</label><input class="f" id="city" maxlength="80" placeholder="Ej: La Guaira"></div>
+          </div>
+          <label class="fl">Zona / sector donde puedes ayudar</label>
+          <input class="f" id="area" maxlength="120" placeholder="Ej: Catia La Mar, Caraballeda…">
+          <label class="fl">¿Qué puedes hacer? (marca todas las que apliquen)</label>
+          <div class="skills" id="skills"></div>
+          <label class="fl">Disponibilidad</label>
+          <select class="f" id="availability">
+            <option value="">Selecciona…</option>
+            <option value="inmediata">Disponible de inmediato</option>
+            <option value="dias">En los próximos días</option>
+            <option value="fines_de_semana">Fines de semana</option>
+            <option value="remoto">Solo remoto / en línea</option>
+          </select>
+          <div class="chrow">
+            <label class="chk"><input type="checkbox" id="has_vehicle"> 🚗 Tengo vehículo</label>
+            <label class="chk"><input type="checkbox" id="can_travel"> 🧭 Puedo trasladarme a otra zona</label>
+          </div>
+          <label class="fl">Experiencia (opcional)</label>
+          <input class="f" id="experience" maxlength="200" placeholder="Ej: paramédico, bombero voluntario, 5 años en logística…">
+          <label class="fl">Notas (opcional)</label>
+          <textarea class="f" id="notes" rows="3" maxlength="1000" placeholder="Horarios, equipo que tienes, idiomas… (sin enlaces)"></textarea>
+          <button type="submit" class="submit" id="submitBtn">Registrarme como voluntario</button>
+          <div class="msg" id="formMsg"></div>
+        </form>
       </div>
-    </section>
-  </div>
+    </details>
+  </section>
+
+  <!-- Full-width directory -->
+  <section class="card card-pad">
+    <h2 class="sec">📋 Directorio de voluntarios</h2>
+    <p class="sub">Personas listas para ayudar. Busca por nombre, ciudad o habilidad, o filtra por destreza y disponibilidad.</p>
+    <div class="search-bar">
+      <div class="search-field">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M21 21l-4.3-4.3"/></svg>
+        <input id="q" type="search" placeholder="Buscar por nombre, ciudad o habilidad…">
+      </div>
+      <select id="fAvail"><option value="">Cualquier disponibilidad</option><option value="inmediata">De inmediato</option><option value="dias">En pocos días</option><option value="fines_de_semana">Fines de semana</option><option value="remoto">Solo remoto</option></select>
+      <select id="sort"><option value="recent">Más recientes</option><option value="name">Nombre (A-Z)</option><option value="skills">Más habilidades</option></select>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="result-meta"><span class="cnt" id="dirCnt"></span></div>
+    <div class="vlist" id="list"><div class="empty">Cargando voluntarios…</div></div>
+  </section>
 </main>
 
+<!-- Shared skill taxonomy + classifier (loaded BEFORE the inline script so VOL exists) -->
+<script src="/voluntarios-skills.js"></script>
 <script>
+const VOL=window.VOL;
+const SK=VOL.SK, AV=VOL.AV;
 const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const SK={
-  medico:['🩺','Médico / Enfermería'], primeros_auxilios:['⛑️','Primeros auxilios'], rescate:['🧗','Rescate / USAR'],
-  busqueda:['🔦','Búsqueda'], logistica:['📦','Logística'], transporte:['🚚','Transporte / Conductor'],
-  construccion:['🧱','Construcción'], electricidad:['⚡','Electricidad'], plomeria:['🔧','Plomería'],
-  cocina:['🍲','Cocina / Alimentación'], psicologia:['🧠','Apoyo psicológico'], traduccion:['🗣️','Traducción / Idiomas'],
-  comunicaciones:['📡','Comunicaciones / Radio'], tecnologia:['💻','Tecnología / Datos'], agua_saneamiento:['🚰','Agua / Saneamiento'],
-  veterinario:['🐾','Veterinario / Mascotas'], donaciones:['🎁','Donaciones / Acopio'], general:['🙋','Voluntario general']
-};
-const AV={inmediata:'De inmediato',dias:'En pocos días',fines_de_semana:'Fines de semana',remoto:'Solo remoto'};
 const VE_ESTADOS=['Amazonas','Anzoátegui','Apure','Aragua','Barinas','Bolívar','Carabobo','Cojedes','Delta Amacuro','Distrito Capital','Falcón','Guárico','La Guaira','Lara','Mérida','Miranda','Monagas','Nueva Esparta','Portuguesa','Sucre','Táchira','Trujillo','Yaracuy','Zulia'];
 const $=id=>document.getElementById(id);
 
+// ── Registration form ──────────────────────────────────────────────────────
 $('skills').innerHTML=Object.entries(SK).map(([k,v])=>
   `<label class="skill" data-k="${k}"><input type="checkbox" value="${k}">${v[0]} ${esc(v[1])}</label>`).join('');
 document.querySelectorAll('.skill').forEach(s=>{const cb=s.querySelector('input');cb.addEventListener('change',()=>s.classList.toggle('on',cb.checked));});
@@ -192,73 +218,92 @@ $('vform').addEventListener('submit',async(ev)=>{
     msg.className='msg ok';
     msg.textContent=d.duplicate?'Ya estabas registrado con esos datos. ¡Gracias!':'¡Listo! Tu registro como voluntario está activo. Gracias por ayudar.';
     $('vform').reset(); document.querySelectorAll('.skill.on').forEach(s=>s.classList.remove('on'));
-    loadDir(); loadStats();
+    loadDir();
   }catch(e){ msg.className='msg err'; msg.textContent=e.message; }
   btn.disabled=false; btn.textContent='Registrarme como voluntario';
 });
 
+// ── Directory + header counts (single source of truth: combined DATA) ───────
 let FILTER='', DATA=[];
 function initials(n){return (String(n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('')||'?').toUpperCase();}
+
 function vcard(v){
   const loc=[v.city,v.state].filter(Boolean).join(', ');
-  const tags=(v.skills||[]).map(k=>SK[k]?`<span class="tg">${SK[k][0]} ${esc(SK[k][1])}</span>`:'').join('');
+  const tags=(v.skills||[]).slice(0,5).map(k=>SK[k]?`<span class="tg">${SK[k][0]} ${esc(SK[k][1])}</span>`:'').join('');
+  const more=(v.skills||[]).length>5?`<span class="tg">+${v.skills.length-5}</span>`:'';
   const av=v.availability&&AV[v.availability]?`<span class="pill-av">⏱️ ${AV[v.availability]}</span>`:'';
   const veh=v.has_vehicle?'<span class="tg">🚗 Vehículo</span>':'';
-  const contact=v.contact_phone?`<span class="contact">📞 ${esc(v.contact_phone)}</span>`:(v.email?`<span class="contact">✉️ ${esc(v.email)}</span>`:'');
-  return `<div class="vcard">
-    <div class="top">
-      <div class="vavatar">${esc(initials(v.full_name))}</div>
-      <div style="min-width:0;flex:1">
-        <div class="vname">${esc(v.full_name||'Voluntario')}</div>
-        <div class="vmeta">${loc?'📍 '+esc(loc):''}${v.experience?(loc?' · ':'')+esc(v.experience):''}</div>
+  const contact=v.contact_phone?`<span class="contact">📞 ${esc(v.contact_phone)}</span>`:(v.email?`<span class="contact">✉️ Correo</span>`:'');
+  const head=v.photo_url
+    ? `<div class="vc-photo" style="background-image:url('${esc(v.photo_url)}')"></div>`
+    : `<div class="vavatar">${esc(initials(v.full_name))}</div>`;
+  return `<a class="vcard" href="/voluntario?id=${encodeURIComponent(v.id)}">
+    ${head}
+    <div class="vc-main">
+      <div class="vc-top">
+        <span class="vname">${esc(v.full_name||'Voluntario')}</span>
+        <span class="badge ${v.source==='rav'?'rav':'reg'}">${v.source==='rav'?'Se ofreció':'Registrado'}</span>
       </div>
-      <span class="badge ${v.__rav?'rav':'reg'}">${v.__rav?'Se ofreció':'Registrado'}</span>
+      <div class="vmeta">${loc?'<span>📍 '+esc(loc)+'</span>':''}${v.experience?'<span>🎖️ '+esc(v.experience)+'</span>':''}</div>
+      ${v.notes?`<p class="vnotes">${esc(v.notes)}</p>`:''}
+      ${(tags||veh)?`<div class="tags">${tags}${more}${veh}</div>`:''}
     </div>
-    ${v.notes?`<p class="sub" style="margin-top:9px">${esc(v.notes)}</p>`:''}
-    ${(tags||veh)?`<div class="tags">${tags}${veh}</div>`:''}
-    <div class="vfoot">${av}${contact||'<span class="sub">Contacto no indicado</span>'}</div>
-  </div>`;
+    <div class="vc-side">${av}${contact||'<span class="sub">Sin contacto</span>'}<span class="view">Ver perfil →</span></div>
+  </a>`;
 }
+
+function applyStats(){
+  const s=VOL.statsFromData(DATA), g=s.groups;
+  $('h_total').textContent=(g.total||0).toLocaleString('es');
+  $('h_medico').textContent=(g.medico||0).toLocaleString('es');
+  $('h_rescate').textContent=(g.rescate||0).toLocaleString('es');
+  $('h_logistica').textContent=(g.logistica||0).toLocaleString('es');
+  const c=s.counts, order=Object.keys(SK);
+  $('chips').innerHTML='<button class="chip on" data-k="">Todas <b>'+DATA.length+'</b></button>'+
+    order.filter(k=>c[k]).map(k=>`<button class="chip" data-k="${k}">${SK[k][0]} ${esc(SK[k][1])} <b>${c[k]}</b></button>`).join('');
+  document.querySelectorAll('#chips .chip').forEach(ch=>ch.addEventListener('click',()=>{
+    document.querySelectorAll('#chips .chip').forEach(x=>x.classList.remove('on')); ch.classList.add('on');
+    FILTER=ch.dataset.k; render();
+  }));
+}
+
 function render(){
   const q=$('q').value.trim().toLowerCase();
-  const rows=DATA.filter(v=>{
+  const avail=$('fAvail').value;
+  const sort=$('sort').value;
+  let rows=DATA.filter(v=>{
     if(FILTER && !(v.skills||[]).includes(FILTER)) return false;
+    if(avail && v.availability!==avail) return false;
     if(q){ const hay=[v.full_name,v.city,v.state,v.notes,v.experience,(v.skills||[]).map(k=>SK[k]&&SK[k][1]).join(' ')].join(' ').toLowerCase(); if(!hay.includes(q))return false; }
     return true;
   });
-  $('dirCnt').textContent='· '+rows.length+' '+(rows.length===1?'voluntario':'voluntarios');
-  $('list').innerHTML=rows.length?rows.map(vcard).join(''):'<p class="sub">Sin coincidencias. Sé el primero en registrarte con esa habilidad.</p>';
+  if(sort==='name') rows=rows.slice().sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||'','es'));
+  else if(sort==='skills') rows=rows.slice().sort((a,b)=>(b.skills||[]).length-(a.skills||[]).length);
+  else rows=rows.slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  $('dirCnt').textContent=rows.length+' '+(rows.length===1?'voluntario':'voluntarios')+(rows.length!==DATA.length?(' de '+DATA.length):'');
+  $('list').innerHTML=rows.length?rows.map(vcard).join(''):'<div class="empty">Sin coincidencias. Ajusta la búsqueda o sé el primero en registrarte con esa habilidad.</div>';
 }
+
 async function loadDir(){
   try{
     const [reg,rav]=await Promise.all([
       fetch('/api/voluntarios?limit=500').then(r=>r.json()).catch(()=>({items:[]})),
-      fetch('/api/rav/reports?kind=voluntario&limit=400').then(r=>r.json()).catch(()=>({items:[]}))
+      fetch('/api/rav/reports?kind=voluntario&limit=500').then(r=>r.json()).catch(()=>({items:[]}))
     ]);
-    const regRows=(reg.items||[]).map(v=>({...v,skills:(()=>{try{return JSON.parse(v.skills||'[]')}catch{return[]}})()}));
-    const ravRows=(rav.items||[]).map(r=>({__rav:true,full_name:r.title||'Voluntario',notes:r.description||'',city:r.city,state:r.state,contact_phone:r.contact,skills:[]}));
+    const regRows=(reg.items||[]).map(v=>VOL.normalize({...v,source:'registered',
+      skills:(()=>{try{return JSON.parse(v.skills||'[]')}catch{return[]}})()}));
+    const ravRows=(rav.items||[]).map(r=>VOL.normalize({source:'rav',id:r.id,full_name:r.title||'Voluntario',
+      notes:r.description||'',city:r.city,state:r.state,area:r.area,contact_phone:r.contact,
+      photo_url:r.photo_url,lat:r.lat,lng:r.lng,created_at:r.created_at}));
     DATA=regRows.concat(ravRows);
-    render();
-  }catch(e){ $('list').innerHTML='<p class="sub">No se pudo cargar el directorio.</p>'; }
+    applyStats(); render();
+  }catch(e){ $('list').innerHTML='<div class="empty">No se pudo cargar el directorio.</div>'; }
 }
-async function loadStats(){
-  try{
-    const d=await fetch('/api/voluntarios/stats').then(r=>r.json());
-    $('h_total').textContent=(d.total||0).toLocaleString('es');
-    const c=d.counts||{};
-    $('h_medico').textContent=((c.medico||0)+(c.primeros_auxilios||0)).toLocaleString('es');
-    $('h_rescate').textContent=((c.rescate||0)+(c.busqueda||0)).toLocaleString('es');
-    $('h_logistica').textContent=((c.logistica||0)+(c.transporte||0)).toLocaleString('es');
-    const order=Object.keys(SK);
-    $('chips').innerHTML='<button class="chip on" data-k="">Todas</button>'+order.filter(k=>c[k]).map(k=>`<button class="chip" data-k="${k}">${SK[k][0]} ${esc(SK[k][1])} <b>${c[k]}</b></button>`).join('');
-    document.querySelectorAll('#chips .chip').forEach(ch=>ch.addEventListener('click',()=>{
-      document.querySelectorAll('#chips .chip').forEach(x=>x.classList.remove('on')); ch.classList.add('on');
-      FILTER=ch.dataset.k; render();
-    }));
-  }catch{}
-}
+
 $('q').addEventListener('input',render);
-loadStats(); loadDir();
+$('fAvail').addEventListener('change',render);
+$('sort').addEventListener('change',render);
+loadDir();
 </script>
 </body>
 </html>
