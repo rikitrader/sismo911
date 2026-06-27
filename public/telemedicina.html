@@ -9,7 +9,7 @@
 <meta property="og:description" content="Elige especialidad, médico, tipo de cita, fecha y hora. Videoconsulta gratuita con médicos voluntarios de todo el mundo.">
 <meta property="og:url" content="https://sismo911.com/telemedicina">
 <meta property="og:image" content="https://sismo911.com/og/og-default.png">
-<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#0e7c86">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
 <!-- Installable PWA — dedicated "Telemedicina" app (own manifest, scope /telemedicina). -->
 <link rel="manifest" href="/telemedicina.webmanifest">
 <link rel="apple-touch-icon" href="/icons/telemedicina-180.png">
@@ -17,229 +17,225 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Telemedicina">
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
 <style>
-  :root{--navy:#13284f;--navy2:#1f3a6b;--line:#dfe3ea;--ink:#1b2433;--muted:#5b6781;--gold:#c9a227;--green:#1f8a4c;--teal:#0e7c86;--red:#c8102e}
-  body{background:#f4f6fa;color:var(--ink);font-family:Inter,system-ui,sans-serif}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 16px}
-  .hero{background:linear-gradient(135deg,#06303a,#0e7c86);color:#fff;border-radius:18px;padding:28px;margin:22px 0 18px;position:relative;overflow:hidden}
-  .hero::after{content:"";position:absolute;right:-40px;top:-40px;width:240px;height:240px;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%)}
-  .eyebrow{font:800 11px 'Public Sans';letter-spacing:.14em;text-transform:uppercase;color:#aef0f6}
-  .hero h1{font:900 30px/1.07 'Public Sans';margin:6px 0 8px;letter-spacing:-.02em}
-  .hero p{color:#d6f1f4;max-width:660px;font-size:15px;line-height:1.5}
-  .hstats{display:flex;gap:26px;margin-top:16px;flex-wrap:wrap}
-  .hstat .n{font:900 24px 'Public Sans';color:#fff}
-  .hstat .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#a9d9de}
-  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.05);margin-bottom:18px}
-  .card-pad{padding:22px}
-  h2.sec{font:800 19px 'Public Sans';color:var(--navy);margin:0 0 3px;display:flex;align-items:center;gap:9px}
-  .sub{color:var(--muted);font-size:13px;margin-bottom:6px}
-  label.fl{display:block;font:700 12px Inter;color:var(--ink);margin:14px 0 5px;text-transform:uppercase;letter-spacing:.03em}
-  .req{color:var(--red)}
-  input.f,select.f,textarea.f{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font:500 14px Inter;color:var(--ink);background:#fff;outline:none;transition:border-color .12s,box-shadow .12s;box-sizing:border-box}
-  input.f:focus,select.f:focus,textarea.f:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,134,.14)}
-  textarea.f{min-height:90px;resize:vertical}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:480px){.two{grid-template-columns:1fr}}
-  .note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
-  .warn{background:#fff7e6;border:1px solid #ffe2a8;border-radius:12px;padding:12px 14px;font-size:13px;color:#7a5200;margin:0 0 16px}
-  .videobtn{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#fff;text-decoration:none;font:800 14px 'Public Sans';padding:12px 18px;border-radius:10px;margin-top:10px}
-
-  /* ---- Wizard ---- */
-  .stepper{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 14px;margin:-2px}
-  .stp{flex:1;min-width:74px;text-align:center;position:relative}
-  .stp .dot{width:26px;height:26px;border-radius:999px;background:#e6eaf1;color:#8a93a6;font:800 12px 'Public Sans';display:flex;align-items:center;justify-content:center;margin:0 auto 5px;border:2px solid #e6eaf1;transition:.15s}
-  .stp .lb{font-size:10.5px;color:var(--muted);font-weight:700;line-height:1.15}
-  .stp.done .dot{background:var(--teal);border-color:var(--teal);color:#fff}
-  .stp.cur .dot{background:#fff;border-color:var(--teal);color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,134,.16)}
-  .stp.cur .lb{color:var(--teal)}
-  .pane{display:none;animation:fade .18s ease}.pane.on{display:block}
-  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-  .ph{font:800 18px 'Public Sans';color:var(--navy);margin:4px 0 2px}
-  .psub{color:var(--muted);font-size:13px;margin-bottom:14px}
-  .optgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:11px}
-  .opt{border:1.5px solid var(--line);border-radius:13px;padding:14px;cursor:pointer;background:#fff;transition:.12s;text-align:left;display:flex;flex-direction:column;gap:3px}
-  .opt:hover{border-color:var(--teal);background:#f6fbfb}
-  .opt.sel{border-color:var(--teal);background:#eef9fa;box-shadow:0 0 0 3px rgba(14,124,134,.12)}
-  .opt .ic{font-size:22px}
-  .opt .t{font:800 14.5px 'Public Sans';color:var(--ink)}
-  .opt .d{font-size:12px;color:var(--muted);line-height:1.35}
-  .opt .meta{font-size:11.5px;color:var(--teal);font-weight:700;margin-top:2px}
-  .docrow{display:flex;align-items:center;gap:13px;align-items:flex-start}
-  .av{width:42px;height:42px;border-radius:999px;background:linear-gradient(135deg,#0e7c86,#06303a);color:#fff;font:800 16px 'Public Sans';display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .vchip{display:inline-block;background:#e3f6ea;color:#166534;border-radius:999px;font:800 10px 'Public Sans';padding:2px 7px;margin-left:6px;vertical-align:middle}
-  .cal{max-width:340px}
-  .calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-  .calhead button{border:1px solid var(--line);background:#fff;border-radius:9px;width:34px;height:34px;font-size:17px;cursor:pointer;color:var(--navy)}
-  .calhead .m{font:800 15px 'Public Sans';color:var(--navy);text-transform:capitalize}
-  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
-  .caldow{font:800 10px 'Public Sans';color:var(--muted);text-align:center;text-transform:uppercase;padding-bottom:4px}
-  .cald{aspect-ratio:1;border:1px solid transparent;border-radius:9px;background:#f4f6fa;font:700 13px Inter;color:var(--ink);cursor:pointer;transition:.1s}
-  .cald:hover:not(:disabled){background:#e8f5f6}
-  .cald:disabled{opacity:.32;cursor:default}
-  .cald.sel{background:var(--teal);color:#fff}
-  .slotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:9px}
-  .slot{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:11px 6px;font:800 14px 'Public Sans';color:var(--navy);cursor:pointer;transition:.1s}
-  .slot:hover{border-color:var(--teal);background:#f6fbfb}
-  .slot.sel{background:var(--teal);color:#fff;border-color:var(--teal)}
-  .freebox{background:linear-gradient(135deg,#06303a,#0e7c86);color:#fff;border-radius:14px;padding:18px 20px;margin-bottom:16px}
-  .freebox .big{font:900 22px 'Public Sans'}
-  .freebox p{color:#d6f1f4;font-size:13px;margin:4px 0 0;line-height:1.45}
-  .review{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:8px}
-  .review .r{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid #eef1f6;font-size:14px}
-  .review .r:last-child{border-bottom:0}.review .k{color:var(--muted)}.review .v{font-weight:700;text-align:right}
-  .wizfoot{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
-  .btn{border:none;border-radius:11px;padding:13px 22px;font:800 14px 'Public Sans';cursor:pointer;transition:.12s}
-  .btn-go{background:var(--teal);color:#fff}.btn-go:hover{background:#0b626a}.btn-go:disabled{opacity:.5;cursor:default}
-  .btn-ghost{background:#eef1f6;color:var(--navy)}.btn-ghost:hover{background:#e3e8f0}
-  .msg{margin-top:13px;border-radius:10px;padding:12px 14px;font-size:13.5px;font-weight:600;display:none}
-  .msg.ok{display:block;background:#e3f6ea;color:#166534;border:1px solid #bfe6cc}
-  .msg.err{display:block;background:#fdeaec;color:#9b1c2e;border:1px solid #f4c2c8}
-  .empty{padding:26px;text-align:center;color:var(--muted);font-size:14px}
-  .spin{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px}
-  @keyframes sp{to{transform:rotate(360deg)}}
-
-  /* ---- Status tracker ---- */
-  .timeline{position:relative;margin:8px 0 4px;padding-left:8px}
-  .tl{display:flex;gap:13px;padding-bottom:18px;position:relative}
-  .tl:last-child{padding-bottom:0}
-  .tl::before{content:"";position:absolute;left:11px;top:24px;bottom:-2px;width:2px;background:#e6eaf1}
-  .tl:last-child::before{display:none}
-  .tl .mk{width:24px;height:24px;border-radius:999px;background:#e6eaf1;color:#8a93a6;flex-shrink:0;display:flex;align-items:center;justify-content:center;font:800 12px 'Public Sans';z-index:1}
-  .tl.done .mk{background:var(--teal);color:#fff}
-  .tl.cur .mk{background:#fff;border:2px solid var(--teal);color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,134,.16)}
-  .tl.bad .mk{background:var(--red);color:#fff}
-  .tl .ti{font:800 14px 'Public Sans';color:var(--ink)}
-  .tl .tw{font-size:12px;color:var(--muted)}
-  .tl.pending .ti{color:#9aa3b2}
-  .kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #eef1f6;font-size:14px}
+  /* Component classes built strictly from SISMO911 tokens (navy/crimson/surface). */
+  :root{--navy:#00173a;--navy-c:#0b2b5b;--crimson:#bb0027;--line:#c4c6d0;--ink:#1a1c1e;--muted:#44474f;--surface:#f9f9fc;--safe:#2e7d32}
+  body{background:var(--surface)}
+  .label-caps{font:700 11px 'Public Sans',sans-serif;letter-spacing:.07em;text-transform:uppercase}
+  .tabnum{font-variant-numeric:tabular-nums}
+  /* Stepper with a progress rail */
+  .tm-steps{display:flex;align-items:flex-start}
+  .tm-step{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;min-width:0}
+  .tm-step::before{content:"";position:absolute;top:15px;right:50%;width:100%;height:2px;background:var(--line);z-index:0}
+  .tm-step:first-child::before{display:none}
+  .tm-step.done::before,.tm-step.cur::before{background:var(--navy)}
+  .tm-dot{width:32px;height:32px;border-radius:999px;display:grid;place-items:center;font:800 13px 'Public Sans';background:#fff;border:2px solid var(--line);color:var(--muted);z-index:1;transition:.15s}
+  .tm-step.done .tm-dot{background:var(--navy);border-color:var(--navy);color:#fff}
+  .tm-step.cur .tm-dot{border-color:var(--navy);color:var(--navy);box-shadow:0 0 0 4px rgba(0,23,58,.12)}
+  .tm-step .tm-lb{font:700 10.5px Inter,sans-serif;color:var(--muted);text-align:center;line-height:1.2;max-width:84px}
+  .tm-step.cur .tm-lb{color:var(--navy)}
+  @media(max-width:640px){.tm-step .tm-lb{display:none}.tm-step.cur .tm-lb{display:block}}
+  /* Selectable option cards */
+  .pane{display:none}.pane.on{display:block;animation:tmfade .18s ease}
+  @keyframes tmfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .optgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:12px}
+  .tm-opt{text-align:left;border:1.5px solid var(--line);border-radius:12px;padding:16px;background:#fff;cursor:pointer;transition:.12s;display:flex;flex-direction:column;gap:6px;font-family:Inter,sans-serif}
+  .tm-opt:hover{border-color:var(--navy);background:#fbfcff}
+  .tm-opt:focus-visible{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,23,58,.18)}
+  .tm-opt.sel{border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,23,58,.14);background:#f5f8fd}
+  .tm-ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:rgba(0,23,58,.07);color:var(--navy)}
+  .tm-ic svg{width:21px;height:21px}
+  .tm-opt .t{font:800 14.5px 'Public Sans',sans-serif;color:var(--ink)}
+  .tm-opt .d{font-size:12.5px;color:var(--muted);line-height:1.4}
+  .tm-opt .meta{font:700 11.5px 'Public Sans',sans-serif;color:var(--navy)}
+  .av{width:42px;height:42px;border-radius:999px;background:var(--navy);color:#fff;font:800 15px 'Public Sans',sans-serif;display:grid;place-items:center;flex:0 0 auto}
+  /* Calendar */
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .caldow{font:800 10px 'Public Sans',sans-serif;color:var(--muted);text-align:center;text-transform:uppercase;padding-bottom:2px}
+  .tm-cald{aspect-ratio:1;border:1px solid transparent;border-radius:9px;background:var(--surface);font:700 13.5px Inter,sans-serif;color:var(--ink);cursor:pointer;transition:.1s;font-variant-numeric:tabular-nums}
+  .tm-cald:hover:not(:disabled){background:#e6ecf5}
+  .tm-cald:disabled{opacity:.3;cursor:default}
+  .tm-cald.sel{background:var(--navy);color:#fff;font-weight:800}
+  /* Slots */
+  .slotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:9px}
+  .tm-slot{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:12px 6px;font:800 14px 'Public Sans',sans-serif;color:var(--navy);cursor:pointer;font-variant-numeric:tabular-nums;transition:.1s}
+  .tm-slot:hover{border-color:var(--navy);background:#f5f8fd}
+  .tm-slot:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(0,23,58,.18)}
+  .tm-slot.sel{background:var(--navy);color:#fff;border-color:var(--navy)}
+  /* Inputs */
+  .fld{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;font:500 14px Inter,sans-serif;color:var(--ink);background:#fff;box-sizing:border-box;transition:.12s}
+  .fld:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,23,58,.14)}
+  textarea.fld{min-height:96px;resize:vertical}
+  .flbl{display:block;font:700 11px 'Public Sans',sans-serif;color:var(--ink);margin:0 0 6px;text-transform:uppercase;letter-spacing:.04em}
+  /* Buttons */
+  .tm-btn{border:none;border-radius:10px;padding:13px 22px;font:800 14px 'Public Sans',sans-serif;cursor:pointer;transition:.12s;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+  .tm-btn-primary{background:var(--navy);color:#fff}.tm-btn-primary:hover{background:var(--navy-c)}.tm-btn-primary:disabled{opacity:.5;cursor:default}
+  .tm-btn-ghost{background:#eeeef0;color:var(--navy)}.tm-btn-ghost:hover{background:#e2e2e5}
+  .tm-btn-danger{background:#fff;color:var(--crimson);border:1.5px solid #efc2cb}.tm-btn-danger:hover{background:#fdecef}
+  .msg{margin-top:14px;border-radius:10px;padding:12px 14px;font:600 13.5px Inter,sans-serif;display:none}
+  .msg.ok{display:block;background:rgba(46,125,50,.1);color:#1b5e20;border:1px solid rgba(46,125,50,.25)}
+  .msg.err{display:block;background:rgba(200,16,46,.08);color:#9b1c2e;border:1px solid rgba(200,16,46,.25)}
+  .empty{padding:30px;text-align:center;color:var(--muted);font:500 14px Inter,sans-serif}
+  .spin{width:17px;height:17px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:tmsp .7s linear infinite}
+  @keyframes tmsp{to{transform:rotate(360deg)}}
+  /* Status timeline */
+  .timeline{position:relative}
+  .tm-tl{display:flex;gap:14px;padding-bottom:20px;position:relative}
+  .tm-tl:last-child{padding-bottom:0}
+  .tm-tl::before{content:"";position:absolute;left:13px;top:26px;bottom:-2px;width:2px;background:var(--line)}
+  .tm-tl:last-child::before{display:none}
+  .tm-mk{width:28px;height:28px;border-radius:999px;flex:0 0 auto;display:grid;place-items:center;font:800 12px 'Public Sans',sans-serif;background:var(--line);color:#fff;z-index:1}
+  .tm-tl.done .tm-mk{background:var(--navy)}
+  .tm-tl.cur .tm-mk{background:#fff;border:2px solid var(--navy);color:var(--navy);box-shadow:0 0 0 4px rgba(0,23,58,.12)}
+  .tm-tl.bad .tm-mk{background:var(--crimson)}
+  .tm-tl .ti{font:800 14px 'Public Sans',sans-serif;color:var(--ink)}
+  .tm-tl.pending .ti{color:#9aa1ad}
+  .tm-tl .tw{font:500 12px Inter,sans-serif;color:var(--muted)}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #eef0f4;font-size:14px}
   .kv:last-child{border-bottom:0}.kv .k{color:var(--muted)}.kv .v{font-weight:700;text-align:right}
-  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font:800 11px 'Public Sans';text-transform:uppercase;letter-spacing:.04em}
-  .actrow{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
 </style>
 </head>
-<body class="font-sans">
-<main class="wrap">
+<body class="font-sans text-on-surface antialiased">
+  <div class="flex min-h-screen">
+    <div class="flex-1 flex flex-col min-w-0">
+      <header class="flex items-center justify-between h-[72px] px-4 sm:px-8 bg-white border-b border-outline-variant/60">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-white flex-shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h18M5 5v14a2 2 0 002 2h10a2 2 0 002-2V5M9 11h6M12 8v6"/></svg>
+          </span>
+          <div class="min-w-0">
+            <div class="font-display font-bold text-[19px] text-on-surface leading-tight truncate">Telemedicina</div>
+            <div class="text-xs text-on-surface-variant truncate">Videoconsulta gratuita · Comando Sísmico Nacional</div>
+          </div>
+        </div>
+        <a href="#docReg" class="hidden sm:flex items-center gap-2 h-10 px-3.5 rounded-full bg-surface-container text-primary font-display font-semibold text-sm hover:bg-surface-container-high transition">Soy médico</a>
+      </header>
 
-  <section class="hero">
-    <div class="eyebrow">🩺 Telemedicina · Comando Sísmico Nacional</div>
-    <h1>Agenda tu videoconsulta gratuita</h1>
-    <p>Elige <b>especialidad</b>, <b>médico</b>, <b>tipo de cita</b>, <b>fecha</b> y <b>hora</b>. Te atiende un médico voluntario por videollamada — sin costo y sin instalar nada.</p>
-    <div class="hstats">
-      <div class="hstat"><div class="n" id="h_docs">—</div><div class="l">Médicos disponibles</div></div>
-      <div class="hstat"><div class="n" id="h_specs">—</div><div class="l">Especialidades</div></div>
-      <div class="hstat"><div class="n">$0</div><div class="l">Consulta gratuita</div></div>
-    </div>
-  </section>
+      <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        <div class="max-w-3xl mx-auto w-full space-y-6">
 
-  <!-- ============ BOOKING WIZARD ============ -->
-  <section class="card card-pad" id="wizCard">
-    <div class="warn">⚠️ La telemedicina <b>no sustituye una emergencia</b>. Si hay riesgo inmediato para la vida, llama al <b>911</b> o acude al centro de salud más cercano.</div>
-    <div class="stepper" id="stepper"></div>
+          <!-- Emergency advisory -->
+          <div class="bg-white rounded-lg border border-outline-variant/60 border-l-4 border-l-critical p-4 flex gap-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#c8102e" stroke-width="2" class="w-5 h-5 flex-shrink-0 mt-0.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+            <p class="text-[13px] leading-relaxed text-on-surface-variant"><b class="text-on-surface">La telemedicina no sustituye una emergencia.</b> Si hay riesgo inmediato para la vida, llama al <b>911</b> o acude al centro de salud más cercano.</p>
+          </div>
 
-    <!-- Step 1: Specialty -->
-    <div class="pane" data-step="0">
-      <div class="ph">1 · Elige la especialidad</div>
-      <div class="psub">¿Qué tipo de atención necesitas?</div>
-      <div class="optgrid" id="specGrid"><div class="empty">Cargando…</div></div>
-    </div>
-    <!-- Step 2: Doctor -->
-    <div class="pane" data-step="1">
-      <div class="ph">2 · Elige el médico</div>
-      <div class="psub" id="docSub">Médicos voluntarios disponibles.</div>
-      <div class="optgrid" id="docGrid"></div>
-    </div>
-    <!-- Step 3: Appointment type -->
-    <div class="pane" data-step="2">
-      <div class="ph">3 · Tipo de cita</div>
-      <div class="psub">Esto define cuánto dura tu consulta.</div>
-      <div class="optgrid" id="typeGrid"></div>
-    </div>
-    <!-- Step 4: Date -->
-    <div class="pane" data-step="3">
-      <div class="ph">4 · Elige la fecha</div>
-      <div class="psub">Horario de Venezuela (GMT-4).</div>
-      <div class="cal" id="cal"></div>
-    </div>
-    <!-- Step 5: Time slot -->
-    <div class="pane" data-step="4">
-      <div class="ph">5 · Elige la hora</div>
-      <div class="psub" id="slotSub">Horarios disponibles.</div>
-      <div class="slotgrid" id="slotGrid"></div>
-    </div>
-    <!-- Step 6: Intake reason -->
-    <div class="pane" data-step="5">
-      <div class="ph">6 · Motivo de la consulta</div>
-      <div class="psub">Datos del paciente y por qué necesitas la consulta.</div>
-      <label class="fl">Nombre del paciente <span class="req">*</span></label>
-      <input class="f" id="f_name" maxlength="120" placeholder="Nombre y apellido" />
-      <div class="two">
-        <div><label class="fl">Correo</label><input class="f" id="f_email" type="email" maxlength="160" placeholder="tucorreo@ejemplo.com" /></div>
-        <div><label class="fl">Teléfono / WhatsApp</label><input class="f" id="f_phone" maxlength="60" placeholder="+58…" /></div>
-      </div>
-      <div class="note">Indica al menos un correo o teléfono — te enviaremos el enlace de la videollamada.</div>
-      <label class="fl">¿Qué necesitas? Síntomas o situación <span class="req">*</span></label>
-      <textarea class="f" id="f_reason" maxlength="2000" placeholder="Describe lo que ocurre, desde cuándo, edad, enfermedades o medicación relevante…"></textarea>
-    </div>
-    <!-- Step 7: Insurance / payment (FREE) -->
-    <div class="pane" data-step="6">
-      <div class="ph">7 · Seguro y pago</div>
-      <div class="psub">Tu consulta es completamente gratuita.</div>
-      <div class="freebox"><div class="big">✓ Consulta GRATIS — $0</div><p>SISMO911 Telemedicina es atendida por médicos voluntarios. No se cobra ni se requiere tarjeta. Los datos de seguro son <b>opcionales</b> y solo sirven de referencia para tu médico.</p></div>
-      <div class="two">
-        <div><label class="fl">Seguro / aseguradora (opcional)</label><input class="f" id="f_ins" maxlength="120" placeholder="Ej. Seguros Caracas, ninguno…" /></div>
-        <div><label class="fl">N.º de afiliado (opcional)</label><input class="f" id="f_insid" maxlength="80" placeholder="Opcional" /></div>
-      </div>
-    </div>
-    <!-- Step 8: Confirmation -->
-    <div class="pane" data-step="7">
-      <div class="ph">8 · Confirma tu cita</div>
-      <div class="psub">Revisa los datos antes de confirmar.</div>
-      <div class="review" id="review"></div>
-      <div class="msg" id="bookMsg"></div>
-    </div>
+          <!-- ============ BOOKING WIZARD ============ -->
+          <section class="bg-white rounded-lg border border-outline-variant/60 p-5 sm:p-6" id="wizCard">
+            <div class="tm-steps mb-6" id="stepper"></div>
 
-    <div class="wizfoot">
-      <button class="btn btn-ghost" id="backBtn" style="visibility:hidden">← Atrás</button>
-      <button class="btn btn-go" id="nextBtn" disabled>Continuar →</button>
+            <!-- 1 Specialty -->
+            <div class="pane" data-step="0">
+              <h2 class="font-display font-extrabold text-xl text-on-surface">Elige la especialidad</h2>
+              <p class="text-sm text-on-surface-variant mt-0.5 mb-4">¿Qué tipo de atención necesitas?</p>
+              <div class="optgrid" id="specGrid"><div class="empty">Cargando…</div></div>
+            </div>
+            <!-- 2 Doctor -->
+            <div class="pane" data-step="1">
+              <h2 class="font-display font-extrabold text-xl text-on-surface">Elige el médico</h2>
+              <p class="text-sm text-on-surface-variant mt-0.5 mb-4" id="docSub">Médicos voluntarios disponibles.</p>
+              <div class="optgrid" id="docGrid"></div>
+            </div>
+            <!-- 3 Type -->
+            <div class="pane" data-step="2">
+              <h2 class="font-display font-extrabold text-xl text-on-surface">Tipo de cita</h2>
+              <p class="text-sm text-on-surface-variant mt-0.5 mb-4">Esto define cuánto dura tu consulta.</p>
+              <div class="optgrid" id="typeGrid"></div>
+            </div>
+            <!-- 4 Date -->
+            <div class="pane" data-step="3">
+              <h2 class="font-display font-extrabold text-xl text-on-surface">Elige la fecha</h2>
+              <p class="text-sm text-on-surface-variant mt-0.5 mb-4">Horario de Venezuela (GMT-4).</p>
+              <div class="max-w-sm" id="cal"></div>
+            </div>
+            <!-- 5 Slot -->
+            <div class="pane" data-step="4">
+              <h2 class="font-display font-extrabold text-xl text-on-surface">Elige la hora</h2>
+              <p class="text-sm text-on-surface-variant mt-0.5 mb-4" id="slotSub">Horarios disponibles.</p>
+              <div class="slotgrid" id="slotGrid"></div>
+            </div>
+            <!-- 6 Reason -->
+            <div class="pane" data-step="5">
+              <h2 class="font-display font-extrabold text-xl text-on-surface">Motivo de la consulta</h2>
+              <p class="text-sm text-on-surface-variant mt-0.5 mb-4">Datos del paciente y por qué necesitas la consulta.</p>
+              <label class="flbl">Nombre del paciente <span class="text-secondary">*</span></label>
+              <input class="fld" id="f_name" maxlength="120" placeholder="Nombre y apellido">
+              <div class="grid sm:grid-cols-2 gap-3 mt-4">
+                <div><label class="flbl">Correo</label><input class="fld" id="f_email" type="email" maxlength="160" placeholder="tucorreo@ejemplo.com"></div>
+                <div><label class="flbl">Teléfono / WhatsApp</label><input class="fld" id="f_phone" maxlength="60" placeholder="+58…"></div>
+              </div>
+              <p class="text-xs text-on-surface-variant mt-2">Indica al menos un correo o teléfono — te enviaremos el enlace de la videollamada.</p>
+              <label class="flbl mt-4">¿Qué necesitas? Síntomas o situación <span class="text-secondary">*</span></label>
+              <textarea class="fld" id="f_reason" maxlength="2000" placeholder="Describe lo que ocurre, desde cuándo, edad, enfermedades o medicación relevante…"></textarea>
+            </div>
+            <!-- 7 Insurance / payment -->
+            <div class="pane" data-step="6">
+              <h2 class="font-display font-extrabold text-xl text-on-surface">Seguro y pago</h2>
+              <p class="text-sm text-on-surface-variant mt-0.5 mb-4">Tu consulta es completamente gratuita.</p>
+              <div class="rounded-lg border border-outline-variant/60 border-l-4 border-l-safe bg-safe/5 p-5 mb-5 flex items-start gap-3">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.4" class="w-6 h-6 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
+                <div><div class="font-display font-extrabold text-lg text-safe">Consulta gratuita — $0</div><p class="text-[13px] text-on-surface-variant leading-relaxed mt-0.5">Atendida por médicos voluntarios. No se cobra ni se requiere tarjeta. Los datos de seguro son <b>opcionales</b> y solo sirven de referencia para tu médico.</p></div>
+              </div>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div><label class="flbl">Seguro / aseguradora (opcional)</label><input class="fld" id="f_ins" maxlength="120" placeholder="Ej. Seguros Caracas, ninguno…"></div>
+                <div><label class="flbl">N.º de afiliado (opcional)</label><input class="fld" id="f_insid" maxlength="80" placeholder="Opcional"></div>
+              </div>
+            </div>
+            <!-- 8 Confirm -->
+            <div class="pane" data-step="7">
+              <h2 class="font-display font-extrabold text-xl text-on-surface">Confirma tu cita</h2>
+              <p class="text-sm text-on-surface-variant mt-0.5 mb-4">Revisa los datos antes de confirmar.</p>
+              <div class="rounded-lg border border-outline-variant/60 overflow-hidden" id="review"></div>
+              <div class="msg" id="bookMsg"></div>
+            </div>
+
+            <div class="flex justify-between gap-3 mt-6 pt-5 border-t border-outline-variant/60">
+              <button class="tm-btn tm-btn-ghost" id="backBtn" style="visibility:hidden">← Atrás</button>
+              <button class="tm-btn tm-btn-primary" id="nextBtn" disabled>Continuar →</button>
+            </div>
+          </section>
+
+          <!-- Booking success -->
+          <section class="bg-white rounded-lg border border-outline-variant/60 p-5 sm:p-6" id="doneCard" style="display:none"></section>
+
+          <!-- STATUS TRACKER -->
+          <section class="bg-white rounded-lg border border-outline-variant/60 p-5 sm:p-6" id="trackCard" style="display:none">
+            <h2 class="font-display font-extrabold text-xl text-on-surface">Estado de tu cita</h2>
+            <p class="text-sm text-on-surface-variant mt-0.5 mb-4">Guarda esta página: aquí ves el avance de tu consulta y el enlace de la videollamada.</p>
+            <div id="trackBox"></div>
+          </section>
+
+          <!-- Doctor onboarding (secondary) -->
+          <details class="bg-white rounded-lg border border-outline-variant/60 p-5 sm:p-6" id="docReg">
+            <summary class="cursor-pointer font-display font-bold text-base text-on-surface">¿Eres médico? Regístrate para atender →</summary>
+            <p class="text-sm text-on-surface-variant mt-3">Atiende a pacientes en Venezuela desde cualquier país. Recibirás por correo tu enlace privado al panel, donde defines tu <b>disponibilidad</b> y horarios.</p>
+            <div class="mt-4 space-y-4">
+              <div><label class="flbl">Nombre completo <span class="text-secondary">*</span></label><input class="fld" id="d_name" maxlength="120" placeholder="Dr(a). Nombre Apellido"></div>
+              <div><label class="flbl">Correo <span class="text-secondary">*</span></label><input class="fld" id="d_email" type="email" maxlength="160" placeholder="tucorreo@ejemplo.com"></div>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div><label class="flbl">Especialidad</label><select class="fld" id="d_spec"></select></div>
+                <div><label class="flbl">País</label><input class="fld" id="d_country" maxlength="80" placeholder="Ej. España, EE.UU., Chile…"></div>
+              </div>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div><label class="flbl">N.º de colegiatura / licencia</label><input class="fld" id="d_lic" maxlength="80" placeholder="Opcional"></div>
+                <div><label class="flbl">Teléfono</label><input class="fld" id="d_phone" maxlength="60" placeholder="Opcional"></div>
+              </div>
+              <div><label class="flbl">Breve presentación</label><textarea class="fld" id="d_bio" maxlength="800" placeholder="Tu experiencia, dónde ejerces, qué casos prefieres…"></textarea></div>
+              <button class="tm-btn tm-btn-primary w-full" id="d_btn">Registrarme como médico</button>
+              <div class="msg" id="d_msg"></div>
+            </div>
+          </details>
+
+        </div>
+      </main>
     </div>
-  </section>
+  </div>
 
-  <!-- Booking success -->
-  <section class="card card-pad" id="doneCard" style="display:none"></section>
-
-  <!-- ============ STATUS TRACKER (?cita= / legacy ?caso=) ============ -->
-  <section class="card card-pad" id="trackCard" style="display:none">
-    <h2 class="sec">📋 Estado de tu cita</h2>
-    <div class="sub">Guarda esta página: aquí ves el avance de tu consulta y el enlace de la videollamada.</div>
-    <div id="trackBox"></div>
-  </section>
-
-  <!-- Doctor onboarding (secondary) -->
-  <details class="card card-pad" id="docReg">
-    <summary style="cursor:pointer;font:800 15px 'Public Sans';color:var(--navy)">🩺 ¿Eres médico? Regístrate para atender →</summary>
-    <div class="sub" style="margin-top:10px">Atiende a pacientes en Venezuela desde cualquier país. Recibirás por correo tu enlace privado al panel, donde defines tu <b>disponibilidad</b> y horarios.</div>
-    <label class="fl">Nombre completo <span class="req">*</span></label>
-    <input class="f" id="d_name" maxlength="120" placeholder="Dr(a). Nombre Apellido" />
-    <label class="fl">Correo <span class="req">*</span></label>
-    <input class="f" id="d_email" type="email" maxlength="160" placeholder="tucorreo@ejemplo.com" />
-    <div class="two">
-      <div><label class="fl">Especialidad</label><select class="f" id="d_spec"></select></div>
-      <div><label class="fl">País</label><input class="f" id="d_country" maxlength="80" placeholder="Ej. España, EE.UU., Chile…" /></div>
-    </div>
-    <div class="two">
-      <div><label class="fl">N.º de colegiatura / licencia</label><input class="f" id="d_lic" maxlength="80" placeholder="Opcional" /></div>
-      <div><label class="fl">Teléfono</label><input class="f" id="d_phone" maxlength="60" placeholder="Opcional" /></div>
-    </div>
-    <label class="fl">Breve presentación</label>
-    <textarea class="f" id="d_bio" maxlength="800" placeholder="Tu experiencia, dónde ejerces, qué casos prefieres…"></textarea>
-    <button class="btn btn-go" id="d_btn" style="margin-top:14px;width:100%">Registrarme como médico</button>
-    <div class="msg" id="d_msg"></div>
-  </details>
-
-  <script src="/app-shell.js" defer></script>
   <script src="/telemedicina-pwa.js" defer></script>
   <script src="/telemedicina-booking.js" defer></script>
-</main>
 </body>
 </html>

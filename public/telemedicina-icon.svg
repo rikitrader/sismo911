@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="SISMO911 Telemedicina">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0e7c86"/>
-      <stop offset="1" stop-color="#06303a"/>
+      <stop offset="0" stop-color="#0b2b5b"/>
+      <stop offset="1" stop-color="#00173a"/>
     </linearGradient>
   </defs>
-  <!-- Full-bleed background so the icon works as `maskable` (no transparent corners). -->
+  <!-- Full-bleed institutional navy so the icon works as `maskable` (no transparent corners). -->
   <rect width="512" height="512" fill="url(#bg)"/>
-  <!-- Medical cross + heartbeat pulse, kept inside the maskable safe zone (center 80%). -->
+  <!-- White medical cross + crimson heartbeat, inside the maskable safe zone (center 80%). -->
   <g fill="#ffffff">
     <rect x="208" y="120" width="96" height="272" rx="26"/>
     <rect x="120" y="208" width="272" height="96" rx="26"/>
   </g>
   <polyline points="120,256 196,256 222,214 256,308 290,206 316,256 392,256"
-    fill="none" stroke="#c9a227" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    fill="none" stroke="#bb0027" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

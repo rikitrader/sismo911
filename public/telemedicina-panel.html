@@ -4,7 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel médico — SISMO911 Telemedicina</title>
 <meta name="robots" content="noindex">
-<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#0e7c86">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
 <!-- Installable PWA — same dedicated "Telemedicina" app (manifest scope covers this panel). -->
 <link rel="manifest" href="/telemedicina.webmanifest">
 <link rel="apple-touch-icon" href="/icons/telemedicina-180.png">
@@ -12,132 +12,130 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Telemedicina">
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
 <style>
-  :root{--navy:#13284f;--navy2:#1f3a6b;--line:#dfe3ea;--ink:#1b2433;--muted:#5b6781;--green:#1f8a4c;--teal:#0e7c86;--red:#c8102e}
-  body{background:#f4f6fa;color:var(--ink);font-family:Inter,system-ui,sans-serif}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 16px}
-  .hero{background:linear-gradient(135deg,#0c1b38,#1f3a6b);color:#fff;border-radius:18px;padding:24px 26px;margin:22px 0 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
-  .hero .eyebrow{font:800 11px 'Public Sans';letter-spacing:.14em;text-transform:uppercase;color:#f5c518}
-  .hero h1{font:900 25px 'Public Sans';margin:5px 0 2px}
-  .hero .who{color:#c9d6ef;font-size:13.5px}
-  .hstats{display:flex;gap:22px}
-  .hstat .n{font:900 24px 'Public Sans';color:#fff}.hstat .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#9fb3d8}
-  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.05);margin-bottom:18px}
-  .card-pad{padding:20px}
-  h2.sec{font:800 18px 'Public Sans';color:var(--navy);margin:0 0 10px;display:flex;align-items:center;gap:9px}
-  .tabbar{display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap}
-  .tab{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 15px;font:700 13px 'Public Sans';color:var(--muted);cursor:pointer}
-  .tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .tab .c{display:inline-block;min-width:18px;text-align:center;background:rgba(0,0,0,.12);border-radius:999px;padding:0 6px;font-size:11px;margin-left:5px}
-  .tab.on .c{background:rgba(255,255,255,.25)}
+  :root{--navy:#00173a;--navy-c:#0b2b5b;--crimson:#bb0027;--line:#c4c6d0;--ink:#1a1c1e;--muted:#44474f;--surface:#f9f9fc}
+  body{background:var(--surface)}
+  .tabnum{font-variant-numeric:tabular-nums}
   .pane{display:none}.pane.on{display:block}
-  .row{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:11px}
-  .row.term{opacity:.72}
-  .row .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
-  .row .name{font:800 15px 'Public Sans';color:var(--ink)}
-  .row .meta{font-size:12.5px;color:var(--muted);margin-top:2px}
-  .row .desc{font-size:13.5px;color:#39435a;margin-top:8px;line-height:1.45;white-space:pre-wrap}
-  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font:800 11px 'Public Sans';text-transform:uppercase;letter-spacing:.04em}
-  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-  button.act{border:none;border-radius:9px;padding:9px 14px;font:800 13px 'Public Sans';cursor:pointer;color:#fff;background:var(--navy)}
-  .act.go{background:var(--teal)}.act.start{background:#0e7490}.act.done{background:var(--green)}
-  .act.warn{background:#b45309}.act.danger{background:var(--red)}.act.ghost{background:#eef1f6;color:var(--navy)}
-  button.act:disabled{opacity:.5;cursor:default}
-  .videolink{display:inline-flex;align-items:center;gap:7px;background:var(--teal);color:#fff;text-decoration:none;font:800 13px 'Public Sans';padding:9px 14px;border-radius:9px}
-  .empty{text-align:center;color:var(--muted);padding:30px;font-size:14px}
+  .fld{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font:500 14px Inter,sans-serif;color:var(--ink);background:#fff;box-sizing:border-box;transition:.12s}
+  .fld:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,23,58,.14)}
+  .flbl{display:block;font:700 11px 'Public Sans',sans-serif;color:var(--ink);margin:0 0 6px;text-transform:uppercase;letter-spacing:.04em}
+  .tm-btn{border:none;border-radius:10px;padding:11px 18px;font:800 13.5px 'Public Sans',sans-serif;cursor:pointer;transition:.12s;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none}
+  .tm-btn-primary{background:var(--navy);color:#fff}.tm-btn-primary:hover{background:var(--navy-c)}.tm-btn-primary:disabled{opacity:.5;cursor:default}
+  .tm-btn-go{background:#1f3a6b;color:#fff}.tm-btn-go:hover{background:#16305c}
+  .tm-btn-start{background:#0b2b5b;color:#fff}
+  .tm-btn-done{background:#2e7d32;color:#fff}
+  .tm-btn-warn{background:#e57200;color:#fff}
+  .tm-btn-danger{background:#fff;color:var(--crimson);border:1.5px solid #efc2cb}.tm-btn-danger:hover{background:#fdecef}
+  .tm-btn-ghost{background:#eeeef0;color:var(--navy)}.tm-btn-ghost:hover{background:#e2e2e5}
+  button.tm-btn:disabled{opacity:.5;cursor:default}
+  .ptab{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 16px;font:700 13px 'Public Sans',sans-serif;color:var(--muted);cursor:pointer;transition:.12s}
+  .ptab:hover{border-color:var(--navy)}
+  .ptab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .ptab .c{display:inline-block;min-width:18px;text-align:center;background:rgba(0,0,0,.12);border-radius:999px;padding:0 6px;font-size:11px;margin-left:6px}
+  .ptab.on .c{background:rgba(255,255,255,.25)}
+  .prow{border:1px solid var(--line);border-radius:12px;padding:15px;margin-bottom:12px;background:#fff}
+  .prow.term{opacity:.7}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font:800 11px 'Public Sans',sans-serif;text-transform:uppercase;letter-spacing:.04em}
+  .empty{text-align:center;color:var(--muted);padding:32px;font:500 14px Inter,sans-serif}
+  .msg{margin-top:10px;border-radius:9px;padding:10px 13px;font:600 13px Inter,sans-serif;display:none}
+  .msg.ok{display:block;background:rgba(46,125,50,.1);color:#1b5e20}.msg.err{display:block;background:rgba(200,16,46,.08);color:#9b1c2e}
   .gate{max-width:460px;margin:60px auto;text-align:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:34px}
-  .msg{margin-top:10px;border-radius:9px;padding:10px 13px;font-size:13px;font-weight:600;display:none}
-  .msg.ok{display:block;background:#e3f6ea;color:#166534}.msg.err{display:block;background:#fdeaec;color:#9b1c2e}
-  label.fl{display:block;font:700 11px Inter;color:var(--ink);margin:0 0 5px;text-transform:uppercase;letter-spacing:.03em}
-  input.f,select.f{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font:500 14px Inter;box-sizing:border-box}
-  /* availability */
-  .toggle{display:flex;align-items:center;gap:10px;font:700 14px 'Public Sans';color:var(--navy);margin-bottom:6px}
-  .switch{position:relative;width:46px;height:26px;flex-shrink:0}
+  .switch{position:relative;width:46px;height:26px;flex:0 0 auto}
   .switch input{opacity:0;width:0;height:0}
   .slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;transition:.15s;cursor:pointer}
   .slider::before{content:"";position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
-  .switch input:checked + .slider{background:var(--teal)}
+  .switch input:checked + .slider{background:var(--navy)}
   .switch input:checked + .slider::before{transform:translateX(20px)}
-  .opts{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
-  .chk{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font:700 12.5px 'Public Sans';color:var(--navy);cursor:pointer}
-  .chk input{accent-color:var(--teal)}
-  .dayrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f4f9;flex-wrap:wrap}
-  .dayrow .dn{width:108px;font:800 13px 'Public Sans';color:var(--ink)}
+  .chk{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:7px 13px;font:700 12.5px 'Public Sans',sans-serif;color:var(--navy);cursor:pointer}
+  .chk input{accent-color:var(--navy)}
+  .dayrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eef0f4;flex-wrap:wrap}
   .dayrow.off .times{opacity:.4;pointer-events:none}
-  .blkrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f4f9;flex-wrap:wrap;font-size:13.5px}
-  .cal-day{font:800 13px 'Public Sans';color:var(--navy);margin:14px 0 7px;border-bottom:2px solid #eef1f6;padding-bottom:5px}
-  .cal-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f4f9;flex-wrap:wrap}
-  .cal-time{font:800 14px 'Public Sans';color:var(--teal);min-width:74px}
+  .blkrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #eef0f4;flex-wrap:wrap;font-size:13.5px;color:var(--ink)}
+  .cal-day{font:800 13px 'Public Sans',sans-serif;color:var(--navy);margin:16px 0 7px;border-bottom:2px solid #eef0f4;padding-bottom:5px}
+  .cal-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f1f4f9;flex-wrap:wrap}
+  .cal-time{font:800 14px 'Public Sans',sans-serif;color:var(--navy);min-width:74px;font-variant-numeric:tabular-nums}
 </style>
 </head>
-<body class="font-sans">
-<main class="wrap">
+<body class="font-sans text-on-surface antialiased">
   <div id="gate" class="gate" style="display:none">
-    <h2 class="sec" style="justify-content:center">Acceso al panel médico</h2>
-    <p style="color:var(--muted);font-size:14px">Este panel se abre desde el enlace privado que te enviamos por correo al registrarte.
-    Si no lo tienes, <a href="/telemedicina" style="color:var(--teal);font-weight:700">regístrate aquí</a>.</p>
+    <h2 class="font-display font-extrabold text-xl text-on-surface">Acceso al panel médico</h2>
+    <p class="text-sm text-on-surface-variant mt-2">Este panel se abre desde el enlace privado que te enviamos por correo al registrarte. Si no lo tienes, <a href="/telemedicina" class="text-primary font-semibold">regístrate aquí</a>.</p>
   </div>
 
   <div id="app" style="display:none">
-    <section class="hero">
-      <div>
-        <div class="eyebrow">🩺 Panel Médico · Telemedicina</div>
-        <h1 id="docName">—</h1>
-        <div class="who" id="docWho">—</div>
-      </div>
-      <div class="hstats">
-        <div class="hstat"><div class="n" id="s_next">—</div><div class="l">Próximas</div></div>
-        <div class="hstat"><div class="n" id="s_today">—</div><div class="l">Hoy</div></div>
-        <div class="hstat"><div class="n" id="s_done">—</div><div class="l">Completadas</div></div>
-      </div>
-    </section>
+    <div class="flex min-h-screen">
+      <div class="flex-1 flex flex-col min-w-0">
+        <header class="flex items-center justify-between h-[72px] px-4 sm:px-8 bg-white border-b border-outline-variant/60">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-white flex-shrink-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h18M5 5v14a2 2 0 002 2h10a2 2 0 002-2V5M9 11h6M12 8v6"/></svg>
+            </span>
+            <div class="min-w-0">
+              <div class="font-display font-bold text-[19px] text-on-surface leading-tight truncate" id="docName">—</div>
+              <div class="text-xs text-on-surface-variant truncate" id="docWho">Panel médico · Telemedicina</div>
+            </div>
+          </div>
+        </header>
 
-    <div id="setup" class="card card-pad" style="display:none;border-color:#f5c518;background:#fffbeb">
-      <h2 class="sec">⚠️ Publica tu disponibilidad</h2>
-      <div style="color:#7a5200;font-size:13.5px">Aún no tienes horarios. Los pacientes solo pueden agendar contigo cuando defines tus días y horas en la pestaña <b>Disponibilidad</b>.</div>
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+          <!-- KPI tiles -->
+          <div class="grid grid-cols-3 gap-4">
+            <div class="bg-white rounded-lg border border-outline-variant/60 p-4 sm:p-5"><div class="text-[11px] uppercase tracking-wide text-on-surface-variant font-display font-bold">Próximas</div><div id="s_next" class="mt-2 font-display font-extrabold text-3xl sm:text-4xl text-primary tabnum">—</div></div>
+            <div class="bg-white rounded-lg border border-outline-variant/60 p-4 sm:p-5"><div class="text-[11px] uppercase tracking-wide text-on-surface-variant font-display font-bold">Hoy</div><div id="s_today" class="mt-2 font-display font-extrabold text-3xl sm:text-4xl text-on-surface tabnum">—</div></div>
+            <div class="bg-white rounded-lg border border-outline-variant/60 p-4 sm:p-5"><div class="text-[11px] uppercase tracking-wide text-on-surface-variant font-display font-bold">Completadas</div><div id="s_done" class="mt-2 font-display font-extrabold text-3xl sm:text-4xl text-safe tabnum">—</div></div>
+          </div>
+
+          <div id="setup" class="bg-white rounded-lg border border-outline-variant/60 border-l-4 border-l-advisory p-4" style="display:none">
+            <h2 class="font-display font-bold text-base text-on-surface">Publica tu disponibilidad</h2>
+            <p class="text-[13px] text-on-surface-variant mt-1">Aún no tienes horarios. Los pacientes solo pueden agendar contigo cuando defines tus días y horas en la pestaña <b>Disponibilidad</b>.</p>
+          </div>
+
+          <section class="bg-white rounded-lg border border-outline-variant/60 p-5 sm:p-6">
+            <div class="flex flex-wrap gap-2 mb-5">
+              <button class="ptab on" data-pane="appts">Citas <span class="c" id="c_appts">0</span></button>
+              <button class="ptab" data-pane="avail">Disponibilidad</button>
+              <button class="ptab" data-pane="cal">Calendario <span class="c" id="c_cal">0</span></button>
+            </div>
+
+            <div class="pane on" id="pane-appts"><div class="empty">Cargando…</div></div>
+
+            <div class="pane" id="pane-avail">
+              <h2 class="font-display font-extrabold text-lg text-on-surface mb-4">Tu disponibilidad</h2>
+              <div class="flex items-center gap-3 font-display font-bold text-sm text-on-surface mb-5"><label class="switch"><input type="checkbox" id="av_accept" checked><span class="slider"></span></label> Acepto nuevas citas</div>
+              <label class="flbl">Duración de cada bloque</label>
+              <select class="fld max-w-[200px]" id="av_slot"><option value="15">15 min</option><option value="20">20 min</option><option value="30" selected>30 min</option><option value="45">45 min</option><option value="60">60 min</option></select>
+              <label class="flbl mt-5">Tipos de cita que ofreces</label>
+              <div class="flex flex-wrap gap-2" id="av_types"></div>
+              <label class="flbl mt-5">Horario semanal <span class="normal-case font-normal text-on-surface-variant">(hora de Venezuela)</span></label>
+              <div id="av_days"></div>
+              <button class="tm-btn tm-btn-primary mt-5" id="av_save">Guardar disponibilidad</button>
+              <div class="msg" id="av_msg"></div>
+
+              <h2 class="font-display font-extrabold text-lg text-on-surface mt-8 mb-3">Bloquear fechas</h2>
+              <div class="flex flex-wrap items-center gap-2.5 mb-1">
+                <input class="fld w-auto" type="date" id="blk_date">
+                <span class="text-xs text-on-surface-variant">(día completo si no indicas horas)</span>
+                <input class="fld w-[120px]" type="time" id="blk_from"><span class="text-on-surface-variant">–</span><input class="fld w-[120px]" type="time" id="blk_to">
+                <button class="tm-btn tm-btn-ghost" id="blk_add">Añadir bloqueo</button>
+              </div>
+              <div id="blk_list"></div>
+              <div class="msg" id="blk_msg"></div>
+            </div>
+
+            <div class="pane" id="pane-cal"><div class="empty">Cargando…</div></div>
+          </section>
+        </main>
+      </div>
     </div>
-
-    <section class="card card-pad">
-      <div class="tabbar">
-        <button class="tab on" data-pane="appts">Citas <span class="c" id="c_appts">0</span></button>
-        <button class="tab" data-pane="avail">🗓️ Disponibilidad</button>
-        <button class="tab" data-pane="cal">📅 Calendario <span class="c" id="c_cal">0</span></button>
-      </div>
-
-      <div class="pane on" id="pane-appts"><div class="empty">Cargando…</div></div>
-
-      <div class="pane" id="pane-avail">
-        <h2 class="sec">Tu disponibilidad</h2>
-        <div class="toggle"><label class="switch"><input type="checkbox" id="av_accept" checked><span class="slider"></span></label> Acepto nuevas citas</div>
-        <label class="fl" style="margin-top:14px">Duración de cada bloque</label>
-        <select class="f" id="av_slot"><option value="15">15 min</option><option value="20">20 min</option><option value="30" selected>30 min</option><option value="45">45 min</option><option value="60">60 min</option></select>
-        <label class="fl" style="margin-top:14px">Tipos de cita que ofreces</label>
-        <div class="opts" id="av_types"></div>
-        <label class="fl" style="margin-top:14px">Horario semanal <span style="font-weight:500;text-transform:none;color:var(--muted)">(hora de Venezuela)</span></label>
-        <div id="av_days"></div>
-        <button class="act go" id="av_save" style="margin-top:16px">Guardar disponibilidad</button>
-        <div class="msg" id="av_msg"></div>
-
-        <h2 class="sec" style="margin-top:24px">Bloquear fechas</h2>
-        <div class="blkrow" style="border:0;padding-bottom:4px">
-          <input class="f" type="date" id="blk_date">
-          <span style="color:var(--muted);font-size:12.5px">(día completo si no indicas horas)</span>
-          <input class="f" type="time" id="blk_from" style="width:120px"><span>–</span><input class="f" type="time" id="blk_to" style="width:120px">
-          <button class="act ghost" id="blk_add">Añadir bloqueo</button>
-        </div>
-        <div id="blk_list"></div>
-        <div class="msg" id="blk_msg"></div>
-      </div>
-
-      <div class="pane" id="pane-cal"><div class="empty">Cargando…</div></div>
-    </section>
   </div>
 
   <script src="/app-shell.js" defer></script>
   <script src="/telemedicina-pwa.js" defer></script>
   <script src="/telemedicina-panel.js" defer></script>
-</main>
 </body>
 </html>
