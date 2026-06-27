@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ayuda Urgente — Perfiles de Emergencia | SISMO911</title>
+<meta name="description" content="Súper banner de perfiles de emergencia: personas que necesitan ayuda urgente tras el terremoto de Venezuela. Conoce su historia, comparte y moviliza apoyo.">
+<link rel="canonical" href="https://sismo911.com/emergencia">
+<meta property="og:title" content="Ayuda Urgente — Perfiles de Emergencia | SISMO911">
+<meta property="og:description" content="Personas que necesitan ayuda urgente. Conoce su historia, comparte y moviliza apoyo. #SISMO911">
+<meta property="og:url" content="https://sismo911.com/emergencia">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>
+  :root{--bg:#eef1f7;--panel:#fff;--ink:#0b1b3a;--navy:#00173a;--red:#bb0027;--gold:#c9a227;--amber:#e57200;--green:#1f8a4c;--blue:#1f5fd0;
+    --muted:#5b6781;--line:#e2e6ef;--line-2:#d3d9e6;--shadow:0 1px 2px rgba(16,24,40,.06);--shadow-lg:0 10px 40px rgba(0,23,58,.18)}
+  body{background:var(--bg)}
+  .disp{font-family:'Public Sans',sans-serif}.mono{font-family:'JetBrains Mono',monospace}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 64px}
+  .cmd{background:linear-gradient(135deg,#00112e 0%,#0a2c61 100%);color:#fff;border-radius:16px;box-shadow:var(--shadow-lg);padding:22px 24px;position:relative;overflow:hidden}
+  .cmd::after{content:"";position:absolute;right:-50px;top:-50px;width:240px;height:240px;background:radial-gradient(circle,rgba(201,162,39,.22),transparent 70%)}
+  .eyebrow{font:800 11px 'Public Sans';letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+  .cmd h1{font:900 30px/1.05 'Public Sans';margin:6px 0 6px;letter-spacing:-.02em}
+  .cmd p{color:#c9d6ef;max-width:680px;font-size:14px;line-height:1.5;margin:0}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+  @media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:12px 13px}
+  .kpi .n{font:900 24px 'Public Sans';color:#fff;font-variant-numeric:tabular-nums}
+  .kpi .l{font:700 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:#9fb3d8;margin-top:3px}
+
+  /* BILLBOARD */
+  .billboard{margin:20px 0 8px;border-radius:18px;overflow:hidden;position:relative;box-shadow:var(--shadow-lg);background:#0a1a36;min-height:340px}
+  .bb-slide{position:absolute;inset:0;opacity:0;transition:opacity .7s ease;display:flex;align-items:flex-end}
+  .bb-slide.on{opacity:1;position:relative}
+  .bb-bg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.04);filter:saturate(1.05)}
+  .bb-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,17,46,.15) 0%,rgba(0,17,46,.55) 45%,rgba(0,17,46,.94) 100%)}
+  .bb-body{position:relative;z-index:2;padding:30px 34px;width:100%;color:#fff}
+  .bb-badge{display:inline-flex;align-items:center;gap:7px;background:var(--red);color:#fff;font:800 11px 'Public Sans';letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:999px;box-shadow:0 2px 10px rgba(187,0,39,.5)}
+  .bb-badge.pulse::before{content:"";width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.3s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.7)}70%{box-shadow:0 0 0 8px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+  .bb-name{font:900 38px/1.02 'Public Sans';letter-spacing:-.02em;margin:14px 0 4px;text-shadow:0 2px 18px rgba(0,0,0,.5)}
+  @media(max-width:720px){.bb-name{font-size:27px}.bb-body{padding:22px}}
+  .bb-meta{font:700 14px Inter;color:#d7e2f7;margin-bottom:8px}
+  .bb-head{font:600 17px/1.4 Inter;max-width:680px;color:#eef4ff;margin-bottom:16px;text-shadow:0 1px 12px rgba(0,0,0,.5)}
+  .bb-cta{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;border-radius:12px;font:800 14px 'Public Sans';padding:13px 20px;text-decoration:none;transition:transform .12s,box-shadow .12s}
+  .btn:active{transform:translateY(1px)}
+  .btn-gold{background:var(--gold);color:#1a1500;box-shadow:0 4px 16px rgba(201,162,39,.45)}
+  .btn-red{background:var(--red);color:#fff;box-shadow:0 4px 16px rgba(187,0,39,.45)}
+  .btn-ghost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.3)}
+  .btn-navy{background:var(--navy);color:#fff}
+  .bb-prog{position:absolute;top:14px;right:16px;z-index:3;display:flex;gap:6px}
+  .bb-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.35);cursor:pointer;transition:.2s}
+  .bb-dot.on{background:#fff;width:24px;border-radius:5px}
+  .bb-nav{position:absolute;top:50%;z-index:3;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;border:none;background:rgba(0,17,46,.5);color:#fff;font-size:20px;cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(3px)}
+  .bb-nav.prev{left:12px}.bb-nav.next{right:12px}
+  .pbar{height:7px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden;max-width:420px;margin-bottom:14px}
+  .pbar > i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#ffdd7a)}
+  .praise{font:700 12px Inter;color:#cfe0ff;margin-bottom:6px}
+
+  /* GRID */
+  .sec-h{display:flex;align-items:baseline;justify-content:space-between;margin:30px 2px 14px;gap:10px;flex-wrap:wrap}
+  .sec-h h2{font:900 19px 'Public Sans';color:var(--ink);letter-spacing:-.01em}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:transform .14s,box-shadow .14s}
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+  .card .ph{aspect-ratio:16/10;background:#0a1a36 center/cover no-repeat;position:relative}
+  .card .ph .nb{position:absolute;left:10px;top:10px;font:800 9.5px 'Public Sans';letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:4px 9px;border-radius:999px}
+  .card .bd{padding:13px 14px 15px}
+  .card .nm{font:800 16px 'Public Sans';color:var(--ink);letter-spacing:-.01em}
+  .card .mt{font:600 12.5px Inter;color:var(--muted);margin:2px 0 8px}
+  .card .hl{font:500 13px/1.45 Inter;color:#3a455e;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card .ft{display:flex;align-items:center;justify-content:space-between;margin-top:11px;font:700 11.5px Inter;color:var(--muted)}
+  .nb.medico{background:#1f5fd0}.nb.rescate{background:var(--red)}.nb.desplazado{background:var(--amber)}.nb.duelo{background:#5b6781}.nb.reconstruccion{background:var(--green)}.nb.otro{background:var(--navy)}
+  .mini-pbar{height:5px;border-radius:999px;background:#e7ebf3;overflow:hidden;margin-top:9px}
+  .mini-pbar > i{display:block;height:100%;background:var(--green)}
+  .empty{background:#fff;border:1px dashed var(--line-2);border-radius:14px;padding:46px 24px;text-align:center;color:var(--muted)}
+  .empty b{display:block;font:800 17px 'Public Sans';color:var(--ink);margin-bottom:6px}
+  .skel{height:200px;border-radius:14px;background:linear-gradient(100deg,#e9edf5 30%,#f3f6fb 50%,#e9edf5 70%);background-size:200% 100%;animation:sh 1.2s infinite}
+  @keyframes sh{to{background-position:-200% 0}}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;font:700 13px Inter;padding:12px 18px;border-radius:12px;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.25s;z-index:50}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans">
+<main class="wrap">
+  <header class="cmd">
+    <div class="eyebrow">Súper Banner · Ayuda Urgente</div>
+    <h1>Perfiles de Emergencia</h1>
+    <p>Historias reales de personas que necesitan ayuda urgente tras el terremoto. Conoce su situación, comparte su perfil y moviliza apoyo. Cada perfil es verificado y publicado por el equipo de SISMO911.</p>
+    <div class="kpis">
+      <div class="kpi"><div class="n" id="k-act">—</div><div class="l">Perfiles activos</div></div>
+      <div class="kpi"><div class="n" id="k-raised">—</div><div class="l">Recaudado</div></div>
+      <div class="kpi"><div class="n" id="k-views">—</div><div class="l">Vistas</div></div>
+      <div class="kpi"><div class="n" id="k-shares">—</div><div class="l">Compartidos</div></div>
+    </div>
+  </header>
+
+  <section id="bbwrap" class="billboard" aria-label="Banner rotativo de emergencias">
+    <div class="skel" style="height:340px"></div>
+  </section>
+
+  <div class="sec-h">
+    <h2>Todas las emergencias activas</h2>
+    <span id="count" style="font:700 12.5px Inter;color:var(--muted)"></span>
+  </div>
+  <div id="grid" class="grid"></div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const NEED={medico:'Médico',rescate:'Rescate',desplazado:'Desplazado',duelo:'Duelo',reconstruccion:'Reconstrucción',otro:'Ayuda'};
+const fmtMoney=(n,c)=>n==null?'':new Intl.NumberFormat('es-VE',{style:'currency',currency:(c||'USD'),maximumFractionDigits:0}).format(n);
+const fmtNum=n=>new Intl.NumberFormat('es-VE').format(n||0);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let PROFILES=[], FEAT=[], idx=0, timer=null;
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2200);}
+
+function pct(p){return p.goal_amount&&p.goal_amount>0?Math.min(100,Math.round((p.raised_amount||0)/p.goal_amount*100)):null;}
+
+function billboard(){
+  const w=$('bbwrap');
+  if(!FEAT.length){w.innerHTML='<div class="empty" style="margin:0"><b>Sin emergencias destacadas ahora mismo</b>Cuando el equipo publique un perfil, aparecerá aquí.</div>';return;}
+  w.innerHTML = FEAT.map((p,i)=>{
+    const pc=pct(p);
+    const bg=p.hero?`background-image:url('${esc(p.hero)}')`:'background:linear-gradient(135deg,#0a1a36,#13284f)';
+    return `<div class="bb-slide${i===0?' on':''}" data-i="${i}">
+      <div class="bb-bg" style="${bg}"></div>
+      <div class="bb-body">
+        <span class="bb-badge pulse">${esc(NEED[p.need_type]||'Ayuda')} · Urgente</span>
+        <div class="bb-name">${esc(p.name)}${p.age?`, ${p.age}`:''}</div>
+        <div class="bb-meta">${esc(p.location||'Venezuela')}</div>
+        ${p.headline?`<div class="bb-head">${esc(p.headline)}</div>`:''}
+        ${pc!=null?`<div class="praise">${fmtMoney(p.raised_amount,p.currency)} de ${fmtMoney(p.goal_amount,p.currency)} · ${pc}%</div><div class="pbar"><i style="width:${pc}%"></i></div>`:''}
+        <div class="bb-cta">
+          <a class="btn btn-gold" href="/emergencia/${esc(p.slug)}">Ver perfil y ayudar →</a>
+          <button class="btn btn-ghost" onclick="quickShare(${i})">↗ Compartir</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') +
+    `<div class="bb-prog">${FEAT.map((_,i)=>`<span class="bb-dot${i===0?' on':''}" onclick="go(${i})"></span>`).join('')}</div>
+     ${FEAT.length>1?'<button class="bb-nav prev" onclick="go(idx-1)" aria-label="Anterior">‹</button><button class="bb-nav next" onclick="go(idx+1)" aria-label="Siguiente">›</button>':''}`;
+  idx=0; arm();
+  w.onmouseenter=()=>clearTimeout(timer); w.onmouseleave=arm;
+}
+function arm(){clearTimeout(timer);const p=FEAT[idx];if(!p||FEAT.length<2)return;timer=setTimeout(()=>go(idx+1),(p.rotation_secs||8)*1000);}
+function go(n){
+  const slides=[...document.querySelectorAll('.bb-slide')];const dots=[...document.querySelectorAll('.bb-dot')];
+  if(!slides.length)return; idx=(n+FEAT.length)%FEAT.length;
+  slides.forEach((s,i)=>s.classList.toggle('on',i===idx));
+  dots.forEach((d,i)=>d.classList.toggle('on',i===idx)); arm();
+}
+function quickShare(i){const p=FEAT[i];share(p);}
+async function share(p){
+  const url=location.origin+'/emergencia/'+p.slug;
+  const text=`🆘 ${p.name} necesita ayuda urgente — SISMO911`;
+  try{ if(navigator.share){await navigator.share({title:text,text:p.headline||text,url});}
+    else{await navigator.clipboard.writeText(url);toast('Enlace copiado ✓');} }
+  catch(e){ try{await navigator.clipboard.writeText(url);toast('Enlace copiado ✓');}catch{} }
+  fetch('/api/emergencia/'+p.slug+'/share',{method:'POST'}).catch(()=>{});
+}
+
+function grid(){
+  const g=$('grid');
+  if(!PROFILES.length){g.innerHTML='';$('count').textContent='';document.querySelector('.sec-h h2').parentElement.nextElementSibling;return;}
+  $('count').textContent=PROFILES.length+' perfil'+(PROFILES.length>1?'es':'');
+  g.innerHTML=PROFILES.map(p=>{
+    const pc=pct(p);
+    const bg=p.hero?`background-image:url('${esc(p.hero)}')`:'background:linear-gradient(135deg,#0a1a36,#13284f)';
+    return `<a class="card" href="/emergencia/${esc(p.slug)}">
+      <div class="ph" style="${bg}"><span class="nb ${esc(p.need_type)}">${esc(NEED[p.need_type]||'Ayuda')}</span></div>
+      <div class="bd">
+        <div class="nm">${esc(p.name)}${p.age?`, ${p.age}`:''}</div>
+        <div class="mt">${esc(p.location||'Venezuela')}</div>
+        ${p.headline?`<div class="hl">${esc(p.headline)}</div>`:''}
+        ${pc!=null?`<div class="mini-pbar"><i style="width:${pc}%"></i></div>`:''}
+        <div class="ft"><span>${p.status==='resolved'?'✓ Resuelto':'Activo'}</span><span>${fmtNum(p.views)} vistas · ${fmtNum(p.shares)} ↗</span></div>
+      </div></a>`;
+  }).join('');
+}
+
+async function load(){
+  try{
+    const r=await fetch('/api/emergencia',{headers:{'Accept':'application/json'}});
+    const j=await r.json();
+    PROFILES=(j.profiles||[]).filter(p=>p.status==='active'||p.status==='resolved');
+    FEAT=PROFILES.filter(p=>p.featured&&p.status==='active');
+    if(!FEAT.length) FEAT=PROFILES.slice(0,5);
+    $('k-act').textContent=fmtNum(PROFILES.filter(p=>p.status==='active').length);
+    $('k-raised').textContent=fmtMoney(PROFILES.reduce((a,p)=>a+(p.raised_amount||0),0),'USD')||'$0';
+    $('k-views').textContent=fmtNum(PROFILES.reduce((a,p)=>a+(p.views||0),0));
+    $('k-shares').textContent=fmtNum(PROFILES.reduce((a,p)=>a+(p.shares||0),0));
+    billboard(); grid();
+  }catch(e){
+    $('bbwrap').innerHTML='<div class="empty" style="margin:0"><b>No se pudieron cargar los perfiles</b>Revisa tu conexión e intenta de nuevo.</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>
