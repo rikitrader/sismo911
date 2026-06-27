@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel médico — SISMO911 Telemedicina</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>
+  :root{--navy:#13284f;--navy2:#1f3a6b;--line:#dfe3ea;--ink:#1b2433;--muted:#5b6781;--green:#1f8a4c;--teal:#0e7c86;--red:#c8102e}
+  body{background:#f4f6fa;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+  .hero{background:linear-gradient(135deg,#0c1b38,#1f3a6b);color:#fff;border-radius:18px;padding:24px 26px;margin:22px 0 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+  .hero .eyebrow{font:800 11px 'Public Sans';letter-spacing:.14em;text-transform:uppercase;color:#f5c518}
+  .hero h1{font:900 25px 'Public Sans';margin:5px 0 2px}
+  .hero .who{color:#c9d6ef;font-size:13.5px}
+  .hstats{display:flex;gap:22px}
+  .hstat .n{font:900 24px 'Public Sans';color:#fff}.hstat .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#9fb3d8}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.05);margin-bottom:18px}
+  .card-pad{padding:20px}
+  h2.sec{font:800 18px 'Public Sans';color:var(--navy);margin:0 0 10px;display:flex;align-items:center;gap:9px}
+  .tabbar{display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap}
+  .tab{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 15px;font:700 13px 'Public Sans';color:var(--muted);cursor:pointer}
+  .tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .tab .c{display:inline-block;min-width:18px;text-align:center;background:rgba(0,0,0,.12);border-radius:999px;padding:0 6px;font-size:11px;margin-left:5px}
+  .tab.on .c{background:rgba(255,255,255,.25)}
+  .pane{display:none}.pane.on{display:block}
+  .row{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:11px}
+  .row .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .row .name{font:800 15px 'Public Sans';color:var(--ink)}
+  .row .meta{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .row .desc{font-size:13.5px;color:#39435a;margin-top:8px;line-height:1.45;white-space:pre-wrap}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font:800 11px 'Public Sans';text-transform:uppercase;letter-spacing:.04em}
+  .b-open{background:#fef3c7;color:#92600a}.b-claimed{background:#dbeafe;color:#1e40af}.b-scheduled{background:#dcfce7;color:#166534}.b-completed{background:#e5e7eb;color:#374151}
+  .b-critica{background:#fee2e2;color:#991b1b}.b-alta{background:#ffedd5;color:#9a3412}.b-normal{background:#e0e7ff;color:#3730a3}.b-baja{background:#f1f5f9;color:#475569}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  button.act{border:none;border-radius:9px;padding:9px 14px;font:800 13px 'Public Sans';cursor:pointer;color:#fff}
+  .act.claim{background:var(--teal)}.act.sched{background:var(--navy)}.act.done{background:var(--green)}.act.ghost{background:#eef1f6;color:var(--navy)}
+  button.act:disabled{opacity:.5;cursor:default}
+  .videolink{display:inline-flex;align-items:center;gap:7px;background:var(--teal);color:#fff;text-decoration:none;font:800 13px 'Public Sans';padding:9px 14px;border-radius:9px}
+  .empty{text-align:center;color:var(--muted);padding:30px;font-size:14px}
+  .sched-form{margin-top:12px;background:#f7f9fd;border:1px solid var(--line);border-radius:11px;padding:14px;display:none}
+  .sched-form.show{display:block}
+  .sched-form .two{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+  @media(max-width:560px){.sched-form .two{grid-template-columns:1fr}}
+  label.fl{display:block;font:700 11px Inter;color:var(--ink);margin:0 0 5px;text-transform:uppercase;letter-spacing:.03em}
+  input.f,select.f{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font:500 14px Inter;box-sizing:border-box}
+  .gate{max-width:460px;margin:60px auto;text-align:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:34px}
+  .msg{margin-top:10px;border-radius:9px;padding:10px 13px;font-size:13px;font-weight:600;display:none}
+  .msg.ok{display:block;background:#e3f6ea;color:#166534}.msg.err{display:block;background:#fdeaec;color:#9b1c2e}
+  /* calendar */
+  .cal-day{font:800 13px 'Public Sans';color:var(--navy);margin:14px 0 7px;border-bottom:2px solid #eef1f6;padding-bottom:5px}
+  .cal-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f4f9;flex-wrap:wrap}
+  .cal-time{font:800 14px 'Public Sans';color:var(--teal);min-width:74px}
+</style>
+</head>
+<body class="font-sans">
+<main class="wrap">
+  <div id="gate" class="gate" style="display:none">
+    <h2 class="sec" style="justify-content:center">Acceso al panel médico</h2>
+    <p style="color:var(--muted);font-size:14px">Este panel se abre desde el enlace privado que te enviamos por correo al registrarte.
+    Si no lo tienes, <a href="/telemedicina" style="color:var(--teal);font-weight:700">regístrate aquí</a>.</p>
+  </div>
+
+  <div id="app" style="display:none">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">🩺 Panel Médico · Telemedicina</div>
+        <h1 id="docName">—</h1>
+        <div class="who" id="docWho">—</div>
+      </div>
+      <div class="hstats">
+        <div class="hstat"><div class="n" id="s_open">—</div><div class="l">Abiertas</div></div>
+        <div class="hstat"><div class="n" id="s_mine">—</div><div class="l">Mis casos</div></div>
+        <div class="hstat"><div class="n" id="s_sched">—</div><div class="l">Agendadas</div></div>
+      </div>
+    </section>
+
+    <section class="card card-pad">
+      <div class="tabbar">
+        <button class="tab on" data-pane="open">Solicitudes abiertas <span class="c" id="c_open">0</span></button>
+        <button class="tab" data-pane="mine">Mis casos <span class="c" id="c_mine">0</span></button>
+        <button class="tab" data-pane="cal">📅 Mi calendario <span class="c" id="c_cal">0</span></button>
+      </div>
+      <div class="pane on" id="pane-open"></div>
+      <div class="pane" id="pane-mine"></div>
+      <div class="pane" id="pane-cal"></div>
+    </section>
+  </div>
+
+  <script src="/app-shell.js" defer></script>
+  <script>
+  const $=id=>document.getElementById(id);
+  const qs=new URLSearchParams(location.search);
+  const DOC=qs.get('doc'), TOKEN=qs.get('t');
+  const SPECS={general:'Medicina general',pediatria:'Pediatría',medicina_interna:'Medicina interna',cardiologia:'Cardiología',ginecologia:'Ginecología',traumatologia:'Traumatología',psicologia:'Psicología',psiquiatria:'Psiquiatría',dermatologia:'Dermatología',neurologia:'Neurología',nutricion:'Nutrición',enfermeria:'Enfermería',farmacia:'Farmacia',otra:'Otra'};
+  const specL=k=>SPECS[k]||k;
+  const STATUS={open:['b-open','Abierta'],claimed:['b-claimed','Aceptada'],scheduled:['b-scheduled','Agendada'],completed:['b-completed','Completada'],cancelled:['b-completed','Cancelada']};
+  let DOCTOR=null;
+
+  if(!DOC||!TOKEN){ $('gate').style.display='block'; }
+  else { boot(); }
+
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on'); $('pane-'+t.dataset.pane).classList.add('on');
+  }));
+
+  async function api(path,opts){ return fetch(path,opts).then(r=>r.json()); }
+
+  async function boot(){
+    const me=await api(`/api/telemedicina/doctors/me?doc=${encodeURIComponent(DOC)}&t=${encodeURIComponent(TOKEN)}`).catch(()=>({}));
+    if(!me.ok){ $('gate').style.display='block'; $('gate').querySelector('p').textContent='El enlace no es válido o expiró. Vuelve a registrarte.'; return; }
+    DOCTOR=me.doctor; $('app').style.display='block';
+    $('docName').textContent='Dr(a). '+DOCTOR.full_name;
+    $('docWho').textContent=specL(DOCTOR.specialty)+(DOCTOR.country?' · '+DOCTOR.country:'')+(DOCTOR.verified?' · ✔ Verificado':'');
+    await Promise.all([loadOpen(), refreshMine(me.cases)]);
+  }
+
+  // ---- Open queue ----
+  async function loadOpen(){
+    const res=await api('/api/telemedicina/requests').catch(()=>({items:[]}));
+    const items=res.items||[]; $('s_open').textContent=items.length; $('c_open').textContent=items.length;
+    if(!items.length){ $('pane-open').innerHTML='<div class="empty">No hay solicitudes abiertas ahora. ¡Gracias por estar disponible!</div>'; return; }
+    $('pane-open').innerHTML=items.map(r=>{
+      const u=STATUS_URG(r.urgency);
+      return `<div class="row" id="open-${r.id}">
+        <div class="top">
+          <div><div class="name">${specL(r.specialty)} · <span class="badge ${u[0]}">${u[1]}</span></div>
+          <div class="meta">${[r.patient_city,r.patient_state].filter(Boolean).join(', ')||'Venezuela'}${r.requester_country?' · solicita desde '+r.requester_country:''} · ${fage(r.created_ms)}</div></div>
+        </div>
+        ${r.description?`<div class="desc">${esc(r.description)}</div>`:''}
+        <div class="actions"><button class="act claim" onclick="claim('${r.id}',this)">✋ Aceptar este caso</button></div>
+        <div class="msg" id="m-open-${r.id}"></div>
+      </div>`;
+    }).join('');
+  }
+  function STATUS_URG(u){return {critica:['b-critica','Crítica'],alta:['b-alta','Alta'],normal:['b-normal','Normal'],baja:['b-baja','Baja']}[u]||['b-normal',u];}
+
+  window.claim=async(id,btn)=>{
+    btn.disabled=true; btn.textContent='Aceptando…';
+    const res=await api(`/api/telemedicina/requests/${id}/claim`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doctor_id:DOC,token:TOKEN})}).catch(()=>({}));
+    const m=$('m-open-'+id);
+    if(!res.ok){ m.className='msg err'; m.textContent=res.hint||res.error||'No se pudo aceptar.'; btn.disabled=false; btn.textContent='✋ Aceptar este caso'; if(res.error==='already_taken'){setTimeout(loadOpen,800);} return; }
+    m.className='msg ok'; m.textContent='✓ Caso aceptado. Pasó a “Mis casos” para que agendes la videoconsulta.';
+    setTimeout(async()=>{ await reloadAll(); document.querySelector('.tab[data-pane="mine"]').click(); },700);
+  };
+
+  // ---- My cases ----
+  function refreshMine(cases){
+    const mine=(cases||[]).filter(c=>c.status!=='completed'&&c.status!=='cancelled');
+    const sched=(cases||[]).filter(c=>c.status==='scheduled');
+    $('s_mine').textContent=mine.length; $('c_mine').textContent=(cases||[]).length;
+    $('s_sched').textContent=sched.length; $('c_cal').textContent=sched.length;
+    renderMine(cases||[]); renderCal(sched);
+  }
+  function renderMine(cases){
+    if(!cases.length){ $('pane-mine').innerHTML='<div class="empty">Aún no has aceptado casos. Mira las <b>solicitudes abiertas</b>.</div>'; return; }
+    $('pane-mine').innerHTML=cases.map(r=>{
+      const st=STATUS[r.status]||['b-open',r.status];
+      const contact=[r.patient_email,r.patient_phone].filter(Boolean).join(' · ');
+      return `<div class="row" id="mine-${r.id}">
+        <div class="top">
+          <div><div class="name">${r.patient_name} <span class="badge ${st[0]}">${st[1]}</span></div>
+          <div class="meta">${specL(r.specialty)} · ${[r.patient_city,r.patient_state].filter(Boolean).join(', ')||'Venezuela'}${contact?' · '+esc(contact):''}</div></div>
+        </div>
+        ${r.description?`<div class="desc">${esc(r.description)}</div>`:''}
+        ${r.status==='scheduled'?`<div class="meta" style="margin-top:8px">📅 ${new Date(r.scheduled_start_ms).toLocaleString('es-VE',{dateStyle:'full',timeStyle:'short'})}</div>`:''}
+        <div class="actions">
+          ${r.status==='scheduled'&&r.video_url?`<a class="videolink" href="${r.video_url}" target="_blank" rel="noopener">🎥 Entrar a la videoconsulta</a>`:''}
+          ${r.status==='scheduled'?`<a class="videolink" style="background:#eef1f6;color:var(--navy)" href="/api/telemedicina/appointment/${r.id}/ics?t=${encodeURIComponent(TOKEN==null?'':r.manage_token||'')}" >📅 Descargar .ics</a>`:''}
+          <button class="act sched" onclick="toggleSched('${r.id}')">${r.status==='scheduled'?'Reagendar':'🗓️ Agendar videoconsulta'}</button>
+          ${r.status==='scheduled'?`<button class="act done" onclick="complete('${r.id}',this)">✓ Marcar completada</button>`:''}
+        </div>
+        <div class="sched-form" id="sf-${r.id}">
+          <div class="two">
+            <div><label class="fl">Fecha y hora (tu hora local)</label><input class="f" type="datetime-local" id="dt-${r.id}"></div>
+            <div><label class="fl">Duración</label><select class="f" id="dur-${r.id}"><option value="20">20 min</option><option value="30" selected>30 min</option><option value="45">45 min</option><option value="60">60 min</option></select></div>
+            <div><button class="act sched" onclick="schedule('${r.id}',this)">Confirmar</button></div>
+          </div>
+          <div class="msg" id="m-mine-${r.id}"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  window.toggleSched=id=>$('sf-'+id).classList.toggle('show');
+
+  window.schedule=async(id,btn)=>{
+    const dt=$('dt-'+id).value; if(!dt){ flash(id,'err','Elige fecha y hora.'); return; }
+    const start=new Date(dt).getTime(); if(!(start>Date.now()-60000)){ flash(id,'err','Elige una fecha futura.'); return; }
+    btn.disabled=true; btn.textContent='…';
+    const res=await api(`/api/telemedicina/requests/${id}/schedule`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doctor_id:DOC,token:TOKEN,start_ms:start,duration_min:Number($('dur-'+id).value)})}).catch(()=>({}));
+    if(!res.ok){ flash(id,'err',res.hint||res.error||'No se pudo agendar.'); btn.disabled=false; btn.textContent='Confirmar'; return; }
+    flash(id,'ok','✓ Agendada. Enviamos el enlace de video y el calendario por correo a ambos.');
+    setTimeout(reloadAll,800);
+  };
+  function flash(id,k,t){const m=$('m-mine-'+id);m.className='msg '+k;m.textContent=t;}
+
+  window.complete=async(id,btn)=>{
+    btn.disabled=true; btn.textContent='…';
+    const res=await api(`/api/telemedicina/requests/${id}/complete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doctor_id:DOC,token:TOKEN})}).catch(()=>({}));
+    if(res.ok) reloadAll(); else { btn.disabled=false; btn.textContent='✓ Marcar completada'; }
+  };
+
+  // ---- Calendar ----
+  function renderCal(sched){
+    if(!sched.length){ $('pane-cal').innerHTML='<div class="empty">No tienes videoconsultas agendadas. Agenda una desde <b>Mis casos</b>.</div>'; return; }
+    sched.sort((a,b)=>a.scheduled_start_ms-b.scheduled_start_ms);
+    let html='', lastDay='';
+    for(const r of sched){
+      const d=new Date(r.scheduled_start_ms);
+      const day=d.toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      if(day!==lastDay){ html+=`<div class="cal-day">${day}</div>`; lastDay=day; }
+      html+=`<div class="cal-item">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="cal-time">${d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})}</div>
+          <div><div class="name">${r.patient_name}</div><div class="meta">${specL(r.specialty)}</div></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          ${r.video_url?`<a class="videolink" href="${r.video_url}" target="_blank" rel="noopener">🎥 Entrar</a>`:''}
+          <a class="videolink" style="background:#eef1f6;color:var(--navy)" href="/api/telemedicina/appointment/${r.id}/ics?t=${encodeURIComponent(r.manage_token||'')}">📅 .ics</a>
+        </div>
+      </div>`;
+    }
+    $('pane-cal').innerHTML=html;
+  }
+
+  async function reloadAll(){
+    const me=await api(`/api/telemedicina/doctors/me?doc=${encodeURIComponent(DOC)}&t=${encodeURIComponent(TOKEN)}`).catch(()=>({}));
+    if(me.ok){ refreshMine(me.cases); }
+    await loadOpen();
+  }
+
+  function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+  function fage(ms){const m=Math.floor((Date.now()-ms)/60000);if(m<1)return'ahora';if(m<60)return m+' min';const h=Math.floor(m/60);if(h<24)return h+' h';return Math.floor(h/24)+' d';}
+  </script>
+</main>
+</body>
+</html>

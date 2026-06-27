@@ -14,6 +14,7 @@ import { satellite } from './routes/satellite';
 import { auth } from './routes/auth';
 import { familia } from './routes/familia';
 import { voluntarios } from './routes/voluntarios';
+import { telemedicina } from './routes/telemedicina';
 import { damageMap } from './routes/damage-map';
 import { reports } from './routes/reports';
 import { chat } from './routes/chat';
@@ -178,6 +179,7 @@ app.route('/api/contacts', contacts);
 app.route('/api/auth', auth);
 app.route('/api/familia', familia);
 app.route('/api/voluntarios', voluntarios);
+app.route('/api/telemedicina', telemedicina); // doctors worldwide ↔ patient help-requests for VE (intake, claim, schedule, video, calendar/ics)
 app.route('/api/danos-estructurales', damageMap);
 app.route('/api/alerts', alerts);
 app.route('/api/facilities', facilities);
