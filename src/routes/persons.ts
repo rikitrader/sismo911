@@ -791,14 +791,18 @@ persons.get('/queue', async (c) => {
 });
 
 // GET /api/persons?status=missing — approved registry.
-persons.get('/', async (c) => edgeCached(c, 30, async () => {
+persons.get('/', async (c) => {
+  const limited = await rateLimit(c.env, c, 'persons_browse', 60, 60);
+  if (limited) return limited;
+  return edgeCached(c, 30, async () => {
   const status = c.req.query('status');
   const q = status
     ? c.env.DB.prepare(`SELECT id,full_name,age,sex,last_seen,status,photo_url,created_ms,updated_ms FROM persons WHERE review='approved' AND status = ? ORDER BY updated_ms DESC LIMIT 500`).bind(status)
     : c.env.DB.prepare(`SELECT id,full_name,age,sex,last_seen,status,photo_url,created_ms,updated_ms FROM persons WHERE review='approved' ORDER BY updated_ms DESC LIMIT 500`);
   const { results } = await q.all();
   return { persons: results ?? [] };
-}));
+  });
+});
 
 // POST /api/persons — PUBLIC missing-person report → moderation queue (pending).
 persons.post('/', async (c) => {
