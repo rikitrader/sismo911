@@ -2,6 +2,9 @@
 
 Prioritized remediation roadmap from the security audit. Items marked ✅ were implemented in this pass.
 
+## ⚠️ MANUAL TODO — cannot be verified or fixed from code
+- [ ] **R2 bucket privacy.** Cloudflare Dashboard → **R2** → `sismo911-person-photos` **and** `desaparecidos-fotos` → **Settings → Public access** must be **Disabled** (no `r2.dev` URL, no public custom domain). Missing-person photos are sensitive; the app serves them only through token-gated Worker routes, so a bucket is exposed *only* if public access was manually enabled.
+
 ## Immediate (done in this PR)
 - ✅ Remove `'unsafe-eval'` from CSP `script-src` (`src/lib/security.ts`).
 - ✅ Sanitize AI/scraped blog HTML (allowlist) at storage **and** render (`src/lib/sanitize.ts`, `blog-cron.ts`, `blog.ts`).
