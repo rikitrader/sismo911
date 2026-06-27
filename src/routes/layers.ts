@@ -402,6 +402,7 @@ export function quakeFeature(event: any): Feature {
     properties: {
       layer: 'quake',
       id: event.id,
+      source: str(event.source, 20),
       magnitude: Number(event.mag ?? 0),
       place: str(event.place_es ?? event.place, 180) ?? 'Evento sísmico',
       time_ms: event.time_ms ?? null,
@@ -633,7 +634,7 @@ layers.get('/geoseismic', async (c) => {
   const features: Feature[] = [];
 
   const { results } = await c.env.DB.prepare(
-    `SELECT id, mag, place, place_es, time_ms, lat, lon, depth_km, mmi, alert, tsunami, url
+    `SELECT id, source, mag, place, place_es, time_ms, lat, lon, depth_km, mmi, alert, tsunami, url
      FROM events WHERE lat IS NOT NULL AND lon IS NOT NULL AND mag IS NOT NULL AND mag >= ?
      ORDER BY time_ms DESC LIMIT ?`
   ).bind(minMag, limit).all().catch(() => ({ results: [] }));

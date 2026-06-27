@@ -11,6 +11,9 @@ export interface Env {
   USGS_MINLON: string;
   USGS_MAXLON: string;
   USGS_WINDOW_DAYS: string;
+  // FUNVISIS national seismic feed (Venezuela). Optional override; defaults to
+  // http://www.funvisis.gob.ve/maravilla.json in src/lib/funvisis.ts.
+  FUNVISIS_URL?: string;
   // Cloudflare Access (defense-in-depth). Enforcement is active only when both set.
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;
