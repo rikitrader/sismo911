@@ -29,6 +29,7 @@
   };
 
   const minToTime = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  const t12 = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); const ap = h < 12 ? 'AM' : 'PM'; return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ap}`; };
   const timeToMin = (t) => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
   const caracasToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
   const tFmt = (ms) => new Date(ms).toLocaleString('es-VE', { timeZone: 'America/Caracas', dateStyle: 'medium', timeStyle: 'short' });
@@ -86,6 +87,7 @@
         <div class="text-[12.5px] text-on-surface-variant mt-0.5">${esc(typeL(a.appt_type))} · ${esc(specL(a.specialty))}${contact ? ' · ' + esc(contact) : ''}</div></div>
         <div class="text-[12.5px] text-on-surface-variant text-right tabnum">${tFmt(a.start_ms)}</div>
       </div>
+      ${(() => { const d = [a.patient_cedula ? 'CI ' + esc(a.patient_cedula) : '', a.patient_age != null ? esc(a.patient_age) + ' años' : '', esc(a.patient_gender || ''), esc(a.patient_location || '')].filter(Boolean).join(' · '); return d ? `<div class="text-[12.5px] text-on-surface mt-2 font-medium">${d}</div>` : ''; })()}
       ${a.reason ? `<div class="text-[13.5px] text-on-surface mt-2 leading-relaxed whitespace-pre-wrap">${esc(a.reason)}</div>` : ''}
       ${a.insurance_provider ? `<div class="text-[12.5px] text-on-surface-variant mt-1.5">Seguro: ${esc(a.insurance_provider)}</div>` : ''}
       <div class="flex flex-wrap gap-2 mt-3">${btns}</div>
@@ -191,7 +193,7 @@
       const day = new Date(a.start_ms).toLocaleDateString('es-VE', { timeZone: 'America/Caracas', weekday: 'long', day: 'numeric', month: 'long' });
       if (day !== lastDay) { html += `<div class="cal-day">${day}</div>`; lastDay = day; }
       html += `<div class="cal-item">
-        <div class="flex gap-3 items-center"><div class="cal-time">${a.time}</div>
+        <div class="flex gap-3 items-center"><div class="cal-time">${t12(a.time)}</div>
           <div><div class="font-display font-extrabold text-[15px] text-on-surface">${esc(a.patient_name)} ${badge(a.status)}</div><div class="text-[12.5px] text-on-surface-variant">${esc(typeL(a.appt_type))} · ${esc(specL(a.specialty))}</div></div></div>
         ${a.video_url ? `<a class="tm-btn tm-btn-primary" href="${esc(a.video_url)}" target="_blank" rel="noopener">🎥 Entrar</a>` : ''}
       </div>`;

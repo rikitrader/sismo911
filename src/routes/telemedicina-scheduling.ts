@@ -185,18 +185,35 @@ telemedScheduling.post('/book/appointments', async (c) => {
 
   const specialty = SPECIALTIES.includes(String(b.specialty)) ? String(b.specialty) : (doc.specialty || 'general');
   const lang = LANGS.includes(String(b.preferred_lang)) ? String(b.preferred_lang) : 'es';
+  // Expanded intake the doctor needs to start the consult.
+  const GENDERS = ['Femenino', 'Masculino', 'Otro', 'Prefiero no decir'];
+  const gender = GENDERS.includes(String(b.patient_gender)) ? String(b.patient_gender) : null;
+  const dob = /^\d{4}-\d{2}-\d{2}$/.test(String(b.patient_dob || '')) ? String(b.patient_dob) : null;
+  let age: number | null = null;
+  if (dob) {
+    const d = new Date(dob + 'T00:00:00Z'), n = new Date();
+    let a = n.getUTCFullYear() - d.getUTCFullYear();
+    const mm = n.getUTCMonth() - d.getUTCMonth();
+    if (mm < 0 || (mm === 0 && n.getUTCDate() < d.getUTCDate())) a--;
+    if (a >= 0 && a <= 120) age = a;
+  }
+  const cedula = b.patient_cedula ? String(b.patient_cedula).slice(0, 24) : null;
+  const ploc = b.patient_location ? String(b.patient_location).slice(0, 120) : null;
   const id = uid('apt'); const manageToken = randomToken(20); const now = Date.now();
   const video = jitsiUrl(manageToken);
   await c.env.DB.prepare(
     `INSERT INTO telemed_appointments (id, doctor_id, patient_name, patient_email, patient_phone, specialty,
-        appt_type, reason, insurance_provider, insurance_member_id, date, start_min, end_min, start_ms, end_ms,
+        appt_type, reason, insurance_provider, insurance_member_id,
+        patient_location, patient_cedula, patient_dob, patient_gender, patient_age,
+        date, start_min, end_min, start_ms, end_ms,
         status, video_url, preferred_lang, manage_token, ip, created_at, created_ms, updated_ms)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   ).bind(
     id, doctorId, name.slice(0, 120), email.slice(0, 160) || null, phone.slice(0, 60) || null, specialty,
     type, reason.slice(0, 2000),
     b.insurance_provider ? String(b.insurance_provider).slice(0, 120) : null,
     b.insurance_member_id ? String(b.insurance_member_id).slice(0, 80) : null,
+    ploc, cedula, dob, gender, age,
     date, slot.start_min, slot.end_min, slot.start_ms, localToMs(date, slot.end_min),
     'scheduled', video, lang, manageToken, requestIp(c), new Date(now).toISOString(), now, now,
   ).run();
@@ -237,6 +254,8 @@ telemedScheduling.get('/book/appointment/:token', async (c) => {
       date: a.date, time: minToHHMM(a.start_min), when: whenText(a.start_ms), start_ms: a.start_ms,
       status: a.status, video_url: a.video_url, reason: a.reason,
       insurance_provider: a.insurance_provider, manage_token: a.manage_token,
+      patient_location: a.patient_location, patient_cedula: a.patient_cedula,
+      patient_dob: a.patient_dob, patient_gender: a.patient_gender, patient_age: a.patient_age,
     },
     history: results ?? [],
   }, 200, { 'Cache-Control': 'no-store' });
@@ -269,6 +288,7 @@ telemedScheduling.get('/panel/appointments', async (c) => {
   if (!doc) return c.json({ error: 'unauthorized' }, 401);
   const { results } = await c.env.DB.prepare(
     `SELECT id, patient_name, patient_email, patient_phone, specialty, appt_type, reason, insurance_provider,
+            patient_location, patient_cedula, patient_dob, patient_gender, patient_age,
             date, start_min, end_min, start_ms, end_ms, status, video_url, manage_token
        FROM telemed_appointments WHERE doctor_id=? ORDER BY start_ms ASC LIMIT 500`,
   ).bind(doc.id).all();
