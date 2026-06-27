@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { fetchBlogSources } from '../ingest/blog-sources';
 import { ingestBlog, writeArticle, deriveHeadline } from '../ingest/blog-cron';
+import { sanitizeHtml } from '../lib/sanitize';
 
 // Dynamic /blog ("Noticias") — a magazine of AI-written field reports, each
 // derived from a REAL scraped citizen post about the 24-J terremoto. Rendered
@@ -234,7 +235,7 @@ ${HEADER}
     <h1 class="font-display font-extrabold text-2xl sm:text-3xl leading-tight mb-4">${esc(p.headline)}</h1>
     ${heroBlock}
     <a href="${esc(cl)}" class="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-lg p-3 mb-6 hover:bg-secondary/15 no-underline"><span class="text-xl shrink-0">🔎</span><span class="text-sm text-on-surface"><b class="text-secondary">¿Reconoces a alguien o el lugar?</b> Abre un <b>caso de búsqueda</b> en Familia con esta ubicación →</span></a>
-    ${p.body_html}
+    ${sanitizeHtml(p.body_html)}
     ${p.source_url ? `<p class="mt-5 text-sm"><a href="${esc(p.source_url)}" target="_blank" rel="noopener nofollow" class="text-primary font-semibold hover:underline">↗ Ver publicación original en ${esc(platIcon(p.platform))}</a></p>` : ''}
     ${shareBar(p.headline, canon)}
     <div class="mt-8 bg-primary/5 border border-primary/20 rounded-lg p-4 text-xs text-on-surface-variant">
@@ -347,7 +348,7 @@ blog.post('/api/blog/ingest', async (c) => {
            video_url=excluded.video_url, views=excluded.views, likes=excluded.likes,
            comments=excluded.comments`,
       ).bind(
-        slug, src, headline, String(raw.meta_desc || ''), String(raw.body_html || ''),
+        slug, src, headline, String(raw.meta_desc || ''), sanitizeHtml(String(raw.body_html || '')),
         String(raw.place || 'Venezuela'), raw.lat ?? null, raw.lon ?? null,
         String(raw.platform || ''), String(raw.author || ''), String(raw.source_url || ''),
         String(raw.image_url || ''), String(raw.video_url || ''), String(raw.video_embed_html || ''),
@@ -360,7 +361,7 @@ blog.post('/api/blog/ingest', async (c) => {
       if (String(e?.message || '').includes('UNIQUE') && String(e.message).includes('slug')) {
         try {
           await c.env.DB.prepare(`INSERT OR IGNORE INTO blog_posts (slug, source_post_id, headline, meta_desc, body_html, place, lat, lon, platform, author, source_url, image_url, video_url, video_embed_html, views, likes, comments, featured, status, published_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-            .bind(`${slug}-${src.replace(/\W+/g, '').slice(-6)}`, src, headline, String(raw.meta_desc || ''), String(raw.body_html || ''), String(raw.place || 'Venezuela'), raw.lat ?? null, raw.lon ?? null, String(raw.platform || ''), String(raw.author || ''), String(raw.source_url || ''), String(raw.image_url || ''), String(raw.video_url || ''), String(raw.video_embed_html || ''), Number(raw.views || 0), Number(raw.likes || 0), Number(raw.comments || 0), raw.featured ? 1 : 0, 'published', String(raw.published_at || now)).run();
+            .bind(`${slug}-${src.replace(/\W+/g, '').slice(-6)}`, src, headline, String(raw.meta_desc || ''), sanitizeHtml(String(raw.body_html || '')), String(raw.place || 'Venezuela'), raw.lat ?? null, raw.lon ?? null, String(raw.platform || ''), String(raw.author || ''), String(raw.source_url || ''), String(raw.image_url || ''), String(raw.video_url || ''), String(raw.video_embed_html || ''), Number(raw.views || 0), Number(raw.likes || 0), Number(raw.comments || 0), raw.featured ? 1 : 0, 'published', String(raw.published_at || now)).run();
           inserted++;
         } catch (e2: any) { errors.push(`${src}: ${e2?.message || e2}`); }
       } else { errors.push(`${src}: ${e?.message || e}`); }
