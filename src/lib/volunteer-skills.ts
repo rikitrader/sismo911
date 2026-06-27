@@ -87,6 +87,7 @@ export interface NormalizedVolunteer {
   has_vehicle: boolean; can_travel: boolean;
   experience: string; notes: string;
   contact_phone: string; email: string;
+  social: Record<string, string>;
   photo_url: string; lat: number | null; lng: number | null;
   created_at: string | null;
 }
@@ -108,6 +109,7 @@ export function normalizeRow(rec: any): NormalizedVolunteer {
     has_vehicle: !!rec.has_vehicle, can_travel: !!rec.can_travel,
     experience: rec.experience || '', notes: rec.notes || '',
     contact_phone: rec.contact_phone || '', email: rec.email || '',
+    social: rec.social && typeof rec.social === 'object' ? rec.social : {},
     photo_url: rec.photo_url || '', lat: rec.lat ?? null, lng: rec.lng ?? null,
     created_at: rec.created_at || null,
   };
