@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { rateLimit, validLatLon, blurCoord, nameHasSpam, textHasLink, requestIp } from '../lib/security';
+import { rateLimit, validLatLon, blurCoord, nameHasSpam, textHasLink, requestIp, isImageBytes } from '../lib/security';
 import { audit } from '../lib/audit';
 import { getUserFromRequest } from '../lib/auth';
 import { scoreCase } from '../lib/case-score';
@@ -603,6 +603,75 @@ persons.get('/:id/attachments/:aid/file', async (c) => {
   const obj = await c.env.PERSON_PHOTOS.get(row.r2_key);
   if (!obj) return c.notFound();
   return new Response(obj.body, { headers: { 'Content-Type': row.content_type || 'application/octet-stream', 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': `inline; filename="${String(row.filename || 'archivo').replace(/"/g, '')}"` } });
+});
+
+// ---- PUBLIC citizen contributions ("aportes": documents/pictures/files) ----
+// Separate from the confidential operator /attachments surface above: aportes are
+// citizen uploads that land review='pending' and only become PUBLIC after an
+// operator approves. The public never sees operator evidence (source='operator').
+const APORTE_DOC_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain'];
+
+// GET /api/persons/:id/aportes — public: approved citizen contributions only.
+// Operators additionally see pending ones (to moderate).
+persons.get('/:id/aportes', async (c) => {
+  const op = !!(await getUserFromRequest(c.env, c).catch(() => null))?.role?.match(/operator|admin/);
+  const where = op ? `source='citizen'` : `source='citizen' AND review='approved'`;
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, kind, filename, content_type, size, description, category, review, created_ms
+     FROM case_attachments WHERE person_id = ? AND ${where} ORDER BY created_ms DESC`,
+  ).bind(c.req.param('id')).all();
+  return c.json({ ok: true, operator: op, items: results ?? [] }, 200, { 'Cache-Control': 'no-store' });
+});
+
+// POST /api/persons/:id/aportes — citizen uploads a file (lands pending). Public, rate-limited.
+persons.post('/:id/aportes', async (c) => {
+  const id = c.req.param('id');
+  if (!(c.req.header('content-type') || '').includes('multipart/form-data')) return c.json({ error: 'multipart_required' }, 415);
+  const limited = await rateLimit(c.env, c, 'person_aporte', 6, 600);
+  if (limited) return limited;
+  const f = await c.req.formData();
+  const meta: any = {}; for (const [k, v] of f.entries()) if (typeof v === 'string') meta[k] = v;
+  const file = f.get('file') as any;
+  if (!file || typeof file === 'string' || typeof file.arrayBuffer !== 'function') return c.json({ error: 'no_file' }, 400);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!bytes.length) return c.json({ error: 'no_file' }, 400);
+  if (bytes.length > 8_000_000) return c.json({ error: 'file_too_large', maxBytes: 8_000_000 }, 413);
+  const ctype = file.type || 'application/octet-stream';
+  const isImg = ['image/jpeg', 'image/png', 'image/webp'].includes(ctype);
+  if (isImg && !isImageBytes(bytes, ctype)) return c.json({ error: 'unsupported_image_type' }, 415);
+  if (!isImg && !APORTE_DOC_TYPES.includes(ctype)) return c.json({ error: 'unsupported_file_type', allowed: APORTE_DOC_TYPES }, 415);
+  const attId = uid('apt');
+  const key = `aportes/${id}/${attId}`;
+  await c.env.PERSON_PHOTOS.put(key, bytes, { httpMetadata: { contentType: ctype } });
+  await c.env.DB.prepare(
+    `INSERT INTO case_attachments (id, person_id, kind, r2_key, filename, content_type, size, description, category, source, verification, review, uploaded_by, created_ms)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  ).bind(attId, id, isImg ? 'photo' : 'document', key, file.name ? String(file.name).slice(0, 200) : null, ctype, bytes.length,
+    meta.description ? String(meta.description).slice(0, 500) : null, meta.category ? String(meta.category).slice(0, 40) : null,
+    'citizen', 'unverified', 'pending', null, Date.now()).run();
+  await audit(c, 'persons.aporte_add', { id, attId, review: 'pending' });
+  return c.json({ ok: true, id: attId, review: 'pending', message: 'Recibido. Aparecerá tras la revisión de un moderador.' }, 201);
+});
+
+// GET /api/persons/:id/aportes/:aid/file — serve an approved citizen file (operator: any).
+persons.get('/:id/aportes/:aid/file', async (c) => {
+  const op = !!(await getUserFromRequest(c.env, c).catch(() => null))?.role?.match(/operator|admin/);
+  const row: any = await c.env.DB.prepare(`SELECT r2_key, content_type, filename, review, source FROM case_attachments WHERE id = ? AND person_id = ?`).bind(c.req.param('aid'), c.req.param('id')).first();
+  if (!row || row.source !== 'citizen' || (!op && row.review !== 'approved')) return c.notFound();
+  const obj = await c.env.PERSON_PHOTOS.get(row.r2_key);
+  if (!obj) return c.notFound();
+  return new Response(obj.body, { headers: { 'Content-Type': row.content_type || 'application/octet-stream', 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': `inline; filename="${String(row.filename || 'archivo').replace(/"/g, '')}"` } });
+});
+
+// POST /api/persons/aportes/:aid/approve|reject — operator moderation (gated via /approve|/reject).
+persons.post('/aportes/:aid/approve', async (c) => {
+  await c.env.DB.prepare(`UPDATE case_attachments SET review='approved' WHERE id = ? AND source='citizen'`).bind(c.req.param('aid')).run();
+  await audit(c, 'persons.aporte.approve', { aid: c.req.param('aid') });
+  return c.json({ ok: true });
+});
+persons.post('/aportes/:aid/reject', async (c) => {
+  await c.env.DB.prepare(`UPDATE case_attachments SET review='rejected' WHERE id = ? AND source='citizen'`).bind(c.req.param('aid')).run();
+  return c.json({ ok: true });
 });
 persons.patch('/:id/attachments/:aid', async (c) => {
   const b = await c.req.json().catch(() => ({} as any));

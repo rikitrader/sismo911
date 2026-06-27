@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { rateLimit, nameHasSpam, textHasLink, requestIp } from '../lib/security';
+import { rateLimit, nameHasSpam, textHasLink, requestIp, maskContact, maskPhone, maskEmail } from '../lib/security';
 import { audit } from '../lib/audit';
 import { SKILL_KEYS, AVAILABILITY, deriveSkills, normalizeRow, statsFromRows } from '../lib/volunteer-skills';
 
@@ -32,8 +32,18 @@ voluntarios.get('/', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT id, full_name, city, state, area, skills, availability, has_vehicle, can_travel, experience, notes, contact_phone, email, created_ms
      FROM volunteers WHERE ${conds.join(' AND ')} ORDER BY created_ms DESC LIMIT ?`,
-  ).bind(...binds, limit).all();
-  return c.json({ ok: true, items: results ?? [], total: results?.length ?? 0 }, 200, { 'Cache-Control': 'public, max-age=60' });
+  ).bind(...binds, limit).all<any>();
+  // Strip raw phone/email from the public list (anti-scraping) — only flags + mask.
+  const items = (results ?? []).map((r) => {
+    const { contact_phone, email, ...rest } = r;
+    return {
+      ...rest,
+      has_phone: !!String(contact_phone ?? '').replace(/\D/g, '').match(/\d{6,}/),
+      has_email: !!String(email ?? '').includes('@'),
+      contact_mask: maskPhone(contact_phone) || maskEmail(email),
+    };
+  });
+  return c.json({ ok: true, items, total: items.length }, 200, { 'Cache-Control': 'public, max-age=60' });
 });
 
 // GET /api/voluntarios/stats — totals + per-skill counts for the filter chips.
@@ -71,7 +81,10 @@ voluntarios.get('/profile/:id', async (c) => {
       ok: true, source: 'registered', id: r.id, full_name: r.full_name,
       city: r.city, state: r.state, area: r.area, skills,
       availability: r.availability, has_vehicle: !!r.has_vehicle, can_travel: !!r.can_travel,
-      experience: r.experience, notes: r.notes, contact_phone: r.contact_phone, email: r.email,
+      experience: r.experience, notes: r.notes,
+      has_phone: !!String(r.contact_phone ?? '').replace(/\D/g, '').match(/\d{6,}/),
+      has_email: !!String(r.email ?? '').includes('@'),
+      contact_mask: maskPhone(r.contact_phone) || maskEmail(r.email),
       photo_url: null, lat: null, lng: null, created_at: r.created_ms ? new Date(r.created_ms).toISOString() : null,
     }, 200, { 'Cache-Control': 'public, max-age=120' });
   }
@@ -89,7 +102,8 @@ voluntarios.get('/profile/:id', async (c) => {
     ok: true, source: 'rav', id: r.id, full_name: r.title || 'Voluntario',
     city: r.city, state: r.state, area: r.area, skills,
     availability: null, has_vehicle: false, can_travel: false,
-    experience: null, notes: r.description, contact_phone: r.contact, email: null,
+    experience: null, notes: r.description,
+    ...maskContact(r.contact),
     photo_url: r.photo_url, lat: r.lat, lng: r.lng, category: r.category, created_at: r.created_at,
   }, 200, { 'Cache-Control': 'public, max-age=120' });
 });
@@ -159,13 +173,54 @@ voluntarios.get('/directory', async (c) => {
   else rows.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
 
   const filteredTotal = rows.length;
-  const items = rows.slice(offset, offset + limit);
+  // Strip raw phone/email from the public directory (anti-scraping) — only
+  // has_*/contact_mask; the full value comes from the gated /contact/:id reveal.
+  const items = rows.slice(offset, offset + limit).map((v: any) => {
+    const { contact_phone, email, ...rest } = v;
+    return {
+      ...rest,
+      has_phone: !!String(contact_phone ?? '').replace(/\D/g, '').match(/\d{6,}/),
+      has_email: !!String(email ?? '').includes('@'),
+      contact_mask: maskPhone(contact_phone) || maskEmail(email),
+    };
+  });
   const nextOffset = offset + limit < filteredTotal ? offset + limit : null;
 
   return c.json(
     { ok: true, stats, filteredTotal, offset, limit, nextOffset, items },
     200, { 'Cache-Control': 'public, max-age=60' },
   );
+});
+
+// GET /api/voluntarios/contact/:id — the ONLY endpoint that returns a volunteer's
+// full phone/email. Heavily rate-limited so bulk scraping is impractical; the UI
+// hits it once when a human clicks the call/email icon. Resolves from both sources.
+voluntarios.get('/contact/:id', async (c) => {
+  const limited = await rateLimit(c.env, c, 'volunteer_contact', 20, 300);
+  if (limited) return limited;
+  const id = String(c.req.param('id') || '').trim().slice(0, 64);
+  if (!id) return c.json({ error: 'id_required' }, 400);
+
+  let phone: string | null = null; let email: string | null = null;
+  if (id.startsWith('vol_')) {
+    const r = await c.env.DB.prepare(
+      `SELECT contact_phone, email FROM volunteers WHERE id = ? AND moderation='approved' AND status='activo' LIMIT 1`,
+    ).bind(id).first<any>().catch(() => null);
+    if (!r) return c.json({ error: 'not_found' }, 404);
+    phone = r.contact_phone || null; email = r.email || null;
+  } else {
+    const r = await c.env.DB.prepare(
+      `SELECT contact FROM rav_reports WHERE id = ? AND lower(coalesce(kind,''))='voluntario' AND coalesce(hidden,0)=0 LIMIT 1`,
+    ).bind(id).first<any>().catch(() => null);
+    if (!r) return c.json({ error: 'not_found' }, 404);
+    const s = String(r.contact ?? '').trim();
+    const em = s.match(/[^\s,;]+@[^\s,;]+\.[^\s,;]+/);
+    email = em ? em[0] : null;
+    phone = s.replace(/[^\d+]/g, '').replace(/\D/g, '').length >= 6 ? s.replace(/[^\d+]/g, '') : null;
+  }
+  const wa = phone ? phone.replace(/\D/g, '') : null;
+  await audit(c, 'volunteer.contact.reveal', { id }).catch(() => {});
+  return c.json({ ok: true, phone, email, wa }, 200, { 'Cache-Control': 'no-store' });
 });
 
 // POST /api/voluntarios/register — public self-registration (rate-limited + spam-gated).
