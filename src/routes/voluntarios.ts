@@ -3,16 +3,19 @@ import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { rateLimit, nameHasSpam, textHasLink, requestIp } from '../lib/security';
 import { audit } from '../lib/audit';
+import { SKILL_KEYS, AVAILABILITY, deriveSkills, normalizeRow, statsFromRows } from '../lib/volunteer-skills';
 
 export const voluntarios = new Hono<{ Bindings: Env }>();
 
 // Canonical disaster-volunteer skill keys (the form + filters share this list).
-const SKILLS = [
-  'medico', 'primeros_auxilios', 'rescate', 'busqueda', 'logistica', 'transporte',
-  'construccion', 'electricidad', 'plomeria', 'cocina', 'psicologia', 'traduccion',
-  'comunicaciones', 'tecnologia', 'agua_saneamiento', 'veterinario', 'donaciones', 'general',
-];
-const AVAIL = ['inmediata', 'dias', 'fines_de_semana', 'remoto'];
+// Single source of truth lives in lib/volunteer-skills.ts.
+const SKILLS = SKILL_KEYS as readonly string[];
+const AVAIL = AVAILABILITY as readonly string[];
+
+// Hard ceiling on rows scanned when building the directory/stats. The dataset is
+// citizen-scale (hundreds today); this bounds D1 work if it ever grows. When the
+// corpus approaches this, move skill tags to a persisted/indexed column instead.
+const SCAN_CAP = 5000;
 
 // GET /api/voluntarios?q=&skill=&limit= — public directory of registered volunteers.
 voluntarios.get('/', async (c) => {
@@ -61,6 +64,9 @@ voluntarios.get('/profile/:id', async (c) => {
     ).bind(id).first<any>().catch(() => null);
     if (!r) return c.json({ error: 'not_found' }, 404);
     let skills: string[] = []; try { skills = JSON.parse(r.skills || '[]'); } catch { skills = []; }
+    // If a registered volunteer left skills blank, infer from their free text so the
+    // profile still shows tags (same classifier the directory uses).
+    if (!skills.length) skills = deriveSkills([r.full_name, r.notes, r.experience, r.area].filter(Boolean).join(' '));
     return c.json({
       ok: true, source: 'registered', id: r.id, full_name: r.full_name,
       city: r.city, state: r.state, area: r.area, skills,
@@ -76,13 +82,90 @@ voluntarios.get('/profile/:id', async (c) => {
        FROM rav_reports WHERE id = ? AND lower(coalesce(kind,'')) = 'voluntario' AND coalesce(hidden,0) = 0 LIMIT 1`,
   ).bind(id).first<any>().catch(() => null);
   if (!r) return c.json({ error: 'not_found' }, 404);
+  // RAV rows have no skills field → derive them server-side (same classifier the
+  // directory uses) so the profile page shows the same tags as the card.
+  const skills = deriveSkills([r.title, r.description, r.area].filter(Boolean).join(' '));
   return c.json({
     ok: true, source: 'rav', id: r.id, full_name: r.title || 'Voluntario',
-    city: r.city, state: r.state, area: r.area, skills: [],
+    city: r.city, state: r.state, area: r.area, skills,
     availability: null, has_vehicle: false, can_travel: false,
     experience: null, notes: r.description, contact_phone: r.contact, email: null,
     photo_url: r.photo_url, lat: r.lat, lng: r.lng, category: r.category, created_at: r.created_at,
   }, 200, { 'Cache-Control': 'public, max-age=120' });
+});
+
+// GET /api/voluntarios/directory — the unified, paginated directory feed that
+// powers the /voluntarios page. Reads the FULL dataset from BOTH sources
+// (registered volunteers + RAV "se ofreció" reports), derives skill tags
+// server-side, then returns:
+//   • stats  — exact total + per-skill + per-group counts over the WHOLE dataset
+//              (independent of pagination, so the header is always accurate);
+//   • items  — the q/skill/availability-filtered, sorted, offset-paginated slice;
+//   • filteredTotal / nextOffset — for the "Cargar más" control.
+// Query: q, skill, availability, sort(recent|name|skills), offset, limit(≤100).
+voluntarios.get('/directory', async (c) => {
+  const q = (c.req.query('q') || '').trim().toLowerCase().slice(0, 80);
+  const skill = (c.req.query('skill') || '').trim().toLowerCase().slice(0, 40);
+  const availability = (c.req.query('availability') || '').trim().toLowerCase().slice(0, 20);
+  const sort = (c.req.query('sort') || 'recent').trim().toLowerCase();
+  const offset = Math.max(0, Number(c.req.query('offset')) || 0);
+  const limit = Math.min(Math.max(Number(c.req.query('limit')) || 60, 1), 100);
+
+  const [regRes, ravRes] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT id, full_name, city, state, area, skills, availability, has_vehicle, can_travel,
+              experience, notes, contact_phone, email, created_ms
+         FROM volunteers WHERE moderation='approved' AND status='activo'
+         ORDER BY created_ms DESC LIMIT ?`,
+    ).bind(SCAN_CAP).all<any>().catch(() => ({ results: [] as any[] })),
+    c.env.DB.prepare(
+      `SELECT id, title, description, city, state, area, lat, lng, contact, photo_url, created_at
+         FROM rav_reports WHERE lower(coalesce(kind,''))='voluntario' AND coalesce(hidden,0)=0
+         ORDER BY created_at DESC LIMIT ?`,
+    ).bind(SCAN_CAP).all<any>().catch(() => ({ results: [] as any[] })),
+  ]);
+
+  const all = [
+    ...((regRes.results ?? []).map((r) => normalizeRow({
+      source: 'registered', id: r.id, full_name: r.full_name, city: r.city, state: r.state, area: r.area,
+      skills: r.skills, availability: r.availability, has_vehicle: r.has_vehicle, can_travel: r.can_travel,
+      experience: r.experience, notes: r.notes, contact_phone: r.contact_phone, email: r.email,
+      created_at: r.created_ms ? new Date(r.created_ms).toISOString() : null,
+    }))),
+    ...((ravRes.results ?? []).map((r) => normalizeRow({
+      source: 'rav', id: r.id, full_name: r.title, city: r.city, state: r.state, area: r.area,
+      notes: r.description, contact_phone: r.contact, photo_url: r.photo_url, lat: r.lat, lng: r.lng,
+      created_at: r.created_at,
+    }))),
+  ];
+
+  // Exact stats over the FULL dataset (pre-filter) → header + chips never undercount.
+  const stats = statsFromRows(all);
+
+  // Apply filters.
+  let rows = all.filter((v) => {
+    if (skill && SKILLS.includes(skill) && !v.skills.includes(skill as any)) return false;
+    if (availability && v.availability !== availability) return false;
+    if (q) {
+      const hay = [v.full_name, v.city, v.state, v.notes, v.experience, v.skills.join(' ')].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Sort.
+  if (sort === 'name') rows.sort((a, b) => a.full_name.localeCompare(b.full_name, 'es'));
+  else if (sort === 'skills') rows.sort((a, b) => b.skills.length - a.skills.length);
+  else rows.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+
+  const filteredTotal = rows.length;
+  const items = rows.slice(offset, offset + limit);
+  const nextOffset = offset + limit < filteredTotal ? offset + limit : null;
+
+  return c.json(
+    { ok: true, stats, filteredTotal, offset, limit, nextOffset, items },
+    200, { 'Cache-Control': 'public, max-age=60' },
+  );
 });
 
 // POST /api/voluntarios/register — public self-registration (rate-limited + spam-gated).
