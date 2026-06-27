@@ -48,7 +48,7 @@ rav.post('/api/rav/run', async (c) => {
       // Namesake-safe modes only (omit `loose` = name+location, which can merge
       // two distinct people): exact match, same photo URL, same name+age+phone,
       // same image content-hash. These collapse cross-source (RAV↔theempire) dups.
-      const modes = ['exact', 'photo', 'fuzzyphone', 'phash'] as const;
+      const modes = ['exact', 'photo', 'fuzzyphone', 'phash', 'dhash'] as const;
       out.dedupe = {};
       for (const m of modes) (out.dedupe as any)[m] = await dedupePersonas(c.env, { mode: m, apply: true, limit: 400 });
     }
