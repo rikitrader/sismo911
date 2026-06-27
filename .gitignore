@@ -15,3 +15,23 @@ missing_with_photos.json
 # Crossmint donation setup output (contains collection/recipient — keep out of git)
 .crossmint-donations.json
 .crossmint.json
+
+# --- Hardened secret patterns (Cloudflare zero-trust secret mgmt) ---
+.env.local
+.env.test
+.env.development
+.env.production
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.secret
+*.secrets
+secrets.json
+service-account*.json
+gcp-*.json

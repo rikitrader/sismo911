@@ -6,6 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "preflight": "bash scripts/preflight.sh",
+    "bootstrap:secrets": "bash scripts/bootstrap-secrets.sh",
+    "secret-scan": "bash scripts/secret-scan.sh --all",
+    "predeploy": "bash scripts/preflight.sh",
     "deploy": "npm run build:css && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
