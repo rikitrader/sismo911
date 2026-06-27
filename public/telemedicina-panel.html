@@ -101,11 +101,17 @@
           <section class="bg-white rounded-lg border border-outline-variant/60 p-5 sm:p-6">
             <div class="flex flex-wrap gap-2 mb-5">
               <button class="ptab on" data-pane="appts">Citas <span class="c" id="c_appts">0</span></button>
+              <button class="ptab" data-pane="patients">Pacientes <span class="c" id="c_pat">0</span></button>
               <button class="ptab" data-pane="avail">Disponibilidad</button>
               <button class="ptab" data-pane="cal">Calendario <span class="c" id="c_cal">0</span></button>
             </div>
 
             <div class="pane on" id="pane-appts"><div class="empty">Cargando…</div></div>
+
+            <div class="pane" id="pane-patients">
+              <input class="fld mb-4" id="patSearch" placeholder="Buscar por nombre o cédula…">
+              <div id="patList"><div class="empty">Cargando…</div></div>
+            </div>
 
             <div class="pane" id="pane-avail">
               <h2 class="font-display font-extrabold text-lg text-on-surface mb-4">Tu disponibilidad</h2>
