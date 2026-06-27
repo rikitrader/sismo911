@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expediente de Mascota — SISMO911</title>
+<meta name="description" content="Expediente de una mascota perdida tras el terremoto de Venezuela 2026: perfil, cronología de avistamientos y reunificación. Reporta un avistamiento.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://sismo911.com/mascota">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:title" content="Expediente de Mascota — SISMO911">
+<meta property="og:description" content="Perfil + cronología de avistamientos de una mascota perdida tras el terremoto.">
+<meta property="og:url" content="https://sismo911.com/mascota">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>
+  :root{--bg:#eef1f7;--panel:#fff;--ink:#0b1b3a;--navy:#00173a;--red:#bb0027;--crit:#c8102e;--amber:#e57200;--green:#1f8a4c;--blue:#1f5fd0;
+    --muted:#5b6781;--line:#e2e6ef;--line-2:#d3d9e6;--shadow:0 1px 2px rgba(16,24,40,.06);--shadow-lg:0 10px 40px rgba(0,23,58,.18)}
+  body{background:var(--bg)}
+  .disp{font-family:'Public Sans',sans-serif}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 60px}
+  .back{display:inline-flex;align-items:center;gap:7px;font:700 13px Inter;color:var(--navy);text-decoration:none;margin-bottom:12px}
+  .case-top{background:linear-gradient(135deg,#00112e 0%,#0a2c61 100%);color:#fff;border-radius:16px;box-shadow:var(--shadow-lg);overflow:hidden}
+  .case-top .inner{padding:20px 22px}
+  .toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .caseno{font:600 12px 'JetBrains Mono';color:#bcd0f4;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:9px;padding:6px 11px}
+  .hero{display:flex;gap:18px;margin-top:14px;flex-wrap:wrap}
+  .case-photo{width:96px;height:96px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,255,255,.25);flex:0 0 auto;background:rgba(255,255,255,.08);display:grid;place-items:center;font-size:40px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font:800 11px Inter;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+  .pill .d{width:7px;height:7px;border-radius:50%}
+  .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin-top:16px}
+  .mcard{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:10px 12px}
+  .mcard .k{font:700 9.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#8fb0ef}
+  .mcard .vv{font:600 13.5px Inter;color:#fff;margin-top:4px;line-height:1.25}
+  .tabs{display:flex;gap:4px;overflow-x:auto;margin:18px 0 0;border-bottom:1px solid var(--line)}
+  .tabs button{flex:0 0 auto;padding:11px 15px;font:700 13px Inter;color:var(--muted);border:none;background:none;border-bottom:2.5px solid transparent;margin-bottom:-1px;cursor:pointer}
+  .tabs button.on{color:var(--navy);border-bottom-color:var(--red)}
+  .tabpane{display:none;margin-top:16px}.tabpane.on{display:block}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:16px 17px;box-shadow:var(--shadow);margin-bottom:14px}
+  .card h3{font:800 13px Inter;letter-spacing:.02em;color:var(--ink);margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px}
+  .fact .k{font:700 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .fact .v{font:600 14px Inter;color:var(--ink);margin-top:3px}
+  .docket{position:relative;padding-left:26px}
+  .docket::before{content:'';position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--line-2)}
+  .de{position:relative;padding-bottom:18px}
+  .de .node{position:absolute;left:-22px;top:2px;width:15px;height:15px;border-radius:50%;border:3px solid var(--panel);box-shadow:0 0 0 1.5px var(--line-2);background:#fff}
+  .de .ts{font:600 11.5px 'JetBrains Mono';color:var(--muted)}
+  .de .kind{font:800 13px Inter;margin-top:2px;color:var(--ink)}
+  .de .detail{font:500 13.5px Inter;color:var(--ink);margin-top:3px;line-height:1.4}
+  .de .loc{font:500 11.5px Inter;color:var(--muted);margin-top:3px;display:inline-flex;gap:5px;align-items:center}
+  .de.pending .node{background:var(--amber);box-shadow:0 0 0 1.5px var(--amber)}
+  .contrib input,.contrib select,.contrib textarea{width:100%;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font:500 13.5px Inter;background:#fff;outline:none;margin-top:5px}
+  .contrib input:focus,.contrib select:focus,.contrib textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,95,208,.13)}
+  .contrib label{font:700 11px Inter;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);display:block;margin-top:12px}
+  .btn-primary{background:var(--red);color:#fff;border:none;border-radius:10px;padding:12px;font:800 13.5px Inter;width:100%;cursor:pointer;margin-top:14px}
+  .btn-primary:disabled{opacity:.6;cursor:default}
+  .share{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .share a{display:inline-flex;align-items:center;gap:6px;font:700 12px Inter;text-decoration:none;border:1px solid var(--line-2);border-radius:9px;padding:7px 11px;color:var(--navy)}
+  .msg{margin-top:12px;font:600 13px Inter;display:none}
+</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<main class="wrap">
+  <a href="/mascotas" class="back">← Todas las mascotas</a>
+  <div id="root"><div class="card">Cargando expediente…</div></div>
+</main>
+<script>
+const ST={
+  perdida:{es:'Perdida',c:'#e57200',bg:'#fdf2e0'},
+  avistada:{es:'Avistada',c:'#1f5fd0',bg:'#e8f0fd'},
+  en_transito:{es:'En tránsito',c:'#7a3fb0',bg:'#f0e8fa'},
+  reunida:{es:'Reunida',c:'#1f8a4c',bg:'#e7f4ec'},
+  encontrada:{es:'Encontrada',c:'#1f8a4c',bg:'#e7f4ec'},
+  fallecida:{es:'Fallecida',c:'#1f2430',bg:'#e9eaee'},
+};
+const KIND={avistamiento:'Avistamiento',nota:'Nota',contacto:'Contacto',estado:'Cambio de estado',reunificada:'Reunificación',abierta:'Expediente abierto'};
+const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const qp=(k)=>new URLSearchParams(location.search).get(k);
+function fmtD(v){if(!v)return'—';try{const d=typeof v==='number'?new Date(v):new Date(String(v).length<=10?v+'T00:00:00Z':v);return d.toLocaleDateString('es-VE',{year:'numeric',month:'short',day:'numeric'});}catch{return'—'}}
+function toMs(v){if(v==null)return 0;if(typeof v==='number')return v;const t=Date.parse(String(v).length<=10?v+'T00:00:00Z':v);return Number.isFinite(t)?t:0;}
+function ago(ms){if(!ms)return'—';const s=Math.floor((Date.now()-ms)/1000);if(s<60)return'hace instantes';const m=Math.floor(s/60);if(m<60)return`hace ${m} min`;const h=Math.floor(m/60);if(h<24)return`hace ${h} h`;const d=Math.floor(h/24);return`hace ${d} d`;}
+
+// Live chronometer: elapsed time since the case opened, ticking every second.
+function fmtChrono(ms){let s=Math.max(0,Math.floor((Date.now()-ms)/1000));const d=Math.floor(s/86400);s-=d*86400;const h=Math.floor(s/3600);s-=h*3600;const m=Math.floor(s/60);s-=m*60;const p2=(n)=>String(n).padStart(2,'0');return(d>0?d+'d ':'')+p2(h)+':'+p2(m)+':'+p2(s);}
+let CHRONO_T=null;
+function startChrono(ms){if(CHRONO_T){clearInterval(CHRONO_T);CHRONO_T=null;}if(!ms)return;const tick=()=>{const el=document.getElementById('m_chrono');if(!el){clearInterval(CHRONO_T);CHRONO_T=null;return;}el.textContent=fmtChrono(ms);};tick();CHRONO_T=setInterval(tick,1000);}
+
+function pill(estado){const s=ST[estado]||ST.perdida;return`<span class="pill" style="color:${s.c};background:${s.bg}"><span class="d" style="background:${s.c}"></span>${s.es}</span>`;}
+let AUTH={authenticated:false},CUR=null,OP=false;
+
+async function load(){
+  const id=qp('id');
+  if(!id){document.getElementById('root').innerHTML='<div class="card">Falta el identificador de la mascota. <a href="/mascotas">Ver todas →</a></div>';return;}
+  try{AUTH=await (await fetch('/api/auth/me')).json();}catch{}
+  let d;
+  try{const r=await fetch('/api/mascotas/'+encodeURIComponent(id));if(!r.ok)throw 0;d=await r.json();}
+  catch{document.getElementById('root').innerHTML='<div class="card">No se encontró este expediente. <a href="/mascotas">Ver todas las mascotas →</a></div>';return;}
+  CUR=d;OP=!!d.operator;render(d);startChrono(toMs(d.pet.created_at));
+}
+
+function timeline(d){
+  const p=d.pet,ev=d.timeline||[];
+  const nodes=[{ts:toMs(p.created_at),kind:'abierta',detail:'Expediente registrado',location:[p.city,p.state].filter(Boolean).join(', ')}];
+  for(const x of ev)nodes.push({ts:x.created_ms,kind:x.kind,detail:x.detail,location:x.location,status_from:x.status_from,status_to:x.status_to,source:x.source,review:x.review});
+  nodes.sort((a,b)=>a.ts-b.ts);
+  return nodes;
+}
+
+function render(d){
+  const p=d.pet,ev=d.timeline||[];
+  const estado=p.estado||'perdida';
+  const photo=p.photo_url?`<img src="${esc(p.photo_url)}" class="case-photo" onerror="this.outerHTML='<div class=\\'case-photo\\'>🐾</div>'">`:`<div class="case-photo">🐾</div>`;
+  const loc=[p.city,p.state].filter(Boolean).join(', ')||'—';
+  const meta=[
+    ['Estado',(ST[estado]||ST.perdida).es],
+    ['Tipo',p.category==='encontrada'?'Encontrada (busca dueño)':'Perdida'],
+    ['Zona',loc],
+    ['Reportado',fmtD(p.created_at)],
+    ['Movimientos',String(ev.filter(x=>x.review!=='rejected').length)],
+  ];
+  if(OP&&p.contact)meta.push(['Contacto',p.contact]);
+  const shareUrl=location.origin+'/mascota?id='+encodeURIComponent(p.id);
+  const shareTxt=encodeURIComponent('Ayuda a encontrar a esta mascota: '+(p.title||'')+' — SISMO911');
+
+  document.getElementById('root').innerHTML=`
+  <div class="case-top"><div class="inner">
+    <div class="toprow">
+      <span class="caseno">MAS-${esc((p.id||'').replace(/[^a-zA-Z0-9]/g,'').slice(-8).toUpperCase()||'—')}</span>
+    </div>
+    <div class="hero">${photo}
+      <div style="flex:1;min-width:200px">
+        ${pill(estado)}
+        <h2 class="disp" style="font-weight:900;font-size:24px;letter-spacing:-.02em;margin:8px 0 4px;color:#fff">${esc(p.title||'Mascota sin nombre')}</h2>
+        <div style="font:500 13px Inter;color:#bcd0f4">${esc(p.description||'').slice(0,120)}</div>
+      </div>
+    </div>
+    <div class="meta" id="m_meta">${meta.map(([k,v])=>`<div class="mcard"><div class="k">${esc(k)}</div><div class="vv">${esc(v)}</div></div>`).join('')}
+      <div class="mcard"><div class="k">⏱ Cronómetro</div><div class="vv mono" id="m_chrono" style="font-variant-numeric:tabular-nums">—</div></div>
+    </div>
+  </div></div>
+
+  <div class="tabs">
+    <button data-t="resumen" class="on">Perfil</button>
+    <button data-t="cronologia">Cronología <span style="opacity:.6">${ev.filter(x=>x.review!=='rejected').length}</span></button>
+    <button data-t="aportar">Reportar avistamiento</button>
+  </div>
+
+  <div id="p_resumen" class="tabpane on">
+    <div class="card">
+      <h3>🐾 Perfil de la mascota</h3>
+      <div class="facts">
+        <div class="fact"><div class="k">Estado</div><div class="v" style="color:${(ST[estado]||ST.perdida).c}">${(ST[estado]||ST.perdida).es}</div></div>
+        <div class="fact"><div class="k">Tipo de reporte</div><div class="v">${p.category==='encontrada'?'Encontrada':'Perdida'}</div></div>
+        <div class="fact"><div class="k">Zona</div><div class="v">${esc(loc)}</div></div>
+        <div class="fact"><div class="k">Reportado</div><div class="v">${fmtD(p.created_at)}</div></div>
+        <div class="fact"><div class="k">Última actividad</div><div class="v">${ago(p.case_updated_ms||toMs(p.created_at))}</div></div>
+      </div>
+      ${p.description?`<div style="margin-top:14px"><div class="fact"><div class="k">Descripción / señas</div><div class="v" style="font-weight:500;line-height:1.5">${esc(p.description)}</div></div></div>`:''}
+      ${p.contact?`<div style="margin-top:14px"><div class="fact"><div class="k">Contacto de quien reporta</div><div class="v" style="color:var(--red)">📞 ${esc(p.contact)}</div></div></div>`:''}
+      ${p.case_note?`<div style="margin-top:14px"><div class="fact"><div class="k">Nota</div><div class="v" style="font-weight:500">${esc(p.case_note)}</div></div></div>`:''}
+    </div>
+    <div class="card">
+      <h3>📣 Compartir</h3>
+      <div class="share">
+        <a href="https://wa.me/?text=${shareTxt}%20${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">WhatsApp</a>
+        <a href="https://twitter.com/intent/tweet?text=${shareTxt}&url=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">X</a>
+        <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">Facebook</a>
+        <a href="#" onclick="navigator.clipboard.writeText('${shareUrl}');this.textContent='✓ Copiado';return false">Copiar enlace</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="p_cronologia" class="tabpane">
+    <div class="card">
+      <h3>🕑 Cronología del caso</h3>
+      <div class="docket">${timeline(d).map(n=>`
+        <div class="de ${n.review==='pending'?'pending':''}">
+          <div class="node"></div>
+          <div class="ts">${fmtD(n.ts)} · ${ago(n.ts)}${n.review==='pending'?' · <span style="color:var(--amber);font-weight:700">por revisar</span>':''}</div>
+          <div class="kind">${esc(KIND[n.kind]||n.kind)}${n.status_to?` → ${(ST[n.status_to]||{es:n.status_to}).es}`:''}</div>
+          ${n.detail?`<div class="detail">${esc(n.detail)}</div>`:''}
+          ${n.location?`<div class="loc">📍 ${esc(n.location)}</div>`:''}
+        </div>`).join('')||'<div style="color:var(--muted);font:500 13px Inter">Aún no hay movimientos. Sé el primero en reportar un avistamiento.</div>'}
+      </div>
+    </div>
+  </div>
+
+  <div id="p_aportar" class="tabpane">
+    <div class="card contrib">
+      <h3>👁 Reportar un avistamiento o actualización</h3>
+      <p style="font:500 13px Inter;color:var(--muted);margin:-4px 0 4px">${OP?'Como operador, tu actualización se aplica de inmediato.':'Tu reporte quedará visible tras la revisión de un moderador.'}</p>
+      <form id="cf">
+        <label>Estado (opcional)</label>
+        <select name="status">
+          <option value="">— Sin cambio de estado —</option>
+          <option value="avistada">Avistada</option>
+          <option value="en_transito">En tránsito / rescatada</option>
+          <option value="reunida">Reunida con su familia</option>
+          <option value="encontrada">Encontrada (busca dueño)</option>
+          <option value="fallecida">Fallecida</option>
+        </select>
+        <label>¿Dónde la viste?</label>
+        <input name="location" maxlength="200" placeholder="Zona, calle, referencia…">
+        <label>Detalle</label>
+        <textarea name="detail" rows="3" maxlength="2000" placeholder="Describe el avistamiento, estado del animal, hacia dónde iba…"></textarea>
+        <label>Tu contacto (opcional)</label>
+        <input name="contact" maxlength="120" placeholder="Teléfono o WhatsApp para coordinar">
+        <button class="btn-primary" type="submit">Enviar reporte</button>
+        <div class="msg" id="cmsg"></div>
+      </form>
+    </div>
+  </div>`;
+
+  document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    document.querySelectorAll('.tabpane').forEach(x=>x.classList.remove('on'));
+    document.getElementById('p_'+b.dataset.t).classList.add('on');
+  });
+
+  const f=document.getElementById('cf'),m=document.getElementById('cmsg');
+  f.addEventListener('submit',async ev=>{
+    ev.preventDefault();
+    const body={status:f.status.value||undefined,location:(f.location.value||'').trim(),detail:(f.detail.value||'').trim(),contact:(f.contact.value||'').trim()};
+    if(!body.status&&!body.detail&&!body.location){m.style.display='block';m.style.color='var(--red)';m.textContent='Indica un estado, una ubicación o un detalle.';return;}
+    const btn=f.querySelector('button');btn.disabled=true;btn.textContent='Enviando…';
+    try{
+      const r=await fetch('/api/mascotas/'+encodeURIComponent(p.id)+'/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const j=await r.json();
+      if(r.ok){m.style.display='block';m.style.color='var(--green)';m.textContent=j.review==='approved'?'✓ Actualización aplicada.':'✓ Enviado. Quedará visible tras la revisión de un moderador.';f.reset();setTimeout(load,900);}
+      else{m.style.display='block';m.style.color='var(--red)';m.textContent=j.error==='rate_limited'?'Demasiados envíos. Intenta más tarde.':(j.hint||'No se pudo enviar.');btn.disabled=false;btn.textContent='Enviar reporte';}
+    }catch{m.style.display='block';m.style.color='var(--red)';m.textContent='Error de red. Intenta de nuevo.';btn.disabled=false;btn.textContent='Enviar reporte';}
+  });
+}
+load();
+</script>
+</body>
+</html>

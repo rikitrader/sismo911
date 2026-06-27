@@ -25,6 +25,7 @@ import { plan } from './routes/plan';
 import { desaparecidos } from './routes/desaparecidos';
 import { blog } from './routes/blog';
 import { rav } from './routes/rav';
+import { mascotas } from './routes/mascotas';
 import { monitor } from './routes/monitor';
 import { aidOrgs } from './routes/aid_orgs';
 import { donations } from './routes/donations';
@@ -259,6 +260,9 @@ app.route('/', blog);
 // redayudavenezuela.com (RAV): /api/rav/run (Bearer) + public /api/stats/official
 // + /api/verified-info. The /informacion-verificada page is a static asset.
 app.route('/', rav);
+// Lost-pet case tracking: /api/mascotas/:id (detail+timeline), /:id/update,
+// /report, /queue, /events/:eid/approve|reject. The /mascota detail page is static.
+app.route('/', mascotas);
 
 // Anything not under /api and not a static asset → let ASSETS serve (404s handled by CF).
 app.all('*', async (c) => {
