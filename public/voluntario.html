@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perfil de voluntario | SISMO911</title>
+<meta name="description" content="Perfil de un voluntario de emergencia registrado en SISMO911 tras el terremoto de Venezuela 2026.">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://sismo911.com/voluntarios">
+<meta property="og:title" content="Perfil de voluntario | SISMO911">
+<meta property="og:description" content="Voluntario de emergencia disponible para ayudar tras el terremoto de Venezuela.">
+<meta property="og:url" content="https://sismo911.com/voluntarios">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>
+  :root{--navy:#13284f;--navy2:#1f3a6b;--line:#dfe3ea;--ink:#1b2433;--muted:#5b6781;--gold:#c9a227;--green:#1f8a4c}
+  body{background:#f4f6fa;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  .wrap{max-width:840px;margin:0 auto;padding:0 16px}
+  .back{display:inline-flex;align-items:center;gap:7px;margin:22px 0 14px;font:700 13px Inter;color:var(--navy);text-decoration:none;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 14px}
+  .back:hover{border-color:var(--navy2)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 1px 3px rgba(16,24,40,.05);overflow:hidden;margin-bottom:22px}
+  .phead{display:flex;gap:18px;align-items:center;padding:24px;background:linear-gradient(135deg,#0c1b38,#1f3a6b);color:#fff}
+  .pavatar{width:88px;height:88px;border-radius:18px;flex:0 0 88px;display:grid;place-items:center;font:900 32px 'Public Sans';background:rgba(255,255,255,.14);color:#fff;background-size:cover;background-position:center}
+  .pname{font:900 26px/1.1 'Public Sans';letter-spacing:-.01em}
+  .pmeta{margin-top:6px;color:#c9d6ef;font-size:13.5px;display:flex;gap:14px;flex-wrap:wrap}
+  .badge{display:inline-flex;align-items:center;gap:5px;font:700 10.5px Inter;text-transform:uppercase;letter-spacing:.04em;padding:4px 9px;border-radius:8px;margin-top:8px}
+  .badge.reg{background:rgba(255,255,255,.16);color:#fff}
+  .badge.rav{background:#f5c518;color:#3a2c00}
+  .pbody{padding:22px 24px}
+  .tags{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px}
+  .tg{font:700 12.5px Inter;background:#eef3fb;color:var(--navy);border:1px solid #d9e3f4;border-radius:8px;padding:5px 11px}
+  .row{display:grid;grid-template-columns:150px 1fr;gap:10px;padding:13px 0;border-top:1px solid #eef1f6;font-size:14.5px}
+  .row:first-of-type{border-top:0}
+  .row .k{font:700 12px Inter;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding-top:2px}
+  .row .v{color:var(--ink);line-height:1.5}
+  @media(max-width:540px){.row{grid-template-columns:1fr;gap:2px}}
+  .contact-cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+  .btn{display:inline-flex;align-items:center;gap:8px;font:800 14px 'Public Sans';border-radius:11px;padding:13px 18px;text-decoration:none}
+  .btn.call{background:var(--green);color:#fff}
+  .btn.wa{background:#25d366;color:#063}
+  .btn.mail{background:var(--navy);color:#fff}
+  .btn.map{background:#fff;color:var(--navy);border:1px solid var(--line)}
+  .notes{background:#f7f9fd;border:1px solid #e7edf6;border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.55;color:#34425e;white-space:pre-wrap}
+  .photo{width:100%;max-height:420px;object-fit:cover;display:block;border-bottom:1px solid var(--line)}
+  .state{padding:40px 24px;text-align:center;color:var(--muted)}
+  .state h2{font:800 18px 'Public Sans';color:var(--ink);margin:0 0 6px}
+  .pill-av{font:700 12px Inter;color:#063;background:#e6f5ec;border:1px solid #c7e8d3;border-radius:8px;padding:4px 11px}
+</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans">
+<main class="wrap">
+  <a class="back" href="/voluntarios">← Volver al directorio</a>
+  <div id="root">
+    <div class="card"><div class="state">Cargando perfil…</div></div>
+  </div>
+</main>
+
+<script src="/voluntarios-skills.js"></script>
+<script>
+const VOL=window.VOL, SK=VOL.SK, AV=VOL.AV;
+const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=id=>document.getElementById(id);
+function initials(n){return (String(n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('')||'?').toUpperCase();}
+const params=new URLSearchParams(location.search);
+const id=params.get('id')||'';
+
+function fmtDate(s){ if(!s) return ''; try{ return new Date(s).toLocaleDateString('es',{year:'numeric',month:'long',day:'numeric'}); }catch{ return ''; } }
+function row(k,v){ return v?`<div class="row"><div class="k">${esc(k)}</div><div class="v">${v}</div></div>`:''; }
+
+function render(p){
+  // Normalize through the shared classifier so tags are derived identically to the directory.
+  const v=VOL.normalize(p);
+  const loc=[v.city,v.state].filter(Boolean).join(', ');
+  const tags=(v.skills||[]).map(k=>SK[k]?`<span class="tg">${SK[k][0]} ${esc(SK[k][1])}</span>`:'').join('');
+  const avatar=v.photo_url
+    ? `<div class="pavatar" style="background-image:url('${esc(v.photo_url)}')"></div>`
+    : `<div class="pavatar">${esc(initials(v.full_name))}</div>`;
+  const badge=v.source==='rav'?'<span class="badge rav">Se ofreció a ayudar</span>':'<span class="badge reg">Voluntario registrado</span>';
+
+  const phone=(v.contact_phone||'').trim();
+  const waNum=phone.replace(/[^0-9]/g,'');
+  const cta=[];
+  if(phone) cta.push(`<a class="btn call" href="tel:${esc(phone.replace(/[^0-9+]/g,''))}">📞 Llamar</a>`);
+  if(waNum.length>=7) cta.push(`<a class="btn wa" href="https://wa.me/${esc(waNum)}" target="_blank" rel="noopener">💬 WhatsApp</a>`);
+  if(v.email) cta.push(`<a class="btn mail" href="mailto:${esc(v.email)}">✉️ Correo</a>`);
+  if(v.lat&&v.lng) cta.push(`<a class="btn map" href="https://www.google.com/maps?q=${esc(v.lat)},${esc(v.lng)}" target="_blank" rel="noopener">📍 Ver en mapa</a>`);
+
+  const avail=v.availability&&AV[v.availability]?`<span class="pill-av">⏱️ ${AV[v.availability]}</span>`:'';
+  const flags=[v.has_vehicle?'🚗 Tiene vehículo':'',v.can_travel?'🧭 Puede trasladarse':''].filter(Boolean).join(' · ');
+
+  $('root').innerHTML=`<div class="card">
+    ${v.photo_url?`<img class="photo" src="${esc(v.photo_url)}" alt="${esc(v.full_name)}" onerror="this.remove()">`:''}
+    <div class="phead">
+      ${avatar}
+      <div style="min-width:0">
+        <div class="pname">${esc(v.full_name||'Voluntario')}</div>
+        <div class="pmeta">${loc?'<span>📍 '+esc(loc)+'</span>':''}${avail?'<span>'+avail+'</span>':''}</div>
+        ${badge}
+      </div>
+    </div>
+    <div class="pbody">
+      ${tags?`<div class="tags">${tags}</div>`:''}
+      ${row('Habilidades', (v.skills||[]).map(k=>SK[k]?SK[k][1]:k).join(', '))}
+      ${row('Ubicación', esc(loc))}
+      ${row('Zona / sector', esc(v.area))}
+      ${row('Disponibilidad', v.availability&&AV[v.availability]?esc(AV[v.availability]):'')}
+      ${row('Movilidad', flags?esc(flags):'')}
+      ${row('Experiencia', esc(v.experience))}
+      ${row('Registrado', fmtDate(v.created_at))}
+      ${v.notes?`<div class="row"><div class="k">Notas</div><div class="v"><div class="notes">${esc(v.notes)}</div></div></div>`:''}
+      ${cta.length?`<div class="contact-cta">${cta.join('')}</div>`:'<p class="state" style="padding:18px 0 0;text-align:left">Este voluntario no indicó datos de contacto públicos.</p>'}
+    </div>
+  </div>`;
+  document.title=`${v.full_name||'Voluntario'} — Voluntario | SISMO911`;
+}
+
+function fail(msg){
+  $('root').innerHTML=`<div class="card"><div class="state"><h2>${esc(msg)}</h2><p>Es posible que el perfil ya no esté disponible.</p><a class="back" href="/voluntarios" style="margin-top:14px">← Volver al directorio</a></div></div>`;
+}
+
+async function load(){
+  if(!id){ fail('Perfil no especificado'); return; }
+  try{
+    const r=await fetch('/api/voluntarios/profile/'+encodeURIComponent(id));
+    if(r.status===404){ fail('Voluntario no encontrado'); return; }
+    const d=await r.json();
+    if(!r.ok||d.error||!d.ok){ fail('No se pudo cargar el perfil'); return; }
+    render(d);
+  }catch(e){ fail('No se pudo cargar el perfil'); }
+}
+load();
+</script>
+</body>
+</html>
