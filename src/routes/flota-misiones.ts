@@ -24,7 +24,7 @@ const num = (v: unknown) => (v == null || v === '' ? null : Number(v));
 
 // A transition is valid if it advances exactly one step along ORDER, or cancels
 // a non-terminal mission. 'despachada' is only reachable via /despachar.
-function canTransition(from: string, to: string): boolean {
+export function canTransition(from: string, to: string): boolean {
   if (TERMINAL.has(from)) return false;
   if (to === 'cancelada') return true;
   const fi = ORDER.indexOf(from);
@@ -174,6 +174,12 @@ flotaMisiones.post('/:id/despachar', async (c) => {
   const mision = await c.env.DB.prepare(`SELECT estado FROM flota_misiones WHERE id = ?`).bind(id).first() as { estado: string } | null;
   if (!mision) return c.json({ error: 'no encontrado' }, 404);
   if (mision.estado !== 'creada') return c.json({ error: 'transicion_invalida' }, 409);
+
+  // The assigned unit must exist and be free — never dispatch a bogus or
+  // already-busy unit (would double-book it).
+  const unidad = await c.env.DB.prepare(`SELECT estado_op FROM flota_unidades WHERE id = ?`).bind(unidad_id).first() as { estado_op: string } | null;
+  if (!unidad) return c.json({ error: 'unidad_no_encontrada' }, 404);
+  if (unidad.estado_op !== 'disponible') return c.json({ error: 'unidad_no_disponible', estado_op: unidad.estado_op }, 409);
 
   const now = Date.now();
   await c.env.DB.batch([
