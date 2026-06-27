@@ -196,6 +196,11 @@ persons.get('/cases', async (c) => {
   // total stays consistent with what the operator filtered for.
   const includeFam = !(priority && ['alta', 'media', 'baja'].includes(priority));
   const fWhere: string[] = []; const fBind: unknown[] = [];
+  // Public docket shows only APPROVED personas — mirrors p.review='approved' for
+  // native cases. Without this, the cleaner's moderation='rejected' demotions had
+  // NO effect on /casos: junk / spam / duplicate personas stayed visible no matter
+  // what the cleaner did. Operators still see every row (no filter).
+  if (!op) fWhere.push("moderation = 'approved'");
   if (q) { fWhere.push('(nombre LIKE ? OR ubicacion LIKE ?' + (op ? ' OR contacto LIKE ?' : '') + ')'); fBind.push(l, l); if (op) fBind.push(l); }
   if (status === 'found_safe') fWhere.push("estado = 'localizado'");
   else if (status === 'aparecido') fWhere.push("estado = 'aparecido'");
