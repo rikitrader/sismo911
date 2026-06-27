@@ -506,7 +506,14 @@
     }
 
     const upd = $('updated');
-    if (upd) upd.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+    if (upd) {
+      // Credit the live sources actually present in the data (USGS canonical +
+      // FUNVISIS gap-fillers). FUNVISIS is a rolling "últimos sismos" feed (no
+      // deep archive), so it complements USGS rather than replacing it.
+      const srcs = [...new Set(quakes.map(q => q.source).filter(Boolean))].map(srcLabel).sort();
+      const fuentes = srcs.length ? ' · ' + srcs.join(' + ') : '';
+      upd.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) + fuentes;
+    }
   }
 
   // ---- Live feed via SISMO911 API (Cloudflare Worker mirrors USGS into D1/KV) ----

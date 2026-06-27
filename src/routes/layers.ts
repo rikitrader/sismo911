@@ -635,7 +635,7 @@ layers.get('/geoseismic', async (c) => {
 
   const { results } = await c.env.DB.prepare(
     `SELECT id, source, mag, place, place_es, time_ms, lat, lon, depth_km, mmi, alert, tsunami, url
-     FROM events WHERE lat IS NOT NULL AND lon IS NOT NULL AND mag IS NOT NULL AND mag >= ?
+     FROM events WHERE dup_of IS NULL AND lat IS NOT NULL AND lon IS NOT NULL AND mag IS NOT NULL AND mag >= ?
      ORDER BY time_ms DESC LIMIT ?`
   ).bind(minMag, limit).all().catch(() => ({ results: [] }));
 
