@@ -676,10 +676,12 @@ function renderCase(d){
   if(OP&&p.assigned_to)meta.push(['Asignado a',p.assigned_to]);
   if(OP&&p.contact_phone)meta.push(['Contacto',p.contact_phone]);
   $('#cv_meta').innerHTML=meta.map(([k,v])=>`<div class="mcard"><div class="k">${esc(k)}</div><div class="vv">${esc(v)}</div></div>`).join('');
-  // Count from the reference earthquake (sismo) — the clock that matters for
-  // survival — falling back to when the case was opened if no event is linked.
-  const chronoMs=(e&&e.time_ms)?e.time_ms:p.created_ms;
-  $('#cv_chrono_lbl').textContent=(e&&e.time_ms)?'⏱ Tiempo desde el sismo':'⏱ Tiempo desde apertura';
+  // Standard case clock: count from the sismo — the case's linked event if any,
+  // else the canonical quake origin (quake-clock.js). Case-open time is only a
+  // last resort if neither is available.
+  const fromSismo=(e&&e.time_ms)||(window.SISMO_QUAKE&&SISMO_QUAKE.time)||0;
+  const chronoMs=fromSismo||p.created_ms;
+  $('#cv_chrono_lbl').textContent=fromSismo?'⏱ Tiempo desde el sismo':'⏱ Tiempo desde apertura';
   startChrono(chronoMs);
   $('#tb_dock').textContent=dock.length;
   $('#tb_ev').textContent=p.evidence_count||0;
