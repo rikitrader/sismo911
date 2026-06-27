@@ -4,6 +4,7 @@ import { uid } from '../lib/db';
 import { rateLimit, validLatLon, nameHasSpam, textHasLink, isImageBytes } from '../lib/security';
 import { getUserFromRequest } from '../lib/auth';
 import { audit } from '../lib/audit';
+import { scoreMascota } from '../lib/mascota-score';
 
 // Attachment limits (shared by report-photo + per-case files).
 const MAX_UPLOAD = 8_000_000; // 8 MB
@@ -37,6 +38,13 @@ const clamp = (s: any, n: number) => String(s ?? '').slice(0, n);
 const isOp = (u: any) => !!u && (u.role === 'operator' || u.role === 'admin');
 // Display status: app-owned case_status wins; else derive from the RAV category/status.
 const estadoOf = (r: any) => (r.case_status || r.category || r.status || 'perdida');
+// created_at is an ISO string; coerce to ms for scoring/sorting.
+const toMs = (v: any): number => {
+  if (v == null) return 0;
+  if (typeof v === 'number') return v;
+  const t = Date.parse(String(v).length <= 10 ? `${v}T00:00:00Z` : String(v));
+  return Number.isFinite(t) ? t : 0;
+};
 
 // GET /api/mascotas/queue — operator: pending citizen updates + pending reports.
 // MUST be registered before the /:id route (same method/length) or it'd be shadowed.
@@ -53,6 +61,34 @@ mascotas.get('/api/mascotas/queue', async (c) => {
      FROM rav_reports WHERE kind = 'mascota' AND moderation = 'pending' ORDER BY created_at ASC LIMIT 300`,
   ).all();
   return c.json({ ok: true, events: events ?? [], reports: reports ?? [] }, 200, { 'Cache-Control': 'no-store' });
+});
+
+// GET /api/mascotas/list — docket directory feed: per-case tracking fields +
+// movimientos/fotos counts + a computed urgency score. Public = approved only.
+// MUST be registered before /:id (a literal that would otherwise be captured).
+mascotas.get('/api/mascotas/list', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT r.id, r.title, r.description, r.category, r.city, r.state, r.lat, r.lng, r.photo_url, r.photo_r2, r.tags,
+            r.case_status, r.reports_count, r.case_updated_ms, r.created_at,
+            (SELECT count(*) FROM mascota_events e  WHERE e.report_id = r.id AND e.review = 'approved') AS movimientos,
+            (SELECT count(*) FROM mascota_attachments a WHERE a.report_id = r.id AND a.review = 'approved') AS fotos,
+            (SELECT max(created_ms) FROM mascota_events e2 WHERE e2.report_id = r.id AND e2.review = 'approved') AS last_event_ms
+     FROM rav_reports r
+     WHERE r.kind = 'mascota' AND coalesce(r.moderation,'approved') = 'approved'
+     ORDER BY coalesce(r.case_updated_ms, 0) DESC, r.created_at DESC LIMIT 500`,
+  ).all();
+  const now = Date.now();
+  const items = (results ?? []).map((r: any) => {
+    const estado = estadoOf(r);
+    const score = scoreMascota({
+      status: estado, createdMs: toMs(r.created_at), caseUpdatedMs: r.case_updated_ms,
+      movimientos: Number(r.movimientos) || 0, lastSightingMs: r.last_event_ms, now,
+    });
+    const photo = r.photo_r2 ? `/api/mascotas/photo/${r.id}` : r.photo_url;  // self-hosted hero photo
+    const { photo_r2, ...rest } = r;
+    return { ...rest, photo_url: photo, estado, movimientos: Number(r.movimientos) || 0, fotos: Number(r.fotos) || 0, score };
+  });
+  return c.json({ ok: true, items, total: items.length }, 200, { 'Cache-Control': 'public, max-age=30' });
 });
 
 // GET /api/mascotas/:id — pet case file: profile + cronología (public, redacted).
@@ -77,9 +113,21 @@ mascotas.get('/api/mascotas/:id', async (c) => {
      FROM mascota_events WHERE report_id = ? ${evWhere} ORDER BY created_ms ASC`,
   ).bind(id).all();
 
+  // Tracking KPIs: movimientos = approved events, fotos = approved attachments,
+  // last sighting = newest approved event. Urgency score mirrors the persons triage.
+  const approvedEvents = (events ?? []).filter((e: any) => e.review === 'approved');
+  const fotosRow: any = await c.env.DB.prepare(
+    `SELECT count(*) AS n FROM mascota_attachments WHERE report_id = ? AND review = 'approved'`,
+  ).bind(id).first();
+  const movimientos = approvedEvents.length;
+  const fotos = Number(fotosRow?.n) || 0;
+  const lastSightingMs = approvedEvents.length ? Math.max(...approvedEvents.map((e: any) => e.created_ms || 0)) : null;
+  const estado = estadoOf(r);
+  const score = scoreMascota({ status: estado, createdMs: toMs((r as any).created_at), caseUpdatedMs: (r as any).case_updated_ms, movimientos, lastSightingMs, now: Date.now() });
+
   return c.json({
     ok: true, operator: op,
-    pet: { ...r, estado: estadoOf(r) },
+    pet: { ...r, estado, movimientos, fotos, score },
     timeline: events ?? [],
   }, 200, { 'Cache-Control': 'no-store' });
 });
