@@ -36,9 +36,10 @@
   .chips{display:flex;gap:7px;flex-wrap:wrap}
   .chip{border:1px solid var(--line-2);background:#fff;border-radius:999px;padding:7px 13px;font:700 12.5px 'Public Sans';color:var(--muted);cursor:pointer}
   .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .reportbar{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff7ed;border:1px solid #ffd9ab;border-radius:13px;padding:13px 16px;margin-bottom:16px;flex-wrap:wrap}
+  .reportbar{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff7ed;border:1px solid #ffd9ab;border-radius:13px;padding:13px 16px;margin-top:16px;margin-bottom:16px;flex-wrap:wrap}
   .reportbar .t{font:700 14px Inter;color:#7a4a08}
-  .btn-amber{background:var(--amber);color:#fff;border:none;border-radius:10px;padding:11px 16px;font:800 13.5px 'Public Sans';cursor:pointer}
+  .btn-cta{background:var(--red);color:#fff;border:none;border-radius:10px;padding:11px 16px;font:800 13.5px 'Public Sans';cursor:pointer}
+  .btn-cta:hover{background:#a00021}
   .reg{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px;margin-bottom:18px;display:none}
   .reg.show{display:block}
   .reg h3{font:800 15px 'Public Sans';color:var(--navy);margin:0 0 4px}
@@ -83,7 +84,7 @@
 
   <div class="reportbar">
     <div class="t">¿Perdiste a tu mascota o encontraste una? Abre su expediente.</div>
-    <button class="btn-amber" id="toggleReport">🐾 Reportar una mascota</button>
+    <button class="btn-cta" id="toggleReport">🐾 Reportar una mascota</button>
   </div>
 
   <section class="reg" id="regBox">
@@ -104,7 +105,7 @@
         <div><label>Zona / referencia</label><input name="area" maxlength="120" placeholder="Sector, calle, referencia"></div>
         <div><label>Contacto (teléfono / WhatsApp)</label><input name="contact" maxlength="120" placeholder="Para que te contacten"></div>
       </div>
-      <button class="btn-amber" type="submit" style="margin-top:16px;width:100%">Enviar reporte</button>
+      <button class="btn-cta" type="submit" style="margin-top:16px;width:100%">Enviar reporte</button>
       <div class="msg" id="rmsg"></div>
     </form>
   </section>
