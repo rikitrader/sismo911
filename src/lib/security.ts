@@ -154,6 +154,46 @@ export async function burstLimit(
   return null;
 }
 
+// Normalizers for rate-limit subjects (so "A@B.com " and "+58 412-1" collapse to
+// one bucket and can't be sidestepped by formatting).
+export function normEmail(s: unknown): string { return String(s ?? '').trim().toLowerCase(); }
+export function normPhone(s: unknown): string { return String(s ?? '').replace(/\D/g, '').slice(-12); }
+
+// Per-SUBJECT limiter (email / phone), as opposed to burstLimit's per-IP key.
+// Reuses the same atomic D1 `rate_buckets` row but keys on a HASH of the subject
+// — no raw PII is stored, and the caller returns a GENERIC 429 so it never
+// reveals whether the email/phone exists. Returns true when over the limit.
+// Fails OPEN (never blocks a legit user) on any error. Empty subject = no-op.
+export async function subjectLimit(
+  env: Env,
+  name: string,
+  subject: string,
+  limit: number,
+  windowSec: number,
+): Promise<boolean> {
+  if (!subject) return false;
+  let h: string;
+  try {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${name}:${subject}`));
+    h = [...new Uint8Array(digest)].slice(0, 12).map((b) => b.toString(16).padStart(2, '0')).join('');
+  } catch { return false; }
+  const key = `subj:${name}:${h}`;
+  const now = Date.now();
+  const reset = now + windowSec * 1000;
+  try {
+    const row: any = await env.DB.prepare(
+      `INSERT INTO rate_buckets (key, count, reset_ms) VALUES (?1, 1, ?2)
+       ON CONFLICT(key) DO UPDATE SET
+         count    = CASE WHEN reset_ms < ?3 THEN 1  ELSE count + 1 END,
+         reset_ms = CASE WHEN reset_ms < ?3 THEN ?2 ELSE reset_ms  END
+       RETURNING count`
+    ).bind(key, reset, now).first();
+    return Number(row?.count ?? 0) > limit;
+  } catch {
+    return false; // DB error → fail open
+  }
+}
+
 export function validLatLon(lat: unknown, lon: unknown): lat is number {
   return (
     typeof lat === 'number' &&
