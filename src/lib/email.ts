@@ -166,6 +166,44 @@ export function telemedScheduledEmail(opts: { toName?: string; counterpartName: 
   return { subject: `Videoconsulta agendada — ${opts.whenText} — SISMO911`, html, text };
 }
 
+// Sent to the patient on key appointment status changes (telemedicine v2 lifecycle).
+export function telemedApptStatusEmail(opts: {
+  toName?: string; kind: 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  doctorName?: string; whenText?: string; videoUrl?: string; manageUrl: string;
+}): EmailMsg {
+  const hi = opts.toName ? `Hola ${opts.toName},` : 'Hola,';
+  const dr = opts.doctorName ? `Dr(a). ${opts.doctorName}` : 'tu médico';
+  const map = {
+    in_progress: {
+      subject: 'Tu médico te está esperando — entra ahora — SISMO911',
+      title: '🟢 Tu consulta está por comenzar',
+      body: p(`${dr} ya está en la sala. <b>Entra ahora</b> a tu videoconsulta.`) +
+        (opts.videoUrl ? `<p style="margin:0 0 12px">${button(opts.videoUrl, 'Entrar a la videoconsulta')}</p>` : ''),
+    },
+    completed: {
+      subject: 'Tu consulta finalizó — SISMO911',
+      title: '✓ Consulta completada',
+      body: p(`Tu videoconsulta con ${dr} finalizó. Gracias por usar SISMO911 Telemedicina. Cuídate y sigue las indicaciones de tu médico.`),
+    },
+    cancelled: {
+      subject: 'Tu cita fue cancelada — SISMO911',
+      title: 'Cita cancelada',
+      body: p(`Tu cita${opts.whenText ? ` del <b>${opts.whenText}</b>` : ''} fue cancelada. Puedes agendar una nueva cuando quieras.`) +
+        `<p style="margin:0 0 12px">${button('https://sismo911.com/telemedicina', 'Agendar otra cita')}</p>`,
+    },
+    no_show: {
+      subject: 'No pudimos realizar tu consulta — SISMO911',
+      title: 'No asististe a tu cita',
+      body: p(`Tu médico marcó la cita${opts.whenText ? ` del <b>${opts.whenText}</b>` : ''} como no asistida. Si aún necesitas atención, agenda una nueva cita.`) +
+        `<p style="margin:0 0 12px">${button('https://sismo911.com/telemedicina', 'Agendar otra cita')}</p>`,
+    },
+  }[opts.kind];
+  const html = layout(map.subject, h2(map.title) + p(hi) + map.body +
+    p(`<a href="${opts.manageUrl}" style="color:#13284f;font-weight:600">Ver el estado de mi cita</a>`));
+  const text = `${hi}\n\n${map.title}\nVer tu cita: ${opts.manageUrl}` + (opts.videoUrl && opts.kind === 'in_progress' ? `\nEntrar: ${opts.videoUrl}` : '');
+  return { subject: map.subject, html, text };
+}
+
 // Confirmation sent to a citizen after a damage report is received (status=pending).
 export function reportReceivedEmail(opts: { name?: string; refId: string; categoryLabel: string; place?: string }): EmailMsg {
   const hi = opts.name ? `Hola ${opts.name},` : 'Hola,';

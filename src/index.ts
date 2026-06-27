@@ -15,6 +15,7 @@ import { auth } from './routes/auth';
 import { familia } from './routes/familia';
 import { voluntarios } from './routes/voluntarios';
 import { telemedicina } from './routes/telemedicina';
+import { telemedScheduling } from './routes/telemedicina-scheduling';
 import { damageMap } from './routes/damage-map';
 import { reports } from './routes/reports';
 import { chat } from './routes/chat';
@@ -184,6 +185,7 @@ app.route('/api/auth', auth);
 app.route('/api/familia', familia);
 app.route('/api/voluntarios', voluntarios);
 app.route('/api/telemedicina', telemedicina); // doctors worldwide ↔ patient help-requests for VE (intake, claim, schedule, video, calendar/ics)
+app.route('/api/telemedicina', telemedScheduling); // v2 self-service booking: catalog/slots/appointments + 7-state lifecycle + availability
 app.route('/api/danos-estructurales', damageMap);
 app.route('/api/alerts', alerts);
 app.route('/api/facilities', facilities);
