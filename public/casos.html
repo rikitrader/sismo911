@@ -600,6 +600,22 @@ function buildTimeline(d){
   return nodes;
 }
 
+// Live chronometer: elapsed time since the case opened, ticking every second.
+function fmtChrono(ms){
+  let s=Math.max(0,Math.floor((Date.now()-ms)/1000));
+  const d=Math.floor(s/86400);s-=d*86400;
+  const h=Math.floor(s/3600);s-=h*3600;
+  const m=Math.floor(s/60);s-=m*60;
+  const p2=(n)=>String(n).padStart(2,'0');
+  return (d>0?d+'d ':'')+p2(h)+':'+p2(m)+':'+p2(s);
+}
+let CHRONO_T=null;
+function startChrono(ms){
+  if(CHRONO_T){clearInterval(CHRONO_T);CHRONO_T=null;}
+  if(!ms)return;
+  const tick=()=>{const el=document.getElementById('cv_chrono');if(!el){clearInterval(CHRONO_T);CHRONO_T=null;return;}el.textContent=fmtChrono(ms);};
+  tick();CHRONO_T=setInterval(tick,1000);
+}
 function renderCase(d){
   const p=d.person, e=d.event, dock=d.docket||[];
   $('#cv_caseno').textContent=caseNo(p);
@@ -619,7 +635,9 @@ function renderCase(d){
   ];
   if(OP&&p.assigned_to)meta.push(['Asignado a',p.assigned_to]);
   if(OP&&p.contact_phone)meta.push(['Contacto',p.contact_phone]);
-  $('#cv_meta').innerHTML=meta.map(([k,v])=>`<div class="mcard"><div class="k">${esc(k)}</div><div class="vv">${esc(v)}</div></div>`).join('');
+  $('#cv_meta').innerHTML=meta.map(([k,v])=>`<div class="mcard"><div class="k">${esc(k)}</div><div class="vv">${esc(v)}</div></div>`).join('')
+    +`<div class="mcard"><div class="k">⏱ Cronómetro</div><div class="vv mono" id="cv_chrono" style="font-variant-numeric:tabular-nums">—</div></div>`;
+  startChrono(p.created_ms);
   $('#tb_dock').textContent=dock.length;
   $('#tb_ev').textContent=p.evidence_count||0;
 

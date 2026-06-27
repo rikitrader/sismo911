@@ -32,18 +32,26 @@
 <script>
 const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let ALL=[], CAT='';
+const STBADGE={
+  reunida:['bg-safe/10 text-safe','Reunida'],encontrada:['bg-safe/10 text-safe','Encontrada'],
+  avistada:['bg-primary/10 text-primary','Avistada'],en_transito:['bg-primary/10 text-primary','En tránsito'],
+  fallecida:['bg-on-surface/10 text-on-surface-variant','Fallecida'],perdida:['bg-warning/10 text-warning','Perdida'],
+};
 function card(r){
   const img=r.photo_url?`<img src="${esc(r.photo_url)}" loading="lazy" class="w-full h-48 object-cover" onerror="this.parentElement.style.display='none'">`:'<div class="w-full h-48 bg-surface-variant/40 grid place-items-center text-on-surface-variant text-4xl">🐾</div>';
-  const badge=/encontr/i.test(r.category||'')?'<span class="text-[10px] font-bold uppercase bg-safe/10 text-safe px-2 py-0.5 rounded">Encontrada</span>':'<span class="text-[10px] font-bold uppercase bg-warning/10 text-warning px-2 py-0.5 rounded">Perdida</span>';
+  const est=(r.case_status||(/encontr/i.test(r.category||'')?'encontrada':'perdida'));
+  const [bcls,blbl]=STBADGE[est]||STBADGE.perdida;
+  const badge=`<span class="text-[10px] font-bold uppercase ${bcls} px-2 py-0.5 rounded">${blbl}</span>`;
   const loc=[r.city,r.state].filter(Boolean).join(', ');
-  return `<div class="bg-white rounded-lg border border-outline-variant/60 overflow-hidden">${img}
+  const href='/mascota?id='+encodeURIComponent(r.id);
+  return `<a href="${href}" class="block bg-white rounded-lg border border-outline-variant/60 overflow-hidden hover:shadow-lg transition-shadow">${img}
     <div class="p-4">
       <div class="mb-1">${badge}</div>
       <h3 class="font-display font-bold text-base leading-snug">${esc(r.title||'Mascota')}</h3>
-      ${r.description?`<p class="text-sm text-on-surface-variant mt-1">${esc(r.description)}</p>`:''}
+      ${r.description?`<p class="text-sm text-on-surface-variant mt-1 line-clamp-2">${esc(r.description)}</p>`:''}
       ${loc?`<p class="text-xs text-on-surface-variant mt-1">📍 ${esc(loc)}</p>`:''}
-      ${r.contact?`<p class="text-sm font-semibold text-secondary mt-2">📞 ${esc(r.contact)}</p>`:''}
-    </div></div>`;
+      <span class="text-primary text-sm font-semibold mt-2 inline-block">Ver expediente →</span>
+    </div></a>`;
 }
 function render(){
   const q=document.getElementById('q').value.trim().toLowerCase();
