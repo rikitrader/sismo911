@@ -1,7 +1,7 @@
 import type { Env } from '../types';
 import { deleteByIds, deletePhotos } from './sql';
 
-export type DedupeMode = 'exact' | 'loose' | 'photo' | 'fuzzyphone' | 'fuzzyname' | 'phash';
+export type DedupeMode = 'exact' | 'loose' | 'photo' | 'fuzzyphone' | 'fuzzyname' | 'phash' | 'dhash';
 
 // Accent/case/space-insensitive normalized name (Spanish diacritics → ASCII).
 // lower() first, then fold the lowercase accented vowels + ñ/ü. Used so that
@@ -38,6 +38,7 @@ export interface DedupeReport {
 function partitionFor(mode: DedupeMode): string {
   if (mode === 'photo') return `lower(trim(foto))`;
   if (mode === 'phash') return `photo_phash`;
+  if (mode === 'dhash') return `photo_dhash`;
   if (mode === 'fuzzyname') return `${normNameSql('nombre')}, coalesce(edad,-1)`;
   if (mode === 'fuzzyphone') return `${normNameSql('nombre')}, coalesce(edad,-1), ${normPhoneSql('contacto')}`;
   return mode === 'loose'
@@ -56,7 +57,7 @@ export async function dedupePersonas(
 ): Promise<DedupeReport> {
   const mode: DedupeMode = opts.mode === 'loose' ? 'loose' : opts.mode === 'photo' ? 'photo'
     : opts.mode === 'fuzzyphone' ? 'fuzzyphone' : opts.mode === 'fuzzyname' ? 'fuzzyname'
-    : opts.mode === 'phash' ? 'phash' : 'exact';
+    : opts.mode === 'phash' ? 'phash' : opts.mode === 'dhash' ? 'dhash' : 'exact';
   const apply = !!opts.apply;
   const limit = Math.min(Math.max(opts.limit ?? 300, 1), 400);
   // photo mode must only group rows that actually have a photo, or it would
@@ -65,6 +66,7 @@ export async function dedupePersonas(
   // first+last name (a space, ≥5 chars) so single-token names don't over-merge.
   const scope = mode === 'photo' ? `WHERE trim(coalesce(foto,'')) != ''`
     : mode === 'phash' ? `WHERE trim(coalesce(photo_phash,'')) != ''`
+    : mode === 'dhash' ? `WHERE trim(coalesce(photo_dhash,'')) != '' AND photo_dhash NOT LIKE 'dead:%' AND photo_dhash NOT IN ('0000000000000000','ffffffffffffffff')`
     : mode === 'fuzzyphone' ? `WHERE length(${normPhoneSql('contacto')}) >= 7`
     : mode === 'fuzzyname' ? `WHERE length(${normNameSql('nombre')}) >= 5 AND instr(trim(nombre), ' ') > 0`
     : ``;
@@ -76,12 +78,22 @@ export async function dedupePersonas(
       (CASE WHEN trim(coalesce(descripcion,'')) != '' THEN 1 ELSE 0 END) +
       (CASE WHEN trim(coalesce(ubicacion,'')) != '' THEN 1 ELSE 0 END)
     )`;
+  // SAFETY (perceptual hash only): a dHash can collide on DIFFERENT people whose
+  // photos are visually similar (blank/placeholder/dark) — a real danger in a
+  // missing-persons DB. So for `dhash`, only collapse SMALL clusters (2..6 rows =
+  // the same person across a few sources); a large same-dHash cluster signals a
+  // shared placeholder/generic image and is left untouched. `grp` is the cluster
+  // size; the guard is a no-op for the exact-match modes.
+  const grpGuard = mode === 'dhash' ? `AND grp BETWEEN 2 AND 6` : ``;
   const sql = `SELECT id, foto_r2 FROM (
-      SELECT id, foto_r2, ROW_NUMBER() OVER (
-        PARTITION BY ${partitionFor(mode)}
-        ORDER BY ${completeness} DESC, (CASE WHEN foto_r2 IS NOT NULL THEN 0 ELSE 1 END), updated_at DESC, id ASC
-      ) AS rn FROM personas ${scope}
-    ) WHERE rn > 1`;
+      SELECT id, foto_r2,
+        ROW_NUMBER() OVER (
+          PARTITION BY ${partitionFor(mode)}
+          ORDER BY ${completeness} DESC, (CASE WHEN foto_r2 IS NOT NULL THEN 0 ELSE 1 END), updated_at DESC, id ASC
+        ) AS rn,
+        COUNT(*) OVER (PARTITION BY ${partitionFor(mode)}) AS grp
+      FROM personas ${scope}
+    ) WHERE rn > 1 ${grpGuard}`;
   const { results } = await env.DB.prepare(sql).all<{ id: string; foto_r2: string | null }>();
   const all = results ?? [];
   const found = all.length;
