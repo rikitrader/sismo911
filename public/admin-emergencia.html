@@ -113,8 +113,9 @@
             </div>
             <label>Contacto (privado — solo operadores)</label>
             <input name="contact" maxlength="200" placeholder="Teléfono / responsable" />
-            <label>ID de campaña (donaciones — opcional)</label>
-            <input name="campaign_id" maxlength="64" placeholder="cmp_…" />
+            <label>Campaña de donaciones — slug (opcional)</label>
+            <input name="campaign_id" maxlength="64" placeholder="ej: fondo-respuesta-sismica" />
+            <p class="muted" style="margin-top:4px">Si lo llenas, el botón «Donar» del perfil irá directo a esa campaña (<code>/campana?c=…</code>) y la donación se atribuye a esta persona. El slug es el de la campaña en <code>/donar</code>.</p>
 
             <div class="row3">
               <div><label>Estado</label>
