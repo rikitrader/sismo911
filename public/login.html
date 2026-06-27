@@ -62,9 +62,9 @@
     ff.classList.add('hidden'); lf.classList.toggle('hidden',n!=='login'); rf.classList.toggle('hidden',n!=='register'); msg.textContent='';});
   function dest(role){
     const isOp = role==='operator' || role==='admin';
-    if (isOp) return (next.startsWith('/login') || next==='/') ? '/admin.html' : next;
+    if (isOp) return (next.startsWith('/login') || next==='/') ? '/admin' : next;
     // Citizens can never go to an admin/login destination — send them to their account.
-    return (next.startsWith('/admin') || next.startsWith('/login')) ? '/cuenta.html' : next;
+    return (next.startsWith('/admin') || next.startsWith('/login')) ? '/cuenta' : next;
   }
   async function submit(form,url){ msg.className='text-sm text-center mt-3 text-on-surface-variant'; msg.textContent='…';
     const body=Object.fromEntries(new FormData(form));

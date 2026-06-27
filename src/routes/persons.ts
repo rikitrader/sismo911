@@ -381,6 +381,89 @@ persons.get('/docket/queue', async (c) => {
   return c.json({ updates });
 });
 
+// GET /api/persons/photo-review/candidates
+// Non-biometric same-photo review for missing/found cases. This groups records by
+// photo content hash so operators can review obvious re-used images without any
+// face recognition or biometric identification step.
+persons.get('/photo-review/candidates', async (c) => {
+  if (!(await isOperator(c))) return c.json({ error: 'unauthorized' }, 401);
+  const limit = Math.min(50, Math.max(1, Number(c.req.query('limit') || 25) || 25));
+  let groups: any[] = [];
+  try {
+    const r = await c.env.DB.prepare(
+      `SELECT photo_phash,
+              COUNT(*) AS n,
+              SUM(CASE WHEN status='missing' THEN 1 ELSE 0 END) AS missing,
+              SUM(CASE WHEN status IN ('found_safe','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found
+       FROM persons
+       WHERE moderation='approved' AND photo_phash IS NOT NULL AND trim(photo_phash) != ''
+       GROUP BY photo_phash
+       HAVING COUNT(*) > 1
+       ORDER BY n DESC, photo_phash ASC
+       LIMIT ?`
+    ).bind(limit).all<any>();
+    groups = r.results ?? [];
+  } catch {
+    const r = await c.env.DB.prepare(
+      `SELECT photo_phash,
+              COUNT(*) AS n,
+              SUM(CASE WHEN status='missing' THEN 1 ELSE 0 END) AS missing,
+              SUM(CASE WHEN status IN ('found_safe','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found
+       FROM persons
+       WHERE review='approved' AND photo_phash IS NOT NULL AND trim(photo_phash) != ''
+       GROUP BY photo_phash
+       HAVING COUNT(*) > 1
+       ORDER BY n DESC, photo_phash ASC
+       LIMIT ?`
+    ).bind(limit).all<any>();
+    groups = r.results ?? [];
+  }
+
+  const candidates = [];
+  for (const g of groups ?? []) {
+    let rows: any[] = [];
+    try {
+      const r = await c.env.DB.prepare(
+        `SELECT id, full_name, age, sex, last_seen, status, photo_url, created_ms, updated_ms
+         FROM persons WHERE moderation='approved' AND photo_phash = ?
+         ORDER BY updated_ms DESC, id DESC LIMIT 50`
+      ).bind(g.photo_phash).all<any>();
+      rows = r.results ?? [];
+    } catch {
+      const r = await c.env.DB.prepare(
+        `SELECT id, full_name, age, sex, last_seen, status, photo_url, created_ms, updated_ms
+         FROM persons WHERE review='approved' AND photo_phash = ?
+         ORDER BY updated_ms DESC, id DESC LIMIT 50`
+      ).bind(g.photo_phash).all<any>();
+      rows = r.results ?? [];
+    }
+    const cases = (rows ?? []).map((r: any) => ({
+      id: r.id,
+      full_name: r.full_name,
+      age: r.age,
+      sex: r.sex,
+      last_seen: r.last_seen,
+      status: r.status || estadoToStatus(r.estado),
+      photo_url: r.photo_url,
+      created_ms: r.created_ms,
+      updated_ms: r.updated_ms,
+    }));
+    candidates.push({
+      review_type: 'same_photo_missing_found',
+      biometric: false,
+      photo_phash: g.photo_phash,
+      n: g.n ?? cases.length,
+      missing: g.missing ?? 0,
+      found: g.found ?? 0,
+      cases,
+    });
+  }
+
+  c.header('Cache-Control', 'no-store');
+  c.header('Vary', 'Cookie');
+  return c.json({ biometric: false, candidates });
+});
+
 // POST /api/persons/docket/:eid/approve|reject — moderate a pending update
 // (operator-gated in index.ts). Approving a status-change update applies it.
 persons.post('/docket/:eid/approve', async (c) => {

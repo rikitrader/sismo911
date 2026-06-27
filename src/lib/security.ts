@@ -24,10 +24,13 @@ export function isAllowedOrigin(env: Env, origin: string | undefined): boolean {
 export function setSecurityHeaders(c: Context) {
   c.header('X-Content-Type-Options', 'nosniff');
   c.header('X-Frame-Options', 'DENY');
+  c.header('X-DNS-Prefetch-Control', 'off');
   c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
   c.header('Permissions-Policy', 'camera=(), microphone=(), payment=(), usb=(), browsing-topics=()');
   c.header('Cross-Origin-Opener-Policy', 'same-origin');
+  c.header('Cross-Origin-Resource-Policy', 'same-origin');
+  c.header('Origin-Agent-Cluster', '?1');
   c.header(
     'Content-Security-Policy',
     [
@@ -36,6 +39,7 @@ export function setSecurityHeaders(c: Context) {
       "object-src 'none'",
       "frame-ancestors 'none'",
       "form-action 'self'",
+      'upgrade-insecure-requests',
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://esm.sh https://static.cloudflareinsights.com https://maps.googleapis.com https://js.stripe.com https://*.crossmint.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://esm.sh",
       "font-src 'self' https://fonts.gstatic.com",

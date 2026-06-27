@@ -2,9 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin.html
-Disallow: /dashboard-static
-Disallow: /dashboard-static.html
 
 Sitemap: https://sismo911.com/sitemap_index.xml
 Sitemap: https://sismo911.com/sitemap.xml
 Sitemap: https://sismo911.com/sitemap-blog.xml
+Sitemap: https://sismo911.com/sitemap-estados.xml
