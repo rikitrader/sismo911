@@ -8,6 +8,7 @@ import { estimatePager } from '../src/lib/pager';
 import { inBbox, normalizeFeature } from '../src/lib/usgs';
 import { scoreThreat } from '../src/lib/threat';
 import { bootstrapHistory } from '../src/ingest/usgs-history';
+import { edgeCached } from '../src/lib/edge-cache';
 
 // ---- helpers ----
 const envWith = (over: any = {}) => ({ ...over } as any);
@@ -263,5 +264,44 @@ describe('history bootstrap: one-time, count-gated (KV-free)', () => {
     const env: any = { ...bbox, DB: fakeDb(9968) }; // note: no CACHE
     const r = await bootstrapHistory(env);
     expect(r.skipped).toBe('already-populated');
+  });
+});
+
+describe('edgeCached: per-colo read-through cache', () => {
+  const fakeCtx = (url = 'https://x.test/api/events?limit=5') => ({
+    req: { url },
+    json: (obj: any) => new Response(JSON.stringify(obj), { headers: { 'content-type': 'application/json' } }),
+    executionCtx: { waitUntil: (_p: Promise<any>) => {} },
+  } as any);
+
+  it('builds and returns payload when no Cache API is present (graceful)', async () => {
+    const saved = (globalThis as any).caches; delete (globalThis as any).caches;
+    try {
+      let builds = 0;
+      const res = await edgeCached(fakeCtx(), 30, async () => { builds++; return { ok: true, n: 7 }; });
+      expect((await res.json()).n).toBe(7);
+      expect(builds).toBe(1);
+    } finally { (globalThis as any).caches = saved; }
+  });
+
+  it('serves from cache on the second call (miss → hit), build runs once', async () => {
+    const store = new Map<string, Response>();
+    const saved = (globalThis as any).caches;
+    (globalThis as any).caches = {
+      default: {
+        match: async (req: Request) => { const r = store.get(req.url); return r ? r.clone() : undefined; },
+        put: async (req: Request, res: Response) => { store.set(req.url, res.clone()); },
+      },
+    };
+    try {
+      let builds = 0;
+      const build = async () => { builds++; return { v: 'data' }; };
+      const r1 = await edgeCached(fakeCtx(), 30, build);
+      expect(r1.headers.get('X-Edge-Cache')).toBe('miss');
+      const r2 = await edgeCached(fakeCtx(), 30, build);
+      expect(r2.headers.get('X-Edge-Cache')).toBe('hit');
+      expect(builds).toBe(1); // second call served from cache
+      expect((await r2.json()).v).toBe('data');
+    } finally { (globalThis as any).caches = saved; }
   });
 });
