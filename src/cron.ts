@@ -24,7 +24,7 @@ import { dedupePersonas } from './lib/dedupe';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
 import { ingestBlog } from './ingest/blog-cron';
-import { ingestRav, ingestRavStats, ingestRavVerified } from './ingest/rav-cron';
+import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestRavSafe } from './ingest/rav-cron';
 import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
 
@@ -118,6 +118,9 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'rav-ingest', run: (env) => ingestRav(env) },
     { name: 'rav-stats', run: ingestRavStats },
     { name: 'rav-verified', run: ingestRavVerified },
+    // RAV extra datasets: citizen reports (pets/volunteers/trapped/aid/damage) +
+    // "estoy a salvo" check-ins. Both bounded + UPSERT-keyed (no dupes); one job.
+    { name: 'rav-reports-safe', run: async (env) => ({ reports: await ingestRavReports(env), safe: await ingestRavSafe(env) }) },
     // 3rd phash-backfill slot (batch 400). :05's rav ingest is bounded (Supabase
     // REST pages), so there's budget. Together :05+:30+:45 hash ~950/hr → the
     // one-time ~58k backlog drains in ~2.6 days (vs ~16 at the :45-only 150/tick).
