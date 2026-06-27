@@ -4,6 +4,7 @@ import {
   ravFetch, RAV_PAGE, mapRavPersona, mapRavVerified, mapRavStats, mapRavReport, mapRavSafe,
   type RavPersonRow, type RavVerifiedRow, type RavStatsRow, type RavReportRow, type RavSafeRow, type PersonaUpsert,
 } from '../lib/rav';
+import { gatePersona, gateRavReport } from './gate-config';
 
 // Ingest of redayudavenezuela.com (RAV) into D1.
 //
@@ -40,7 +41,7 @@ function upsertPersonaStmt(env: Env, p: PersonaUpsert) {
   );
 }
 
-export interface RavIngestResult { written: number; from: number; to: number; total: number; next: number; }
+export interface RavIngestResult { written: number; from: number; to: number; total: number; next: number; rejected?: number; }
 
 // Ingest up to `pages` pages of RAV missing_persons starting at the KV cursor.
 // `pages` defaults to the cron-safe window; the run endpoint passes a larger N
@@ -69,9 +70,13 @@ export async function ingestRav(env: Env, pages = MAX_PAGES_PER_RUN): Promise<Ra
     }
 
     const stmts = [];
+    let rejected = 0;
     for (const r of collected) {
       const p = mapRavPersona(r, runIso);
       if (!p || !p.nombre) continue;   // empty-name rows: skip; cleanPersonas handles junk that does get in
+      // Door check: drop junk / link-spam / stored-XSS / flood-phrase rows before
+      // they ever land (in-memory, no D1 — safe per-row at cron scale).
+      if (!gatePersona(p).ok) { rejected++; continue; }
       stmts.push(upsertPersonaStmt(env, p));
     }
     let written = 0;
@@ -80,8 +85,8 @@ export async function ingestRav(env: Env, pages = MAX_PAGES_PER_RUN): Promise<Ra
     const next = cur >= total ? 0 : cur;   // wrap to 0 after a full cycle
     await env.CACHE.put(CURSOR_KEY, String(next)).catch(() => {});
     await recordIngest(env, 'rav', true, written);
-    const res = { written, from: offset, to: Math.min(cur, total), total, next };
-    console.log(`[rav] ${offset}-${res.to}/${total}: upserted ${written}; next cursor=${next}`);
+    const res = { written, from: offset, to: Math.min(cur, total), total, next, rejected };
+    console.log(`[rav] ${offset}-${res.to}/${total}: upserted ${written}, rejected ${rejected}; next cursor=${next}`);
     return res;
   } catch (e: any) {
     console.error('[rav] ingest failed:', e?.message ?? e);
@@ -158,9 +163,11 @@ export async function ingestRavReports(env: Env, pages = 15): Promise<number> {
       all.push(...(await ravFetch<RavReportRow>(env, 'reports', { offset: off, order: 'created_at.desc' })).rows);
     }
     const stmts = [];
+    let rejected = 0;
     for (const r of all) {
       const m = mapRavReport(r, runIso);
       if (!m.title && !m.description) continue;   // skip empty junk
+      if (!gateRavReport(m).ok) { rejected++; continue; }  // drop markup/link-spam/flood
       stmts.push(env.DB.prepare(
         `INSERT INTO rav_reports (id, kind, category, title, description, city, state, area, lat, lng,
             contact, status, photo_url, meta, tags, ext_id, created_at, synced_at, pulled_at)
@@ -176,7 +183,7 @@ export async function ingestRavReports(env: Env, pages = 15): Promise<number> {
     let n = 0;
     for (let i = 0; i < stmts.length; i += 100) { await env.DB.batch(stmts.slice(i, i + 100)); n += Math.min(100, stmts.length - i); }
     await recordIngest(env, 'rav-reports', true, n);
-    console.log(`[rav] reports upserted ${n}/${total}`);
+    console.log(`[rav] reports upserted ${n}/${total}, rejected ${rejected}`);
     return n;
   } catch (e: any) { console.error('[rav] reports failed:', e?.message ?? e); await recordIngest(env, 'rav-reports', false, 0, String(e?.message ?? e)).catch(() => {}); return 0; }
 }

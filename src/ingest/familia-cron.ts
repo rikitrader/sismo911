@@ -1,5 +1,6 @@
 import type { Env } from '../types';
 import { recordIngest } from '../lib/db';
+import { gatePersona } from './gate-config';
 
 // Hourly re-ingest of the missing-persons (Familia) registry from the public
 // API into the DESAP `personas` DB. Source URL is FAMILIA_SOURCE_URL; without
@@ -66,9 +67,15 @@ export async function ingestFamilia(env: Env): Promise<number> {
     for (let p = start + 1; p <= lastPage; p++) addRows(toArray(await fetchPage(p)));
 
     const stmts = [];
+    let rejected = 0;
     for (const [rawId, o] of seen) {
       const nombre = pick(o, ['nombre', 'name', 'full_name', 'nombre_completo']);
       if (!nombre) continue;
+      // Door check: drop junk / link-spam / stored-XSS / flood names before they
+      // land (in-memory, no D1). The golden-rule UPSERT below is untouched.
+      const ubic = String(pick(o, ['ubicacion', 'last_seen', 'location', 'lugar']) ?? '');
+      const desc = String(pick(o, ['descripcion', 'notes', 'detalle', 'description', 'senas']) ?? '');
+      if (!gatePersona({ nombre: String(nombre), ubicacion: ubic, descripcion: desc }).ok) { rejected++; continue; }
       const id = rawId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
       stmts.push(env.DB.prepare(
         `INSERT INTO personas (id, nombre, edad, ubicacion, fecha, descripcion, contacto, foto, estado,
@@ -101,7 +108,7 @@ export async function ingestFamilia(env: Env): Promise<number> {
     const next = lastPage >= totalPages ? 1 : lastPage + 1;   // wrap to 1 after a full cycle
     await env.CACHE.put(CURSOR_KEY, String(next)).catch(() => {});
     await recordIngest(env, 'familia', true, written);
-    console.log(`[familia] pages ${start}-${lastPage}/${totalPages}: upserted ${written}; next cursor=${next}`);
+    console.log(`[familia] pages ${start}-${lastPage}/${totalPages}: upserted ${written}, rejected ${rejected}; next cursor=${next}`);
     return written;
   } catch (e: any) {
     console.error('[familia] ingest failed:', e?.message ?? e);

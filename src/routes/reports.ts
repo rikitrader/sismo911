@@ -1,9 +1,35 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { rateLimit, burstLimit, validLatLon, isImageBytes, nameHasSpam, textHasLink } from '../lib/security';
+import { rateLimit, burstLimit } from '../lib/security';
 import { audit } from '../lib/audit';
 import { sendEmail, reportReceivedEmail } from '../lib/email';
+import { runGate, clientMessage, recordClean } from '../security/ingestion-gate';
+import { z, nameField, textField, latField, lonField } from '../security/validators';
+
+// Gate schema for a citizen map report. category/severity are pre-checked for
+// friendly Spanish errors below, so here they're lenient strings; title/reporter
+// are strict NAME fields (no link/markup), description is free TEXT (source links
+// allowed), and the photo is scanned (magic-bytes/polyglot/size) by the gate.
+const ReportSchema = z.object({
+  category: z.string().max(40).optional(),
+  severity: z.string().max(20).optional(),
+  title: nameField(140).optional(),
+  description: textField(2000).optional(),
+  estado: z.string().max(120).optional(),
+  municipio: z.string().max(120).optional(),
+  parroquia: z.string().max(120).optional(),
+  building_type: z.string().max(80).optional(),
+  people_trapped: z.coerce.number().int().min(0).max(100000).optional(),
+  reporter: nameField(120).optional(),
+  reporter_email: z.string().email().max(254).optional().or(z.literal('')),
+  lat: latField.optional(),
+  lon: lonField.optional(),
+});
+const REPORT_FIELDS = [
+  'category', 'severity', 'title', 'description', 'estado', 'municipio', 'parroquia',
+  'building_type', 'people_trapped', 'reporter', 'reporter_email', 'lat', 'lon',
+] as const;
 
 // Human-readable Spanish labels for confirmation emails.
 const CATEGORY_LABELS: Record<string, string> = {
@@ -107,34 +133,42 @@ reports.post('/', async (c) => {
     if (j && typeof j === 'object') Object.assign(b, j);
   }
 
+  // Friendly Spanish pre-checks (specific errors) BEFORE the gate's generic msg.
   if (!b?.category || !CATEGORIES.has(b.category)) return c.json({ error: 'categoría inválida' }, 400);
   if (!b?.title && !b?.description) return c.json({ error: 'título o descripción requerido' }, 400);
   if (b.severity && !SEVERITIES.has(b.severity)) return c.json({ error: 'severidad inválida' }, 400);
-  // Spam guard at the door: a reporter name or title that is a link/domain, or a
-  // description carrying a promotional link, is rejected (mirrors persons/familia).
-  if (nameHasSpam(b.reporter) || nameHasSpam(b.title) || textHasLink(b.description)) {
-    return c.json({ error: 'contenido_no_permitido', hint: 'No incluyas enlaces ni dominios.' }, 422);
-  }
-  const lat = b.lat == null ? null : Number(b.lat);
-  const lon = b.lon == null ? null : Number(b.lon);
-  if ((lat != null || lon != null) && !validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
 
-  // Validate the photo (if any) before we touch the DB.
+  // Unified gate: normalizes fields, spam-SCORES reporter/title/description (vs
+  // the old binary link check), and SCANS the photo (magic-bytes/MIME/polyglot/
+  // size + SHA-256). rateLimit already ran above, so skipRateLimit. Audited.
+  const gate = await runGate(c.env, c, {
+    surface: 'map_report',
+    schema: ReportSchema,
+    allowedFields: REPORT_FIELDS,
+    nameFields: ['title', 'reporter'],
+    textFields: ['description'],
+    emailField: 'reporter_email',
+    skipRateLimit: true,
+    file: photoBytes ? { fieldName: 'photo', keyPrefix: 'report/', maxSize: 6_000_000 } : undefined,
+  }, JSON.stringify(b), photoBytes ? { bytes: photoBytes, mime: photoType, filename: 'photo' } : undefined);
+  if (!gate.ok) {
+    if (gate.retryAfterSec) c.header('Retry-After', String(gate.retryAfterSec));
+    return c.json(clientMessage(gate), gate.status);
+  }
+  const g = gate.data;
+  const lat = g.lat ?? null;
+  const lon = g.lon ?? null;
+
+  // Validated photo → content-addressed key (SHA-256). Identical bytes share one
+  // KV blob (storage dedup) + let us detect re-submissions of the same image.
   let imageKey: string | null = null;
-  if (photoBytes) {
-    if (photoBytes.length > 6_000_000) return c.json({ error: 'imagen_muy_grande', maxBytes: 6_000_000 }, 413);
-    photoType = ['image/jpeg', 'image/png', 'image/webp'].includes(photoType) ? photoType : 'application/octet-stream';
-    if (!isImageBytes(photoBytes, photoType)) return c.json({ error: 'tipo_de_imagen_no_soportado' }, 415);
-    // Content-address the photo by its SHA-256 so identical bytes share one KV
-    // blob (storage dedup) and let us detect re-submissions of the same image.
-    const digest = await crypto.subtle.digest('SHA-256', photoBytes);
-    const hash = [...new Uint8Array(digest)].map((x) => x.toString(16).padStart(2, '0')).join('');
-    imageKey = `report/${hash}`;
+  if (gate.file?.sha256) {
+    imageKey = `report/${gate.file.sha256}`;
     const dup = await c.env.DB.prepare(
       `SELECT 1 FROM map_reports WHERE image_key = ? AND created_ms > ? LIMIT 1`
     ).bind(imageKey, Date.now() - 24 * 60 * 60 * 1000).first();
     if (dup) return c.json({ error: 'foto_duplicada', hint: 'Esta foto ya fue enviada recientemente.' }, 409);
-    await c.env.PHOTOS.put(imageKey, photoBytes, { metadata: { contentType: photoType } });
+    await c.env.PHOTOS.put(imageKey, gate.file.bytes, { metadata: { contentType: `image/${gate.file.detectedType}` } });
   }
 
   const now = Date.now();
@@ -146,10 +180,11 @@ reports.post('/', async (c) => {
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id, b.category, b.severity ?? null, 'pending', 'unverified',
-    (b.title ?? '').slice(0, 140) || null, (b.description ?? '').slice(0, 2000) || null,
-    blur(lat), blur(lon), b.estado ? String(b.estado).slice(0, 120) : null, b.municipio ? String(b.municipio).slice(0, 120) : null, b.parroquia ? String(b.parroquia).slice(0, 120) : null,
-    b.building_type ? String(b.building_type).slice(0, 80) : null, b.people_trapped ?? null, 'citizen', imageKey, b.reporter ? String(b.reporter).slice(0, 120) : null, now, now
+    (g.title ?? '').slice(0, 140) || null, (g.description ?? '').slice(0, 2000) || null,
+    blur(lat), blur(lon), g.estado ? String(g.estado).slice(0, 120) : null, g.municipio ? String(g.municipio).slice(0, 120) : null, g.parroquia ? String(g.parroquia).slice(0, 120) : null,
+    g.building_type ? String(g.building_type).slice(0, 80) : null, g.people_trapped ?? null, 'citizen', imageKey, g.reporter ? String(g.reporter).slice(0, 120) : null, now, now
   ).run();
+  await recordClean(c.env, c, { correlationId: gate.correlationId, surface: 'map_report', destTable: 'map_reports', destId: id, r2Key: imageKey ?? undefined, score: gate.score, payloadHash: gate.payloadHash });
 
   // Email confirmation system: if the reporter left a valid email, send a
   // branded receipt with a reference number. Never blocks the response — the
