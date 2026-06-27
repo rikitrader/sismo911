@@ -1,5 +1,6 @@
 import type { Env } from '../types';
 import { fetchBlogSources, type SourceRecord } from './blog-sources';
+import { sanitizeHtml } from '../lib/sanitize';
 
 // Always-on blog pipeline, run from the Worker's scheduled() handler so it
 // publishes 24/7 regardless of any local machine. Every ~3h: fetch free
@@ -94,7 +95,9 @@ ${JSON.stringify({ plataforma: rec.platform, medio_o_autor: rec.author, lugar: r
     if (a === -1 || b === -1) { console.error('[blog-cron] AI no-json:', JSON.stringify(resp).slice(0, 300)); return null; }
     const obj = JSON.parse(text.slice(a, b + 1));
     if (!obj.body_html) { console.error('[blog-cron] AI missing body:', text.slice(0, 200)); return null; }
-    return { meta_desc: String(obj.meta_desc || ''), body_html: String(obj.body_html) };
+    // Stored-XSS defense: the AI body is built from scraped captions (prompt-injection
+    // surface) and later rendered as raw HTML — allowlist-sanitize before storing.
+    return { meta_desc: String(obj.meta_desc || ''), body_html: sanitizeHtml(String(obj.body_html)) };
   } catch (e: any) {
     console.error('[blog-cron] writeArticle failed:', e?.message ?? e);
     return null;

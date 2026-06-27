@@ -4,6 +4,9 @@ on:
     branches: [main]        # every merge to main re-asserts the full main → prevents stale-worktree overwrites
     tags: ['v*.*.*']
   workflow_dispatch:
+# Least privilege for the auto GITHUB_TOKEN — the deploy never writes repo contents.
+permissions:
+  contents: read
 # Serialize prod deploys so concurrent merges can't race; the newest main wins.
 concurrency:
   group: deploy-prod
