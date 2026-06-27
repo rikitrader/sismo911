@@ -8,7 +8,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { rateLimit, nameHasSpam, textHasLink, requestIp } from '../lib/security';
+import { rateLimit, nameHasSpam, textHasLink, requestIp, isImageBytes } from '../lib/security';
 import { audit } from '../lib/audit';
 import { sendEmail, randomToken, telemedScheduledEmail, telemedApptStatusEmail } from '../lib/email';
 import { notifyPatientText } from '../lib/sms';
@@ -250,10 +250,11 @@ telemedScheduling.get('/book/appointment/:token', async (c) => {
        LEFT JOIN telemed_doctors d ON d.id = a.doctor_id WHERE a.manage_token=? LIMIT 1`,
   ).bind(token).first<any>().catch(() => null);
   if (!a) return c.json({ error: 'not_found' }, 404);
-  const [hist, rx, consult] = await Promise.all([
+  const [hist, rx, consult, files] = await Promise.all([
     c.env.DB.prepare(`SELECT status, actor, note, at_ms FROM telemed_appt_status WHERE appointment_id=? ORDER BY at_ms ASC`).bind(a.id).all(),
     c.env.DB.prepare(`SELECT id, items, notes, issued_ms FROM telemed_prescriptions WHERE appointment_id=? ORDER BY issued_ms ASC`).bind(a.id).all(),
     c.env.DB.prepare(`SELECT summary FROM telemed_consults WHERE appointment_id=?`).bind(a.id).first<any>().catch(() => null),
+    c.env.DB.prepare(`SELECT id, uploader, filename, content_type, caption, at_ms FROM telemed_appt_files WHERE appointment_id=? ORDER BY at_ms ASC`).bind(a.id).all(),
   ]);
   return c.json({
     ok: true,
@@ -271,6 +272,7 @@ telemedScheduling.get('/book/appointment/:token', async (c) => {
     // Clinical outputs the patient may see: the plan + their récipe(s). Doctor-only notes are NOT exposed.
     plan: consult?.summary || '',
     prescriptions: (rx.results ?? []).map((r: any) => ({ id: r.id, items: safeJson(r.items, []), notes: r.notes, issued_ms: r.issued_ms })),
+    files: files.results ?? [],
   }, 200, { 'Cache-Control': 'no-store' });
 });
 
@@ -428,10 +430,11 @@ telemedScheduling.get('/panel/appointment/:id', async (c) => {
   const o = await ownAppt(c, {});
   if (!o) return c.json({ error: 'unauthorized' }, 401);
   const id = o.appt.id;
-  const [notes, rx, consult] = await Promise.all([
+  const [notes, rx, consult, files] = await Promise.all([
     c.env.DB.prepare(`SELECT id, body, at_ms FROM telemed_consult_notes WHERE appointment_id=? ORDER BY at_ms ASC`).bind(id).all(),
     c.env.DB.prepare(`SELECT id, items, notes, issued_ms FROM telemed_prescriptions WHERE appointment_id=? ORDER BY issued_ms ASC`).bind(id).all(),
     c.env.DB.prepare(`SELECT summary, checklist, updated_ms FROM telemed_consults WHERE appointment_id=?`).bind(id).first<any>().catch(() => null),
+    c.env.DB.prepare(`SELECT id, uploader, filename, content_type, caption, at_ms FROM telemed_appt_files WHERE appointment_id=? ORDER BY at_ms ASC`).bind(id).all(),
   ]);
   const a = o.appt;
   return c.json({
@@ -446,6 +449,7 @@ telemedScheduling.get('/panel/appointment/:id', async (c) => {
     notes: notes.results ?? [],
     prescriptions: (rx.results ?? []).map((r: any) => ({ id: r.id, items: safeJson(r.items, []), notes: r.notes, issued_ms: r.issued_ms })),
     consult: consult ? { summary: consult.summary, checklist: safeJson(consult.checklist, {}), updated_ms: consult.updated_ms } : { summary: '', checklist: {}, updated_ms: null },
+    files: files.results ?? [],
   }, 200, { 'Cache-Control': 'no-store' });
 });
 
@@ -500,6 +504,88 @@ telemedScheduling.post('/panel/appointment/:id/prescription', async (c) => {
     manageUrl: trackUrl(c, o.appt.manage_token),
   })).then(() => {}));
   return c.json({ ok: true, id: rid, issued_ms: now }, 201);
+});
+
+// ---------------------------------------------------------------------------
+// ATTACHMENTS (photos the patient sends, documents the doctor attaches).
+// Bytes → R2 (PERSON_PHOTOS, telemed/ prefix); telemed_appt_files indexes them.
+// ---------------------------------------------------------------------------
+const TM_MAX_UPLOAD = 8_000_000; // 8 MB
+const TM_DOC_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+async function readUpload(c: any): Promise<{ body: any; bytes: Uint8Array | null; ctype: string; filename: string }> {
+  let body: any = {}; let bytes: Uint8Array | null = null; let ctype = 'application/octet-stream'; let filename = '';
+  if ((c.req.header('content-type') || '').includes('multipart/form-data')) {
+    const f = await c.req.formData();
+    for (const [k, v] of f.entries()) if (typeof v === 'string') body[k] = v;
+    const file = (f.get('file') || f.get('photo')) as any;
+    if (file && typeof file !== 'string' && typeof file.arrayBuffer === 'function') {
+      bytes = new Uint8Array(await file.arrayBuffer()); ctype = file.type || ctype; filename = file.name || '';
+    }
+  } else { body = (await c.req.json().catch(() => ({}))) || {}; }
+  return { body, bytes, ctype, filename };
+}
+function validUpload(bytes: Uint8Array | null, ctype: string): string | null {
+  if (!bytes || !bytes.length) return 'no_file';
+  if (bytes.length > TM_MAX_UPLOAD) return 'too_large';
+  if (!TM_DOC_TYPES.includes(ctype)) return 'bad_type';
+  const isPdf = ctype === 'application/pdf';
+  if (isPdf) { if (!(bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46)) return 'bad_pdf'; } // %PDF
+  else if (!isImageBytes(bytes, ctype)) return 'bad_image';
+  return null;
+}
+async function storeFile(c: any, apptId: string, uploader: 'patient' | 'doctor', up: { bytes: Uint8Array | null; ctype: string; filename: string; body: any }) {
+  const err = validUpload(up.bytes, up.ctype);
+  if (err) return { error: err };
+  const fid = uid('f'); const key = `telemed/${apptId}/${fid}`; const now = Date.now();
+  await c.env.PERSON_PHOTOS.put(key, up.bytes, { httpMetadata: { contentType: up.ctype } });
+  await c.env.DB.prepare(`INSERT INTO telemed_appt_files (id, appointment_id, uploader, r2_key, filename, content_type, caption, at_ms) VALUES (?,?,?,?,?,?,?,?)`)
+    .bind(fid, apptId, uploader, key, String(up.filename || '').slice(0, 160), up.ctype, up.body.caption ? String(up.body.caption).slice(0, 200) : null, now).run();
+  return { id: fid, at_ms: now };
+}
+
+// POST /panel/appointment/:id/files — doctor attaches a document/photo (multipart).
+telemedScheduling.post('/panel/appointment/:id/files', async (c) => {
+  const up = await readUpload(c);
+  const o = await ownAppt(c, up.body);
+  if (!o) return c.json({ error: 'unauthorized' }, 401);
+  const r = await storeFile(c, o.appt.id, 'doctor', up);
+  if ((r as any).error) return c.json({ error: (r as any).error, hint: 'Sube una imagen (JPG/PNG/WebP) o PDF de máx. 8 MB.' }, 400);
+  return c.json({ ok: true, ...r }, 201);
+});
+
+// POST /book/appointment/:token/files — patient uploads a photo (multipart).
+telemedScheduling.post('/book/appointment/:token/files', async (c) => {
+  const limited = await rateLimit(c.env, c, 'telemed_file', 20, 600);
+  if (limited) return limited;
+  const token = String(c.req.param('token') || '').trim().slice(0, 64);
+  const appt = await c.env.DB.prepare(`SELECT id FROM telemed_appointments WHERE manage_token=? LIMIT 1`).bind(token).first().catch(() => null);
+  if (!appt) return c.json({ error: 'not_found' }, 404);
+  const up = await readUpload(c);
+  const r = await storeFile(c, (appt as any).id, 'patient', up);
+  if ((r as any).error) return c.json({ error: (r as any).error, hint: 'Sube una imagen (JPG/PNG/WebP) o PDF de máx. 8 MB.' }, 400);
+  return c.json({ ok: true, ...r }, 201);
+});
+
+// GET /appt/:id/file/:fid?t=<manage_token | panel_token> — serve an attachment.
+telemedScheduling.get('/appt/:id/file/:fid', async (c) => {
+  const id = String(c.req.param('id') || '').trim().slice(0, 64);
+  const fid = String(c.req.param('fid') || '').trim().slice(0, 64);
+  const t = String(c.req.query('t') || '').trim().slice(0, 64);
+  const row = await c.env.DB.prepare(
+    `SELECT fil.r2_key, fil.content_type, fil.filename, a.manage_token, d.panel_token AS doctor_token
+       FROM telemed_appt_files fil JOIN telemed_appointments a ON a.id = fil.appointment_id
+       LEFT JOIN telemed_doctors d ON d.id = a.doctor_id
+      WHERE fil.id=? AND fil.appointment_id=? LIMIT 1`,
+  ).bind(fid, id).first<any>().catch(() => null);
+  if (!row) return c.json({ error: 'not_found' }, 404);
+  if (t !== row.manage_token && t !== row.doctor_token) return c.json({ error: 'unauthorized' }, 401);
+  const obj = await c.env.PERSON_PHOTOS.get(row.r2_key);
+  if (!obj) return c.json({ error: 'gone' }, 404);
+  return c.body(obj.body, 200, {
+    'Content-Type': row.content_type || 'application/octet-stream',
+    'Content-Disposition': `inline; filename="${(row.filename || fid).replace(/[^\w.-]/g, '_')}"`,
+    'Cache-Control': 'private, max-age=3600',
+  });
 });
 
 // GET /appt/:id/ics?t=<manage_token | panel_token> — calendar invite for a booking.

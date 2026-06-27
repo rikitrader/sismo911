@@ -304,6 +304,12 @@
     const rxs = res.prescriptions || [];
     const planHtml = plan ? `<div class="rounded-lg border border-outline-variant/60 border-l-4 border-l-primary p-4 mb-5"><div class="label-caps text-on-surface-variant mb-1">Indicaciones médicas</div><div class="text-[14px] text-on-surface whitespace-pre-wrap">${esc(plan)}</div></div>` : '';
     const rxHtml = rxs.length ? `<div class="rounded-lg border border-outline-variant/60 p-4 mb-5"><div class="label-caps text-on-surface-variant mb-2">Récipe / Indicación médica</div>${rxs.map((p, i) => `<div class="mb-3 pb-3 ${i < rxs.length - 1 ? 'border-b border-outline-variant/40' : ''}"><div class="text-[11px] text-on-surface-variant tabnum mb-1">Emitido ${new Date(p.issued_ms).toLocaleString('es-VE', { timeZone: 'America/Caracas', dateStyle: 'medium', timeStyle: 'short' })}</div>${p.items.map((it) => `<div class="text-[13.5px] text-on-surface">• <b>${esc(it.med)}</b>${it.dose ? ' · ' + esc(it.dose) : ''}${it.freq ? ' · ' + esc(it.freq) : ''}${it.duration ? ' · ' + esc(it.duration) : ''}${it.notes ? ' — ' + esc(it.notes) : ''}</div>`).join('')}${p.notes ? `<div class="text-[12.5px] text-on-surface-variant mt-1">${esc(p.notes)}</div>` : ''}<button class="tm-btn tm-btn-ghost mt-2" data-rx="${i}">Imprimir récipe</button></div>`).join('')}<p class="text-[11px] text-on-surface-variant">Indicación informativa; no sustituye una receta médica legal.</p></div>` : '';
+    const files = res.files || [];
+    const fileUrl = (fid) => `/api/telemedicina/appt/${encodeURIComponent(a.id)}/file/${encodeURIComponent(fid)}?t=${encodeURIComponent(a.manage_token)}`;
+    const galleryHtml = files.length ? `<div class="flex flex-wrap gap-2 mb-3">${files.map((f) => (f.content_type || '').startsWith('image/')
+      ? `<a href="${fileUrl(f.id)}" target="_blank" rel="noopener"><img src="${fileUrl(f.id)}" alt="${esc(f.caption || f.filename || '')}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)"></a>`
+      : `<a class="tm-btn tm-btn-ghost" href="${fileUrl(f.id)}" target="_blank" rel="noopener">📄 ${esc((f.filename || 'Documento').slice(0, 24))}</a>`).join('')}</div>` : '';
+    const filesHtml = `<div class="rounded-lg border border-outline-variant/60 p-4 mb-5"><div class="label-caps text-on-surface-variant mb-2">Fotos y documentos</div>${galleryHtml}<label class="tm-btn tm-btn-ghost" style="cursor:pointer">Adjuntar foto<input type="file" id="patFile" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none"></label><div class="msg" id="patFmsg"></div></div>`;
     $('trackBox').innerHTML =
       `<div class="mb-4">${badge(a.status)}</div>
        <div class="rounded-lg border border-outline-variant/60 p-4 mb-5">
@@ -313,10 +319,18 @@
          <div class="kv"><span class="k">Cuándo</span><span class="v tabnum">${esc(a.when)}</span></div>
        </div>
        <div class="flex flex-wrap gap-3">${actions}</div>
-       ${planHtml}${rxHtml}
+       ${planHtml}${rxHtml}${filesHtml}
        <h3 class="font-display font-bold text-base text-on-surface mt-7 mb-3">Seguimiento</h3>
        <div class="timeline">${timeline}</div>`;
     $('trackBox').querySelectorAll('[data-rx]').forEach((b) => b.addEventListener('click', () => printRx(a, rxs[+b.dataset.rx])));
+    $('patFile').addEventListener('change', async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const fmsg = $('patFmsg'); fmsg.className = 'msg ok'; fmsg.textContent = 'Subiendo…';
+      const fd = new FormData(); fd.append('file', file);
+      const r = await fetch(`/api/telemedicina/book/appointment/${encodeURIComponent(token)}/files`, { method: 'POST', body: fd }).then((x) => x.json()).catch(() => ({}));
+      if (!r.ok) { fmsg.className = 'msg err'; fmsg.textContent = r.hint || 'No se pudo subir.'; return; }
+      loadTrack(token);
+    });
 
     $('trackBox').querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', async () => {
       const act = b.dataset.act;
