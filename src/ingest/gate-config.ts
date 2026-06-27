@@ -8,7 +8,7 @@
 // gateRow() is pure + in-memory (no D1, no Context) — safe to call per row inside
 // a cron loop that processes thousands of rows. See src/security/ingestion-gate.ts.
 
-import { gateRow, type GateRowResult } from '../security/ingestion-gate';
+import { gateRow, REASON_CODES, type GateRowResult } from '../security/ingestion-gate';
 import { z, nameField, textField } from '../security/validators';
 
 // A mapped persona row (rav-cron / familia-cron). We validate the NAME strictly
@@ -44,6 +44,13 @@ export const RAV_REPORT_INGEST_GATE = {
 
 /** Gate a mapped persona row. Returns the gateRow result (ok → keep, !ok → skip). */
 export function gatePersona(p: { nombre: string; ubicacion?: string | null; descripcion?: string | null }): GateRowResult<unknown> {
+  // Door min-length: nameField(200) only caps the MAX, so 1–2 char junk ('ll',
+  // 'NN', 'a', 'J') slipped in. A real name has ≥3 letters — reject shorter,
+  // mirroring clean.ts's junk definition so the door and the cleaner agree.
+  const letters = (p.nombre ?? '').replace(/[^\p{L}]/gu, '');
+  if (letters.length < 3) {
+    return { ok: false, reason: REASON_CODES.SCHEMA_INVALID, score: 0, reasons: ['name_too_short'], detail: `nombre too short: ${JSON.stringify(p.nombre)}` };
+  }
   return gateRow(
     { nombre: p.nombre, ubicacion: p.ubicacion ?? undefined, descripcion: p.descripcion ?? undefined },
     PERSONA_INGEST_GATE,
