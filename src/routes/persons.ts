@@ -153,7 +153,7 @@ persons.get('/stats', async (c) => edgeCached(c, 60, async () => {
   ).first();
   // Federate the Familia (DESAP personas) registry so /personas reflects ALL cases.
   let f: any = {};
-  try { f = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS found, SUM(CASE WHEN estado='hospitalizado' THEN 1 ELSE 0 END) AS hospitalized, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
+  try { f = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS found, SUM(CASE WHEN estado='hospitalizado' THEN 1 ELSE 0 END) AS hospitalized, COUNT(*) AS total FROM personas WHERE moderation = 'approved'`).first() || {}; } catch {}
   return {
     missing: (row?.missing ?? 0) + (f?.missing ?? 0),
     found: (row?.found ?? 0) + (f?.found ?? 0),
@@ -353,7 +353,7 @@ persons.get('/cases', async (c) => {
      FROM persons${op ? '' : " WHERE review='approved'"}`
   ).first();
   let fsum: any = {};
-  try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas`).first() || {}; } catch {}
+  try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas WHERE moderation = 'approved'`).first() || {}; } catch {}
   const summary = {
     missing: (sum?.missing || 0) + (fsum?.missing || 0),
     found_safe: (sum?.found_safe || 0) + (fsum?.found_safe || 0),
@@ -856,7 +856,7 @@ persons.get('/search', async (c) => {
   let fam: any[] = [];
   try {
     const { results: fr } = await c.env.DB.prepare(
-      `SELECT id, nombre, edad, ubicacion, estado, foto, foto_r2, updated_at FROM personas WHERE nombre LIKE ? ORDER BY updated_at DESC LIMIT 60`
+      `SELECT id, nombre, edad, ubicacion, estado, foto, foto_r2, updated_at FROM personas WHERE moderation = 'approved' AND nombre LIKE ? ORDER BY updated_at DESC LIMIT 60`
     ).bind(like).all<any>();
     fam = (fr || []).map((r: any) => ({
       id: FAM + r.id, full_name: r.nombre, age: r.edad, sex: null,
