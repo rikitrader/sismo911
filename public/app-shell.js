@@ -103,25 +103,25 @@
       // Big flashing red "REPORTAR" CTA, set apart from the pinned buttons by
       // extra top/bottom margin.
       const onR = active(it);
-      return `<a href="${it.href}" class="s911-report" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:14px 0;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 2px 10px rgba(187,0,39,.45)${onR ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" class="s911-report" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 2px 10px rgba(187,0,39,.45)${onR ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.damage) {
       // Big blue "DAÑOS" CTA — same large shape as REPORTAR, solid navy (no flash).
       const onD = active(it);
-      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${NAVY};color:#fff;box-shadow:0 2px 10px rgba(0,23,58,.45)${onD ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 8px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${NAVY};color:#fff;box-shadow:0 2px 10px rgba(0,23,58,.45)${onD ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.volunteer) {
       // Big yellow "VOLUNTARIOS" CTA — same large shape as DAÑOS, yellow with navy text for contrast.
       const onV = active(it);
-      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onV ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 8px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onV ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.telemed) {
       // Big yellow "TELEMEDICINA" CTA — same large shape/size/color as VOLUNTARIOS, yellow with navy text.
       const onT = active(it);
-      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onT ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 8px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onT ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.pets) {
@@ -135,7 +135,7 @@
       // SUPER BANNER "AYUDA URGENTE" CTA — big solid SOS-red billboard (matches the
       // "Emergencia / SOS" + REPORTAR red CTAs) so urgent help reads as an emergency.
       const onS = active(it);
-      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 2px 14px rgba(187,0,39,.5)${onS ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 8px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${SECONDARY};color:#fff;box-shadow:0 2px 14px rgba(187,0,39,.5)${onS ? ';outline:2px solid #fff;outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.cta) {
