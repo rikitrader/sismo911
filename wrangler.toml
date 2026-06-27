@@ -21,13 +21,44 @@ custom_domain = true
 pattern = "app.sismo911.com"
 custom_domain = true
 
-# Static frontend (dashboard, PAGER, admin) served by the Worker.
-# run_worker_first = true → the Worker (and the Access gate) runs before assets
-# are served, so /admin is protected even on the workers.dev hostname.
+# Static frontend served by the Assets layer DIRECTLY (free, no Worker invocation)
+# for the high-traffic static shells (homepage, /dashboard, /casos, /sos, ...).
+# `run_worker_first` lists ONLY the DYNAMIC routes the Worker must own — every
+# other path is served straight from ./public. The list also opts those paths out
+# of the Sec-Fetch-Mode navigation heuristic, so dynamic HTML pages (which have no
+# matching static file) reach the Worker instead of hitting not_found_handling.
+# Anything here that needs the Worker: all /api, the MCP server, OG-rewritten
+# /familia + /emergencia/:slug, the dynamic blog/estado/agencias/botiquin/plan
+# pages, the generated sitemaps, and the auth-gated /admin* pages.
+# (Homepage `/`→personas, `/terremotos`, `/la-guaira` are remapped in public/_redirects;
+#  security headers for direct-served assets live in public/_headers.)
 [assets]
 directory = "./public"
 binding = "ASSETS"
-run_worker_first = true
+html_handling = "auto-trailing-slash"
+not_found_handling = "none"
+run_worker_first = [
+  "/api/*",
+  "/mcp",
+  "/familia",
+  "/emergencia/*",
+  "/estados",
+  "/estado/*",
+  "/agencias",
+  "/agencias/*",
+  "/botiquin",
+  "/botiquin/*",
+  "/blog",
+  "/blog/*",
+  "/sitemap-blog.xml",
+  "/sitemap-desaparecidos.xml",
+  "/plan",
+  "/plan/*",
+  "/admin",
+  "/admin/*",
+  "/admin-casos",
+  "/admin-emergencia",
+]
 
 # Run every ingest/sync job once per hour (one parse per hour).
 [triggers]
