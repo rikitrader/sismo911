@@ -303,4 +303,31 @@ describe('runGate', () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe(REASON_CODES.COUNTRY_BLOCKED);
   });
+
+  // Regression: the reject-path ledger write was fire-and-forget (void), so the
+  // Worker returned before it committed and rejected_ingestions stayed empty. It
+  // must now be registered with executionCtx.waitUntil so it outlives the response.
+  it('reject path writes to rejected_ingestions via waitUntil', async () => {
+    const inserts: string[] = [];
+    const recordingDb = {
+      prepare(sql: string) {
+        return {
+          bind() { return this; },
+          async first() { return null; },
+          async run() { inserts.push(sql); return { success: true }; },
+        };
+      },
+    } as any;
+    const waited: Promise<unknown>[] = [];
+    const c = {
+      env: { DB: recordingDb, SPAM_THRESHOLD: '100' },
+      req: { header: () => undefined, raw: { cf: { country: 'VE' } } },
+      executionCtx: { waitUntil: (p: Promise<unknown>) => waited.push(p) },
+    } as any;
+    const r = await runGate(c.env, c, baseCfg, '{bad json');
+    expect(r.ok).toBe(false);
+    expect(waited.length).toBeGreaterThan(0); // ledger write was registered, not dropped
+    await Promise.all(waited);
+    expect(inserts.some((s) => /INSERT INTO rejected_ingestions/i.test(s))).toBe(true);
+  });
 });

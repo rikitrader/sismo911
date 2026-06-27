@@ -223,8 +223,8 @@ export async function recordClean(
         Date.now(),
       )
       .run();
-  } catch {
-    /* ledger write is best-effort */
+  } catch (e) {
+    logGate({ ledger: 'clean_ingestions', error: String(e).slice(0, 300) });
   }
 }
 
@@ -251,8 +251,11 @@ export async function runGate<S extends z.ZodTypeAny>(
     extra?: { retryAfterSec?: number; score?: number; payloadHash?: string; sample?: string },
   ): GateReject => {
     const r: GateReject = { ok: false, status, reason, detail, correlationId, retryAfterSec: extra?.retryAfterSec };
-    // fire-and-forget ledger write; caller awaits the returned promise via middleware
-    void recordReject(env, c, cfg, r, { ip, score: extra?.score, payloadHash: extra?.payloadHash, sample: extra?.sample });
+    // The ledger write must outlive the response — register it with waitUntil so
+    // it isn't dropped when the Worker returns. Falls back to a bare promise when
+    // no executionCtx (cron/test) is available.
+    const p = recordReject(env, c, cfg, r, { ip, score: extra?.score, payloadHash: extra?.payloadHash, sample: extra?.sample });
+    try { c.executionCtx?.waitUntil(p); } catch { void p; }
     return r;
   };
 

@@ -95,7 +95,8 @@ export async function checkAndRecordHash(
       return { seen: true, hits: Number(prev.hits) + 1 };
     }
     return { seen: false, hits: prev ? Number(prev.hits) + 1 : 1 };
-  } catch {
+  } catch (e) {
+    console.log(JSON.stringify({ gate: true, ledger: 'ingest_dedupe', error: String(e).slice(0, 300) }));
     return { seen: false, hits: 0 }; // fail open
   }
 }
