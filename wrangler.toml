@@ -23,6 +23,12 @@ custom_domain = true
 pattern = "app.sismo911.com"
 custom_domain = true
 
+# SUMINISTROS division — inventory & supply-chain management. Same Worker; its
+# root is rewritten to /suministros via a host-scoped rule in public/_redirects.
+[[routes]]
+pattern = "suministros.sismo911.com"
+custom_domain = true
+
 # Static frontend served by the Assets layer DIRECTLY (free, no Worker invocation)
 # for the high-traffic static shells (homepage, /dashboard, /casos, /sos, ...).
 # `run_worker_first` lists ONLY the DYNAMIC routes the Worker must own — every

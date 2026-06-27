@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMO911 — Suministros y Almacén</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://suministros.sismo911.com/" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#0b1830" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/app.css" />
+  <style>
+    body{background:#eef0f4}
+    .eoc-bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%)}
+    input,select,textarea{width:100%;border:1px solid #c4c6d0;border-radius:.5rem;padding:.5rem .65rem;font-size:.875rem;background:#fff}
+    .chip{display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:9999px;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
+    .eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7a8092}
+    .card{background:#fff;border:1px solid #d7dbe4;border-radius:.7rem}
+    .row:hover{background:#eef1f8;cursor:pointer}
+    table.dt{width:100%;font-size:.82rem;border-collapse:collapse}
+    table.dt th{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;text-align:left;padding:.5rem .6rem;background:#f4f6f9;position:sticky;top:0;z-index:1}
+    table.dt td{padding:.5rem .6rem;border-top:1px solid #eceef3;vertical-align:top}
+    .mono{font-family:'JetBrains Mono',monospace}
+    .dot{display:inline-block;width:.7rem;height:.7rem;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px #c4c6d0;vertical-align:middle}
+    .pulse{position:relative}
+    .pulse::after{content:'';position:absolute;inset:0;border-radius:9999px;background:#15803d;opacity:.6;animation:pl 1.6s ease-out infinite}
+    @keyframes pl{0%{transform:scale(1);opacity:.5}100%{transform:scale(2.4);opacity:0}}
+    .segbar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+    .segbar::-webkit-scrollbar{display:none}
+    .seg{font:700 12px 'Inter',sans-serif;padding:7px 14px;border-radius:9px;cursor:pointer;color:#44474f;white-space:nowrap;flex:0 0 auto;border:none;background:none}
+    .seg.on{background:#0b1830;color:#fff}
+    .seg:hover:not(.on){background:#e0e4ef}
+    .subtab{font:700 11px 'Inter',sans-serif;padding:5px 10px;border-radius:7px;cursor:pointer;color:#44474f;white-space:nowrap;border:none;background:none}
+    .subtab.on{background:#13284f;color:#fff}
+    .subtab:hover:not(.on){background:#e0e4ef}
+    tr.vencido td{background:#fff1f2!important}
+    tr.por-vencer td{background:#fffbeb!important}
+    tr.bajo td{background:#fff7ed!important}
+    .alert-item{padding:.45rem .7rem;border-top:1px solid #eceef3;font-size:.8rem}
+    .inp-sm{border:1px solid #c4c6d0;border-radius:.4rem;padding:.35rem .55rem;font-size:.8rem;background:#fff;width:auto}
+    .btn-add{font-size:.72rem;color:#0b1830;font-weight:700;border:1px solid #c4c6d0;border-radius:.4rem;padding:.3rem .6rem;cursor:pointer;background:#fff}
+    .btn-del{font-size:.72rem;color:#b91c1c;font-weight:700;border:1px solid #fecaca;border-radius:.4rem;padding:.25rem .5rem;cursor:pointer;background:#fff8f8}
+    .lrow{display:grid;gap:5px;align-items:center;margin-bottom:4px}
+    .lbl{font-size:.64rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7a8092;display:block;margin-bottom:2px}
+  </style>
+</head>
+<body class="font-sans text-on-surface">
+
+<header class="eoc-bar text-white">
+  <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+    <div class="flex items-center gap-3">
+      <img src="/logo.svg" alt="SISMO911" class="h-10 w-10" />
+      <div>
+        <div class="font-display font-extrabold text-lg leading-none">SISMO911</div>
+        <div class="text-[10px] tracking-[0.18em] text-white/60 mt-0.5">SUMINISTROS Y ALMACÉN</div>
+      </div>
+    </div>
+    <nav class="flex items-center gap-4 text-sm font-medium text-white/85">
+      <span class="flex items-center gap-1.5 text-[11px] text-white/70"><span class="dot pulse" style="background:#15803d"></span> EN VIVO</span>
+      <a href="/operaciones" class="hover:text-white">Operaciones</a>
+      <a href="/admin" class="hover:text-white">← Consola</a>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-5 space-y-4">
+  <div class="flex items-end justify-between flex-wrap gap-3">
+    <div>
+      <div class="eyebrow">Inventario y cadena de suministro de emergencia</div>
+      <h1 class="font-display font-extrabold text-2xl leading-tight">Suministros y Almacén</h1>
+    </div>
+    <div class="flex items-center gap-3">
+      <span id="lastUpdate" class="text-[11px] text-on-surface-variant mono">—</span>
+      <button id="refreshBtn" class="bg-primary text-white font-semibold rounded-md px-3 py-2 text-xs">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <div id="authBanner" class="hidden card p-3 text-sm" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c"></div>
+  <div id="toastEl" class="hidden card p-3 text-sm"></div>
+
+  <!-- Tab bar -->
+  <div class="segbar bg-white border border-gray-200 rounded-xl p-1.5">
+    <button class="seg on" data-tab="tablero">Tablero</button>
+    <button class="seg" data-tab="inventario">Inventario</button>
+    <button class="seg" data-tab="catalogo">Catálogo</button>
+    <button class="seg" data-tab="ubicaciones">Ubicaciones</button>
+    <button class="seg" data-tab="movimientos">Movimientos</button>
+    <button class="seg" data-tab="requisiciones">Requisiciones</button>
+  </div>
+
+  <!-- ═══ TABLERO ═══ -->
+  <section data-panel="tablero">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="card p-3"><div id="k_prod" class="font-display font-black text-2xl text-primary">—</div><div class="eyebrow">Productos</div></div>
+      <div class="card p-3"><div id="k_ubic" class="font-display font-black text-2xl text-primary">—</div><div class="eyebrow">Ubicaciones</div></div>
+      <div class="card p-3"><div id="k_units" class="font-display font-black text-2xl" style="color:#15803d">—</div><div class="eyebrow">Unid. en stock</div></div>
+      <div class="card p-3"><div id="k_bajo" class="font-display font-black text-2xl" style="color:#b45309">—</div><div class="eyebrow">Bajo stock</div></div>
+      <div class="card p-3"><div id="k_pven" class="font-display font-black text-2xl" style="color:#d97706">—</div><div class="eyebrow">Por vencer ≤30d</div></div>
+      <div class="card p-3"><div id="k_venc" class="font-display font-black text-2xl" style="color:#b91c1c">—</div><div class="eyebrow">Vencidos</div></div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="card overflow-hidden">
+        <div class="px-4 pt-3 pb-2 eyebrow">Alertas</div>
+        <div id="alertasPanel" class="text-sm text-on-surface-variant p-3">Cargando…</div>
+      </div>
+      <div class="lg:col-span-2 card overflow-hidden">
+        <div class="px-4 pt-3 pb-2 eyebrow">Movimientos recientes</div>
+        <div class="overflow-x-auto" style="max-height:300px">
+          <table class="dt">
+            <thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Ref.</th><th>Líneas</th><th>Fecha</th></tr></thead>
+            <tbody id="movRecRows"><tr><td colspan="6" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card p-4">
+      <div class="eyebrow mb-2">Unidades por categoría</div>
+      <div id="catBreakdown" class="flex flex-wrap gap-3">—</div>
+    </div>
+  </section>
+
+  <!-- ═══ INVENTARIO ═══ -->
+  <section data-panel="inventario" class="hidden">
+    <div class="card overflow-hidden">
+      <div class="px-4 py-3 flex flex-wrap items-center gap-3 border-b border-gray-100">
+        <div class="eyebrow">Existencias</div>
+        <select id="fi_ubic" class="inp-sm"><option value="">Todas las ubicaciones</option></select>
+        <input id="fi_q" placeholder="Buscar producto…" class="inp-sm" style="width:180px">
+        <label class="flex items-center gap-1.5 text-[12px] font-semibold cursor-pointer"><input type="checkbox" id="fi_bajo"> Solo bajo stock</label>
+        <button id="fi_buscar" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+      </div>
+      <div class="overflow-x-auto" style="max-height:60vh">
+        <table class="dt">
+          <thead><tr><th>Producto</th><th>Código</th><th>Categoría</th><th>Ubicación</th><th>Lote</th><th>Caducidad</th><th>Cantidad</th><th>Unidad</th></tr></thead>
+          <tbody id="invRows"><tr><td colspan="8" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CATÁLOGO ═══ -->
+  <section data-panel="catalogo" class="hidden">
+    <div class="grid lg:grid-cols-2 gap-4">
+      <!-- Categorías -->
+      <div class="card overflow-hidden">
+        <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+          <div class="eyebrow">Categorías</div>
+          <button id="btnNuevaCat" class="bg-primary text-white font-semibold rounded px-2.5 py-1 text-xs">+ Nueva</button>
+        </div>
+        <form id="fCat" class="hidden px-4 pb-3 space-y-2 border-b border-gray-100">
+          <div class="grid grid-cols-[1fr_auto] gap-2 items-end">
+            <input name="nombre" placeholder="Nombre de categoría*" required />
+            <input name="color" type="color" value="#0b1830" style="width:2.5rem;padding:.2rem;height:2.2rem;border-radius:.4rem;border:1px solid #c4c6d0">
+          </div>
+          <div class="flex gap-2">
+            <button class="flex-1 bg-secondary text-white font-bold rounded py-1.5 text-xs">Guardar</button>
+            <button type="button" id="btnCancelCat" class="flex-1 border border-gray-200 rounded py-1.5 text-xs font-semibold">Cancelar</button>
+          </div>
+          <p id="catMsg" class="text-xs text-center"></p>
+        </form>
+        <div class="overflow-x-auto" style="max-height:45vh">
+          <table class="dt"><thead><tr><th>Nombre</th><th>Color</th><th></th></tr></thead>
+          <tbody id="catRows"><tr><td colspan="3" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody></table>
+        </div>
+      </div>
+      <!-- Productos -->
+      <div class="card overflow-hidden">
+        <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+          <div class="eyebrow">Productos</div>
+          <button id="btnNuevoProd" class="bg-primary text-white font-semibold rounded px-2.5 py-1 text-xs">+ Nuevo</button>
+        </div>
+        <form id="fProd" class="hidden px-4 pb-3 space-y-2 border-b border-gray-100">
+          <input name="nombre" placeholder="Nombre del producto*" required />
+          <div class="grid grid-cols-2 gap-2">
+            <select name="categoria_id"><option value="">-- Categoría --</option></select>
+            <select name="unidad">
+              <option value="unidad">Unidad</option><option value="caja">Caja</option><option value="kg">kg</option>
+              <option value="litro">Litro</option><option value="paquete">Paquete</option><option value="saco">Saco</option><option value="blister">Blister</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2 items-center">
+            <input name="stock_min" type="number" min="0" placeholder="Stock mínimo">
+            <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer"><input name="perecedero" type="checkbox"> Perecedero</label>
+          </div>
+          <div class="flex gap-2">
+            <button class="flex-1 bg-secondary text-white font-bold rounded py-1.5 text-xs">Guardar</button>
+            <button type="button" id="btnCancelProd" class="flex-1 border border-gray-200 rounded py-1.5 text-xs font-semibold">Cancelar</button>
+          </div>
+          <p id="prodMsg" class="text-xs text-center"></p>
+        </form>
+        <div class="overflow-x-auto" style="max-height:45vh">
+          <table class="dt"><thead><tr><th>Nombre</th><th>Categoría</th><th>Unidad</th><th>Stock mín.</th><th>On Hand</th></tr></thead>
+          <tbody id="prodRows"><tr><td colspan="5" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ UBICACIONES ═══ -->
+  <section data-panel="ubicaciones" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 card overflow-hidden">
+        <div class="px-4 pt-3 pb-2 eyebrow">Ubicaciones</div>
+        <div class="overflow-x-auto" style="max-height:60vh">
+          <table class="dt">
+            <thead><tr><th>Nombre</th><th>Tipo</th><th>Código</th><th>Estado/Región</th><th>Responsable</th><th>Estado</th></tr></thead>
+            <tbody id="ubicRows"><tr><td colspan="6" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Nueva ubicación</div>
+        <form id="fUbic" class="space-y-2">
+          <input name="nombre" placeholder="Nombre*" required />
+          <div class="grid grid-cols-2 gap-2">
+            <select name="tipo">
+              <option value="deposito">Depósito</option><option value="refugio">Refugio</option>
+              <option value="almacen">Almacén</option><option value="hospital">Hospital</option>
+              <option value="punto_distribucion">Punto distribución</option><option value="proveedor">Proveedor</option>
+            </select>
+            <input name="codigo" placeholder="Código" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input name="estado_region" placeholder="Estado/Región" />
+            <input name="telefono" placeholder="Teléfono" />
+          </div>
+          <input name="direccion" placeholder="Dirección" />
+          <input name="responsable" placeholder="Responsable" />
+          <button class="w-full bg-secondary text-white font-bold rounded py-2 text-sm">Registrar ubicación</button>
+          <p id="ubicMsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ MOVIMIENTOS ═══ -->
+  <section data-panel="movimientos" class="hidden space-y-4">
+    <div class="flex gap-2 bg-white border border-gray-200 rounded-xl p-1.5 w-fit">
+      <button class="subtab on" data-stab="recibir">Recibir</button>
+      <button class="subtab" data-stab="despachar">Despachar</button>
+      <button class="subtab" data-stab="trasladar">Trasladar</button>
+      <button class="subtab" data-stab="ajustar">Ajustar</button>
+    </div>
+
+    <div data-subpanel="recibir" class="card p-4 max-w-2xl">
+      <div class="eyebrow mb-3">Recepción de suministros</div>
+      <form id="fRecibir" class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="lbl">Ubicación destino</label><select name="ubicacion_id" required><option value="">-- Seleccionar --</option></select></div>
+          <div><label class="lbl">Referencia (donante/OC)</label><input name="referencia" placeholder="REF-001"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="lbl">Nota</label><input name="nota" placeholder="Opcional"></div>
+          <div><label class="lbl">Operador</label><input name="actor" placeholder="Nombre"></div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <div class="eyebrow">Líneas de producto</div>
+            <button type="button" class="btn-add" onclick="addRow('recibir')">+ Añadir línea</button>
+          </div>
+          <div id="rows_recibir" class="space-y-1.5"></div>
+        </div>
+        <button class="w-full text-white font-bold rounded py-2 text-sm" style="background:#15803d">✓ Registrar recepción</button>
+        <p id="msgRecibir" class="text-xs text-center"></p>
+      </form>
+    </div>
+
+    <div data-subpanel="despachar" class="hidden card p-4 max-w-2xl">
+      <div class="eyebrow mb-3">Despacho de suministros</div>
+      <form id="fDespachar" class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="lbl">Ubicación origen</label>
+            <select name="ubicacion_id" required onchange="loadItems('despachar',this.value)"><option value="">-- Seleccionar --</option></select></div>
+          <div><label class="lbl">Referencia</label><input name="referencia" placeholder="Desp-001"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="lbl">Nota</label><input name="nota"></div>
+          <div><label class="lbl">Operador</label><input name="actor"></div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <div class="eyebrow">Líneas</div>
+            <button type="button" class="btn-add" onclick="addRow('despachar')">+ Añadir línea</button>
+          </div>
+          <div id="rows_despachar" class="space-y-1.5"></div>
+        </div>
+        <button class="w-full bg-primary text-white font-bold rounded py-2 text-sm">→ Registrar despacho</button>
+        <p id="msgDespachar" class="text-xs text-center"></p>
+      </form>
+    </div>
+
+    <div data-subpanel="trasladar" class="hidden card p-4 max-w-2xl">
+      <div class="eyebrow mb-3">Traslado entre ubicaciones</div>
+      <form id="fTrasladar" class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="lbl">Origen</label>
+            <select name="ubicacion_id" required onchange="loadItems('trasladar',this.value)"><option value="">-- Seleccionar --</option></select></div>
+          <div><label class="lbl">Destino</label>
+            <select name="ubicacion_dest_id" required><option value="">-- Seleccionar --</option></select></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="lbl">Nota</label><input name="nota"></div>
+          <div><label class="lbl">Operador</label><input name="actor"></div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <div class="eyebrow">Líneas</div>
+            <button type="button" class="btn-add" onclick="addRow('trasladar')">+ Añadir línea</button>
+          </div>
+          <div id="rows_trasladar" class="space-y-1.5"></div>
+        </div>
+        <button class="w-full bg-primary text-white font-bold rounded py-2 text-sm">⇄ Registrar traslado</button>
+        <p id="msgTrasladar" class="text-xs text-center"></p>
+      </form>
+    </div>
+
+    <div data-subpanel="ajustar" class="hidden card p-4 max-w-2xl">
+      <div class="eyebrow mb-3">Ajuste de inventario</div>
+      <form id="fAjustar" class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="lbl">Ubicación</label>
+            <select name="ubicacion_id" required onchange="loadItems('ajustar',this.value)"><option value="">-- Seleccionar --</option></select></div>
+          <div><label class="lbl">Motivo</label><input name="motivo" placeholder="Merma / conteo físico…"></div>
+        </div>
+        <div><label class="lbl">Operador</label><input name="actor"></div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <div class="eyebrow">Ajustes (+/-)</div>
+            <button type="button" class="btn-add" onclick="addRow('ajustar')">+ Añadir línea</button>
+          </div>
+          <div id="rows_ajustar" class="space-y-1.5"></div>
+        </div>
+        <button class="w-full text-white font-bold rounded py-2 text-sm" style="background:#7c3aed">✎ Registrar ajuste</button>
+        <p id="msgAjustar" class="text-xs text-center"></p>
+      </form>
+    </div>
+
+    <div class="card overflow-hidden">
+      <div class="px-4 pt-3 pb-2 eyebrow">Historial de movimientos</div>
+      <div class="overflow-x-auto" style="max-height:40vh">
+        <table class="dt">
+          <thead><tr><th>Código</th><th>Tipo</th><th>Origen</th><th>Destino</th><th>Ref.</th><th>Líneas</th><th>Fecha</th></tr></thead>
+          <tbody id="movRows"><tr><td colspan="7" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ REQUISICIONES ═══ -->
+  <section data-panel="requisiciones" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="eyebrow">Requisiciones</div>
+          <select id="rq_estado" class="inp-sm">
+            <option value="">Todos los estados</option>
+            <option value="borrador">Borrador</option><option value="enviada">Enviada</option>
+            <option value="aprobada">Aprobada</option><option value="surtida">Surtida</option><option value="cancelada">Cancelada</option>
+          </select>
+          <button id="rq_buscar" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto" style="max-height:50vh">
+            <table class="dt">
+              <thead><tr><th>Código</th><th>Solicitante</th><th>Ubicación</th><th>Prio.</th><th>Estado</th><th>Líneas</th><th>Fecha</th></tr></thead>
+              <tbody id="rqRows"><tr><td colspan="7" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="rqDetail" class="hidden card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="eyebrow">Detalle de requisición</div>
+            <button id="rqDetailClose" class="text-xs font-semibold text-on-surface-variant">✕ Cerrar</button>
+          </div>
+          <div id="rqDetailMeta" class="text-sm"></div>
+          <div class="overflow-x-auto">
+            <table class="dt"><thead><tr><th>Producto</th><th>Código</th><th>Unidad</th><th>Solicitado</th><th>Surtido</th></tr></thead>
+            <tbody id="rqDetailLines"></tbody></table>
+          </div>
+          <div id="rqActions" class="flex flex-wrap gap-2 items-center"></div>
+          <p id="rqActMsg" class="text-xs text-center"></p>
+        </div>
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Nueva requisición</div>
+        <form id="fReq" class="space-y-2">
+          <select name="ubicacion_id" required><option value="">-- Ubicación solicitante --</option></select>
+          <div class="grid grid-cols-2 gap-2">
+            <select name="prioridad">
+              <option value="1">P1 · Crítica</option><option value="2">P2 · Alta</option>
+              <option value="3" selected>P3 · Normal</option><option value="4">P4 · Baja</option><option value="5">P5 · Mínima</option>
+            </select>
+            <input name="solicitante" placeholder="Operador*" required />
+          </div>
+          <textarea name="nota" rows="2" placeholder="Nota opcional"></textarea>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <div class="eyebrow">Líneas</div>
+              <button type="button" class="btn-add" id="btnAddReqRow">+ Añadir</button>
+            </div>
+            <div id="rows_req" class="space-y-1.5"></div>
+          </div>
+          <button class="w-full bg-secondary text-white font-bold rounded py-2 text-sm">Crear requisición</button>
+          <p id="reqMsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <p class="text-[11px] text-on-surface-variant">Actualización manual · las acciones de escritura requieren sesión de operador.</p>
+</main>
+
+<script>
+// ── Core ──
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const api=(p,o={})=>fetch('/api/suministros/'+p,Object.assign({credentials:'same-origin',headers:{'content-type':'application/json'}},o));
+const j=r=>r.json();
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const fdate=ms=>ms?new Date(Number(ms)).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'}):'—';
+const toMs=v=>v?new Date(v).getTime():null;
+const num=v=>(v===''||v==null)?null:Number(v);
+
+// ── Chip maps ──
+const MTIPO={recepcion:{l:'Recepción',c:'#15803d',bg:'#dcfce7'},despacho:{l:'Despacho',c:'#1d4ed8',bg:'#dbeafe'},traslado:{l:'Traslado',c:'#b45309',bg:'#fef3c7'},ajuste:{l:'Ajuste',c:'#7c3aed',bg:'#ede9fe'}};
+const RQEST={borrador:{l:'Borrador',c:'#475569',bg:'#e2e8f0'},enviada:{l:'Enviada',c:'#1d4ed8',bg:'#dbeafe'},aprobada:{l:'Aprobada',c:'#15803d',bg:'#dcfce7'},surtida:{l:'Surtida',c:'#0891b2',bg:'#cffafe'},cancelada:{l:'Cancelada',c:'#b91c1c',bg:'#fee2e2'}};
+const UTIPO={deposito:'Depósito',refugio:'Refugio',almacen:'Almacén',hospital:'Hospital',punto_distribucion:'Punto dist.',proveedor:'Proveedor'};
+function chipOf(k,map){const m=map[k]||{l:k||'—',c:'#475569',bg:'#e2e8f0'};return`<span class="chip" style="color:${m.c};background:${m.bg}">${esc(m.l)}</span>`;}
+
+// ── Toast / messages ──
+let _tt;
+function toast(msg,ok=true){const el=$('#toastEl');el.textContent=msg;el.style.cssText=ok?'background:#f0fdf4;border-color:#bbf7d0;color:#15803d':'background:#fef2f2;border-color:#fecaca;color:#b91c1c';el.classList.remove('hidden');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.add('hidden'),4000);}
+function setMsg(sel,msg,ok){const el=$(sel);if(!el)return;el.textContent=msg;el.style.color=ok?'#15803d':'#b91c1c';}
+function showAuth(msg){const b=$('#authBanner');b.textContent=msg;b.classList.remove('hidden');}
+
+// ── State caches ──
+let UBICACIONES=[], CATEGORIAS=[], PRODUCTOS=[], ICACHE={};
+
+// ── Tabs ──
+$$('.seg').forEach(b=>b.onclick=()=>{
+  $$('.seg').forEach(x=>x.classList.toggle('on',x===b));
+  $$('[data-panel]').forEach(p=>p.classList.toggle('hidden',p.dataset.panel!==b.dataset.tab));
+  onTab(b.dataset.tab);
+});
+$$('.subtab').forEach(b=>b.onclick=()=>{
+  $$('.subtab').forEach(x=>x.classList.toggle('on',x===b));
+  $$('[data-subpanel]').forEach(p=>p.classList.toggle('hidden',p.dataset.subpanel!==b.dataset.stab));
+});
+function onTab(t){
+  if(t==='tablero')loadTablero();
+  else if(t==='inventario'){ensureUbic();loadInv();}
+  else if(t==='catalogo'){loadCats();loadProds();}
+  else if(t==='ubicaciones')loadUbic();
+  else if(t==='movimientos'){ensureUbic();ensureProds();loadMovs();}
+  else if(t==='requisiciones'){ensureUbic();ensureProds();loadReqs();}
+}
+
+// ── Ubicaciones ──
+async function loadUbic(){
+  const r=await api('ubicaciones').catch(()=>null);
+  if(!r){renderUbic([]);return;}
+  if(r.status===401){showAuth('Inicia sesión como operador en /admin');renderUbic([]);return;}
+  const d=await j(r).catch(()=>({}));
+  UBICACIONES=d.results||[];
+  renderUbic(UBICACIONES);
+  fillUbicSelects();
+}
+async function ensureUbic(){if(!UBICACIONES.length)await loadUbic();else fillUbicSelects();}
+function fillUbicSelects(){
+  const opts=UBICACIONES.map(u=>`<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('');
+  // movement form selects
+  $$('select[name="ubicacion_id"],select[name="ubicacion_dest_id"]').forEach(s=>{
+    const cur=s.value;s.innerHTML='<option value="">-- Seleccionar --</option>'+opts;if(cur)s.value=cur;
+  });
+  // requisicion form
+  const rqs=$('#fReq select[name="ubicacion_id"]');if(rqs){const c=rqs.value;rqs.innerHTML='<option value="">-- Ubicación solicitante --</option>'+opts;if(c)rqs.value=c;}
+  // inventory filter
+  const fi=$('#fi_ubic');if(fi){const c=fi.value;fi.innerHTML='<option value="">Todas las ubicaciones</option>'+opts;if(c)fi.value=c;}
+}
+function renderUbic(list){
+  const tb=$('#ubicRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin ubicaciones todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(u=>`<tr class="row">
+    <td><div class="font-semibold text-[12px]">${esc(u.nombre)}</div>${u.direccion?`<div class="text-[11px] text-on-surface-variant">${esc(u.direccion)}</div>`:''}</td>
+    <td class="text-[12px]">${esc(UTIPO[u.tipo]||u.tipo||'—')}</td>
+    <td class="mono text-[11px]">${esc(u.codigo||'—')}</td>
+    <td class="text-[12px]">${esc(u.estado_region||'—')}</td>
+    <td class="text-[12px]">${esc(u.responsable||'—')}</td>
+    <td>${u.activa!==false?'<span class="chip" style="color:#15803d;background:#dcfce7">Activa</span>':'<span class="chip" style="color:#b91c1c;background:#fee2e2">Inactiva</span>'}</td>
+  </tr>`).join('');
+}
+$('#fUbic').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const ok=await post('ubicaciones',{nombre:f.nombre.value,tipo:f.tipo.value,codigo:f.codigo.value||null,estado_region:f.estado_region.value||null,direccion:f.direccion.value||null,responsable:f.responsable.value||null,telefono:f.telefono.value||null},'#ubicMsg');
+  if(ok){f.reset();loadUbic();}
+};
+
+// ── Categorías ──
+async function loadCats(){
+  const r=await api('categorias').catch(()=>null);if(!r||!r.ok){renderCats([]);return;}
+  const d=await j(r).catch(()=>({}));CATEGORIAS=d.results||[];renderCats(CATEGORIAS);fillCatSel();
+}
+function fillCatSel(){
+  const opts=CATEGORIAS.map(c=>`<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');
+  $$('select[name="categoria_id"]').forEach(s=>{const c=s.value;s.innerHTML='<option value="">-- Categoría --</option>'+opts;if(c)s.value=c;});
+}
+function renderCats(list){
+  const tb=$('#catRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="3" class="text-center text-on-surface-variant py-8">Sin categorías todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(c=>`<tr class="row">
+    <td class="font-semibold text-[13px]">${esc(c.nombre)}</td>
+    <td><span class="inline-block w-4 h-4 rounded" style="background:${esc(c.color||'#888')}"></span> <span class="text-[11px] mono">${esc(c.color||'')}</span></td>
+    <td><button class="text-[11px] font-semibold" style="color:#b91c1c" onclick="delCat('${esc(c.id)}')">Eliminar</button></td>
+  </tr>`).join('');
+}
+async function delCat(id){if(!confirm('¿Eliminar categoría?'))return;const r=await api('categorias/'+id,{method:'DELETE'});if(r.ok)loadCats();else{const d=await r.json().catch(()=>({}));toast(d.error||'Error al eliminar',false);}}
+$('#btnNuevaCat').onclick=()=>$('#fCat').classList.toggle('hidden');
+$('#btnCancelCat').onclick=()=>{$('#fCat').classList.add('hidden');$('#fCat').reset();};
+$('#fCat').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const ok=await post('categorias',{nombre:f.nombre.value,color:f.color.value},'#catMsg');
+  if(ok){f.reset();$('#fCat').classList.add('hidden');loadCats();}
+};
+
+// ── Productos ──
+async function loadProds(){
+  const r=await api('productos').catch(()=>null);if(!r||!r.ok){renderProds([]);return;}
+  const d=await j(r).catch(()=>({}));PRODUCTOS=d.results||[];renderProds(PRODUCTOS);fillProdSels();
+}
+async function ensureProds(){if(!PRODUCTOS.length)await loadProds();else fillProdSels();}
+function fillProdSels(){
+  const opts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+  $$('.row-prod-sel').forEach(s=>{const c=s.value;s.innerHTML='<option value="">-- Producto --</option>'+opts;if(c)s.value=c;});
+}
+function renderProds(list){
+  const tb=$('#prodRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-8">Sin productos todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(p=>`<tr class="row">
+    <td><div class="font-semibold text-[12px]">${esc(p.nombre)}</div><div class="mono text-[11px] text-on-surface-variant">${esc(p.codigo||'')}</div></td>
+    <td class="text-[12px]">${esc(p.categoria_nombre||'—')}</td>
+    <td class="text-[12px]">${esc(p.unidad||'—')}</td>
+    <td class="mono text-[12px]">${p.stock_min??'—'}</td>
+    <td class="mono text-[12px] font-semibold">${p.on_hand??'—'}</td>
+  </tr>`).join('');
+}
+$('#btnNuevoProd').onclick=()=>$('#fProd').classList.toggle('hidden');
+$('#btnCancelProd').onclick=()=>{$('#fProd').classList.add('hidden');$('#fProd').reset();};
+$('#fProd').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const ok=await post('productos',{nombre:f.nombre.value,categoria_id:f.categoria_id.value||null,unidad:f.unidad.value,perecedero:f.perecedero.checked,stock_min:num(f.stock_min.value)||0},'#prodMsg');
+  if(ok){f.reset();$('#fProd').classList.add('hidden');loadProds();}
+};
+
+// ── Inventario ──
+async function loadInv(){
+  const ubic=$('#fi_ubic')?.value||'',q=$('#fi_q')?.value||'',bajo=$('#fi_bajo')?.checked?'1':'';
+  const p=new URLSearchParams();if(ubic)p.set('ubicacion_id',ubic);if(q)p.set('q',q);if(bajo)p.set('bajo',bajo);
+  const r=await api('inventario?'+p).catch(()=>null);
+  const tb=$('#invRows');if(!tb)return;
+  if(!r||!r.ok){tb.innerHTML='<tr><td colspan="8" class="text-center text-on-surface-variant py-8">Sin datos.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));const rows=d.results||[];
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="text-center text-on-surface-variant py-8">Sin existencias todavía.</td></tr>';return;}
+  const now=Date.now();
+  tb.innerHTML=rows.map(row=>{
+    const cad=row.caducidad_ms?Number(row.caducidad_ms):null;
+    const dias=cad?Math.floor((cad-now)/86400000):null;
+    const cls=cad&&cad<now?'vencido':dias!=null&&dias<=30?'por-vencer':row.cantidad!=null&&row.stock_min!=null&&row.cantidad<=row.stock_min?'bajo':'';
+    return `<tr class="row ${cls}">
+      <td class="font-semibold text-[12px]">${esc(row.producto_nombre||'—')}</td>
+      <td class="mono text-[11px]">${esc(row.codigo||'—')}</td>
+      <td class="text-[12px]">${esc(row.categoria_nombre||'—')}</td>
+      <td class="text-[12px]">${esc(row.ubicacion_nombre||'—')}</td>
+      <td class="mono text-[11px]">${esc(row.lote||'—')}</td>
+      <td class="text-[12px]">${cad?`<span style="${cad<now?'color:#b91c1c;font-weight:700':dias<=30?'color:#b45309;font-weight:600':''}">${fdate(cad)}</span>`:'—'}</td>
+      <td class="mono text-[12px] font-semibold">${row.cantidad??'—'}</td>
+      <td class="text-[12px]">${esc(row.unidad||'—')}</td>
+    </tr>`;
+  }).join('');
+}
+$('#fi_buscar').onclick=loadInv;
+$('#fi_q').onkeydown=e=>{if(e.key==='Enter')loadInv();};
+
+// ── Tablero ──
+async function loadTablero(){
+  const [rR,aR,mR]=await Promise.all([
+    api('tablero/resumen').catch(()=>null),
+    api('tablero/alertas').catch(()=>null),
+    api('tablero/movimientos-recientes').catch(()=>null),
+  ]);
+  if(rR&&rR.ok){
+    const d=await j(rR).catch(()=>({}));
+    $('#k_prod').textContent=d.productos??'—';
+    $('#k_ubic').textContent=d.ubicaciones??'—';
+    $('#k_units').textContent=d.unidades_total!=null?Number(d.unidades_total).toLocaleString('es-VE'):'—';
+    $('#k_bajo').textContent=d.bajo_stock_n??'—';
+    $('#k_pven').textContent=d.por_vencer_n??'—';
+    $('#k_venc').textContent=d.vencidos_n??'—';
+    const cat=d.por_categoria||{};
+    const catEl=$('#catBreakdown');
+    catEl.innerHTML=Object.entries(cat).length
+      ?Object.entries(cat).map(([n,v])=>`<div class="card px-3 py-2 text-sm"><span class="font-semibold">${esc(n)}</span><span class="ml-2 mono font-black">${Number(v).toLocaleString('es-VE')}</span></div>`).join('')
+      :'<span class="text-on-surface-variant text-sm">Sin datos todavía.</span>';
+  }
+  if(aR&&aR.ok){const d=await j(aR).catch(()=>({}));renderAlertas(d);}
+  if(mR&&mR.ok){const d=await j(mR).catch(()=>({}));renderMovRec(d.results||[]);}
+  $('#lastUpdate').textContent='Act. '+new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+function renderAlertas(d){
+  const el=$('#alertasPanel');if(!el)return;
+  const bajo=d.bajo_stock||[],pven=d.por_vencer||[],venc=d.vencidos||[];
+  if(!bajo.length&&!pven.length&&!venc.length){el.innerHTML='<div class="font-semibold text-sm py-2" style="color:#15803d">✓ Sin alertas activas.</div>';return;}
+  let html='';
+  if(venc.length){html+=`<div class="eyebrow mb-1" style="color:#b91c1c">Vencidos (${venc.length})</div>`;
+    html+=venc.slice(0,5).map(a=>`<div class="alert-item"><b>${esc(a.producto_nombre||a.nombre||'—')}</b> · ${esc(a.ubicacion_nombre||'—')} · <span class="mono">${a.cantidad}</span></div>`).join('');}
+  if(pven.length){html+=`<div class="eyebrow mt-2 mb-1" style="color:#b45309">Por vencer ≤30d (${pven.length})</div>`;
+    html+=pven.slice(0,5).map(a=>`<div class="alert-item"><b>${esc(a.producto_nombre||'—')}</b> · <span class="mono">${a.dias}d</span> · ${esc(a.ubicacion_nombre||'—')}</div>`).join('');}
+  if(bajo.length){html+=`<div class="eyebrow mt-2 mb-1" style="color:#b45309">Bajo stock (${bajo.length})</div>`;
+    html+=bajo.slice(0,5).map(a=>`<div class="alert-item"><b>${esc(a.nombre||'—')}</b> · <span class="mono">${a.total}/${a.stock_min}</span></div>`).join('');}
+  el.innerHTML=html;
+}
+function renderMovRec(rows){
+  const tb=$('#movRecRows');if(!tb)return;
+  if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin movimientos recientes.</td></tr>';return;}
+  tb.innerHTML=rows.map(r=>`<tr class="row">
+    <td class="mono text-[11px] font-bold">${esc(r.codigo||r.id||'—')}</td>
+    <td>${chipOf(r.tipo,MTIPO)}</td>
+    <td class="text-[12px]">${esc(r.ubicacion_nombre||'—')}</td>
+    <td class="text-[12px]">${esc(r.referencia||'—')}</td>
+    <td class="mono text-[12px]">${r.n_lineas??'—'}</td>
+    <td class="text-[11px]">${fdate(r.created_ms)}</td>
+  </tr>`).join('');
+}
+
+// ── Movimientos historial ──
+async function loadMovs(){
+  const r=await api('movimientos').catch(()=>null);const tb=$('#movRows');if(!tb)return;
+  if(!r||!r.ok){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin datos.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));const rows=d.results||[];
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin movimientos registrados.</td></tr>';return;}
+  tb.innerHTML=rows.map(r=>`<tr class="row">
+    <td class="mono text-[11px] font-bold">${esc(r.codigo||r.id||'—')}</td>
+    <td>${chipOf(r.tipo,MTIPO)}</td>
+    <td class="text-[12px]">${esc(r.ubicacion_nombre||'—')}</td>
+    <td class="text-[12px]">${esc(r.ubicacion_dest_nombre||'—')}</td>
+    <td class="text-[12px]">${esc(r.referencia||'—')}</td>
+    <td class="mono text-[12px]">${r.n_lineas??'—'}</td>
+    <td class="text-[11px]">${fdate(r.created_ms)}</td>
+  </tr>`).join('');
+}
+
+// ── Item cache (despacho/traslado/ajuste pickers) ──
+async function loadItems(form,ubicId){
+  if(!ubicId){ICACHE[form]=[];refreshItemSels(form);return;}
+  const r=await api('inventario/items?ubicacion_id='+encodeURIComponent(ubicId)).catch(()=>null);
+  if(!r||!r.ok){ICACHE[form]=[];return;}
+  const d=await j(r).catch(()=>({}));ICACHE[form]=d.results||[];refreshItemSels(form);
+}
+function refreshItemSels(form){
+  const items=ICACHE[form]||[];
+  const opts=items.map(i=>`<option value="${esc(i.item_id)}">${esc(i.producto_nombre)} – ${esc(i.lote||'s/lote')} (${i.disponible})</option>`).join('');
+  $$(`#rows_${form} .row-item-sel`).forEach(s=>{const c=s.value;s.innerHTML='<option value="">-- Ítem --</option>'+opts;if(c)s.value=c;});
+}
+
+// ── Add line rows ──
+function addRow(form){
+  const div=document.createElement('div');div.className='lrow';
+  const pOpts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+  const iOpts=(ICACHE[form]||[]).map(i=>`<option value="${esc(i.item_id)}">${esc(i.producto_nombre)} – ${esc(i.lote||'s/lote')} (${i.disponible})</option>`).join('');
+  if(form==='recibir'){
+    div.style.gridTemplateColumns='1fr 100px 130px 75px auto';
+    div.innerHTML=`<select class="inp-sm row-prod-sel"><option value="">-- Producto --</option>${pOpts}</select>
+      <input placeholder="Lote" class="inp-sm row-lote">
+      <input type="date" class="inp-sm row-cad">
+      <input type="number" min="0" placeholder="Cant." class="inp-sm row-qty">
+      <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+  }else{
+    const isAdj=form==='ajustar';
+    div.style.gridTemplateColumns='1fr 80px auto';
+    div.innerHTML=`<select class="inp-sm row-item-sel"><option value="">-- Ítem --</option>${iOpts}</select>
+      <input type="number" ${isAdj?'':'min="0"'} placeholder="${isAdj?'Delta (+/-)':'Cant.'}" class="inp-sm row-qty">
+      <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+  }
+  $(`#rows_${form}`).appendChild(div);
+  // sync producto selects
+  if(form==='recibir')fillProdSels();
+}
+
+// ── Movement form submissions ──
+$('#fRecibir').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const lineas=[...$('#rows_recibir').querySelectorAll('.lrow')].map(r=>({
+    producto_id:r.querySelector('.row-prod-sel').value,lote:r.querySelector('.row-lote').value||null,
+    caducidad_ms:toMs(r.querySelector('.row-cad').value),cantidad:num(r.querySelector('.row-qty').value)
+  })).filter(l=>l.producto_id&&l.cantidad);
+  if(!lineas.length){setMsg('#msgRecibir','Añade al menos una línea con producto y cantidad.',false);return;}
+  const ok=await post('movimientos/recepcion',{ubicacion_id:f.ubicacion_id.value,referencia:f.referencia.value||null,nota:f.nota.value||null,actor:f.actor.value||null,lineas},'#msgRecibir');
+  if(ok){f.reset();$('#rows_recibir').innerHTML='';loadMovs();toast('Recepción registrada');}
+};
+
+$('#fDespachar').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const lineas=[...$('#rows_despachar').querySelectorAll('.lrow')].map(r=>({
+    item_id:r.querySelector('.row-item-sel').value,cantidad:num(r.querySelector('.row-qty').value)
+  })).filter(l=>l.item_id&&l.cantidad);
+  if(!lineas.length){setMsg('#msgDespachar','Añade al menos una línea.',false);return;}
+  const ok=await post('movimientos/despacho',{ubicacion_id:f.ubicacion_id.value,referencia:f.referencia.value||null,nota:f.nota.value||null,actor:f.actor.value||null,lineas},'#msgDespachar');
+  if(ok){f.reset();$('#rows_despachar').innerHTML='';ICACHE.despachar=[];loadMovs();toast('Despacho registrado');}
+};
+
+$('#fTrasladar').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const lineas=[...$('#rows_trasladar').querySelectorAll('.lrow')].map(r=>({
+    item_id:r.querySelector('.row-item-sel').value,cantidad:num(r.querySelector('.row-qty').value)
+  })).filter(l=>l.item_id&&l.cantidad);
+  if(!lineas.length){setMsg('#msgTrasladar','Añade al menos una línea.',false);return;}
+  const ok=await post('movimientos/traslado',{ubicacion_id:f.ubicacion_id.value,ubicacion_dest_id:f.ubicacion_dest_id.value,nota:f.nota.value||null,actor:f.actor.value||null,lineas},'#msgTrasladar');
+  if(ok){f.reset();$('#rows_trasladar').innerHTML='';ICACHE.trasladar=[];loadMovs();toast('Traslado registrado');}
+};
+
+$('#fAjustar').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const lineas=[...$('#rows_ajustar').querySelectorAll('.lrow')].map(r=>({
+    item_id:r.querySelector('.row-item-sel').value,delta:num(r.querySelector('.row-qty').value)
+  })).filter(l=>l.item_id&&l.delta!=null);
+  if(!lineas.length){setMsg('#msgAjustar','Añade al menos una línea.',false);return;}
+  const ok=await post('movimientos/ajuste',{ubicacion_id:f.ubicacion_id.value,motivo:f.motivo.value||null,actor:f.actor.value||null,lineas},'#msgAjustar');
+  if(ok){f.reset();$('#rows_ajustar').innerHTML='';ICACHE.ajustar=[];loadMovs();toast('Ajuste registrado');}
+};
+
+// ── Requisiciones ──
+async function loadReqs(){
+  const estado=$('#rq_estado')?.value||'';
+  const p=estado?'?estado='+encodeURIComponent(estado):'';
+  const r=await api('requisiciones'+p).catch(()=>null);const tb=$('#rqRows');if(!tb)return;
+  if(!r||!r.ok){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin datos.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));const rows=d.results||[];
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin requisiciones todavía.</td></tr>';return;}
+  tb.innerHTML=rows.map(rq=>`<tr class="row" onclick="openRq('${esc(rq.id)}')">
+    <td class="mono text-[11px] font-bold">${esc(rq.codigo||rq.id||'—')}</td>
+    <td class="text-[12px]">${esc(rq.solicitante||'—')}</td>
+    <td class="text-[12px]">${esc(rq.ubicacion_nombre||'—')}</td>
+    <td class="mono text-[12px]">${rq.prioridad??'—'}</td>
+    <td>${chipOf(rq.estado,RQEST)}</td>
+    <td class="mono text-[12px]">${rq.n_lineas??'—'}</td>
+    <td class="text-[11px]">${fdate(rq.created_ms)}</td>
+  </tr>`).join('');
+}
+
+async function openRq(id){
+  const r=await api('requisiciones/'+id).catch(()=>null);if(!r||!r.ok)return;
+  const d=await j(r).catch(()=>({}));
+  const rq=d.requisicion||d;const lines=d.lineas||[];
+  $('#rqDetailMeta').innerHTML=`<b class="mono">${esc(rq.codigo||rq.id)}</b> ${chipOf(rq.estado,RQEST)} · Solicitante: <b>${esc(rq.solicitante||'—')}</b> · Ubicación: <b>${esc(rq.ubicacion_nombre||'—')}</b> · P${rq.prioridad||'?'}`;
+  $('#rqDetailLines').innerHTML=lines.length?lines.map(l=>`<tr class="row">
+    <td class="font-semibold text-[12px]">${esc(l.producto_nombre||'—')}</td>
+    <td class="mono text-[11px]">${esc(l.codigo||'—')}</td>
+    <td class="text-[12px]">${esc(l.unidad||'—')}</td>
+    <td class="mono text-[12px]">${l.cantidad_sol??'—'}</td>
+    <td class="mono text-[12px]">${l.cantidad_surt??'—'}</td>
+  </tr>`).join(''):'<tr><td colspan="5" class="py-4 text-center text-on-surface-variant">Sin líneas.</td></tr>';
+  buildRqActions(rq);
+  $('#rqDetail').classList.remove('hidden');
+}
+$('#rqDetailClose').onclick=()=>$('#rqDetail').classList.add('hidden');
+
+function buildRqActions(rq){
+  const el=$('#rqActions');const est=rq.estado||'borrador';let acts=[];
+  if(est==='borrador')acts.push(`<button onclick="patchRq('${esc(rq.id)}','enviada')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">→ Enviar</button>`);
+  if(est==='enviada'){
+    acts.push(`<button onclick="patchRq('${esc(rq.id)}','aprobada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Aprobar</button>`);
+    acts.push(`<button onclick="patchRq('${esc(rq.id)}','cancelada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+  }
+  if(est==='aprobada'){
+    const uOpts=UBICACIONES.map(u=>`<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('');
+    acts.push(`<select id="rqOrigenSel" class="inp-sm"><option value="">-- Origen --</option>${uOpts}</select>`);
+    acts.push(`<button onclick="surtirRq('${esc(rq.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b45309">⊕ Surtir</button>`);
+    acts.push(`<button onclick="patchRq('${esc(rq.id)}','cancelada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+  }
+  el.innerHTML=acts.join('');
+}
+
+async function patchRq(id,estado){
+  const r=await api('requisiciones/'+id,{method:'PATCH',body:JSON.stringify({estado})});
+  if(r.ok){toast('Estado actualizado');loadReqs();openRq(id);}
+  else{const d=await r.json().catch(()=>({}));setMsg('#rqActMsg',d.error||'Error al actualizar',false);}
+}
+
+async function surtirRq(id){
+  const origenId=$('#rqOrigenSel')?.value;
+  if(!origenId){setMsg('#rqActMsg','Selecciona ubicación origen.',false);return;}
+  const r=await api('requisiciones/'+id+'/surtir',{method:'POST',body:JSON.stringify({origen_id:origenId})});
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){toast('Requisición surtida');loadReqs();openRq(id);}
+  else setMsg('#rqActMsg',d.error||'Error al surtir',false);
+}
+
+// Nueva requisición rows
+$('#btnAddReqRow').onclick=()=>{
+  const div=document.createElement('div');div.className='lrow';div.style.gridTemplateColumns='1fr 80px auto';
+  const pOpts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+  div.innerHTML=`<select name="producto_id" class="inp-sm row-prod-sel"><option value="">-- Producto --</option>${pOpts}</select>
+    <input type="number" min="0" placeholder="Cant." class="inp-sm row-qty">
+    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+  $('#rows_req').appendChild(div);
+};
+
+$('#fReq').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const lineas=[...$('#rows_req').querySelectorAll('.lrow')].map(r=>({
+    producto_id:r.querySelector('.row-prod-sel').value,cantidad_sol:num(r.querySelector('.row-qty').value)
+  })).filter(l=>l.producto_id&&l.cantidad_sol);
+  if(!lineas.length){setMsg('#reqMsg','Añade al menos una línea.',false);return;}
+  const ok=await post('requisiciones',{ubicacion_id:f.ubicacion_id.value,prioridad:num(f.prioridad.value),solicitante:f.solicitante.value,nota:f.nota.value||null,lineas},'#reqMsg');
+  if(ok){f.reset();$('#rows_req').innerHTML='';loadReqs();toast('Requisición creada');}
+};
+$('#rq_buscar').onclick=loadReqs;
+
+// ── Generic POST ──
+async function post(endpoint,body,msgSel){
+  if(msgSel)setMsg(msgSel,'Enviando…',true);
+  try{
+    const r=await api(endpoint,{method:'POST',body:JSON.stringify(body)});
+    if(r.status===401||r.status===403){const m='Inicia sesión como operador en /admin';showAuth(m);if(msgSel)setMsg(msgSel,m,false);return false;}
+    if(!r.ok){const d=await r.json().catch(()=>({}));if(msgSel)setMsg(msgSel,d.error||'Error '+r.status,false);return false;}
+    if(msgSel)setMsg(msgSel,'✓ Guardado',true);
+    return true;
+  }catch{if(msgSel)setMsg(msgSel,'Error de red',false);return false;}
+}
+
+// ── Refresh ──
+$('#refreshBtn').onclick=()=>{const t=$$('.seg.on')[0]?.dataset.tab;if(t)onTab(t);};
+
+// ── Boot ──
+loadTablero();
+</script>
+</body>
+</html>
