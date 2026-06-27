@@ -51,6 +51,7 @@
       { label: 'Telemedicina', href: '/telemedicina', m: ['/telemedicina'], d: 'M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M4 6h9a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z' },
       { label: 'Panel de Suministros', href: '/suministros-dashboard', m: ['/suministros-dashboard'], d: 'M3 3v18h18M7 16V10m5 6V6m5 10v-3' },
       { label: 'Operaciones Logísticas', href: '/operaciones', m: ['/operaciones'], d: 'M3 11l19-9-9 19-2-8-8-2z' },
+      { label: 'Despacho de Flota', href: '/flota.html', m: ['/flota.html', '/flota'], d: 'M3 13h2l2 5h10l2-5h2M5 13V7a2 2 0 012-2h7l4 4v4M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z' },
       { label: 'Herramientas + Cruz Roja', href: '/herramientas', m: ['/herramientas'], d: 'M14.7 6.3a4 4 0 00-5.4 5.4l-5 5a1.5 1.5 0 002 2l5-5a4 4 0 005.4-5.4l-2.3 2.3-2-2 2.3-2.3z' },
       { label: 'Recursos', href: '/recursos', m: ['/recursos'], d: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v14M4 7v10l8 4' },
       { label: 'Red Global de Ayuda', href: '/red-ayuda', m: ['/red-ayuda'], d: 'M12 21a9 9 0 100-18 9 9 0 000 18zm0-18c2.6 2.7 2.6 15.3 0 18M3 12h18' },
