@@ -106,16 +106,26 @@ function guairaLayers(){
     'La Guaira · poblados':{url:'/la-guaira/places.geojson',build:gj=>L.geoJSON(gj,{pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:f.properties.place==='city'?7:f.properties.place==='town'?5:3,color:'#13284f',weight:1,fillColor:'#3a86ff',fillOpacity:.9}),onEachFeature:(f,l)=>l.bindPopup('<b>'+esc(f.properties.name||'?')+'</b><br>'+esc(f.properties.place||''))})},
     'La Guaira · vialidad':{url:'/la-guaira/roads.geojson',build:gj=>L.geoJSON(gj,{style:f=>ROAD[f.properties.highway]||{color:'#94a3b8',weight:.6},onEachFeature:(f,l)=>{const p=f.properties;if(p.name)l.bindPopup('<b>'+esc(p.name)+'</b><br>'+esc(p.highway||''));}})},
   };
-  const controls={},loaded={};
+  const controls={},loading={};
   Object.keys(defs).forEach(k=>controls[k]=L.layerGroup());
-  const onAdd=async e=>{
-    const k=e.name; if(!defs[k]||loaded[k])return; loaded[k]=true;
-    try{const gj=await fetch(defs[k].url).then(r=>r.json()); defs[k].build(gj).addTo(controls[k]);}catch{loaded[k]=false;}
+  // Promise-cached loader: one fetch per layer, shared by addAll() and onAdd().
+  const load=k=>{
+    if(loading[k])return loading[k];
+    loading[k]=fetch(defs[k].url).then(r=>r.json())
+      .then(gj=>{const lyr=defs[k].build(gj);lyr.addTo(controls[k]);return lyr;})
+      .catch(()=>{delete loading[k];return null;});
+    return loading[k];
   };
-  return {controls,onAdd};
+  const onAdd=e=>{ if(defs[e.name]) load(e.name); };
+  // Turn every La Guaira layer on (checked) and load it; resolves with the
+  // 'límite' layer so the caller can fitBounds to the state outline.
+  const addAll=map=>Promise.all(Object.keys(defs).map(k=>{controls[k].addTo(map);return load(k).then(lyr=>[k,lyr]);}))
+    .then(rs=>{const o=rs.find(([k])=>k==='La Guaira · límite');return o&&o[1];});
+  return {controls,onAdd,addAll};
 }
+const LAGUAIRA=[10.6,-66.9];   // estado La Guaira (foco por defecto)
 async function initGis(){
-  map=L.map('gmap',{attributionControl:false}).setView(YUMARE,11);
+  map=L.map('gmap',{attributionControl:false}).setView(LAGUAIRA,11);
   const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
   const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
   const gibs=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2026-06-24/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',{maxZoom:9});
@@ -131,8 +141,10 @@ async function initGis(){
   if(cfg.google){ const g=L.tileLayer('/api/sat/google/{z}/{x}/{y}',{maxZoom:20}); bases['Google satélite']=g; g.addTo(map); esri.remove(); layerNames.unshift('Google'); }
 
   // La Guaira GIS overlays (estado más golpeado: Catia La Mar, Playa Grande).
+  // Todas activas por defecto y mapa centrado en La Guaira.
   const guaira=guairaLayers();
   L.control.layers(bases,Object.assign({'Evaluaciones IA':resultLayer},guaira.controls),{collapsed:false}).addTo(map);
+  guaira.addAll(map).then(outline=>{ if(outline){ try{map.fitBounds(outline.getBounds(),{padding:[20,20]});}catch{} } });
   map.on('overlayadd',guaira.onAdd);
   if(cfg.gibs)layerNames.push('NASA GIBS');
   document.getElementById('layerinfo').textContent=layerNames.join(' · ');
