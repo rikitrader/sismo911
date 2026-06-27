@@ -35,7 +35,7 @@ npx --no-install wrangler deploy --dry-run --outdir /tmp/sismo-dryout >/dev/null
 
 hr "7. Config / route safety greps"
 # Match only the active script-src directive, not explanatory comments.
-grep -qE "script-src[^\"]*'unsafe-eval'" src/lib/security.ts && { echo "  ⚠︎ CSP script-src allows 'unsafe-eval'"; warn=$((warn+1)); } || echo "  ✓ CSP script-src has no 'unsafe-eval'"
+grep -qE "script-src[^\"]*'unsafe-eval'" src/lib/security.ts public/_headers && { echo "  ⚠︎ CSP script-src allows 'unsafe-eval' (security.ts or public/_headers)"; warn=$((warn+1)); } || echo "  ✓ CSP script-src has no 'unsafe-eval' (Worker + _headers)"
 grep -q "frame-ancestors 'none'" src/lib/security.ts && echo "  ✓ frame-ancestors 'none'" || { echo "  ⚠︎ missing frame-ancestors"; warn=$((warn+1)); }
 # Flag only INTERPOLATED sensitive values (\${token}), not the word in a string label.
 if grep -rnE "console\.[a-z]+\([^)]*\\\$\{[^}]*(token|secret|password|cookie|c[eé]dula|api[_-]?key)" src/ >/dev/null 2>&1; then echo "  ⚠︎ a console.* call interpolates a sensitive value"; warn=$((warn+1)); else echo "  ✓ no secret/PII interpolated into logs"; fi
