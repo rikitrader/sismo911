@@ -145,7 +145,11 @@ function render(p){
     <aside class="rail">
       <div class="panel">
         ${pc!=null?`<div class="praise">${fmtMoney(p.raised_amount,p.currency)} <small>de ${fmtMoney(p.goal_amount,p.currency)}</small></div><div class="pbar"><i style="width:${pc}%"></i></div><div class="pmeta">${pc}% de la meta alcanzada</div>`:'<div class="pmeta" style="margin-bottom:14px">Tu apoyo puede marcar la diferencia.</div>'}
-        ${p.cta_url?`<a class="btn btn-gold" href="${esc(p.cta_url)}" target="_blank" rel="noopener">${esc(p.cta_label||'Ayudar ahora')}</a>`:`<a class="btn btn-gold" href="/donar">Donar a SISMO911</a>`}
+        ${p.campaign_id
+          ? `<a class="btn btn-gold" href="/campana?c=${encodeURIComponent(p.campaign_id)}">${esc(p.cta_label||'Donar ahora')}</a>`
+          : p.cta_url
+          ? `<a class="btn btn-gold" href="${esc(p.cta_url)}" target="_blank" rel="noopener">${esc(p.cta_label||'Ayudar ahora')}</a>`
+          : `<a class="btn btn-gold" href="/donar">Donar a SISMO911</a>`}
         <div style="height:10px"></div>
         <button class="btn btn-red" onclick="shareTo(navigator.share?'native':'copy')">↗ Compartir su perfil</button>
         <div class="share-h">Difunde y salva vidas</div>
