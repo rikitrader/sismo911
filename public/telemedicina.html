@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telemedicina — Consulta médica gratis a distancia | SISMO911</title>
+<meta name="description" content="Telemedicina de emergencia para Venezuela: solicita una videoconsulta gratuita con médicos voluntarios de todo el mundo. Pediatría, medicina interna, psicología y más. ¿Eres médico? Regístrate para atender.">
+<link rel="canonical" href="https://sismo911.com/telemedicina">
+<meta property="og:title" content="Telemedicina — Consulta médica gratis a distancia | SISMO911">
+<meta property="og:description" content="Videoconsulta gratuita con médicos voluntarios de todo el mundo para personas en Venezuela.">
+<meta property="og:url" content="https://sismo911.com/telemedicina">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>
+  :root{--navy:#13284f;--navy2:#1f3a6b;--line:#dfe3ea;--ink:#1b2433;--muted:#5b6781;--gold:#c9a227;--green:#1f8a4c;--teal:#0e7c86}
+  body{background:#f4f6fa;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+  .hero{background:linear-gradient(135deg,#06303a,#0e7c86);color:#fff;border-radius:18px;padding:30px 28px;margin:22px 0 20px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;right:-40px;top:-40px;width:240px;height:240px;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%)}
+  .eyebrow{font:800 11px 'Public Sans';letter-spacing:.14em;text-transform:uppercase;color:#aef0f6}
+  .hero h1{font:900 33px/1.06 'Public Sans';margin:6px 0 8px;letter-spacing:-.02em}
+  .hero p{color:#d6f1f4;max-width:660px;font-size:15px;line-height:1.5}
+  .hstats{display:flex;gap:26px;margin-top:18px;flex-wrap:wrap}
+  .hstat .n{font:900 26px 'Public Sans';color:#fff}
+  .hstat .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#a9d9de}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.05);margin-bottom:18px}
+  .card-pad{padding:22px}
+  h2.sec{font:800 19px 'Public Sans';color:var(--navy);margin:0 0 3px;display:flex;align-items:center;gap:9px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:6px}
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:6px 0 4px}
+  @media(max-width:720px){.steps{grid-template-columns:1fr 1fr}}
+  .step{background:#f7f9fd;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .step .k{font:900 13px 'Public Sans';color:var(--teal)}
+  .step .t{font-weight:700;margin:4px 0 2px;font-size:14px}
+  .step .d{font-size:12.5px;color:var(--muted);line-height:1.4}
+  label.fl{display:block;font:700 12px Inter;color:var(--ink);margin:14px 0 5px;text-transform:uppercase;letter-spacing:.03em}
+  .req{color:#c8102e}
+  input.f,select.f,textarea.f{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font:500 14px Inter;color:var(--ink);background:#fff;outline:none;transition:border-color .12s,box-shadow .12s;box-sizing:border-box}
+  input.f:focus,select.f:focus,textarea.f:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,134,.14)}
+  textarea.f{min-height:84px;resize:vertical}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:480px){.two{grid-template-columns:1fr}}
+  .submit{margin-top:18px;width:100%;color:#fff;border:none;border-radius:11px;padding:15px;font:800 15px 'Public Sans';cursor:pointer;transition:.12s;display:flex;align-items:center;justify-content:center;gap:9px}
+  .submit.pt{background:var(--teal)} .submit.pt:hover{background:#0b626a}
+  .submit.dr{background:var(--navy)} .submit.dr:hover{background:#0e2148}
+  .submit:disabled{opacity:.55;cursor:default}
+  .msg{margin-top:13px;border-radius:10px;padding:12px 14px;font-size:13.5px;font-weight:600;display:none}
+  .msg.ok{display:block;background:#e3f6ea;color:#166534;border:1px solid #bfe6cc}
+  .msg.err{display:block;background:#fdeaec;color:#9b1c2e;border:1px solid #f4c2c8}
+  .note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
+  .warn{background:#fff7e6;border:1px solid #ffe2a8;border-radius:12px;padding:12px 14px;font-size:13px;color:#7a5200;margin:14px 0}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:#eef3fb;border:1px solid #d6e1f3;border-radius:999px;padding:5px 12px;font:700 12px 'Public Sans';color:var(--navy)}
+  .statusbox{display:none;background:#f7f9fd;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:10px}
+  .statusbox.show{display:block}
+  .kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eef1f6;font-size:14px}
+  .kv:last-child{border-bottom:0}.kv .k{color:var(--muted)}.kv .v{font-weight:700}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font:800 11px 'Public Sans';text-transform:uppercase;letter-spacing:.04em}
+  .b-open{background:#fef3c7;color:#92600a}.b-claimed{background:#dbeafe;color:#1e40af}.b-scheduled{background:#dcfce7;color:#166534}.b-completed{background:#e5e7eb;color:#374151}
+  .videobtn{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#fff;text-decoration:none;font:800 14px 'Public Sans';padding:12px 18px;border-radius:10px;margin-top:10px}
+</style>
+</head>
+<body class="font-sans">
+<main class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">🩺 Telemedicina de Emergencia · Comando Sísmico</div>
+    <h1>Atención médica a distancia, sin importar dónde estés</h1>
+    <p>Tras el terremoto, muchos centros de salud están saturados o inaccesibles. Solicita una <b>videoconsulta gratuita</b> con médicos voluntarios de todo el mundo, o —si eres médico— <b>regístrate para atender</b> a personas en Venezuela desde donde te encuentres.</p>
+    <div class="hstats">
+      <div class="hstat"><div class="n" id="h_docs">—</div><div class="l">Médicos voluntarios</div></div>
+      <div class="hstat"><div class="n" id="h_open">—</div><div class="l">Solicitudes abiertas</div></div>
+      <div class="hstat"><div class="n">100%</div><div class="l">Gratis · por video</div></div>
+    </div>
+  </section>
+
+  <section class="card card-pad">
+    <h2 class="sec">¿Cómo funciona?</h2>
+    <div class="steps">
+      <div class="step"><div class="k">1</div><div class="t">Solicitas</div><div class="d">Cuentas qué necesitas y dejas un correo o teléfono de contacto.</div></div>
+      <div class="step"><div class="k">2</div><div class="t">Un médico acepta</div><div class="d">Un voluntario toma tu caso y agenda una videollamada.</div></div>
+      <div class="step"><div class="k">3</div><div class="t">Recibes el enlace</div><div class="d">Te llega por correo la fecha, hora y un enlace de video + calendario.</div></div>
+      <div class="step"><div class="k">4</div><div class="t">Te atienden</div><div class="d">Entras a la videoconsulta desde el navegador, sin instalar nada.</div></div>
+    </div>
+    <div class="warn">⚠️ La telemedicina <b>no sustituye una emergencia</b>. Si hay riesgo inmediato para la vida, llama al <b>911</b> o acude al centro de salud más cercano.</div>
+  </section>
+
+  <div class="grid2">
+    <!-- PATIENT INTAKE -->
+    <section class="card card-pad">
+      <h2 class="sec">🙋 Solicitar una consulta</h2>
+      <div class="sub">Para ti o para un familiar en Venezuela. Gratis y confidencial.</div>
+      <form id="pf" onsubmit="return false">
+        <label class="fl">Nombre del paciente <span class="req">*</span></label>
+        <input class="f" id="p_name" maxlength="120" placeholder="Nombre y apellido" />
+        <div class="two">
+          <div><label class="fl">Correo de contacto</label><input class="f" id="p_email" type="email" maxlength="160" placeholder="tucorreo@ejemplo.com" /></div>
+          <div><label class="fl">Teléfono / WhatsApp</label><input class="f" id="p_phone" maxlength="60" placeholder="+58…" /></div>
+        </div>
+        <div class="note">Indica al menos un correo o teléfono — lo usamos solo para coordinar tu consulta.</div>
+        <div class="two">
+          <div><label class="fl">Especialidad</label>
+            <select class="f" id="p_spec"></select></div>
+          <div><label class="fl">Urgencia</label>
+            <select class="f" id="p_urg">
+              <option value="baja">Baja — orientación general</option>
+              <option value="normal" selected>Normal</option>
+              <option value="alta">Alta — necesito pronto</option>
+              <option value="critica">Crítica — hoy mismo</option>
+            </select></div>
+        </div>
+        <div class="two">
+          <div><label class="fl">Estado (Venezuela)</label>
+            <input class="f" id="p_state" maxlength="80" placeholder="Ej. Sucre, Caracas…" /></div>
+          <div><label class="fl">Idioma preferido</label>
+            <select class="f" id="p_lang">
+              <option value="es" selected>Español</option><option value="en">English</option>
+              <option value="pt">Português</option><option value="it">Italiano</option><option value="fr">Français</option>
+            </select></div>
+        </div>
+        <label class="fl">¿Qué necesitas? Síntomas o situación</label>
+        <textarea class="f" id="p_desc" maxlength="2000" placeholder="Describe lo que ocurre, desde cuándo, y cualquier dato relevante (edad, enfermedades, medicación)…"></textarea>
+        <button class="submit pt" id="p_btn">Enviar solicitud</button>
+        <div class="msg" id="p_msg"></div>
+      </form>
+    </section>
+
+    <!-- DOCTOR REGISTER -->
+    <section class="card card-pad">
+      <h2 class="sec">🩺 Soy médico — quiero atender</h2>
+      <div class="sub">Regístrate y atiende a pacientes en Venezuela desde cualquier país.</div>
+      <form id="df" onsubmit="return false">
+        <label class="fl">Nombre completo <span class="req">*</span></label>
+        <input class="f" id="d_name" maxlength="120" placeholder="Dr(a). Nombre Apellido" />
+        <label class="fl">Correo <span class="req">*</span></label>
+        <input class="f" id="d_email" type="email" maxlength="160" placeholder="tucorreo@ejemplo.com" />
+        <div class="note">Te enviaremos a este correo tu enlace privado al panel médico.</div>
+        <div class="two">
+          <div><label class="fl">Especialidad</label><select class="f" id="d_spec"></select></div>
+          <div><label class="fl">País</label><input class="f" id="d_country" maxlength="80" placeholder="Ej. España, EE.UU., Chile…" /></div>
+        </div>
+        <div class="two">
+          <div><label class="fl">N.º de colegiatura / licencia</label><input class="f" id="d_lic" maxlength="80" placeholder="Opcional" /></div>
+          <div><label class="fl">Teléfono</label><input class="f" id="d_phone" maxlength="60" placeholder="Opcional" /></div>
+        </div>
+        <label class="fl">Idiomas que hablas</label>
+        <div class="two" style="grid-template-columns:repeat(3,1fr)">
+          <label class="pill" style="cursor:pointer"><input type="checkbox" class="d_lang" value="es" checked> Español</label>
+          <label class="pill" style="cursor:pointer"><input type="checkbox" class="d_lang" value="en"> English</label>
+          <label class="pill" style="cursor:pointer"><input type="checkbox" class="d_lang" value="pt"> Português</label>
+        </div>
+        <label class="fl">Breve presentación</label>
+        <textarea class="f" id="d_bio" maxlength="800" placeholder="Tu experiencia, dónde ejerces, qué casos prefieres…"></textarea>
+        <button class="submit dr" id="d_btn">Registrarme como médico</button>
+        <div class="msg" id="d_msg"></div>
+      </form>
+    </section>
+  </div>
+
+  <!-- CASE STATUS (when ?caso=token) -->
+  <section class="card card-pad" id="casoCard" style="display:none">
+    <h2 class="sec">📋 Estado de tu solicitud</h2>
+    <div class="sub">Guarda esta página: aquí verás cuándo un médico te atiende y el enlace de tu videoconsulta.</div>
+    <div class="statusbox show" id="casoBox"></div>
+  </section>
+
+  <script src="/app-shell.js" defer></script>
+  <script>
+  const $=id=>document.getElementById(id);
+  const SPECS=[['general','Medicina general'],['pediatria','Pediatría'],['medicina_interna','Medicina interna'],['cardiologia','Cardiología'],['ginecologia','Ginecología'],['traumatologia','Traumatología'],['psicologia','Psicología'],['psiquiatria','Psiquiatría'],['dermatologia','Dermatología'],['neurologia','Neurología'],['nutricion','Nutrición'],['enfermeria','Enfermería'],['farmacia','Farmacia'],['otra','Otra']];
+  const specLabel=k=>(SPECS.find(s=>s[0]===k)||[k,k])[1];
+  for(const sel of [$('p_spec'),$('d_spec')]) sel.innerHTML=SPECS.map(s=>`<option value="${s[0]}">${s[1]}</option>`).join('');
+
+  function show(el,kind,text){el.className='msg '+kind;el.textContent=text;}
+
+  async function loadStats(){
+    try{
+      const [d,r]=await Promise.all([
+        fetch('/api/telemedicina/doctors').then(x=>x.json()).catch(()=>({total:0})),
+        fetch('/api/telemedicina/requests').then(x=>x.json()).catch(()=>({total:0}))
+      ]);
+      $('h_docs').textContent=d.total??0; $('h_open').textContent=r.total??0;
+    }catch{}
+  }
+
+  // ---- Patient intake ----
+  $('p_btn').addEventListener('click',async()=>{
+    const name=$('p_name').value.trim();
+    if(!name){show($('p_msg'),'err','Indica el nombre del paciente.');return;}
+    if(!$('p_email').value.trim() && !$('p_phone').value.trim()){show($('p_msg'),'err','Indica un correo o teléfono de contacto.');return;}
+    $('p_btn').disabled=true; show($('p_msg'),'ok','Enviando…');
+    try{
+      const res=await fetch('/api/telemedicina/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        patient_name:name,patient_email:$('p_email').value.trim(),patient_phone:$('p_phone').value.trim(),
+        specialty:$('p_spec').value,urgency:$('p_urg').value,patient_state:$('p_state').value.trim(),
+        preferred_lang:$('p_lang').value,description:$('p_desc').value.trim()
+      })}).then(r=>r.json());
+      if(!res.ok){show($('p_msg'),'err',res.hint||'No se pudo enviar.');$('p_btn').disabled=false;return;}
+      show($('p_msg'),'ok','✓ Solicitud enviada. Te avisaremos por correo cuando un médico la acepte. Guarda este enlace para seguir tu caso: '+location.origin+(res.manage_url?new URL(res.manage_url).search:'?caso='+res.manage_token));
+      $('pf').reset(); $('p_btn').textContent='Enviada ✓';
+      if(res.manage_token) history.replaceState(null,'','/telemedicina?caso='+res.manage_token), loadCaso(res.manage_token);
+    }catch{show($('p_msg'),'err','Error de red. Intenta de nuevo.');$('p_btn').disabled=false;}
+  });
+
+  // ---- Doctor register ----
+  $('d_btn').addEventListener('click',async()=>{
+    const name=$('d_name').value.trim(), email=$('d_email').value.trim();
+    if(!name){show($('d_msg'),'err','Indica tu nombre.');return;}
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){show($('d_msg'),'err','Indica un correo válido.');return;}
+    const langs=[...document.querySelectorAll('.d_lang:checked')].map(c=>c.value);
+    $('d_btn').disabled=true; show($('d_msg'),'ok','Registrando…');
+    try{
+      const res=await fetch('/api/telemedicina/doctors/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        full_name:name,email,specialty:$('d_spec').value,country:$('d_country').value.trim(),
+        license_no:$('d_lic').value.trim(),phone:$('d_phone').value.trim(),languages:langs,bio:$('d_bio').value.trim()
+      })}).then(r=>r.json());
+      if(!res.ok){show($('d_msg'),'err',res.hint||'No se pudo registrar.');$('d_btn').disabled=false;return;}
+      show($('d_msg'),'ok','✓ ¡Registro completo! Te enviamos el enlace a tu panel por correo. Ábrelo ahora:');
+      const a=document.createElement('a'); a.href=res.panel_url; a.className='videobtn'; a.textContent='Abrir mi panel médico →';
+      $('d_msg').appendChild(document.createElement('br')); $('d_msg').appendChild(a);
+      $('d_btn').textContent='Registrado ✓';
+    }catch{show($('d_msg'),'err','Error de red. Intenta de nuevo.');$('d_btn').disabled=false;}
+  });
+
+  // ---- Case status lookup (?caso=) ----
+  const STATUS={open:['b-open','Esperando médico'],claimed:['b-claimed','Médico asignado'],scheduled:['b-scheduled','Videoconsulta agendada'],completed:['b-completed','Completada'],cancelled:['b-completed','Cancelada']};
+  async function loadCaso(token){
+    $('casoCard').style.display='block';
+    try{
+      const res=await fetch('/api/telemedicina/request/'+encodeURIComponent(token)).then(r=>r.json());
+      if(!res.ok){$('casoBox').innerHTML='<div class="note">No encontramos esa solicitud.</div>';return;}
+      const r=res.request, st=STATUS[r.status]||['b-open',r.status];
+      let html=`<div class="kv"><span class="k">Paciente</span><span class="v">${r.patient_name}</span></div>`;
+      html+=`<div class="kv"><span class="k">Especialidad</span><span class="v">${specLabel(r.specialty)}</span></div>`;
+      html+=`<div class="kv"><span class="k">Estado</span><span class="v"><span class="badge ${st[0]}">${st[1]}</span></span></div>`;
+      if(r.doctor_name) html+=`<div class="kv"><span class="k">Médico</span><span class="v">Dr(a). ${r.doctor_name}${r.doctor_country?' · '+r.doctor_country:''}</span></div>`;
+      if(r.scheduled_start_ms) html+=`<div class="kv"><span class="k">Cita</span><span class="v">${new Date(r.scheduled_start_ms).toLocaleString('es-VE',{dateStyle:'full',timeStyle:'short'})}</span></div>`;
+      if(r.status==='scheduled'&&r.video_url) html+=`<a class="videobtn" href="${r.video_url}" target="_blank" rel="noopener">🎥 Entrar a la videoconsulta</a>`;
+      $('casoBox').innerHTML=html;
+    }catch{$('casoBox').innerHTML='<div class="note">No se pudo cargar el estado.</div>';}
+  }
+
+  loadStats();
+  const caso=new URLSearchParams(location.search).get('caso');
+  if(caso) loadCaso(caso);
+  </script>
+</main>
+</body>
+</html>
