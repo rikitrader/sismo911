@@ -7,7 +7,7 @@ import { CRON_GROUPS, jobsForCron } from '../src/cron';
 // per hour), every job has a runner, and the cron keys match wrangler.toml.
 
 const ALL_JOB_NAMES = [
-  'usgs', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet',
+  'usgs', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders',
   'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-purge-rejected', 'hospital-match',
   'familia-photo-mirror', 'monitor-sheet', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
   'social-monitor', 'blog', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',

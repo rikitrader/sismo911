@@ -61,7 +61,6 @@ telemedScheduling.get('/catalog', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT d.specialty AS specialty, COUNT(DISTINCT d.id) AS n
        FROM telemed_doctors d
-       JOIN telemed_availability a ON a.doctor_id = d.id
        LEFT JOIN telemed_doctor_prefs p ON p.doctor_id = d.id
       WHERE d.status='activo' AND d.moderation='approved' AND COALESCE(p.accepting,1)=1
       GROUP BY d.specialty ORDER BY n DESC`,
@@ -79,17 +78,18 @@ telemedScheduling.get('/book/doctors', async (c) => {
   if (specialty && SPECIALTIES.includes(specialty)) { conds.push('d.specialty=?'); binds.push(specialty); }
   const { results } = await c.env.DB.prepare(
     `SELECT d.id, d.full_name, d.specialty, d.country, d.languages, d.bio, d.verified,
-            COALESCE(p.slot_minutes,30) AS slot_minutes, COALESCE(p.appt_types,?) AS appt_types
+            COALESCE(p.slot_minutes,30) AS slot_minutes, COALESCE(p.appt_types,?) AS appt_types,
+            COUNT(a.id) AS av_count
        FROM telemed_doctors d
-       JOIN telemed_availability a ON a.doctor_id = d.id
+       LEFT JOIN telemed_availability a ON a.doctor_id = d.id
        LEFT JOIN telemed_doctor_prefs p ON p.doctor_id = d.id
       WHERE ${conds.join(' AND ')}
-      GROUP BY d.id ORDER BY d.verified DESC, d.full_name ASC LIMIT 200`,
+      GROUP BY d.id ORDER BY (COUNT(a.id) > 0) DESC, d.verified DESC, d.full_name ASC LIMIT 200`,
   ).bind(...binds).all().catch(() => ({ results: [] as any[] }));
   let items = (results ?? []).map((r: any) => {
     let languages: string[] = []; try { languages = JSON.parse(r.languages || '[]'); } catch { languages = []; }
     let appt_types: ApptType[] = [...APPT_TYPE_KEYS]; try { const a = JSON.parse(r.appt_types); if (Array.isArray(a) && a.length) appt_types = a.filter(isApptType); } catch { /* default */ }
-    return { id: r.id, full_name: r.full_name, specialty: r.specialty, country: r.country, languages, bio: r.bio, verified: !!r.verified, slot_minutes: r.slot_minutes, appt_types };
+    return { id: r.id, full_name: r.full_name, specialty: r.specialty, country: r.country, languages, bio: r.bio, verified: !!r.verified, slot_minutes: r.slot_minutes, appt_types, has_availability: (r.av_count || 0) > 0 };
   });
   if (isApptType(type)) items = items.filter((d) => d.appt_types.includes(type as ApptType));
   return c.json({ ok: true, items, total: items.length }, 200, { 'Cache-Control': 'public, max-age=20' });
