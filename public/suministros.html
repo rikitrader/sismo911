@@ -53,60 +53,192 @@
     .etq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:1rem}
     .etq-label{border:1px solid #d7dbe4;border-radius:.5rem;padding:.75rem;background:#fff;text-align:center}
     @media print{body *{visibility:hidden}#etq-print,#etq-print *{visibility:visible}#etq-print{position:absolute;top:0;left:0;width:100%}.etq-grid{display:grid!important;grid-template-columns:repeat(3,1fr);gap:8mm;padding:8mm}.etq-label{break-inside:avoid}}
+    /* ── App Shell ── */
+    .app-shell{display:flex;min-height:100vh}
+    .sidebar{width:248px;flex-shrink:0;background:linear-gradient(180deg,#0b1830 0%,#13284f 100%);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto;z-index:40}
+    .sidebar-brand{padding:1.1rem 1rem .9rem;display:flex;align-items:center;gap:.7rem;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0}
+    .brand-name{font-weight:800;font-size:.95rem;color:#fff;line-height:1;letter-spacing:.01em}
+    .brand-sub{font-size:.58rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-top:3px}
+    .sidebar-nav{flex:1;padding:.55rem .45rem;overflow-y:auto}
+    .nav-section{margin-bottom:.1rem}
+    .nav-section+.nav-section{margin-top:.45rem}
+    .nav-section-label{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.32);padding:.45rem .55rem .25rem;display:block}
+    .sidebar-footer{padding:.7rem .85rem;border-top:1px solid rgba(255,255,255,.08);font-size:.71rem;color:rgba(255,255,255,.38);flex-shrink:0;line-height:1.5}
+    .sidebar-footer a{color:rgba(255,255,255,.52);text-decoration:none;font-weight:600}
+    .sidebar-footer a:hover{color:#fff}
+    .main-area{flex:1;min-width:0;display:flex;flex-direction:column;overflow:auto;background:#eef0f4}
+    .top-bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%);padding:.6rem 1.25rem;display:flex;align-items:center;gap:.6rem;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.06)}
+    .top-bar-right{margin-left:auto;display:flex;align-items:center;gap:.75rem}
+    .page-content{flex:1;padding:1.25rem 1.5rem;overflow-y:auto}
+    .page-content>*+*{margin-top:1rem}
+    .menu-btn{background:none;border:none;color:rgba(255,255,255,.8);cursor:pointer;padding:.3rem;border-radius:.35rem;display:none;align-items:center;justify-content:center;flex-shrink:0;line-height:0}
+    .menu-btn:hover{background:rgba(255,255,255,.1)}
+    .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:39}
+    @media(max-width:1023px){
+      .menu-btn{display:flex}
+      .sidebar{position:fixed;left:0;top:0;bottom:0;height:100%;transform:translateX(-100%);transition:transform .22s ease}
+      .sidebar.open{transform:translateX(0)}
+      .sidebar-backdrop.open{display:block}
+    }
+    /* Sidebar nav item (.seg) — replaces horizontal pill style */
+    .seg{display:flex;align-items:center;gap:.55rem;width:100%;text-align:left;font:600 .82rem 'Inter',sans-serif;padding:.48rem .55rem;border-radius:.4rem;cursor:pointer;color:rgba(255,255,255,.62);border:none;background:none;position:relative;margin-bottom:1px;line-height:1.35;transition:background .12s,color .12s;white-space:normal}
+    .seg svg{flex-shrink:0;width:17px;height:17px;opacity:.62;transition:opacity .12s}
+    .seg:hover:not(.on){background:rgba(255,255,255,.08);color:rgba(255,255,255,.9)}
+    .seg:hover:not(.on) svg{opacity:.85}
+    .seg.on{background:rgba(255,255,255,.1);color:#fff;font-weight:700}
+    .seg.on svg{opacity:1}
+    .seg.on::before{content:'';position:absolute;left:0;top:18%;bottom:18%;width:3px;border-radius:0 3px 3px 0;background:#e53e5a}
   </style>
 </head>
 <body class="font-sans text-on-surface">
 
-<header class="eoc-bar text-white">
-  <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
-    <div class="flex items-center gap-3">
-      <img src="/logo.svg" alt="SISMO911" class="h-10 w-10" />
-      <div>
-        <div class="font-display font-extrabold text-lg leading-none">SISMO911</div>
-        <div class="text-[10px] tracking-[0.18em] text-white/60 mt-0.5">SUMINISTROS Y ALMACÉN</div>
-      </div>
-    </div>
-    <nav class="flex items-center gap-4 text-sm font-medium text-white/85">
-      <span class="flex items-center gap-1.5 text-[11px] text-white/70"><span class="dot pulse" style="background:#15803d"></span> EN VIVO</span>
-      <a href="/operaciones" class="hover:text-white">Operaciones</a>
-      <a href="/admin" class="hover:text-white">← Consola</a>
-    </nav>
-  </div>
-</header>
+<div class="app-shell">
 
-<main class="max-w-7xl mx-auto px-6 py-5 space-y-4">
-  <div class="flex items-end justify-between flex-wrap gap-3">
+<!-- ── Sidebar backdrop (mobile) ── -->
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<!-- ══════════════ LEFT SIDEBAR ══════════════ -->
+<aside class="sidebar" id="sidebar">
+
+  <!-- Brand block -->
+  <div class="sidebar-brand">
+    <img src="/logo.svg" alt="SISMO911" style="width:32px;height:32px;flex-shrink:0" />
     <div>
-      <div class="eyebrow">Inventario y cadena de suministro de emergencia</div>
-      <h1 class="font-display font-extrabold text-2xl leading-tight">Suministros y Almacén</h1>
+      <div class="brand-name">SISMO911</div>
+      <div class="brand-sub">Suministros y Almacén</div>
     </div>
-    <div class="flex items-center gap-3">
-      <span id="lastUpdate" class="text-[11px] text-on-surface-variant mono">—</span>
+  </div>
+
+  <!-- Nav groups -->
+  <nav class="sidebar-nav" aria-label="Módulos">
+
+    <!-- GENERAL -->
+    <div class="nav-section">
+      <span class="nav-section-label">General</span>
+      <button class="seg on" data-tab="tablero">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Tablero
+      </button>
+    </div>
+
+    <!-- INVENTARIO -->
+    <div class="nav-section">
+      <span class="nav-section-label">Inventario</span>
+      <button class="seg" data-tab="inventario">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/><rect x="3" y="8" width="18" height="13" rx="1"/><line x1="9" y1="8" x2="9" y2="21"/><line x1="15" y1="8" x2="15" y2="21"/></svg>
+        Inventario
+      </button>
+      <button class="seg" data-tab="catalogo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>
+        Catálogo
+      </button>
+      <button class="seg" data-tab="ubicaciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        Ubicaciones
+      </button>
+      <button class="seg" data-tab="conteos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Conteos
+      </button>
+    </div>
+
+    <!-- OPERACIONES -->
+    <div class="nav-section">
+      <span class="nav-section-label">Operaciones</span>
+      <button class="seg" data-tab="movimientos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="16" x2="7" y2="4"/><polyline points="3 8 7 4 11 8"/><line x1="17" y1="8" x2="17" y2="20"/><polyline points="13 16 17 20 21 16"/></svg>
+        Movimientos
+      </button>
+      <button class="seg" data-tab="requisiciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Requisiciones
+      </button>
+      <button class="seg" data-tab="picklists">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        Picklists
+      </button>
+      <button class="seg" data-tab="envios">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        Envíos
+      </button>
+    </div>
+
+    <!-- COMPRAS & FINANZAS -->
+    <div class="nav-section">
+      <span class="nav-section-label">Compras &amp; Finanzas</span>
+      <button class="seg" data-tab="proveedores">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Proveedores
+      </button>
+      <button class="seg" data-tab="ordenes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9l-7-7z"/><polyline points="9 2 9 8 15 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+        Órdenes
+      </button>
+      <button class="seg" data-tab="donaciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Donaciones
+      </button>
+      <button class="seg" data-tab="finanzas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Finanzas
+      </button>
+    </div>
+
+    <!-- ANÁLISIS -->
+    <div class="nav-section">
+      <span class="nav-section-label">Análisis</span>
+      <button class="seg" data-tab="reportes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Reportes
+      </button>
+      <button class="seg" data-tab="etiquetas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        Etiquetas
+      </button>
+    </div>
+
+  </nav>
+
+  <!-- Sidebar footer -->
+  <div class="sidebar-footer">
+    <div style="margin-bottom:.3rem;font-size:.69rem">Emergencias &amp; Operaciones</div>
+    <div style="display:flex;gap:.65rem;flex-wrap:wrap">
+      <a href="/operaciones">Operaciones</a>
+      <a href="/admin">← Consola</a>
+    </div>
+  </div>
+
+</aside>
+<!-- ══════════════ END SIDEBAR ══════════════ -->
+
+<!-- ── MAIN AREA ── -->
+<div class="main-area">
+
+  <!-- Slim top bar -->
+  <header class="eoc-bar top-bar">
+    <button class="menu-btn" id="menuBtn" aria-label="Abrir menú">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="top-bar-right">
+      <span class="flex items-center gap-1.5" style="font-size:.7rem;color:rgba(255,255,255,.65)">
+        <span class="dot pulse" style="background:#15803d"></span> EN VIVO
+      </span>
+      <span id="lastUpdate" class="text-[11px] mono" style="color:rgba(255,255,255,.45)">—</span>
       <button id="refreshBtn" class="bg-primary text-white font-semibold rounded-md px-3 py-2 text-xs">↻ Actualizar</button>
     </div>
-  </div>
+  </header>
 
-  <div id="authBanner" class="hidden card p-3 text-sm" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c"></div>
-  <div id="toastEl" class="hidden card p-3 text-sm"></div>
+  <!-- Page content -->
+  <main class="page-content">
+    <div class="flex items-end justify-between flex-wrap gap-3">
+      <div>
+        <div class="eyebrow">Inventario y cadena de suministro de emergencia</div>
+        <h1 class="font-display font-extrabold text-2xl leading-tight">Suministros y Almacén</h1>
+      </div>
+    </div>
 
-  <!-- Tab bar -->
-  <div class="segbar bg-white border border-gray-200 rounded-xl p-1.5">
-    <button class="seg on" data-tab="tablero">Tablero</button>
-    <button class="seg" data-tab="inventario">Inventario</button>
-    <button class="seg" data-tab="catalogo">Catálogo</button>
-    <button class="seg" data-tab="ubicaciones">Ubicaciones</button>
-    <button class="seg" data-tab="movimientos">Movimientos</button>
-    <button class="seg" data-tab="requisiciones">Requisiciones</button>
-    <button class="seg" data-tab="proveedores">Proveedores</button>
-    <button class="seg" data-tab="donaciones">Donaciones</button>
-    <button class="seg" data-tab="ordenes">Órdenes</button>
-    <button class="seg" data-tab="finanzas">Finanzas</button>
-    <button class="seg" data-tab="picklists">Picklists</button>
-    <button class="seg" data-tab="envios">Envíos</button>
-    <button class="seg" data-tab="conteos">Conteos</button>
-    <button class="seg" data-tab="reportes">Reportes</button>
-    <button class="seg" data-tab="etiquetas">Etiquetas</button>
-  </div>
+    <div id="authBanner" class="hidden card p-3 text-sm" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c"></div>
+    <div id="toastEl" class="hidden card p-3 text-sm"></div>
 
   <!-- ═══ TABLERO ═══ -->
   <section data-panel="tablero">
@@ -1003,8 +1135,11 @@
     </div>
   </section>
 
-  <p class="text-[11px] text-on-surface-variant">Actualización manual · las acciones de escritura requieren sesión de operador.</p>
-</main>
+    <p class="text-[11px] text-on-surface-variant">Actualización manual · las acciones de escritura requieren sesión de operador.</p>
+  </main><!-- end page-content -->
+
+</div><!-- end main-area -->
+</div><!-- end app-shell -->
 
 <script>
 // ── Core ──
@@ -2420,6 +2555,18 @@ $('#refreshBtn').onclick=()=>{const t=$$('.seg.on')[0]?.dataset.tab;if(t)onTab(t
 
 // ── Boot ──
 loadTablero();
+</script>
+<script>
+// ── Mobile sidebar toggle ──
+(function(){
+  var btn=document.getElementById('menuBtn');
+  var sb=document.getElementById('sidebar');
+  var bd=document.getElementById('sidebarBackdrop');
+  function openSb(){sb.classList.add('open');bd.classList.add('open');}
+  function closeSb(){sb.classList.remove('open');bd.classList.remove('open');}
+  if(btn)btn.addEventListener('click',function(){sb.classList.contains('open')?closeSb():openSb();});
+  if(bd)bd.addEventListener('click',closeSb);
+})();
 </script>
 </body>
 </html>
