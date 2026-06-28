@@ -1,17 +1,12 @@
-# Remaps the Worker used to do (src/index.ts serveAsset), now handled by the
-# Assets layer so these high-traffic paths serve WITHOUT invoking the Worker.
+# Static rewrites/redirects served by the Workers Assets layer (no Worker invocation).
 # 200 = rewrite (serve target content at the original URL); 301 = redirect.
+# NOTE: _redirects cannot match on host and rejects absolute URLs, so the homepage
+# host-branching (SUMINISTROS root vs DESAPARECIDOS registry) is done in the Worker
+# via run_worker_first in wrangler.toml. The rule below stays as the default target.
+# Comments here are plain ASCII on purpose: a non-ASCII char (em dash) in this block
+# previously made the Cloudflare Assets parser reject the file (only-relative-URLs).
 
-# Homepage "/" is owned by the WORKER (run_worker_first in wrangler.toml) so it
-# can host-branch: the SUMINISTROS subdomain root serves the inventory SPA, every
-# other host serves the DESAPARECIDOS registry. (_redirects can't match on host —
-# Workers Assets rejects absolute URLs in the source — so this rule no longer
-# fires for "/", but is kept as the documented fallback target.)
-/                /personas        200
+/                /personas          200
 
-# /terremotos (old earthquake dashboard = index.html) is served by the WORKER —
-# see run_worker_first in wrangler.toml. A _redirects rewrite to /index.html gets
-# normalized to "/" by html_handling and wrongly lands on personas.
-
-# Legacy La Guaira deep-link → generalized state template (dynamic, Worker-owned).
+# Legacy La Guaira deep-link to the generalized state template (Worker-owned).
 /la-guaira       /estado/la-guaira  301
