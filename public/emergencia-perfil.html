@@ -73,7 +73,7 @@
   <a class="back" href="/emergencia">‹ Todas las emergencias</a>
   <div id="app"><div class="skel"></div></div>
 </main>
-<div class="lb" id="lb"><button class="x" onclick="closeLb()">×</button><img id="lbimg" alt=""></div>
+<div class="lb" id="lb"><button class="x" data-act="closeLb">×</button><img id="lbimg" alt=""></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -140,7 +140,7 @@ function render(p){
       ${p.headline?`<div class="panel" style="border-left:4px solid var(--gold)"><div style="font:700 17px/1.5 Inter;color:#1a233b">${esc(p.headline)}</div></div><div style="height:18px"></div>`:''}
       <div class="panel"><h2>🩹 Su historia</h2><div class="bio">${esc(p.bio||'Sin descripción todavía.')}</div></div>
       ${p.video_url?`<div style="height:18px"></div><div class="panel"><h2>🎬 Video</h2>${videoEmbed(p.video_url)}</div>`:''}
-      ${galleryImgs.length?`<div style="height:18px"></div><div class="panel"><h2>📷 Fotos</h2><div class="gallery">${galleryImgs.map(g=>`<img loading="lazy" src="${esc(g.src)}" alt="${esc(g.caption||p.name)}" onclick="openLb('${esc(g.src)}')">`).join('')}</div></div>`:''}
+      ${galleryImgs.length?`<div style="height:18px"></div><div class="panel"><h2>📷 Fotos</h2><div class="gallery">${galleryImgs.map(g=>`<img loading="lazy" src="${esc(g.src)}" alt="${esc(g.caption||p.name)}" data-act="openLb" data-a1="${esc(g.src)}">`).join('')}</div></div>`:''}
     </div>
     <aside class="rail">
       <div class="panel">
@@ -151,16 +151,16 @@ function render(p){
           ? `<a class="btn btn-gold" href="${esc(p.cta_url)}" target="_blank" rel="noopener">${esc(p.cta_label||'Ayudar ahora')}</a>`
           : `<a class="btn btn-gold" href="/donar">Donar a SISMO911</a>`}
         <div style="height:10px"></div>
-        <button class="btn btn-red" onclick="shareTo(navigator.share?'native':'copy')">↗ Compartir su perfil</button>
+        <button class="btn btn-red" data-act="__shareAuto">↗ Compartir su perfil</button>
         <div class="share-h">Difunde y salva vidas</div>
         <div class="shares">
-          <a class="sh wa" onclick="shareTo('whatsapp')">${ICON.whatsapp}WhatsApp</a>
-          <a class="sh x" onclick="shareTo('x')">${ICON.x}X</a>
-          <a class="sh fb" onclick="shareTo('facebook')">${ICON.facebook}Facebook</a>
-          <a class="sh tg" onclick="shareTo('telegram')">${ICON.telegram}Telegram</a>
+          <a class="sh wa" data-act="shareTo" data-a1="whatsapp">${ICON.whatsapp}WhatsApp</a>
+          <a class="sh x" data-act="shareTo" data-a1="x">${ICON.x}X</a>
+          <a class="sh fb" data-act="shareTo" data-a1="facebook">${ICON.facebook}Facebook</a>
+          <a class="sh tg" data-act="shareTo" data-a1="telegram">${ICON.telegram}Telegram</a>
         </div>
         <div style="height:8px"></div>
-        <a class="sh" style="grid-column:span 4;flex-direction:row;gap:8px" onclick="shareTo('copy')">${ICON.copy}Copiar enlace</a>
+        <a class="sh" style="grid-column:span 4;flex-direction:row;gap:8px" data-act="shareTo" data-a1="copy">${ICON.copy}Copiar enlace</a>
         ${p.contact?`<div class="contact">📞 ${esc(p.contact)}</div>`:''}
       </div>
     </aside>
@@ -180,6 +180,13 @@ async function load(){
   }
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb();});
+function __shareAuto(el){shareTo(navigator.share?'native':'copy');}
+var ACTIONS={closeLb:closeLb,openLb:openLb,shareTo:shareTo,__shareAuto:__shareAuto};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+  var el=e.target.closest("[data-act]");if(!el)return;
+  var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 load();
 </script>
 </body>

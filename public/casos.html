@@ -248,6 +248,12 @@
   #s911-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);background:#0a1c3d;color:#fff;font:600 13.5px Inter;padding:11px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;max-width:90vw;text-align:center;word-break:break-word}
   #s911-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
+<script>addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;
+if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}
+if(t.hasAttribute("data-fb-remove")){t.remove();return}
+if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html");return}
+if(t.hasAttribute("data-fb-noimg")){t.style.display="none";var n=t.parentNode&&t.parentNode.querySelector(".noimg");if(n)n.style.display="grid";return}
+if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.parentNode.innerHTML=t.getAttribute("data-fb-parent")}},true)</script>
 </head>
 <body>
 
@@ -455,7 +461,7 @@ const pill=s=>{const o=ST[s]||ST.unknown;return `<span class="pill" style="backg
 const prioCell=p=>{if(!p)return '<span class="sub">—</span>';const o=PRIO[p]||PRIO.media;return `<span class="prio" style="color:${o.c}"><span class="bar" style="background:${o.c}"></span>${o.es}</span>`;};
 // Hospitalizados now come from the server union (/api/persons/cases) as cases with
 // id "hosp-…" and source==='hospital' — they paginate/search like any other case.
-const avatar=(url,cls)=>url?`<img src="${esc(url)}" class="${cls}" onerror="this.outerHTML='<div class=\\'${cls} ph\\'>👤</div>'">`:`<div class="${cls} ph">👤</div>`;
+const avatar=(url,cls)=>url?`<img src="${esc(url)}" class="${cls}" data-fb-html="<div class='${cls} ph'>👤</div>">`:`<div class="${cls} ph">👤</div>`;
 // Triage assessment card for the case detail: badge + score bar + why (rules hit).
 function triagePanel(p){
   const t=TRIAGE[p.triage]; if(!t)return '';
@@ -753,8 +759,8 @@ function renderCase(d){
       <div class="card">
         <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" stroke-linecap="round" stroke-linejoin="round"/></svg>Acciones</h3>
         <div style="display:flex;flex-direction:column;gap:9px">
-          <button class="btn-navy" onclick="setTab('cronologia')" style="border:none;width:100%">Ver cronología completa →</button>
-          <button class="btn-navy" onclick="setTab('aportar')" style="background:var(--red);border:none;width:100%">Aportar información</button>
+          <button class="btn-navy" data-act="setTab" data-a1="cronologia" style="border:none;width:100%">Ver cronología completa →</button>
+          <button class="btn-navy" data-act="setTab" data-a1="aportar" style="background:var(--red);border:none;width:100%">Aportar información</button>
         </div>
       </div>
     </div>
@@ -998,6 +1004,17 @@ document.addEventListener('keydown',e=>{
   const m=location.hash.match(/^#caso=(.+)$/);
   if(m)openCase(decodeURIComponent(m[1]),true);
 })();
+
+// ---- Delegated event dispatcher (replaces inline handlers for CSP) ----
+var ACTIONS={
+  setTab:function(t){setTab(t);},
+  __rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
+};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+  var el=e.target.closest("[data-act]");if(!el)return;
+  var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 </script>
 <!-- Cronómetro: tiempo transcurrido desde el sismo (reloj canónico compartido) -->
 <script src="/quake-clock.js"></script>

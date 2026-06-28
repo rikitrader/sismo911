@@ -1183,7 +1183,7 @@ select,input { font-family:var(--font); }
       <span class="error-card-icon">⚠️</span>
       <div class="error-card-title">No se pudo cargar tu perfil</div>
       <div class="error-card-text">Verifica tu conexión e intenta recargar la página.</div>
-      <button class="btn btn-secondary" onclick="location.reload()" style="margin-top:16px;">
+      <button class="btn btn-secondary" data-act="__reload" style="margin-top:16px;">
         Reintentar
       </button>
     </div>
@@ -1364,7 +1364,7 @@ select,input { font-family:var(--font); }
           <span class="error-card-icon">⚠️</span>
           <div class="error-card-title">No se pudieron cargar los enlaces</div>
           <div class="error-card-text" id="pagos-err-msg"></div>
-          <button class="btn btn-secondary" onclick="loadPaymentLinks()" style="margin-top:14px;">
+          <button class="btn btn-secondary" data-act="loadPaymentLinks" style="margin-top:14px;">
             Reintentar
           </button>
         </div>
@@ -1431,7 +1431,7 @@ select,input { font-family:var(--font); }
           <span class="error-card-icon">⚠️</span>
           <div class="error-card-title">No se pudo cargar el libro contable</div>
           <div class="error-card-text" id="acct-err-msg">Verifica tu conexión e intenta de nuevo.</div>
-          <button class="btn btn-secondary" onclick="loadLedger()" style="margin-top:16px;">Reintentar</button>
+          <button class="btn btn-secondary" data-act="loadLedger" style="margin-top:16px;">Reintentar</button>
         </div>
       </div>
 
@@ -1464,7 +1464,7 @@ select,input { font-family:var(--font); }
           <span class="error-card-icon">⚠️</span>
           <div class="error-card-title">No se pudieron cargar los retiros</div>
           <div class="error-card-text" id="ret-err-msg">Verifica tu conexión e intenta de nuevo.</div>
-          <button class="btn btn-secondary" onclick="loadWithdrawals()" style="margin-top:16px;">
+          <button class="btn btn-secondary" data-act="loadWithdrawals" style="margin-top:16px;">
             Reintentar
           </button>
         </div>
@@ -1521,7 +1521,7 @@ select,input { font-family:var(--font); }
             <div class="empty-title" id="ret-empty-title">Aún no has solicitado retiros</div>
             <div class="empty-text" id="ret-empty-text">—</div>
             <button class="btn btn-primary" style="margin-top:16px;"
-                    onclick="document.getElementById('ret-new-btn').click();">
+                    data-act="__clickRetNew">
               Solicitar retiro
             </button>
           </div>
@@ -1845,7 +1845,7 @@ function buildOverview(profile, summary) {
       <span class="empty-icon" aria-hidden="true">📭</span>
       <div class="empty-title">Aún no has recibido pagos</div>
       <div class="empty-text">Crea un enlace de pago para empezar a recibir USDC.</div>
-      <button class="btn btn-secondary btn-sm" onclick="switchTab('pagos')" style="margin-top:14px;">
+      <button class="btn btn-secondary btn-sm" data-act="switchTab" data-a1="pagos" style="margin-top:14px;">
         Ir a Pagos
       </button>
     </div>` : '';
@@ -2628,7 +2628,7 @@ function renderQRSelector() {
         <span class="empty-icon" aria-hidden="true">📲</span>
         <div class="empty-title">Sin enlaces con URL de pago</div>
         <div class="empty-text">Crea un enlace de pago x402 para generar su código QR.</div>
-        <button class="btn btn-secondary" onclick="switchTab('pagos')" style="margin-top:16px;">
+        <button class="btn btn-secondary" data-act="switchTab" data-a1="pagos" style="margin-top:16px;">
           Ir a Pagos
         </button>
       </div>`;
@@ -4141,7 +4141,7 @@ async function fetchPaymentSummary() {
       <span class="error-card-icon">⚠️</span>
       <div class="error-card-title">No se pudieron cargar los KPIs</div>
       <div class="error-card-text" style="margin-bottom:12px;">${esc(msg)}</div>
-      <button class="btn btn-secondary btn-sm" onclick="fetchPaymentSummary()">Reintentar</button>
+      <button class="btn btn-secondary btn-sm" data-act="fetchPaymentSummary">Reintentar</button>
     </div>`;
   try {
     const r = await fetch('/api/profile/payments/summary', {credentials:'same-origin'});
@@ -4244,6 +4244,22 @@ async function fetchPaymentSummary() {
 
   document.getElementById('qa-qr').addEventListener('click', () => switchTab('qr'));
 })();
+
+/* ── CSP-safe delegated dispatcher (replaces inline on* handler attributes) ── */
+var ACTIONS = {
+  switchTab: switchTab,
+  loadPaymentLinks: loadPaymentLinks,
+  loadLedger: loadLedger,
+  fetchPaymentSummary: fetchPaymentSummary,
+  loadWithdrawals: loadWithdrawals,
+  __reload: function(){ location.reload(); },
+  __clickRetNew: function(){ var b=document.getElementById('ret-new-btn'); if(b) b.click(); },
+};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+  var el=e.target.closest("[data-act]");if(!el)return;
+  var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 </script>
 </body>
 </html>

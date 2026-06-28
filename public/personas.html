@@ -85,6 +85,12 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebPage","name":"Personas desaparecidas — SISMO911","description":"Registro nacional de personas desaparecidas tras el terremoto en Venezuela, con búsqueda y filtros por estado, ciudad, edificio y fecha.","url":"https://sismo911.com/personas","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
 </script>
+<script>addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;
+if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}
+if(t.hasAttribute("data-fb-remove")){t.remove();return}
+if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html");return}
+if(t.hasAttribute("data-fb-noimg")){t.style.display="none";var n=t.parentNode&&t.parentNode.querySelector(".noimg");if(n)n.style.display="grid";return}
+if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.parentNode.innerHTML=t.getAttribute("data-fb-parent")}},true)</script>
 </head>
 <body class="font-sans text-on-surface">
 
@@ -216,7 +222,7 @@ function vcard(p){
   const loc=esc(p.last_seen||'Ubicación no indicada');
   const fch=esc(fmtFecha(p));
   const img=p.photo_url
-    ? `<img src="${p.photo_url}" loading="lazy" alt="${esc(p.full_name||'persona desaparecida')}" onerror="this.style.display='none';this.parentNode.querySelector('.noimg').style.display='grid'"><div class="noimg" style="display:none">👤</div>`
+    ? `<img src="${p.photo_url}" loading="lazy" alt="${esc(p.full_name||'persona desaparecida')}" data-fb-noimg><div class="noimg" style="display:none">👤</div>`
     : `<div class="noimg">👤</div>`;
   return `<a href="${link}" class="vcard" title="Abrir expediente de ${esc(p.full_name||'')}">
     <div class="ph">${img}<span class="badge" style="background:${col}"><span class="d"></span>${lbl}</span></div>
@@ -271,7 +277,7 @@ async function loadAll(reset){
   const d=await fetch('/api/familia/persons?'+qs.toString()).then(r=>r.json()).catch(()=>({persons:[]}));
   const html=(d.persons||[]).map(p=>{const[l,cl]=ST2[p.status]||ST2.unknown;const link=caseUrl(p);
     return `<a href="${link}" class="flex items-center gap-3 py-2.5 hover:bg-surface-container/40 -mx-1 px-1 rounded">
-      <div class="w-11 h-11 rounded-lg overflow-hidden bg-surface-container shrink-0">${p.photo_url?`<img src="${p.photo_url}" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentNode.innerHTML='<div class=\\'w-full h-full grid place-items-center text-on-surface-variant\\'>👤</div>'">`:'<div class="w-full h-full grid place-items-center text-on-surface-variant">👤</div>'}</div>
+      <div class="w-11 h-11 rounded-lg overflow-hidden bg-surface-container shrink-0">${p.photo_url?`<img src="${p.photo_url}" loading="lazy" class="w-full h-full object-cover" data-fb-parent="<div class='w-full h-full grid place-items-center text-on-surface-variant'>👤</div>">`:'<div class="w-full h-full grid place-items-center text-on-surface-variant">👤</div>'}</div>
       <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(p.full_name||'Sin nombre')}${p.age?', '+Number(p.age):''}</div><div class="text-xs text-on-surface-variant truncate">${esc(p.last_seen||'')}</div></div>
       <span class="${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">${l}</span></a>`;}).join('');
   $('allList').insertAdjacentHTML('beforeend',html);

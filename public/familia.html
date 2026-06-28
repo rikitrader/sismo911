@@ -23,7 +23,7 @@
   <p class="text-on-surface-variant mb-5">Avisa que estás a salvo, reporta a una persona desaparecida (con foto) y busca en el registro nacional. Los reportes ciudadanos aparecen tras revisión de un operador.</p>
 
   <!-- Global search: searches ALL cases (any status) from anywhere on the page -->
-  <form id="globalSearchForm" class="mb-6" role="search" onsubmit="return false">
+  <form id="globalSearchForm" class="mb-6" role="search">
     <div class="relative">
       <span class="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg pointer-events-none">🔎</span>
       <input id="globalSearch" type="search" autocomplete="off" enterkeyhint="search"
@@ -151,7 +151,7 @@ const personGrid=document.getElementById('personGrid');
 let pCursor=null;
 function card(p){const[l,cl]=ST[p.status]||ST.unknown;
   const img=p.photo_url?`<img src="${esc(p.photo_url)}" loading="lazy" class="w-full h-44 object-cover bg-surface-container">`:`<div class="w-full h-44 grid place-items-center bg-surface-container text-on-surface-variant text-4xl">👤</div>`;
-  return `<div onclick="openPerson('${p.id}')" class="bg-white border border-outline-variant/60 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
+  return `<div data-act="openPerson" data-a1="${p.id}" class="bg-white border border-outline-variant/60 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
     <div class="relative">${img}<span class="absolute top-2 left-2 ${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span>${p.kind==='case'?`<span class="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Expediente</span>`:''}</div>
     <div class="p-3"><div class="font-display font-bold">${esc(p.full_name)} ${p.age?`<span class="text-on-surface-variant font-normal text-sm">· ${p.age}</span>`:''}</div>
       <div class="text-xs text-on-surface-variant mt-0.5">${esc(p.last_seen||'—')}</div>
@@ -212,7 +212,7 @@ async function loadGallery(reset){
   if(reset){gCursor=null;galleryGrid.innerHTML='';}
   const d=await fetch(`/api/familia/gallery?limit=30${gCursor?'&cursor='+encodeURIComponent(gCursor):''}`).then(r=>r.json());
   galleryGrid.insertAdjacentHTML('beforeend',(d.photos||[]).map(p=>{const[l,cl]=ST[p.status]||ST.unknown;
-    return `<a href="/familia?persona=${p.id}" onclick="event.preventDefault();openPerson('${p.id}')" class="block relative rounded-lg overflow-hidden border border-outline-variant/60 cursor-pointer">
+    return `<a href="/familia?persona=${p.id}" data-act="__openPersonNav" data-a1="${p.id}" class="block relative rounded-lg overflow-hidden border border-outline-variant/60 cursor-pointer">
       <img src="${esc(p.photo_url)}" loading="lazy" class="w-full aspect-square object-cover bg-surface-container">
       <span class="absolute top-1 left-1 ${cl} text-white text-[9px] font-bold px-1.5 py-0.5 rounded">${l}</span>
       <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1 truncate">${esc(p.full_name)}</div></a>`;}).join(''));
@@ -248,7 +248,7 @@ window.openPerson=async function(id){
   const docketId=p.kind==='case'?id:'fam-'+id;
   const text=`🔴 BUSCAMOS a ${p.full_name}${p.age?', '+p.age+' años':''}. Última ubicación: ${p.last_seen||'—'}. Ayúdanos a difundir. #SISMO911 #Venezuela`;
   const U=encodeURIComponent(url),T=encodeURIComponent(text);
-  const sb=(on,lab)=>`<button onclick="${on}" class="flex items-center gap-2 border border-outline-variant rounded-full px-3.5 py-2 text-sm font-semibold hover:bg-surface-container whitespace-nowrap">${lab}</button>`;
+  const sb=(attrs,lab)=>`<button ${attrs} class="flex items-center gap-2 border border-outline-variant rounded-full px-3.5 py-2 text-sm font-semibold hover:bg-surface-container whitespace-nowrap">${lab}</button>`;
   pBody.innerHTML=`<div class="relative">
       <span class="absolute top-4 left-4 z-10 inline-flex items-center gap-1.5 bg-white/95 backdrop-blur text-sm font-bold px-3 py-1.5 rounded-full shadow-sm" style="color:${col}"><span class="h-2 w-2 rounded-full" style="background:${col}"></span>${lbl}</span>
       <div class="rounded-t-2xl overflow-hidden">${hero}</div></div>
@@ -281,13 +281,13 @@ window.openPerson=async function(id){
       <div class="border-t border-outline-variant/50 mt-5 pt-4">
         <div class="label-caps text-on-surface-variant text-[10px] mb-2">Ayuda a difundir</div>
         <div class="flex flex-wrap gap-2">
-          ${navigator.share?sb('pShare()','📲 Compartir'):''}
-          ${sb(`window.open('https://wa.me/?text=${T}%20${U}','_blank','noopener')`,'🟢 WhatsApp')}
-          ${sb(`window.open('https://twitter.com/intent/tweet?text=${T}&url=${U}','_blank','noopener,width=600,height=520')`,'𝕏 X')}
-          ${sb(`window.open('https://www.facebook.com/sharer/sharer.php?u=${U}','_blank','noopener,width=600,height=520')`,'f Facebook')}
-          ${sb(`window.open('https://t.me/share/url?url=${U}&text=${T}','_blank','noopener')`,'✈ Telegram')}
-          ${sb('pIG()','📷 Instagram')}
-          ${sb('pCopy()','🔗 Copiar')}
+          ${navigator.share?sb('data-act="pShare"','📲 Compartir'):''}
+          ${sb(`data-act="__openWin" data-a1="https://wa.me/?text=${T}%20${U}"`,'🟢 WhatsApp')}
+          ${sb(`data-act="__openWin" data-a1="https://twitter.com/intent/tweet?text=${T}&url=${U}" data-a2="noopener,width=600,height=520"`,'𝕏 X')}
+          ${sb(`data-act="__openWin" data-a1="https://www.facebook.com/sharer/sharer.php?u=${U}" data-a2="noopener,width=600,height=520"`,'f Facebook')}
+          ${sb(`data-act="__openWin" data-a1="https://t.me/share/url?url=${U}&text=${T}"`,'✈ Telegram')}
+          ${sb('data-act="pIG"','📷 Instagram')}
+          ${sb('data-act="pCopy"','🔗 Copiar')}
         </div>
       </div>
       <button id="pReport" class="block mx-auto mt-5 text-xs text-on-surface-variant hover:text-secondary">⚠ Reportar contenido obsceno</button>
@@ -320,6 +320,24 @@ window.openPerson=async function(id){
 
 // Deep-link from a blog report photo: ?reportar=1&lugar=…&ref=… → open a prefilled case
 (function(){const q=new URLSearchParams(location.search);if(!q.has('reportar')&&!q.has('caso'))return;show('registro');const m=document.getElementById('modal');if(m)m.classList.remove('hidden');const ls=document.querySelector('#registerForm [name=last_seen]');if(ls&&q.get('lugar'))ls.value=q.get('lugar');const nm=document.querySelector('#registerForm [name=full_name]');if(nm&&q.get('nombre'))nm.value=q.get('nombre');const nt=document.querySelector('#registerForm [name=notes]');if(nt&&q.get('ref'))nt.value=(q.get('nombre')?'Caso vinculado: '+q.get('nombre')+'. ':'')+'Ref: '+(q.get('ref')||'');const fo=document.querySelector('#registerForm [name='+(q.get('nombre')?'last_seen':'full_name')+']');if(fo)setTimeout(()=>fo.focus(),120);})();
+
+/* ── CSP-safe delegated dispatcher (replaces inline on* handler attributes) ── */
+document.getElementById('globalSearchForm').addEventListener('submit',function(e){e.preventDefault();});
+var ACTIONS={
+  openPerson:function(id){window.openPerson(id);},
+  __openPersonNav:function(id,el){window.openPerson(id);},
+  pShare:function(){window.pShare&&window.pShare();},
+  pIG:function(){window.pIG&&window.pIG();},
+  pCopy:function(){window.pCopy&&window.pCopy();},
+  __openWin:function(url,feat){window.open(url,"_blank",(feat&&feat.nodeType)?"noopener":(feat||"noopener"));},
+};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+  var el=e.target.closest("[data-act]");if(!el)return;
+  var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
+// Anchors carrying data-act (gallery deep-links) keep their href for SEO/middle-click but suppress default nav on plain click.
+document.addEventListener('click',function(e){var a=e.target.closest('a[data-act]');if(a)e.preventDefault();},false);
 </script>
 </body>
 </html>

@@ -122,11 +122,11 @@
   <p class="text-xs text-on-surface-variant mt-5 max-w-3xl">⚠️ <b>Aviso médico-legal:</b> lista de planificación y logística. La adquisición, dosificación y administración corresponde a personal sanitario licenciado. Equivale a 100 Unidades Básicas + 10 Complementarias del IEHK OMS para 100.000 personas / 90 días. Renovar cada ~30 días según consumo real (EWARS). 🔒 = estupefaciente/psicotrópico (custodia y libro de narcóticos). ❄︎ = requiere cadena de frío.</p>
 
   <!-- Ficha de medicamento -->
-  <div id="drugModal" class="hidden fixed inset-0 z-[60] bg-black/40 p-4 overflow-y-auto" onclick="closeDrug()">
-    <div class="bg-white rounded-2xl max-w-lg w-full mx-auto my-8 p-5 shadow-2xl" onclick="event.stopPropagation()">
+  <div id="drugModal" class="hidden fixed inset-0 z-[60] bg-black/40 p-4 overflow-y-auto" data-act="closeDrug">
+    <div class="bg-white rounded-2xl max-w-lg w-full mx-auto my-8 p-5 shadow-2xl" data-act="__stop">
       <div class="flex items-start justify-between gap-3 mb-2">
         <div><h3 id="dm_name" class="font-display font-extrabold text-xl leading-tight"></h3><div id="dm_cat" class="text-xs text-on-surface-variant mt-0.5"></div></div>
-        <button onclick="closeDrug()" class="text-3xl leading-none text-on-surface-variant hover:text-on-surface -mt-1">×</button>
+        <button data-act="closeDrug" class="text-3xl leading-none text-on-surface-variant hover:text-on-surface -mt-1">×</button>
       </div>
       <div id="dm_badges" class="flex flex-wrap gap-2 mb-4"></div>
       <dl class="space-y-3 text-sm">
@@ -577,6 +577,14 @@ $('#csv').addEventListener('click',()=>{
 });
 document.getElementById('rows').addEventListener('click',e=>{const tr=e.target.closest('tr[data-dci]');if(tr)openDrug(tr.dataset.dci);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrug();});
+// ── Delegated handler dispatcher (replaces inline on* attributes for CSP) ──
+var ACTIONS={closeDrug:function(){closeDrug();},__stop:function(){},
+  __rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+  var el=e.target.closest("[data-act]");if(!el)return;
+  var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 renderAll();
 </script>
 </body>

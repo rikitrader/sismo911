@@ -59,7 +59,7 @@
 
   <!-- Nav comes from /app-shell.js (single source of truth). Print control preserved below. -->
   <div class="no-print mx-auto max-w-6xl px-4 pt-4 flex justify-end">
-    <button onclick="window.print()" class="inline-flex items-center gap-1.5 bg-primary text-white hover:bg-primary/90 px-3 py-1.5 rounded text-sm font-medium">🖨 Imprimir</button>
+    <button data-act="__print" class="inline-flex items-center gap-1.5 bg-primary text-white hover:bg-primary/90 px-3 py-1.5 rounded text-sm font-medium">🖨 Imprimir</button>
   </div>
 
   <main class="paper p-6 sm:p-8 my-4 shadow-lg">
@@ -340,6 +340,17 @@
   // Epicenter star
   L.marker(EPI, { icon: L.divIcon({ className:'', html:'<div class="epi">★</div>', iconSize:[26,26], iconAnchor:[13,13] }) })
     .addTo(map).bindTooltip('Epicentro · M 7.5 · Yumare', { permanent:false });
+
+  // ---- Delegated event dispatcher (replaces inline handlers for CSP) ----
+  var ACTIONS={
+    __print:function(){window.print();},
+    __rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
+  };
+  function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+  ["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+    var el=e.target.closest("[data-act]");if(!el)return;
+    var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+    var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 </script>
 
 

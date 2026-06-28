@@ -410,7 +410,7 @@
         <div>
           <div class="flex items-center justify-between mb-2">
             <div class="eyebrow">Líneas de producto</div>
-            <button type="button" class="btn-add" onclick="addRow('recibir')">+ Añadir línea</button>
+            <button type="button" class="btn-add" data-act="addRow" data-a1="recibir">+ Añadir línea</button>
           </div>
           <div id="rows_recibir" class="space-y-1.5"></div>
         </div>
@@ -424,7 +424,7 @@
       <form id="fDespachar" class="space-y-3">
         <div class="grid grid-cols-2 gap-2">
           <div><label class="lbl">Ubicación origen</label>
-            <select name="ubicacion_id" required onchange="loadItems('despachar',this.value)"><option value="">-- Seleccionar --</option></select></div>
+            <select name="ubicacion_id" required data-act="loadItems" data-a1="despachar" data-a2="@value" data-ev="change"><option value="">-- Seleccionar --</option></select></div>
           <div><label class="lbl">Referencia</label><input name="referencia" placeholder="Desp-001"></div>
         </div>
         <div class="grid grid-cols-2 gap-2">
@@ -434,7 +434,7 @@
         <div>
           <div class="flex items-center justify-between mb-2">
             <div class="eyebrow">Líneas</div>
-            <button type="button" class="btn-add" onclick="addRow('despachar')">+ Añadir línea</button>
+            <button type="button" class="btn-add" data-act="addRow" data-a1="despachar">+ Añadir línea</button>
           </div>
           <div id="rows_despachar" class="space-y-1.5"></div>
         </div>
@@ -448,7 +448,7 @@
       <form id="fTrasladar" class="space-y-3">
         <div class="grid grid-cols-2 gap-2">
           <div><label class="lbl">Origen</label>
-            <select name="ubicacion_id" required onchange="loadItems('trasladar',this.value)"><option value="">-- Seleccionar --</option></select></div>
+            <select name="ubicacion_id" required data-act="loadItems" data-a1="trasladar" data-a2="@value" data-ev="change"><option value="">-- Seleccionar --</option></select></div>
           <div><label class="lbl">Destino</label>
             <select name="ubicacion_dest_id" required><option value="">-- Seleccionar --</option></select></div>
         </div>
@@ -459,7 +459,7 @@
         <div>
           <div class="flex items-center justify-between mb-2">
             <div class="eyebrow">Líneas</div>
-            <button type="button" class="btn-add" onclick="addRow('trasladar')">+ Añadir línea</button>
+            <button type="button" class="btn-add" data-act="addRow" data-a1="trasladar">+ Añadir línea</button>
           </div>
           <div id="rows_trasladar" class="space-y-1.5"></div>
         </div>
@@ -473,14 +473,14 @@
       <form id="fAjustar" class="space-y-3">
         <div class="grid grid-cols-2 gap-2">
           <div><label class="lbl">Ubicación</label>
-            <select name="ubicacion_id" required onchange="loadItems('ajustar',this.value)"><option value="">-- Seleccionar --</option></select></div>
+            <select name="ubicacion_id" required data-act="loadItems" data-a1="ajustar" data-a2="@value" data-ev="change"><option value="">-- Seleccionar --</option></select></div>
           <div><label class="lbl">Motivo</label><input name="motivo" placeholder="Merma / conteo físico…"></div>
         </div>
         <div><label class="lbl">Operador</label><input name="actor"></div>
         <div>
           <div class="flex items-center justify-between mb-2">
             <div class="eyebrow">Ajustes (+/-)</div>
-            <button type="button" class="btn-add" onclick="addRow('ajustar')">+ Añadir línea</button>
+            <button type="button" class="btn-add" data-act="addRow" data-a1="ajustar">+ Añadir línea</button>
           </div>
           <div id="rows_ajustar" class="space-y-1.5"></div>
         </div>
@@ -703,7 +703,7 @@
           <div>
             <div class="flex items-center justify-between mb-1">
               <div class="eyebrow">Líneas</div>
-              <button type="button" class="btn-add" onclick="addDonRow()">+ Añadir</button>
+              <button type="button" class="btn-add" data-act="addDonRow">+ Añadir</button>
             </div>
             <div id="rows_don" class="space-y-1.5"></div>
           </div>
@@ -770,7 +770,7 @@
           <div>
             <div class="flex items-center justify-between mb-1">
               <div class="eyebrow">Líneas</div>
-              <button type="button" class="btn-add" onclick="addOrdenRow()">+ Añadir</button>
+              <button type="button" class="btn-add" data-act="addOrdenRow">+ Añadir</button>
             </div>
             <div id="rows_orden" class="space-y-1.5"></div>
           </div>
@@ -869,7 +869,7 @@
           <div>
             <div class="flex items-center justify-between mb-1">
               <div class="eyebrow">Líneas</div>
-              <button type="button" class="btn-add" onclick="addFacRow()">+ Añadir</button>
+              <button type="button" class="btn-add" data-act="addFacRow">+ Añadir</button>
             </div>
             <div id="rows_fac" class="space-y-1.5"></div>
           </div>
@@ -927,7 +927,7 @@
           <div>
             <div class="flex items-center justify-between mb-1">
               <div class="eyebrow">Líneas</div>
-              <button type="button" class="btn-add" onclick="addPkRow()">+ Añadir</button>
+              <button type="button" class="btn-add" data-act="addPkRow">+ Añadir</button>
             </div>
             <div id="rows_pk" class="space-y-1.5"></div>
           </div>
@@ -994,14 +994,14 @@
             <div>
               <div class="flex items-center justify-between mb-1">
                 <div class="eyebrow">Contenedores</div>
-                <button type="button" class="btn-add" onclick="addEnvContRow()">+ Añadir</button>
+                <button type="button" class="btn-add" data-act="addEnvContRow">+ Añadir</button>
               </div>
               <div id="rows_env_cont" class="space-y-1.5"></div>
             </div>
             <div>
               <div class="flex items-center justify-between mb-1">
                 <div class="eyebrow">Líneas</div>
-                <button type="button" class="btn-add" onclick="addEnvRow()">+ Añadir</button>
+                <button type="button" class="btn-add" data-act="addEnvRow">+ Añadir</button>
               </div>
               <div id="rows_env" class="space-y-1.5"></div>
             </div>
@@ -1075,14 +1075,14 @@
       <div class="card p-4 h-fit">
         <div class="eyebrow mb-3">Programar conteo</div>
         <form id="fCnt" class="space-y-2">
-          <div><label class="lbl">Ubicación</label><select id="cntUbicSel" name="ubicacion_id" required onchange="loadCntItems(this.value)"><option value="">-- Seleccionar --</option></select></div>
+          <div><label class="lbl">Ubicación</label><select id="cntUbicSel" name="ubicacion_id" required data-act="loadCntItems" data-a1="@value" data-ev="change"><option value="">-- Seleccionar --</option></select></div>
           <input name="asignado_a" placeholder="Asignado a" />
           <div><label class="lbl">Fecha programada</label><input name="programado" type="date" /></div>
-          <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer"><input id="cntSnapshotChk" type="checkbox" onchange="toggleCntLineas()"> Snapshot de todo el stock</label>
+          <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer"><input id="cntSnapshotChk" type="checkbox" data-act="toggleCntLineas" data-ev="change"> Snapshot de todo el stock</label>
           <div id="cntLineasBox">
             <div class="flex items-center justify-between mb-1">
               <div class="eyebrow">Líneas a contar</div>
-              <button type="button" class="btn-add" onclick="addCntRow()">+ Añadir</button>
+              <button type="button" class="btn-add" data-act="addCntRow">+ Añadir</button>
             </div>
             <div id="rows_cnt" class="space-y-1.5"></div>
           </div>
@@ -1096,11 +1096,11 @@
   <!-- ═══ REPORTES ═══ -->
   <section data-panel="reportes" class="hidden space-y-4">
     <div class="flex gap-2 bg-white border border-gray-200 rounded-xl p-1.5 w-fit flex-wrap">
-      <button class="rep-tab on" data-rep="valuacion" onclick="switchRep('valuacion')">Valuación</button>
-      <button class="rep-tab" data-rep="rotacion" onclick="switchRep('rotacion')">Rotación</button>
-      <button class="rep-tab" data-rep="caducidad" onclick="switchRep('caducidad')">Caducidad</button>
-      <button class="rep-tab" data-rep="ledger" onclick="switchRep('ledger')">Ledger</button>
-      <button class="rep-tab" data-rep="fill-rate" onclick="switchRep('fill-rate')">Fill-rate</button>
+      <button class="rep-tab on" data-rep="valuacion" data-act="switchRep" data-a1="valuacion">Valuación</button>
+      <button class="rep-tab" data-rep="rotacion" data-act="switchRep" data-a1="rotacion">Rotación</button>
+      <button class="rep-tab" data-rep="caducidad" data-act="switchRep" data-a1="caducidad">Caducidad</button>
+      <button class="rep-tab" data-rep="ledger" data-act="switchRep" data-a1="ledger">Ledger</button>
+      <button class="rep-tab" data-rep="fill-rate" data-act="switchRep" data-a1="fill-rate">Fill-rate</button>
     </div>
     <div id="repFilters" class="card p-3 flex flex-wrap items-center gap-3">
       <span class="eyebrow">Valuación de inventario</span>
@@ -1271,7 +1271,7 @@ function renderCats(list){
   tb.innerHTML=list.map(c=>`<tr class="row">
     <td class="font-semibold text-[13px]">${esc(c.nombre)}</td>
     <td><span class="inline-block w-4 h-4 rounded" style="background:${esc(c.color||'#888')}"></span> <span class="text-[11px] mono">${esc(c.color||'')}</span></td>
-    <td><button class="text-[11px] font-semibold" style="color:#b91c1c" onclick="delCat('${esc(c.id)}')">Eliminar</button></td>
+    <td><button class="text-[11px] font-semibold" style="color:#b91c1c" data-act="delCat" data-a1="${esc(c.id)}">Eliminar</button></td>
   </tr>`).join('');
 }
 async function delCat(id){if(!confirm('¿Eliminar categoría?'))return;const r=await api('categorias/'+id,{method:'DELETE'});if(r.ok)loadCats();else{const d=await r.json().catch(()=>({}));toast(d.error||'Error al eliminar',false);}}
@@ -1431,13 +1431,13 @@ function addRow(form){
       <input placeholder="Lote" class="inp-sm row-lote">
       <input type="date" class="inp-sm row-cad">
       <input type="number" min="0" placeholder="Cant." class="inp-sm row-qty">
-      <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+      <button type="button" class="btn-del" data-act="__rmClosest" data-a1=".lrow">✕</button>`;
   }else{
     const isAdj=form==='ajustar';
     div.style.gridTemplateColumns='1fr 80px auto';
     div.innerHTML=`<select class="inp-sm row-item-sel"><option value="">-- Ítem --</option>${iOpts}</select>
       <input type="number" ${isAdj?'':'min="0"'} placeholder="${isAdj?'Delta (+/-)':'Cant.'}" class="inp-sm row-qty">
-      <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+      <button type="button" class="btn-del" data-act="__rmClosest" data-a1=".lrow">✕</button>`;
   }
   $(`#rows_${form}`).appendChild(div);
   // sync producto selects
@@ -1490,7 +1490,7 @@ async function loadReqs(){
   if(!r||!r.ok){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin datos.</td></tr>';return;}
   const d=await j(r).catch(()=>({}));const rows=d.results||[];
   if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin requisiciones todavía.</td></tr>';return;}
-  tb.innerHTML=rows.map(rq=>`<tr class="row" onclick="openRq('${esc(rq.id)}')">
+  tb.innerHTML=rows.map(rq=>`<tr class="row" data-act="openRq" data-a1="${esc(rq.id)}">
     <td class="mono text-[11px] font-bold">${esc(rq.codigo||rq.id||'—')}</td>
     <td class="text-[12px]">${esc(rq.solicitante||'—')}</td>
     <td class="text-[12px]">${esc(rq.ubicacion_nombre||'—')}</td>
@@ -1520,16 +1520,16 @@ $('#rqDetailClose').onclick=()=>$('#rqDetail').classList.add('hidden');
 
 function buildRqActions(rq){
   const el=$('#rqActions');const est=rq.estado||'borrador';let acts=[];
-  if(est==='borrador')acts.push(`<button onclick="patchRq('${esc(rq.id)}','enviada')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">→ Enviar</button>`);
+  if(est==='borrador')acts.push(`<button data-act="patchRq" data-a1="${esc(rq.id)}" data-a2="enviada" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">→ Enviar</button>`);
   if(est==='enviada'){
-    acts.push(`<button onclick="patchRq('${esc(rq.id)}','aprobada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Aprobar</button>`);
-    acts.push(`<button onclick="patchRq('${esc(rq.id)}','cancelada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+    acts.push(`<button data-act="patchRq" data-a1="${esc(rq.id)}" data-a2="aprobada" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Aprobar</button>`);
+    acts.push(`<button data-act="patchRq" data-a1="${esc(rq.id)}" data-a2="cancelada" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
   }
   if(est==='aprobada'){
     const uOpts=UBICACIONES.map(u=>`<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('');
     acts.push(`<select id="rqOrigenSel" class="inp-sm"><option value="">-- Origen --</option>${uOpts}</select>`);
-    acts.push(`<button onclick="surtirRq('${esc(rq.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b45309">⊕ Surtir</button>`);
-    acts.push(`<button onclick="patchRq('${esc(rq.id)}','cancelada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+    acts.push(`<button data-act="surtirRq" data-a1="${esc(rq.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b45309">⊕ Surtir</button>`);
+    acts.push(`<button data-act="patchRq" data-a1="${esc(rq.id)}" data-a2="cancelada" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
   }
   el.innerHTML=acts.join('');
 }
@@ -1555,7 +1555,7 @@ $('#btnAddReqRow').onclick=()=>{
   const pOpts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
   div.innerHTML=`<select name="producto_id" class="inp-sm row-prod-sel"><option value="">-- Producto --</option>${pOpts}</select>
     <input type="number" min="0" placeholder="Cant." class="inp-sm row-qty">
-    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+    <button type="button" class="btn-del" data-act="__rmClosest" data-a1=".lrow">✕</button>`;
   $('#rows_req').appendChild(div);
 };
 
@@ -1583,7 +1583,7 @@ async function loadProveedores(){
 function renderProveedores(list){
   const tb=$('#pvRows');if(!tb)return;
   if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin proveedores todavía.</td></tr>';return;}
-  tb.innerHTML=list.map(p=>`<tr class="row" onclick="openProveedor('${esc(p.id)}')">
+  tb.innerHTML=list.map(p=>`<tr class="row" data-act="openProveedor" data-a1="${esc(p.id)}">
     <td><div class="font-semibold text-[12px]">${esc(p.nombre||'—')}</div></td>
     <td>${chipOf(p.tipo,PVTIPO)}</td>
     <td class="mono text-[11px]">${esc(p.rif||'—')}</td>
@@ -1619,7 +1619,7 @@ function renderPreciosTable(list,pvId){
     <td class="mono text-[12px]">${l.lead_time_dias??'—'}</td>
     <td class="mono text-[12px]">${l.minimo_pedido??'—'}</td>
     <td class="text-[12px]">${l.preferido?'<span class="chip" style="color:#15803d;background:#dcfce7">✓ Sí</span>':'—'}</td>
-    <td><button class="btn-del" onclick="delPrecio('${esc(l.id)}','${esc(pvId||'')}')">✕</button></td>
+    <td><button class="btn-del" data-act="delPrecio" data-a1="${esc(l.id)}" data-a2="${esc(pvId||'')}">✕</button></td>
   </tr>`).join('');
 }
 $('#pvDetailClose').onclick=()=>$('#pvDetail').classList.add('hidden');
@@ -1654,7 +1654,7 @@ async function loadDonaciones(){
 function renderDonaciones(list){
   const tb=$('#dnRows');if(!tb)return;
   if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin donaciones todavía.</td></tr>';return;}
-  tb.innerHTML=list.map(dn=>`<tr class="row" onclick="openDonacion('${esc(dn.id)}')">
+  tb.innerHTML=list.map(dn=>`<tr class="row" data-act="openDonacion" data-a1="${esc(dn.id)}">
     <td class="mono text-[11px] font-bold">${esc(dn.codigo||dn.id||'—')}</td>
     <td class="font-semibold text-[12px]">${esc(dn.donante||'—')}</td>
     <td>${chipOf(dn.tipo_donante,DONTIPO)}</td>
@@ -1685,8 +1685,8 @@ $('#dn_buscar').onclick=loadDonaciones;
 function buildDnActions(dn){
   const el=$('#dnActions');const est=dn.estado||'registrada';let acts=[];
   if(est==='registrada'){
-    acts.push(`<button onclick="recibirDonacion('${esc(dn.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Recibir donación</button>`);
-    acts.push(`<button onclick="cancelarDonacion('${esc(dn.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+    acts.push(`<button data-act="recibirDonacion" data-a1="${esc(dn.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Recibir donación</button>`);
+    acts.push(`<button data-act="cancelarDonacion" data-a1="${esc(dn.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
   }
   el.innerHTML=acts.join('');
 }
@@ -1712,7 +1712,7 @@ function addDonRow(){
     <input type="date" class="inp-sm row-cad">
     <input type="number" min="0" placeholder="Cant." class="inp-sm row-qty">
     <input type="number" min="0" step="0.01" placeholder="Val. unit." class="inp-sm row-val">
-    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+    <button type="button" class="btn-del" data-act="__rmClosest" data-a1=".lrow">✕</button>`;
   $('#rows_don').appendChild(div);
 }
 $('#fDon').onsubmit=async e=>{e.preventDefault();const f=e.target;
@@ -1752,7 +1752,7 @@ async function loadOrdenes(){
 function renderOrdenes(list){
   const tb=$('#ocRows');if(!tb)return;
   if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin órdenes todavía.</td></tr>';return;}
-  tb.innerHTML=list.map(oc=>`<tr class="row" onclick="openOrden('${esc(oc.id)}')">
+  tb.innerHTML=list.map(oc=>`<tr class="row" data-act="openOrden" data-a1="${esc(oc.id)}">
     <td class="mono text-[11px] font-bold">${esc(oc.codigo||oc.id||'—')}</td>
     <td class="font-semibold text-[12px]">${esc(oc.proveedor_nombre||'—')}</td>
     <td class="text-[12px]">${esc(oc.ubicacion_nombre||'—')}</td>
@@ -1789,11 +1789,11 @@ $('#ocDetailClose').onclick=()=>$('#ocDetail').classList.add('hidden');
 function buildOcActions(oc,lines){
   const el=$('#ocActions');const est=oc.estado||'borrador';let acts=[];
   if(est==='borrador')
-    acts.push(`<button onclick="patchOrden('${esc(oc.id)}','aprobada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Aprobar</button>`);
+    acts.push(`<button data-act="patchOrden" data-a1="${esc(oc.id)}" data-a2="aprobada" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Aprobar</button>`);
   if(est==='aprobada'||est==='recibida_parcial')
-    acts.push(`<button onclick="showOcRecibir('${esc(oc.id)}')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">⊕ Recibir</button>`);
+    acts.push(`<button data-act="showOcRecibir" data-a1="${esc(oc.id)}" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">⊕ Recibir</button>`);
   if(est!=='recibida'&&est!=='cancelada')
-    acts.push(`<button onclick="patchOrden('${esc(oc.id)}','cancelada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+    acts.push(`<button data-act="patchOrden" data-a1="${esc(oc.id)}" data-a2="cancelada" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
   el.innerHTML=acts.join('');
   el.dataset.ocId=oc.id;
   el.dataset.ocLines=JSON.stringify(lines);
@@ -1840,7 +1840,7 @@ function addOrdenRow(){
   div.innerHTML=`<select class="inp-sm row-prod-sel"><option value="">-- Producto --</option>${pOpts}</select>
     <input type="number" min="0" placeholder="Cant." class="inp-sm row-qty">
     <input type="number" min="0" step="0.01" placeholder="Precio u." class="inp-sm row-precio">
-    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+    <button type="button" class="btn-del" data-act="__rmClosest" data-a1=".lrow">✕</button>`;
   $('#rows_orden').appendChild(div);
   fillProdSels();
 }
@@ -1871,7 +1871,7 @@ function renderCuentas(list){
     <td class="font-semibold text-[12px]">${esc(c.nombre||'—')}</td>
     <td>${chipOf(c.tipo,CTATIPO)}</td>
     <td>${c.activa!==false?'<span class="chip" style="color:#15803d;background:#dcfce7">Sí</span>':'<span class="chip" style="color:#b91c1c;background:#fee2e2">No</span>'}</td>
-    <td><button class="btn-del" onclick="delCuenta('${esc(c.id)}')">✕</button></td>
+    <td><button class="btn-del" data-act="delCuenta" data-a1="${esc(c.id)}">✕</button></td>
   </tr>`).join('');
 }
 function fillCtaSels(){
@@ -1906,7 +1906,7 @@ function renderFacturas(list){
   tb.innerHTML=list.map(fac=>{
     const venc=fac.vencimiento_ms?Number(fac.vencimiento_ms):null;
     const cls=venc&&venc<now&&fac.estado!=='pagada'&&fac.estado!=='anulada'?'vencido':'';
-    return`<tr class="row ${cls}" onclick="openFactura('${esc(fac.id)}')">
+    return`<tr class="row ${cls}" data-act="openFactura" data-a1="${esc(fac.id)}">
       <td class="mono text-[11px] font-bold">${esc(fac.codigo||fac.id||'—')}</td>
       <td class="font-semibold text-[12px]">${esc(fac.proveedor_nombre||'—')}</td>
       <td class="text-[12px]">${esc(fac.cuenta_nombre||'—')}</td>
@@ -1941,11 +1941,11 @@ $('#facDetailClose').onclick=()=>$('#facDetail').classList.add('hidden');
 function buildFacActions(fac){
   const el=$('#facActions');const est=fac.estado||'borrador';let acts=[];
   if(est==='borrador')
-    acts.push(`<button onclick="patchFac('${esc(fac.id)}','emitida')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">→ Emitir</button>`);
+    acts.push(`<button data-act="patchFac" data-a1="${esc(fac.id)}" data-a2="emitida" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">→ Emitir</button>`);
   if(est==='emitida')
-    acts.push(`<button onclick="pagarFac('${esc(fac.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Pagar</button>`);
+    acts.push(`<button data-act="pagarFac" data-a1="${esc(fac.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Pagar</button>`);
   if(est==='borrador'||est==='emitida')
-    acts.push(`<button onclick="patchFac('${esc(fac.id)}','anulada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Anular</button>`);
+    acts.push(`<button data-act="patchFac" data-a1="${esc(fac.id)}" data-a2="anulada" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Anular</button>`);
   el.innerHTML=acts.join('');
 }
 async function patchFac(id,estado){
@@ -1969,7 +1969,7 @@ function addFacRow(){
     <select class="inp-sm row-prod-sel fac-prod"><option value="">-- Producto (opc.) --</option>${pOpts}</select>
     <input type="number" min="0" placeholder="Cant." class="inp-sm fac-qty">
     <input type="number" min="0" step="0.01" placeholder="Precio u." class="inp-sm fac-precio">
-    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove();calcFacTotal()">✕</button>`;
+    <button type="button" class="btn-del" data-act="__h1">✕</button>`;
   div.querySelector('.fac-qty').addEventListener('input',calcFacTotal);
   div.querySelector('.fac-precio').addEventListener('input',calcFacTotal);
   $('#rows_fac').appendChild(div);
@@ -2009,7 +2009,7 @@ async function loadPicklists(){
 function renderPicklists(list){
   const tb=$('#pkRows');if(!tb)return;
   if(!list.length){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin picklists todavía.</td></tr>';return;}
-  tb.innerHTML=list.map(pk=>`<tr class="row" onclick="openPicklist('${esc(pk.id)}')">
+  tb.innerHTML=list.map(pk=>`<tr class="row" data-act="openPicklist" data-a1="${esc(pk.id)}">
     <td class="mono text-[11px] font-bold">${esc(pk.codigo||pk.id||'—')}</td>
     <td class="text-[12px]">${esc(pk.ubicacion_nombre||'—')}</td>
     <td>${chipOf(pk.estado,PICKEST)}</td>
@@ -2042,9 +2042,9 @@ $('#pk_buscar').onclick=loadPicklists;
 function buildPkActions(pk){
   const el=$('#pkActions');const est=pk.estado||'pendiente';let acts=[];
   if(est!=='completada'&&est!=='cancelada'){
-    acts.push(`<button onclick="pickPicklist('${esc(pk.id)}')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">✎ Preparar</button>`);
-    acts.push(`<button onclick="completarPicklist('${esc(pk.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Completar (despachar)</button>`);
-    acts.push(`<button onclick="cancelarPicklist('${esc(pk.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+    acts.push(`<button data-act="pickPicklist" data-a1="${esc(pk.id)}" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">✎ Preparar</button>`);
+    acts.push(`<button data-act="completarPicklist" data-a1="${esc(pk.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Completar (despachar)</button>`);
+    acts.push(`<button data-act="cancelarPicklist" data-a1="${esc(pk.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
   }
   el.innerHTML=acts.join('');
 }
@@ -2082,7 +2082,7 @@ function addPkRow(){
   const iOpts=(ICACHE['pk']||[]).map(i=>`<option value="${esc(i.item_id)}">${esc(i.producto_nombre)} – ${esc(i.lote||'s/lote')} (${i.disponible})</option>`).join('');
   div.innerHTML=`<select class="inp-sm row-item-sel"><option value="">-- Ítem --</option>${iOpts}</select>
     <input type="number" min="0" placeholder="Cant. sol." class="inp-sm row-qty">
-    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+    <button type="button" class="btn-del" data-act="__rmClosest" data-a1=".lrow">✕</button>`;
   $('#rows_pk').appendChild(div);
 }
 $('#pkUbicSel').onchange=function(){loadItems('pk',this.value);};
@@ -2110,7 +2110,7 @@ function renderMetodosEnvio(list){
     <td class="font-semibold text-[12px]">${esc(m.nombre||'—')}</td>
     <td class="text-[12px]">${esc(m.transportista||'—')}</td>
     <td>${chipOf(m.modo,MODOENV)}</td>
-    <td><button class="btn-del" onclick="delMetodo('${esc(m.id)}')">✕</button></td>
+    <td><button class="btn-del" data-act="delMetodo" data-a1="${esc(m.id)}">✕</button></td>
   </tr>`).join('');
 }
 function fillMetodoSel(){
@@ -2142,7 +2142,7 @@ async function loadEnvios(){
 function renderEnvios(list){
   const tb=$('#envRows');if(!tb)return;
   if(!list.length){tb.innerHTML='<tr><td colspan="8" class="text-center text-on-surface-variant py-8">Sin envíos todavía.</td></tr>';return;}
-  tb.innerHTML=list.map(env=>`<tr class="row" onclick="openEnvio('${esc(env.id)}')">
+  tb.innerHTML=list.map(env=>`<tr class="row" data-act="openEnvio" data-a1="${esc(env.id)}">
     <td class="mono text-[11px] font-bold">${esc(env.codigo||env.id||'—')}</td>
     <td class="text-[12px]">${esc(env.origen_nombre||'—')}</td>
     <td class="text-[12px]">${esc(env.destino_nombre||'—')}</td>
@@ -2174,15 +2174,15 @@ $('#env_buscar').onclick=loadEnvios;
 function buildEnvActions(env){
   const el=$('#envActions');const est=env.estado||'pendiente';let acts=[];
   if(est==='pendiente'){
-    acts.push(`<button onclick="despacharEnvio('${esc(env.id)}')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">→ Despachar</button>`);
-    acts.push(`<button onclick="cancelarEnvio('${esc(env.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+    acts.push(`<button data-act="despacharEnvio" data-a1="${esc(env.id)}" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">→ Despachar</button>`);
+    acts.push(`<button data-act="cancelarEnvio" data-a1="${esc(env.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
   }
   if(est==='despachado'){
-    acts.push(`<button onclick="patchEnvio('${esc(env.id)}','en_transito')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b45309">↗ En tránsito</button>`);
-    acts.push(`<button onclick="recibirEnvio('${esc(env.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Recibir</button>`);
+    acts.push(`<button data-act="patchEnvio" data-a1="${esc(env.id)}" data-a2="en_transito" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b45309">↗ En tránsito</button>`);
+    acts.push(`<button data-act="recibirEnvio" data-a1="${esc(env.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Recibir</button>`);
   }
   if(est==='en_transito')
-    acts.push(`<button onclick="recibirEnvio('${esc(env.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Recibir</button>`);
+    acts.push(`<button data-act="recibirEnvio" data-a1="${esc(env.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Recibir</button>`);
   el.innerHTML=acts.join('');
 }
 async function despacharEnvio(id){
@@ -2219,13 +2219,13 @@ function addEnvContRow(){
   _envContCount++;
   const div=document.createElement('div');div.className='lrow';
   div.style.gridTemplateColumns='110px 100px 1fr auto';
-  div.innerHTML=`<select class="inp-sm env-cont-tipo" onchange="rebuildContSels()">
+  div.innerHTML=`<select class="inp-sm env-cont-tipo" data-act="rebuildContSels" data-ev="change">
       <option value="caja">Caja</option><option value="pallet">Pallet</option>
       <option value="saco">Saco</option><option value="nevera">Nevera</option><option value="bidon">Bidón</option>
     </select>
-    <input placeholder="Código" class="inp-sm env-cont-codigo" oninput="rebuildContSels()">
+    <input placeholder="Código" class="inp-sm env-cont-codigo" data-act="rebuildContSels" data-ev="input">
     <input placeholder="Descripción" class="inp-sm env-cont-desc">
-    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove();rebuildContSels()">✕</button>`;
+    <button type="button" class="btn-del" data-act="__h2">✕</button>`;
   $('#rows_env_cont').appendChild(div);
   rebuildContSels();
 }
@@ -2243,7 +2243,7 @@ function addEnvRow(){
   div.innerHTML=`<select class="inp-sm row-item-sel"><option value="">-- Ítem --</option>${iOpts}</select>
     <input type="number" min="0" placeholder="Cant." class="inp-sm row-qty">
     <select class="inp-sm env-cont-sel"><option value="">-- Contenedor --</option>${cOpts}</select>
-    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+    <button type="button" class="btn-del" data-act="__rmClosest" data-a1=".lrow">✕</button>`;
   $('#rows_env').appendChild(div);
 }
 $('#envOrigenSel').onchange=function(){loadItems('env',this.value);};
@@ -2277,7 +2277,7 @@ async function loadConteos(){
 function renderConteos(list){
   const tb=$('#cntRows');if(!tb)return;
   if(!list.length){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin conteos todavía.</td></tr>';return;}
-  tb.innerHTML=list.map(c=>`<tr class="row" onclick="openConteo('${esc(c.id)}')">
+  tb.innerHTML=list.map(c=>`<tr class="row" data-act="openConteo" data-a1="${esc(c.id)}">
     <td class="mono text-[11px] font-bold">${esc(c.codigo||c.id||'—')}</td>
     <td class="text-[12px]">${esc(c.ubicacion_nombre||'—')}</td>
     <td>${chipOf(c.estado,CNTEST)}</td>
@@ -2314,9 +2314,9 @@ $('#cnt_buscar').onclick=loadConteos;
 function buildCntActions(ct){
   const el=$('#cntActions');const est=ct.estado||'programado';let acts=[];
   if(est!=='conciliado'&&est!=='cancelado'){
-    acts.push(`<button onclick="guardarConteo('${esc(ct.id)}')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">✎ Guardar conteo</button>`);
-    acts.push(`<button onclick="conciliarConteo('${esc(ct.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Conciliar (ajustar stock)</button>`);
-    acts.push(`<button onclick="cancelarConteo('${esc(ct.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+    acts.push(`<button data-act="guardarConteo" data-a1="${esc(ct.id)}" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">✎ Guardar conteo</button>`);
+    acts.push(`<button data-act="conciliarConteo" data-a1="${esc(ct.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Conciliar (ajustar stock)</button>`);
+    acts.push(`<button data-act="cancelarConteo" data-a1="${esc(ct.id)}" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
   }
   el.innerHTML=acts.join('');
 }
@@ -2364,7 +2364,7 @@ function addCntRow(){
   const div=document.createElement('div');div.className='lrow';
   div.style.gridTemplateColumns='1fr auto';
   div.innerHTML=`<select class="inp-sm row-item-sel"><option value="">-- Ítem --</option>${CNT_ITEMS.map(i=>`<option value="${esc(i.item_id)}">${esc(i.producto_nombre)} – ${esc(i.lote||'s/lote')} (${i.disponible})</option>`).join('')}</select>
-    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+    <button type="button" class="btn-del" data-act="__rmClosest" data-a1=".lrow">✕</button>`;
   $('#rows_cnt').appendChild(div);
 }
 $('#fCnt').onsubmit=async e=>{e.preventDefault();const f=e.target;
@@ -2396,7 +2396,7 @@ function renderRepFilters(rep){
   else if(rep==='rotacion'){
     el.innerHTML=`<span class="eyebrow">Rotación</span>
       <label class="flex items-center gap-1.5 text-xs font-semibold">Días: <select id="rot_dias" class="inp-sm" style="width:auto"><option value="30">30d</option><option value="90" selected>90d</option><option value="180">180d</option></select></label>
-      <button onclick="loadReporte('rotacion')" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Calcular</button>`;
+      <button data-act="loadReporte" data-a1="rotacion" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Calcular</button>`;
   }
   else if(rep==='caducidad'){el.innerHTML='<span class="eyebrow">Caducidad por bucket</span>';}
   else if(rep==='ledger'){
@@ -2408,8 +2408,8 @@ function renderRepFilters(rep){
       <select id="led_tipo" class="inp-sm" style="width:auto"><option value="">Todos los tipos</option><option value="recepcion">Recepción</option><option value="despacho">Despacho</option><option value="traslado">Traslado</option><option value="ajuste">Ajuste</option></select>
       <input id="led_from" type="date" class="inp-sm" style="width:130px">
       <input id="led_to" type="date" class="inp-sm" style="width:130px">
-      <button onclick="loadReporte('ledger')" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
-      <button id="ledExportBtn" class="btn-add hidden" onclick="exportLedgerCSV()">↓ CSV</button>`;
+      <button data-act="loadReporte" data-a1="ledger" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+      <button id="ledExportBtn" class="btn-add hidden" data-act="exportLedgerCSV">↓ CSV</button>`;
   }
   else if(rep==='fill-rate'){el.innerHTML='<span class="eyebrow">Fill-rate de requisiciones</span>';}
 }
@@ -2500,7 +2500,7 @@ async function loadEtqCatalogo(q=''){
   if(!r||!r.ok){el.innerHTML='<div class="text-sm text-on-surface-variant py-4 text-center">Sin datos.</div>';return;}
   const d=await j(r).catch(()=>({}));const items=d.results||[];
   if(!items.length){el.innerHTML='<div class="text-sm text-on-surface-variant py-4 text-center">Sin productos encontrados.</div>';return;}
-  el.innerHTML=items.map(i=>`<div class="alert-item cursor-pointer flex items-center justify-between hover:bg-blue-50" onclick="loadEtiquetas('${esc(i.producto_id||i.id)}')">
+  el.innerHTML=items.map(i=>`<div class="alert-item cursor-pointer flex items-center justify-between hover:bg-blue-50" data-act="loadEtiquetas" data-a1="${esc(i.producto_id||i.id)}">
     <div><div class="font-semibold text-[12px]">${esc(i.nombre||'—')}</div><div class="mono text-[11px] text-on-surface-variant">${esc(i.codigo||'—')}</div></div>
     <div class="mono text-[11px] text-on-surface-variant">${i.n_lotes??0}L</div>
   </div>`).join('');
@@ -2552,6 +2552,14 @@ async function post(endpoint,body,msgSel){
 
 // ── Refresh ──
 $('#refreshBtn').onclick=()=>{const t=$$('.seg.on')[0]?.dataset.tab;if(t)onTab(t);};
+
+// ── CSP-safe delegated event dispatcher ──
+function __rmClosest(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
+function __h1(el){var n=el.closest('.lrow');if(n)n.remove();calcFacTotal();}
+function __h2(el){var n=el.closest('.lrow');if(n)n.remove();rebuildContSels();}
+var ACTIONS={addRow:addRow,loadItems:loadItems,addDonRow:addDonRow,addOrdenRow:addOrdenRow,addFacRow:addFacRow,addPkRow:addPkRow,addEnvContRow:addEnvContRow,addEnvRow:addEnvRow,loadCntItems:loadCntItems,toggleCntLineas:toggleCntLineas,addCntRow:addCntRow,switchRep:switchRep,delCat:delCat,openRq:openRq,patchRq:patchRq,surtirRq:surtirRq,openProveedor:openProveedor,delPrecio:delPrecio,openDonacion:openDonacion,recibirDonacion:recibirDonacion,cancelarDonacion:cancelarDonacion,openOrden:openOrden,patchOrden:patchOrden,showOcRecibir:showOcRecibir,delCuenta:delCuenta,openFactura:openFactura,patchFac:patchFac,pagarFac:pagarFac,openPicklist:openPicklist,pickPicklist:pickPicklist,completarPicklist:completarPicklist,cancelarPicklist:cancelarPicklist,delMetodo:delMetodo,openEnvio:openEnvio,despacharEnvio:despacharEnvio,cancelarEnvio:cancelarEnvio,patchEnvio:patchEnvio,recibirEnvio:recibirEnvio,openConteo:openConteo,guardarConteo:guardarConteo,conciliarConteo:conciliarConteo,cancelarConteo:cancelarConteo,loadReporte:loadReporte,exportLedgerCSV:exportLedgerCSV,loadEtiquetas:loadEtiquetas,rebuildContSels:rebuildContSels,__rmClosest:__rmClosest,__h1:__h1,__h2:__h2};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){var el=e.target.closest("[data-act]");if(!el)return;var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 
 // ── Boot ──
 loadTablero();
