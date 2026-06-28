@@ -87,6 +87,8 @@
     <button class="seg" data-tab="ubicaciones">Ubicaciones</button>
     <button class="seg" data-tab="movimientos">Movimientos</button>
     <button class="seg" data-tab="requisiciones">Requisiciones</button>
+    <button class="seg" data-tab="proveedores">Proveedores</button>
+    <button class="seg" data-tab="donaciones">Donaciones</button>
   </div>
 
   <!-- ═══ TABLERO ═══ -->
@@ -410,6 +412,159 @@
     </div>
   </section>
 
+  <!-- ═══ PROVEEDORES ═══ -->
+  <section data-panel="proveedores" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="eyebrow">Proveedores</div>
+          <input id="pv_q" placeholder="Buscar proveedor…" class="inp-sm" style="width:180px">
+          <select id="pv_tipo" class="inp-sm">
+            <option value="">Todos los tipos</option>
+            <option value="proveedor">Proveedor</option>
+            <option value="donante">Donante</option>
+            <option value="fabricante">Fabricante</option>
+            <option value="distribuidor">Distribuidor</option>
+          </select>
+          <button id="pv_buscar" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto" style="max-height:50vh">
+            <table class="dt">
+              <thead><tr><th>Nombre</th><th>Tipo</th><th>RIF</th><th>Contacto</th><th>Teléfono</th><th>Estado</th><th>#precios</th></tr></thead>
+              <tbody id="pvRows"><tr><td colspan="7" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="pvDetail" class="hidden card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="eyebrow">Detalle de proveedor</div>
+            <button id="pvDetailClose" class="text-xs font-semibold text-on-surface-variant">✕ Cerrar</button>
+          </div>
+          <div id="pvDetailMeta" class="text-sm"></div>
+          <div class="eyebrow mt-1">Lista de precios</div>
+          <div class="overflow-x-auto">
+            <table class="dt"><thead><tr><th>Producto</th><th>Código prov.</th><th>Precio</th><th>Moneda</th><th>Lead time</th><th>Mín. pedido</th><th>Preferido</th><th></th></tr></thead>
+            <tbody id="pvPreciosRows"></tbody></table>
+          </div>
+          <div>
+            <div class="eyebrow mb-2">Agregar precio</div>
+            <form id="pvAddPrecioForm" class="space-y-2">
+              <div class="grid grid-cols-2 gap-2">
+                <div><label class="lbl">Producto</label><select id="pvPrecioFormProd" name="producto_id" required class="inp-sm"><option value="">-- Producto --</option></select></div>
+                <div><label class="lbl">Código proveedor</label><input name="codigo_proveedor" class="inp-sm" placeholder="SKU-prov"></div>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div><label class="lbl">Precio</label><input name="precio" type="number" min="0" step="0.01" class="inp-sm" required></div>
+                <div><label class="lbl">Moneda</label><select name="moneda" class="inp-sm"><option value="USD">USD</option><option value="VES">VES</option></select></div>
+                <div><label class="lbl">Lead time (días)</label><input name="lead_time_dias" type="number" min="0" class="inp-sm" placeholder="0"></div>
+              </div>
+              <div class="grid grid-cols-2 gap-2 items-center">
+                <div><label class="lbl">Mín. pedido</label><input name="minimo_pedido" type="number" min="0" class="inp-sm" placeholder="0"></div>
+                <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer"><input name="preferido" type="checkbox"> Preferido</label>
+              </div>
+              <button class="w-full bg-secondary text-white font-bold rounded py-1.5 text-xs">Agregar precio</button>
+              <p id="pvPrecioMsg" class="text-xs text-center"></p>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Nuevo proveedor</div>
+        <form id="fProv" class="space-y-2">
+          <input name="nombre" placeholder="Nombre*" required />
+          <div class="grid grid-cols-2 gap-2">
+            <select name="tipo">
+              <option value="proveedor">Proveedor</option>
+              <option value="donante">Donante</option>
+              <option value="fabricante">Fabricante</option>
+              <option value="distribuidor">Distribuidor</option>
+            </select>
+            <input name="rif" placeholder="RIF" />
+          </div>
+          <input name="contacto" placeholder="Contacto" />
+          <div class="grid grid-cols-2 gap-2">
+            <input name="telefono" placeholder="Teléfono" />
+            <input name="email" type="email" placeholder="Email" />
+          </div>
+          <input name="estado_region" placeholder="Estado/Región" />
+          <input name="direccion" placeholder="Dirección" />
+          <button class="w-full bg-secondary text-white font-bold rounded py-2 text-sm">Registrar proveedor</button>
+          <p id="pvFormMsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ DONACIONES ═══ -->
+  <section data-panel="donaciones" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="eyebrow">Donaciones</div>
+          <select id="dn_estado" class="inp-sm">
+            <option value="">Todas</option>
+            <option value="registrada">Registrada</option>
+            <option value="recibida">Recibida</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+          <button id="dn_buscar" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto" style="max-height:50vh">
+            <table class="dt">
+              <thead><tr><th>Código</th><th>Donante</th><th>Tipo</th><th>Ubicación</th><th>Estado</th><th>#líneas</th><th>Fecha</th></tr></thead>
+              <tbody id="dnRows"><tr><td colspan="7" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="dnDetail" class="hidden card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="eyebrow">Detalle de donación</div>
+            <button id="dnDetailClose" class="text-xs font-semibold text-on-surface-variant">✕ Cerrar</button>
+          </div>
+          <div id="dnDetailMeta" class="text-sm"></div>
+          <div class="overflow-x-auto">
+            <table class="dt"><thead><tr><th>Producto</th><th>Código</th><th>Lote</th><th>Caducidad</th><th>Cantidad</th><th>Valor unit.</th></tr></thead>
+            <tbody id="dnDetailLines"></tbody></table>
+          </div>
+          <div id="dnActions" class="flex flex-wrap gap-2 items-center"></div>
+          <p id="dnActMsg" class="text-xs text-center"></p>
+        </div>
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Nueva donación</div>
+        <form id="fDon" class="space-y-2">
+          <input name="donante" placeholder="Donante*" required />
+          <div class="grid grid-cols-2 gap-2">
+            <select name="tipo_donante">
+              <option value="individual">Individual</option>
+              <option value="empresa">Empresa</option>
+              <option value="ong">ONG</option>
+              <option value="gobierno">Gobierno</option>
+              <option value="internacional">Internacional</option>
+            </select>
+            <select name="ubicacion_id"><option value="">-- Ubicación --</option></select>
+          </div>
+          <input name="referencia" placeholder="Referencia" />
+          <div class="grid grid-cols-2 gap-2">
+            <input name="valor_estimado" type="number" min="0" step="0.01" placeholder="Valor estimado" />
+            <select name="moneda"><option value="USD">USD</option><option value="VES">VES</option></select>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <div class="eyebrow">Líneas</div>
+              <button type="button" class="btn-add" onclick="addDonRow()">+ Añadir</button>
+            </div>
+            <div id="rows_don" class="space-y-1.5"></div>
+          </div>
+          <button class="w-full text-white font-bold rounded py-2 text-sm" style="background:#15803d">✓ Registrar donación</button>
+          <p id="donMsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
   <p class="text-[11px] text-on-surface-variant">Actualización manual · las acciones de escritura requieren sesión de operador.</p>
 </main>
 
@@ -428,6 +583,9 @@ const num=v=>(v===''||v==null)?null:Number(v);
 const MTIPO={recepcion:{l:'Recepción',c:'#15803d',bg:'#dcfce7'},despacho:{l:'Despacho',c:'#1d4ed8',bg:'#dbeafe'},traslado:{l:'Traslado',c:'#b45309',bg:'#fef3c7'},ajuste:{l:'Ajuste',c:'#7c3aed',bg:'#ede9fe'}};
 const RQEST={borrador:{l:'Borrador',c:'#475569',bg:'#e2e8f0'},enviada:{l:'Enviada',c:'#1d4ed8',bg:'#dbeafe'},aprobada:{l:'Aprobada',c:'#15803d',bg:'#dcfce7'},surtida:{l:'Surtida',c:'#0891b2',bg:'#cffafe'},cancelada:{l:'Cancelada',c:'#b91c1c',bg:'#fee2e2'}};
 const UTIPO={deposito:'Depósito',refugio:'Refugio',almacen:'Almacén',hospital:'Hospital',punto_distribucion:'Punto dist.',proveedor:'Proveedor'};
+const PVTIPO={proveedor:{l:'Proveedor',c:'#1d4ed8',bg:'#dbeafe'},donante:{l:'Donante',c:'#15803d',bg:'#dcfce7'},fabricante:{l:'Fabricante',c:'#7c3aed',bg:'#ede9fe'},distribuidor:{l:'Distribuidor',c:'#b45309',bg:'#fef3c7'}};
+const DONEST={registrada:{l:'Registrada',c:'#b45309',bg:'#fef3c7'},recibida:{l:'Recibida',c:'#15803d',bg:'#dcfce7'},cancelada:{l:'Cancelada',c:'#b91c1c',bg:'#fee2e2'}};
+const DONTIPO={individual:{l:'Individual',c:'#475569',bg:'#e2e8f0'},empresa:{l:'Empresa',c:'#1d4ed8',bg:'#dbeafe'},ong:{l:'ONG',c:'#15803d',bg:'#dcfce7'},gobierno:{l:'Gobierno',c:'#7c3aed',bg:'#ede9fe'},internacional:{l:'Internacional',c:'#0891b2',bg:'#cffafe'}};
 function chipOf(k,map){const m=map[k]||{l:k||'—',c:'#475569',bg:'#e2e8f0'};return`<span class="chip" style="color:${m.c};background:${m.bg}">${esc(m.l)}</span>`;}
 
 // ── Toast / messages ──
@@ -456,6 +614,8 @@ function onTab(t){
   else if(t==='ubicaciones')loadUbic();
   else if(t==='movimientos'){ensureUbic();ensureProds();loadMovs();}
   else if(t==='requisiciones'){ensureUbic();ensureProds();loadReqs();}
+  else if(t==='proveedores'){ensureUbic();ensureProds();loadProveedores();}
+  else if(t==='donaciones'){ensureUbic();ensureProds();loadDonaciones();}
 }
 
 // ── Ubicaciones ──
@@ -809,6 +969,163 @@ $('#fReq').onsubmit=async e=>{e.preventDefault();const f=e.target;
   if(ok){f.reset();$('#rows_req').innerHTML='';loadReqs();toast('Requisición creada');}
 };
 $('#rq_buscar').onclick=loadReqs;
+
+// ── Proveedores ──
+let PROVEEDORES=[];
+async function loadProveedores(){
+  const q=$('#pv_q')?.value||'',tipo=$('#pv_tipo')?.value||'';
+  const p=new URLSearchParams();if(q)p.set('q',q);if(tipo)p.set('tipo',tipo);
+  const r=await api('proveedores?'+p).catch(()=>null);
+  const tb=$('#pvRows');if(!tb)return;
+  if(!r){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Error de red.</td></tr>';return;}
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin autorización.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));PROVEEDORES=d.results||[];renderProveedores(PROVEEDORES);
+}
+function renderProveedores(list){
+  const tb=$('#pvRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin proveedores todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(p=>`<tr class="row" onclick="openProveedor('${esc(p.id)}')">
+    <td><div class="font-semibold text-[12px]">${esc(p.nombre||'—')}</div></td>
+    <td>${chipOf(p.tipo,PVTIPO)}</td>
+    <td class="mono text-[11px]">${esc(p.rif||'—')}</td>
+    <td class="text-[12px]">${esc(p.contacto||'—')}</td>
+    <td class="text-[12px]">${esc(p.telefono||'—')}</td>
+    <td class="text-[12px]">${esc(p.estado_region||'—')}</td>
+    <td class="mono text-[12px]">${p.n_precios??'—'}</td>
+  </tr>`).join('');
+}
+async function openProveedor(id){
+  const [rPv,rPr]=await Promise.all([
+    api('proveedores/'+id).catch(()=>null),
+    api('proveedores/'+id+'/precios').catch(()=>null)
+  ]);
+  if(!rPv||!rPv.ok)return;
+  const d=await j(rPv).catch(()=>({}));const pv=d.proveedor||d;
+  const dp=rPr&&rPr.ok?await j(rPr).catch(()=>({})):{};const precios=dp.results||[];
+  $('#pvDetailMeta').innerHTML=`<b class="mono">${esc(pv.nombre||pv.id)}</b> ${chipOf(pv.tipo,PVTIPO)} · RIF: <b>${esc(pv.rif||'—')}</b> · Contacto: <b>${esc(pv.contacto||'—')}</b> · Tel: ${esc(pv.telefono||'—')}`;
+  renderPreciosTable(precios,id);
+  const pOpts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+  const pSel=$('#pvPrecioFormProd');if(pSel)pSel.innerHTML='<option value="">-- Producto --</option>'+pOpts;
+  $('#pvAddPrecioForm').dataset.pvId=id;
+  $('#pvDetail').classList.remove('hidden');
+}
+function renderPreciosTable(list,pvId){
+  const tb=$('#pvPreciosRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="8" class="py-4 text-center text-on-surface-variant">Sin precios registrados.</td></tr>';return;}
+  tb.innerHTML=list.map(l=>`<tr class="row">
+    <td class="font-semibold text-[12px]">${esc(l.producto_nombre||'—')}</td>
+    <td class="mono text-[11px]">${esc(l.codigo_proveedor||'—')}</td>
+    <td class="mono text-[12px]">${l.precio!=null?Number(l.precio).toLocaleString('es-VE',{minimumFractionDigits:2}):'—'}</td>
+    <td class="text-[12px]">${esc(l.moneda||'USD')}</td>
+    <td class="mono text-[12px]">${l.lead_time_dias??'—'}</td>
+    <td class="mono text-[12px]">${l.minimo_pedido??'—'}</td>
+    <td class="text-[12px]">${l.preferido?'<span class="chip" style="color:#15803d;background:#dcfce7">✓ Sí</span>':'—'}</td>
+    <td><button class="btn-del" onclick="delPrecio('${esc(l.id)}','${esc(pvId||'')}')">✕</button></td>
+  </tr>`).join('');
+}
+$('#pvDetailClose').onclick=()=>$('#pvDetail').classList.add('hidden');
+$('#pv_buscar').onclick=loadProveedores;
+$('#pv_q').onkeydown=e=>{if(e.key==='Enter')loadProveedores();};
+$('#fProv').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const ok=await post('proveedores',{nombre:f.nombre.value,tipo:f.tipo.value,rif:f.rif.value||null,contacto:f.contacto.value||null,telefono:f.telefono.value||null,email:f.email.value||null,estado_region:f.estado_region.value||null,direccion:f.direccion.value||null},'#pvFormMsg');
+  if(ok){f.reset();loadProveedores();toast('Proveedor registrado');}
+};
+$('#pvAddPrecioForm').onsubmit=async e=>{e.preventDefault();const f=e.target;const pvId=f.dataset.pvId;
+  if(!pvId)return;
+  const ok=await post('proveedores/'+pvId+'/precios',{producto_id:f.producto_id.value,codigo_proveedor:f.codigo_proveedor.value||null,precio:num(f.precio.value),moneda:f.moneda.value,lead_time_dias:num(f.lead_time_dias.value)||null,minimo_pedido:num(f.minimo_pedido.value)||null,preferido:f.preferido.checked},'#pvPrecioMsg');
+  if(ok){f.reset();f.dataset.pvId=pvId;openProveedor(pvId);toast('Precio agregado');}
+};
+async function delPrecio(linkId,pvId){
+  if(!confirm('¿Eliminar precio?'))return;
+  const r=await api('proveedores/precios/'+linkId,{method:'DELETE'});
+  if(r.ok){toast('Precio eliminado');if(pvId)openProveedor(pvId);}
+  else{const d=await r.json().catch(()=>({}));toast(d.error||'Error al eliminar',false);}
+}
+
+// ── Donaciones ──
+async function loadDonaciones(){
+  const estado=$('#dn_estado')?.value||'';
+  const p=estado?'?estado='+encodeURIComponent(estado):'';
+  const r=await api('donaciones'+p).catch(()=>null);
+  const tb=$('#dnRows');if(!tb)return;
+  if(!r){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Error de red.</td></tr>';return;}
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin autorización.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));renderDonaciones(d.results||[]);
+}
+function renderDonaciones(list){
+  const tb=$('#dnRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin donaciones todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(dn=>`<tr class="row" onclick="openDonacion('${esc(dn.id)}')">
+    <td class="mono text-[11px] font-bold">${esc(dn.codigo||dn.id||'—')}</td>
+    <td class="font-semibold text-[12px]">${esc(dn.donante||'—')}</td>
+    <td>${chipOf(dn.tipo_donante,DONTIPO)}</td>
+    <td class="text-[12px]">${esc(dn.ubicacion_nombre||dn.ubicacion||'—')}</td>
+    <td>${chipOf(dn.estado,DONEST)}</td>
+    <td class="mono text-[12px]">${dn.n_lineas??'—'}</td>
+    <td class="text-[11px]">${fdate(dn.created_ms)}</td>
+  </tr>`).join('');
+}
+async function openDonacion(id){
+  const r=await api('donaciones/'+id).catch(()=>null);if(!r||!r.ok)return;
+  const d=await j(r).catch(()=>({}));
+  const dn=d.donacion||d;const lines=d.lineas||[];
+  $('#dnDetailMeta').innerHTML=`<b class="mono">${esc(dn.codigo||dn.id)}</b> ${chipOf(dn.estado,DONEST)} ${chipOf(dn.tipo_donante,DONTIPO)} · Donante: <b>${esc(dn.donante||'—')}</b> · Ubicación: <b>${esc(dn.ubicacion_nombre||'—')}</b>`;
+  $('#dnDetailLines').innerHTML=lines.length?lines.map(l=>`<tr class="row">
+    <td class="font-semibold text-[12px]">${esc(l.producto_nombre||'—')}</td>
+    <td class="mono text-[11px]">${esc(l.codigo||'—')}</td>
+    <td class="mono text-[11px]">${esc(l.lote||'—')}</td>
+    <td class="text-[12px]">${fdate(l.caducidad_ms)}</td>
+    <td class="mono text-[12px]">${l.cantidad??'—'}</td>
+    <td class="mono text-[12px]">${l.valor_unitario!=null?Number(l.valor_unitario).toLocaleString('es-VE',{minimumFractionDigits:2}):'—'}</td>
+  </tr>`).join(''):'<tr><td colspan="6" class="py-4 text-center text-on-surface-variant">Sin líneas.</td></tr>';
+  buildDnActions(dn);
+  $('#dnDetail').classList.remove('hidden');
+}
+$('#dnDetailClose').onclick=()=>$('#dnDetail').classList.add('hidden');
+$('#dn_buscar').onclick=loadDonaciones;
+function buildDnActions(dn){
+  const el=$('#dnActions');const est=dn.estado||'registrada';let acts=[];
+  if(est==='registrada'){
+    acts.push(`<button onclick="recibirDonacion('${esc(dn.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Recibir donación</button>`);
+    acts.push(`<button onclick="cancelarDonacion('${esc(dn.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+  }
+  el.innerHTML=acts.join('');
+}
+async function recibirDonacion(id){
+  const r=await api('donaciones/'+id+'/recibir',{method:'POST',body:JSON.stringify({})});
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){toast('Donación recibida y registrada en inventario');loadDonaciones();openDonacion(id);}
+  else setMsg('#dnActMsg',d.error||'Error al recibir',false);
+}
+async function cancelarDonacion(id){
+  if(!confirm('¿Cancelar donación?'))return;
+  const r=await api('donaciones/'+id,{method:'PATCH',body:JSON.stringify({estado:'cancelada'})});
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){toast('Donación cancelada');loadDonaciones();openDonacion(id);}
+  else setMsg('#dnActMsg',d.error||'Error al cancelar',false);
+}
+function addDonRow(){
+  const div=document.createElement('div');div.className='lrow';
+  div.style.gridTemplateColumns='1fr 100px 130px 80px 100px auto';
+  const pOpts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+  div.innerHTML=`<select class="inp-sm row-prod-sel"><option value="">-- Producto --</option>${pOpts}</select>
+    <input placeholder="Lote" class="inp-sm row-lote">
+    <input type="date" class="inp-sm row-cad">
+    <input type="number" min="0" placeholder="Cant." class="inp-sm row-qty">
+    <input type="number" min="0" step="0.01" placeholder="Val. unit." class="inp-sm row-val">
+    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+  $('#rows_don').appendChild(div);
+}
+$('#fDon').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const lineas=[...$('#rows_don').querySelectorAll('.lrow')].map(r=>({
+    producto_id:r.querySelector('.row-prod-sel').value,lote:r.querySelector('.row-lote').value||null,
+    caducidad_ms:toMs(r.querySelector('.row-cad').value),
+    cantidad:num(r.querySelector('.row-qty').value),valor_unitario:num(r.querySelector('.row-val').value)||null
+  })).filter(l=>l.producto_id&&l.cantidad);
+  if(!lineas.length){setMsg('#donMsg','Añade al menos una línea con producto y cantidad.',false);return;}
+  const ok=await post('donaciones',{donante:f.donante.value,tipo_donante:f.tipo_donante.value,ubicacion_id:f.ubicacion_id.value||null,referencia:f.referencia.value||null,valor_estimado:num(f.valor_estimado.value)||null,moneda:f.moneda.value||'USD',lineas},'#donMsg');
+  if(ok){f.reset();$('#rows_don').innerHTML='';loadDonaciones();toast('Donación registrada');}
+};
 
 // ── Generic POST ──
 async function post(endpoint,body,msgSel){
