@@ -27,6 +27,9 @@ import { adminRbac } from './routes/admin-rbac';
 import { adminSessions } from './routes/admin-sessions';
 import { adminOrg } from './routes/admin-org';
 import { adminFlags } from './routes/admin-flags';
+import { adminLifecycle } from './routes/admin-lifecycle';
+import { adminImpersonation } from './routes/admin-impersonation';
+import { adminRolesIo } from './routes/admin-roles-io';
 import { funding } from './routes/funding';
 import { dashboard } from './routes/dashboard';
 import { plan } from './routes/plan';
@@ -269,10 +272,13 @@ app.route('/api/sitrep', sitrep);    // public non-PII operational sitrep / ESF 
 app.route('/api/acopio', acopio);    // /api/acopio/status — live status for acopio/hospitales/PC
 app.route('/api/acopio', logistica); // /api/acopio/{inventory,needs,shipments,match,dashboard} — FEMA-style logistics (GET public, writes operator-gated)
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
+app.route('/api/rbac', adminLifecycle); // Phase 2 W2: invitations/approvals/temp-roles — MOUNTED FIRST so its richer /invitations handlers win over adminRbac's
 app.route('/api/rbac', adminRbac);   // enterprise RBAC admin API (users/roles/permissions/audit/dashboard) — each route self-gates via requirePermission
 app.route('/api/rbac', adminSessions); // Phase 2: TOTP MFA + session mgmt + emergency lock
 app.route('/api/rbac', adminOrg);      // Phase 2: organization → department → team hierarchy
 app.route('/api/rbac', adminFlags);    // Phase 2: feature flags scoped by org/role/user
+app.route('/api/rbac', adminImpersonation); // Phase 2 W2: impersonation with mandatory audit + auto-expire
+app.route('/api/rbac', adminRolesIo);  // Phase 2 W2: permission diff, role export/import, effective-perms inspector
 app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET public; refresh gated; apify webhook secret-gated)
 app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directory (GET public; writes operator-gated)
 app.route('/api/emergencia', emergencia); // SUPER BANNER emergency spotlight profiles (GET public; writes operator-gated; share bump public)
