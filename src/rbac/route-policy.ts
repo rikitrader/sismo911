@@ -27,7 +27,37 @@ export type GateDecision =
   | { kind: 'open' }                       // no auth required
   | { kind: 'login' }                      // any authenticated user
   | { kind: 'perm'; perm: string }         // requires this permission
-  | { kind: 'page'; perm?: string };       // HTML page (login redirect on fail); perm defaults to ops:console
+  | { kind: 'page'; perm?: string }        // HTML page (login redirect on fail); perm defaults to ops:console
+  | { kind: 'deny' };                      // M1 default-deny: an /api route neither gated nor on the public allow-list → fail closed (403)
+
+// M1 default-deny — explicit allow-list of the PUBLIC /api surface. ANY /api/*
+// path that is neither gated (the matrix below) nor matched here fails closed.
+//
+// IMPORTANT: most of these are NOT "wide open" — they are token-gated or
+// route-level-authenticated INSIDE their handlers (e.g. /api/rbac uses
+// requirePermission per route; /api/blog/run uses BLOG_INGEST_TOKEN; webhooks use
+// shared secrets; /api/telemedicina uses booking/doctor tokens). The global gate
+// merely lets the request REACH that route-level auth. A brand-new feature prefix
+// is intentionally absent here, so it fails closed (the exact C3/flota bug class).
+// Completeness is enforced by test/api-route-coverage.test.ts against the real
+// Hono route table — a new prefix cannot merge/deploy unclassified.
+const PUBLIC_API_PREFIXES: readonly string[] = [
+  '/api/health', '/api/ready', '/api/status', '/api/verified-info', '/api/stats',
+  '/api/events', '/api/heatmap', '/api/dashboard', '/api/layers', '/api/sitrep',
+  '/api/acopio', '/api/agencias', '/api/aid-orgs', '/api/alerts', '/api/auth',
+  '/api/blog', '/api/botiquin', '/api/campaigns', '/api/campaigns-mine', '/api/chat', '/api/checkins',
+  '/api/comms', '/api/contacts', '/api/damage', '/api/danos-estructurales',
+  '/api/donations', '/api/emergencia', '/api/facilities', '/api/familia',
+  '/api/funding', '/api/humanitarian', '/api/mascotas', '/api/monitor',
+  '/api/persons', '/api/push', '/api/rav', '/api/rbac', '/api/reports',
+  '/api/resources', '/api/sat', '/api/shelters', '/api/sos', '/api/suministros',
+  '/api/telemedicina', '/api/v1', '/api/voluntarios', '/api/x402', '/api/admin',
+];
+
+/** True if `path` is on the public /api allow-list (prefix match on a path segment). */
+export function isPublicApi(path: string): boolean {
+  return PUBLIC_API_PREFIXES.some((p) => path === p || path.startsWith(p + '/'));
+}
 
 /**
  * Decide what a request needs. Pure (path, method) — no env, no side effects.
@@ -78,7 +108,13 @@ export function evaluateGate(path: string, method: string): GateDecision {
     isShelterModeration || isSatWrite || isAcopioReview || isFlotaApi || isFlotaAdminApi ||
     isSuministrosPage || isSuministrosRead;
 
-  if (!gated) return { kind: 'open' };
+  if (!gated) {
+    // M1 default-deny: an un-gated /api route must be on the public allow-list,
+    // else it fails closed (403). Non-/api paths (static pages, public HTML) are
+    // unaffected and stay open.
+    if (path.startsWith('/api') && !isPublicApi(path)) return { kind: 'deny' };
+    return { kind: 'open' };
+  }
   if (isAdminPage) return { kind: 'page' };          // gated, but HTML → login redirect on fail
   if (isSuministrosPage) return { kind: 'page', perm: 'suministros:read' }; // SPA shell → login redirect
   if (isSuministrosRead) return { kind: 'perm', perm: 'suministros:read' }; // read APIs
