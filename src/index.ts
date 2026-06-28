@@ -57,6 +57,9 @@ import { sumRequisiciones } from './routes/suministros-requisiciones';
 import { sumTablero } from './routes/suministros-tablero';
 import { sumProveedores } from './routes/suministros-proveedores';
 import { sumDonaciones } from './routes/suministros-donaciones';
+import { sumOrdenes } from './routes/suministros-ordenes';
+import { sumCuentas } from './routes/suministros-cuentas';
+import { sumFacturas } from './routes/suministros-facturas';
 import { runCronGroup } from './cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
@@ -296,6 +299,9 @@ app.route('/api/suministros/requisiciones', sumRequisiciones); // stock requests
 app.route('/api/suministros/tablero', sumTablero);             // dashboard aggregates (resumen + alertas + recientes)
 app.route('/api/suministros/proveedores', sumProveedores);     // suppliers + product-supplier pricing/lead-time
 app.route('/api/suministros/donaciones', sumDonaciones);       // donations intake → recepción into stock
+app.route('/api/suministros/ordenes', sumOrdenes);             // purchase orders: crear→aprobar→recibir vs OC
+app.route('/api/suministros/cuentas', sumCuentas);             // GL accounts / budget codes
+app.route('/api/suministros/facturas', sumFacturas);           // supplier invoices (+ líneas, pagar)
 
 // Homepage = the DESAPARECIDOS registry. The root URL serves the /personas page
 // (family-reunification is the app's front door post-quake); the old TERREMOTOS

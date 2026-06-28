@@ -43,6 +43,9 @@
     .btn-del{font-size:.72rem;color:#b91c1c;font-weight:700;border:1px solid #fecaca;border-radius:.4rem;padding:.25rem .5rem;cursor:pointer;background:#fff8f8}
     .lrow{display:grid;gap:5px;align-items:center;margin-bottom:4px}
     .lbl{font-size:.64rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7a8092;display:block;margin-bottom:2px}
+    .fin-subtab{font:700 11px 'Inter',sans-serif;padding:5px 10px;border-radius:7px;cursor:pointer;color:#44474f;white-space:nowrap;border:none;background:none}
+    .fin-subtab.on{background:#13284f;color:#fff}
+    .fin-subtab:hover:not(.on){background:#e0e4ef}
   </style>
 </head>
 <body class="font-sans text-on-surface">
@@ -89,6 +92,8 @@
     <button class="seg" data-tab="requisiciones">Requisiciones</button>
     <button class="seg" data-tab="proveedores">Proveedores</button>
     <button class="seg" data-tab="donaciones">Donaciones</button>
+    <button class="seg" data-tab="ordenes">Órdenes</button>
+    <button class="seg" data-tab="finanzas">Finanzas</button>
   </div>
 
   <!-- ═══ TABLERO ═══ -->
@@ -565,6 +570,173 @@
     </div>
   </section>
 
+  <!-- ═══ ÓRDENES ═══ -->
+  <section data-panel="ordenes" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="eyebrow">Órdenes de compra</div>
+          <select id="oc_estado" class="inp-sm">
+            <option value="">Todas</option>
+            <option value="borrador">Borrador</option>
+            <option value="aprobada">Aprobada</option>
+            <option value="recibida_parcial">Recibida parcial</option>
+            <option value="recibida">Recibida</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+          <button id="oc_buscar" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto" style="max-height:50vh">
+            <table class="dt">
+              <thead><tr><th>Código</th><th>Proveedor</th><th>Ubicación</th><th>Estado</th><th>#líneas</th><th>Total</th><th>Esperada</th></tr></thead>
+              <tbody id="ocRows"><tr><td colspan="7" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="ocDetail" class="hidden card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="eyebrow">Detalle de orden</div>
+            <button id="ocDetailClose" class="text-xs font-semibold text-on-surface-variant">✕ Cerrar</button>
+          </div>
+          <div id="ocDetailMeta" class="text-sm"></div>
+          <div class="overflow-x-auto">
+            <table class="dt"><thead><tr><th>Producto</th><th>Código</th><th>Cant. pedida</th><th>Cant. recibida</th><th>Precio</th><th>Subtotal</th></tr></thead>
+            <tbody id="ocDetailLines"></tbody></table>
+          </div>
+          <div id="ocActions" class="flex flex-wrap gap-2 items-center"></div>
+          <div id="ocRecibirForm" class="hidden space-y-2">
+            <div class="eyebrow mt-1">Registrar recepción</div>
+            <div id="ocRecibirLines" class="space-y-1.5"></div>
+            <button id="ocRecibirBtn" class="text-white font-bold rounded py-2 px-4 text-sm" style="background:#15803d">✓ Confirmar recepción</button>
+          </div>
+          <p id="ocActMsg" class="text-xs text-center"></p>
+        </div>
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Nueva orden</div>
+        <form id="fOrden" class="space-y-2">
+          <select name="proveedor_id" class="prov-sel" required><option value="">-- Proveedor --</option></select>
+          <select name="ubicacion_id" required><option value="">-- Seleccionar --</option></select>
+          <div class="grid grid-cols-2 gap-2">
+            <select name="moneda"><option value="USD">USD</option><option value="VES">VES</option></select>
+            <input name="referencia" placeholder="Referencia" />
+          </div>
+          <div><label class="lbl">Fecha esperada</label><input name="fecha_esperada" type="date" /></div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <div class="eyebrow">Líneas</div>
+              <button type="button" class="btn-add" onclick="addOrdenRow()">+ Añadir</button>
+            </div>
+            <div id="rows_orden" class="space-y-1.5"></div>
+          </div>
+          <button class="w-full bg-secondary text-white font-bold rounded py-2 text-sm">Crear orden</button>
+          <p id="ordenMsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FINANZAS ═══ -->
+  <section data-panel="finanzas" class="hidden space-y-4">
+    <div class="flex gap-2 bg-white border border-gray-200 rounded-xl p-1.5 w-fit">
+      <button class="fin-subtab on" data-fin-stab="cuentas">Cuentas / GL</button>
+      <button class="fin-subtab" data-fin-stab="facturas">Facturas</button>
+    </div>
+
+    <!-- Cuentas GL subpanel -->
+    <div data-fin-subpanel="cuentas" class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <div class="eyebrow">Cuentas presupuesto / GL</div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto" style="max-height:50vh">
+            <table class="dt">
+              <thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Activa</th><th></th></tr></thead>
+              <tbody id="ctaRows"><tr><td colspan="5" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Nueva cuenta</div>
+        <form id="fCta" class="space-y-2">
+          <input name="codigo" placeholder="Código*" required />
+          <input name="nombre" placeholder="Nombre*" required />
+          <select name="tipo">
+            <option value="presupuesto">Presupuesto</option>
+            <option value="gasto">Gasto</option>
+            <option value="activo">Activo</option>
+            <option value="pasivo">Pasivo</option>
+            <option value="ingreso">Ingreso</option>
+          </select>
+          <textarea name="descripcion" rows="2" placeholder="Descripción"></textarea>
+          <button class="w-full bg-secondary text-white font-bold rounded py-2 text-sm">Registrar cuenta</button>
+          <p id="ctaMsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Facturas subpanel -->
+    <div data-fin-subpanel="facturas" class="hidden grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="eyebrow">Facturas</div>
+          <select id="fac_estado" class="inp-sm">
+            <option value="">Todas</option>
+            <option value="borrador">Borrador</option>
+            <option value="emitida">Emitida</option>
+            <option value="pagada">Pagada</option>
+            <option value="anulada">Anulada</option>
+          </select>
+          <button id="fac_buscar" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto" style="max-height:50vh">
+            <table class="dt">
+              <thead><tr><th>Código</th><th>Proveedor</th><th>Cuenta</th><th>Estado</th><th>Monto</th><th>#líneas</th><th>Vence</th></tr></thead>
+              <tbody id="facRows"><tr><td colspan="7" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="facDetail" class="hidden card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="eyebrow">Detalle de factura</div>
+            <button id="facDetailClose" class="text-xs font-semibold text-on-surface-variant">✕ Cerrar</button>
+          </div>
+          <div id="facDetailMeta" class="text-sm"></div>
+          <div class="overflow-x-auto">
+            <table class="dt"><thead><tr><th>Descripción</th><th>Producto</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead>
+            <tbody id="facDetailLines"></tbody></table>
+          </div>
+          <div id="facActions" class="flex flex-wrap gap-2 items-center"></div>
+          <p id="facActMsg" class="text-xs text-center"></p>
+        </div>
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Nueva factura</div>
+        <form id="fFac" class="space-y-2">
+          <select name="proveedor_id" class="prov-sel" required><option value="">-- Proveedor --</option></select>
+          <select name="cuenta_id" class="cta-sel" required><option value="">-- Cuenta GL --</option></select>
+          <input name="orden_id" placeholder="Orden ID (opcional)" />
+          <div class="grid grid-cols-2 gap-2">
+            <select name="moneda"><option value="USD">USD</option><option value="VES">VES</option></select>
+            <div><label class="lbl">Vencimiento</label><input name="vencimiento" type="date" /></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <div class="eyebrow">Líneas</div>
+              <button type="button" class="btn-add" onclick="addFacRow()">+ Añadir</button>
+            </div>
+            <div id="rows_fac" class="space-y-1.5"></div>
+          </div>
+          <div class="card px-3 py-2 text-sm font-semibold" style="background:#f4f6f9">Total estimado: <span id="facTotalPreview" class="mono font-black">0.00</span></div>
+          <button class="w-full bg-secondary text-white font-bold rounded py-2 text-sm">Crear factura</button>
+          <p id="facMsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
   <p class="text-[11px] text-on-surface-variant">Actualización manual · las acciones de escritura requieren sesión de operador.</p>
 </main>
 
@@ -586,6 +758,9 @@ const UTIPO={deposito:'Depósito',refugio:'Refugio',almacen:'Almacén',hospital:
 const PVTIPO={proveedor:{l:'Proveedor',c:'#1d4ed8',bg:'#dbeafe'},donante:{l:'Donante',c:'#15803d',bg:'#dcfce7'},fabricante:{l:'Fabricante',c:'#7c3aed',bg:'#ede9fe'},distribuidor:{l:'Distribuidor',c:'#b45309',bg:'#fef3c7'}};
 const DONEST={registrada:{l:'Registrada',c:'#b45309',bg:'#fef3c7'},recibida:{l:'Recibida',c:'#15803d',bg:'#dcfce7'},cancelada:{l:'Cancelada',c:'#b91c1c',bg:'#fee2e2'}};
 const DONTIPO={individual:{l:'Individual',c:'#475569',bg:'#e2e8f0'},empresa:{l:'Empresa',c:'#1d4ed8',bg:'#dbeafe'},ong:{l:'ONG',c:'#15803d',bg:'#dcfce7'},gobierno:{l:'Gobierno',c:'#7c3aed',bg:'#ede9fe'},internacional:{l:'Internacional',c:'#0891b2',bg:'#cffafe'}};
+const OCEST={borrador:{l:'Borrador',c:'#475569',bg:'#e2e8f0'},aprobada:{l:'Aprobada',c:'#15803d',bg:'#dcfce7'},recibida_parcial:{l:'Rec. parcial',c:'#b45309',bg:'#fef3c7'},recibida:{l:'Recibida',c:'#0891b2',bg:'#cffafe'},cancelada:{l:'Cancelada',c:'#b91c1c',bg:'#fee2e2'}};
+const FACEST={borrador:{l:'Borrador',c:'#475569',bg:'#e2e8f0'},emitida:{l:'Emitida',c:'#1d4ed8',bg:'#dbeafe'},pagada:{l:'Pagada',c:'#15803d',bg:'#dcfce7'},anulada:{l:'Anulada',c:'#b91c1c',bg:'#fee2e2'}};
+const CTATIPO={presupuesto:{l:'Presupuesto',c:'#7c3aed',bg:'#ede9fe'},gasto:{l:'Gasto',c:'#b91c1c',bg:'#fee2e2'},activo:{l:'Activo',c:'#15803d',bg:'#dcfce7'},pasivo:{l:'Pasivo',c:'#b45309',bg:'#fef3c7'},ingreso:{l:'Ingreso',c:'#0891b2',bg:'#cffafe'}};
 function chipOf(k,map){const m=map[k]||{l:k||'—',c:'#475569',bg:'#e2e8f0'};return`<span class="chip" style="color:${m.c};background:${m.bg}">${esc(m.l)}</span>`;}
 
 // ── Toast / messages ──
@@ -596,6 +771,7 @@ function showAuth(msg){const b=$('#authBanner');b.textContent=msg;b.classList.re
 
 // ── State caches ──
 let UBICACIONES=[], CATEGORIAS=[], PRODUCTOS=[], ICACHE={};
+let CUENTAS=[];
 
 // ── Tabs ──
 $$('.seg').forEach(b=>b.onclick=()=>{
@@ -607,6 +783,12 @@ $$('.subtab').forEach(b=>b.onclick=()=>{
   $$('.subtab').forEach(x=>x.classList.toggle('on',x===b));
   $$('[data-subpanel]').forEach(p=>p.classList.toggle('hidden',p.dataset.subpanel!==b.dataset.stab));
 });
+$$('[data-fin-stab]').forEach(b=>b.addEventListener('click',()=>{
+  $$('[data-fin-stab]').forEach(x=>x.classList.toggle('on',x===b));
+  $$('[data-fin-subpanel]').forEach(p=>p.classList.toggle('hidden',p.dataset.finSubpanel!==b.dataset.finStab));
+  if(b.dataset.finStab==='facturas'){if(!CUENTAS.length)loadCuentas().then(()=>{fillCtaSels();loadFacturas();});else{fillCtaSels();loadFacturas();}}
+  else loadCuentas();
+}));
 function onTab(t){
   if(t==='tablero')loadTablero();
   else if(t==='inventario'){ensureUbic();loadInv();}
@@ -616,6 +798,8 @@ function onTab(t){
   else if(t==='requisiciones'){ensureUbic();ensureProds();loadReqs();}
   else if(t==='proveedores'){ensureUbic();ensureProds();loadProveedores();}
   else if(t==='donaciones'){ensureUbic();ensureProds();loadDonaciones();}
+  else if(t==='ordenes'){ensureUbic();ensureProds();ensureProvs();loadOrdenes();}
+  else if(t==='finanzas'){ensureProvs();loadCuentas();}
 }
 
 // ── Ubicaciones ──
@@ -1126,6 +1310,276 @@ $('#fDon').onsubmit=async e=>{e.preventDefault();const f=e.target;
   const ok=await post('donaciones',{donante:f.donante.value,tipo_donante:f.tipo_donante.value,ubicacion_id:f.ubicacion_id.value||null,referencia:f.referencia.value||null,valor_estimado:num(f.valor_estimado.value)||null,moneda:f.moneda.value||'USD',lineas},'#donMsg');
   if(ok){f.reset();$('#rows_don').innerHTML='';loadDonaciones();toast('Donación registrada');}
 };
+
+// ── Proveedores cache helpers ──
+async function ensureProvs(){
+  if(!PROVEEDORES.length){
+    const r=await api('proveedores').catch(()=>null);
+    if(r&&r.ok){const d=await j(r).catch(()=>({}));PROVEEDORES=d.results||[];}
+  }
+  fillProvSels();
+}
+function fillProvSels(){
+  const opts=PROVEEDORES.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+  $$('select.prov-sel').forEach(s=>{const c=s.value;s.innerHTML='<option value="">-- Proveedor --</option>'+opts;if(c)s.value=c;});
+}
+
+// ── Órdenes ──
+async function loadOrdenes(){
+  const estado=$('#oc_estado')?.value||'';
+  const p=estado?'?estado='+encodeURIComponent(estado):'';
+  const r=await api('ordenes'+p).catch(()=>null);
+  const tb=$('#ocRows');if(!tb)return;
+  if(!r){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Error de red.</td></tr>';return;}
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin autorización.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));renderOrdenes(d.results||[]);
+}
+function renderOrdenes(list){
+  const tb=$('#ocRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin órdenes todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(oc=>`<tr class="row" onclick="openOrden('${esc(oc.id)}')">
+    <td class="mono text-[11px] font-bold">${esc(oc.codigo||oc.id||'—')}</td>
+    <td class="font-semibold text-[12px]">${esc(oc.proveedor_nombre||'—')}</td>
+    <td class="text-[12px]">${esc(oc.ubicacion_nombre||'—')}</td>
+    <td>${chipOf(oc.estado,OCEST)}</td>
+    <td class="mono text-[12px]">${oc.n_lineas??'—'}</td>
+    <td class="mono text-[12px]">${oc.total!=null?Number(oc.total).toLocaleString('es-VE',{minimumFractionDigits:2}):'—'}</td>
+    <td class="text-[11px]">${fdate(oc.fecha_esperada_ms)}</td>
+  </tr>`).join('');
+}
+async function openOrden(id){
+  const r=await api('ordenes/'+id).catch(()=>null);if(!r||!r.ok)return;
+  const d=await j(r).catch(()=>({}));
+  const oc=d.orden||d;const lines=d.lineas||[];
+  const total=oc.total!=null?Number(oc.total).toLocaleString('es-VE',{minimumFractionDigits:2}):'—';
+  $('#ocDetailMeta').innerHTML=`<b class="mono">${esc(oc.codigo||oc.id)}</b> ${chipOf(oc.estado,OCEST)} · Proveedor: <b>${esc(oc.proveedor_nombre||'—')}</b> · Ubicación: <b>${esc(oc.ubicacion_nombre||'—')}</b> · Total: <b class="mono">${total} ${esc(oc.moneda||'USD')}</b>`;
+  $('#ocDetailLines').innerHTML=lines.length?lines.map(l=>{
+    const sub=l.cantidad_ped!=null&&l.precio_unit!=null?Number(l.cantidad_ped*l.precio_unit).toLocaleString('es-VE',{minimumFractionDigits:2}):'—';
+    return`<tr class="row">
+      <td class="font-semibold text-[12px]">${esc(l.producto_nombre||'—')}</td>
+      <td class="mono text-[11px]">${esc(l.codigo||'—')}</td>
+      <td class="mono text-[12px]">${l.cantidad_ped??'—'}</td>
+      <td class="mono text-[12px]">${l.cantidad_rec??'0'}</td>
+      <td class="mono text-[12px]">${l.precio_unit!=null?Number(l.precio_unit).toLocaleString('es-VE',{minimumFractionDigits:2}):'—'}</td>
+      <td class="mono text-[12px]">${sub}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="6" class="py-4 text-center text-on-surface-variant">Sin líneas.</td></tr>';
+  buildOcActions(oc,lines);
+  $('#ocRecibirForm').classList.add('hidden');
+  setMsg('#ocActMsg','',true);
+  $('#ocDetail').classList.remove('hidden');
+}
+$('#ocDetailClose').onclick=()=>$('#ocDetail').classList.add('hidden');
+
+function buildOcActions(oc,lines){
+  const el=$('#ocActions');const est=oc.estado||'borrador';let acts=[];
+  if(est==='borrador')
+    acts.push(`<button onclick="patchOrden('${esc(oc.id)}','aprobada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Aprobar</button>`);
+  if(est==='aprobada'||est==='recibida_parcial')
+    acts.push(`<button onclick="showOcRecibir('${esc(oc.id)}')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">⊕ Recibir</button>`);
+  if(est!=='recibida'&&est!=='cancelada')
+    acts.push(`<button onclick="patchOrden('${esc(oc.id)}','cancelada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+  el.innerHTML=acts.join('');
+  el.dataset.ocId=oc.id;
+  el.dataset.ocLines=JSON.stringify(lines);
+}
+function showOcRecibir(id){
+  const el=$('#ocActions');
+  const lines=JSON.parse(el.dataset.ocLines||'[]');
+  const pending=lines.filter(l=>(l.cantidad_ped||0)>(l.cantidad_rec||0));
+  const cont=$('#ocRecibirLines');
+  cont.innerHTML=pending.length?pending.map(l=>`<div class="lrow" style="grid-template-columns:1fr 70px 110px 110px" data-linea-id="${esc(l.id)}">
+    <span class="text-[12px] font-semibold">${esc(l.producto_nombre||'—')} <span class="text-on-surface-variant">(ped:${l.cantidad_ped||0} rec:${l.cantidad_rec||0})</span></span>
+    <input type="number" min="0" max="${(l.cantidad_ped||0)-(l.cantidad_rec||0)}" value="${(l.cantidad_ped||0)-(l.cantidad_rec||0)}" placeholder="Cant." class="inp-sm roc-qty">
+    <input placeholder="Lote" class="inp-sm roc-lote">
+    <input type="date" class="inp-sm roc-cad">
+  </div>`).join(''):'<p class="text-sm text-on-surface-variant">Todas las líneas ya están completas.</p>';
+  $('#ocRecibirForm').dataset.ocId=id;
+  $('#ocRecibirForm').classList.remove('hidden');
+}
+$('#ocRecibirBtn').onclick=async()=>{
+  const ocId=$('#ocRecibirForm').dataset.ocId;if(!ocId)return;
+  const lineas=[...$('#ocRecibirLines').querySelectorAll('.lrow[data-linea-id]')].map(row=>({
+    linea_id:row.dataset.lineaId,
+    cantidad:num(row.querySelector('.roc-qty').value),
+    lote:row.querySelector('.roc-lote').value||null,
+    caducidad_ms:toMs(row.querySelector('.roc-cad').value)
+  })).filter(l=>l.linea_id&&l.cantidad);
+  if(!lineas.length){setMsg('#ocActMsg','No hay cantidades a recibir.',false);return;}
+  const r=await api('ordenes/'+ocId+'/recibir',{method:'POST',body:JSON.stringify({lineas})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Recepción registrada');$('#ocRecibirForm').classList.add('hidden');loadOrdenes();openOrden(ocId);}
+  else setMsg('#ocActMsg',d.error||'Error al recibir',false);
+};
+async function patchOrden(id,estado){
+  const r=await api('ordenes/'+id,{method:'PATCH',body:JSON.stringify({estado})});
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Estado actualizado');loadOrdenes();openOrden(id);}
+  else{const d=await r.json().catch(()=>({}));setMsg('#ocActMsg',d.error||'Error al actualizar',false);}
+}
+function addOrdenRow(){
+  const div=document.createElement('div');div.className='lrow';
+  div.style.gridTemplateColumns='1fr 75px 100px auto';
+  const pOpts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+  div.innerHTML=`<select class="inp-sm row-prod-sel"><option value="">-- Producto --</option>${pOpts}</select>
+    <input type="number" min="0" placeholder="Cant." class="inp-sm row-qty">
+    <input type="number" min="0" step="0.01" placeholder="Precio u." class="inp-sm row-precio">
+    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+  $('#rows_orden').appendChild(div);
+  fillProdSels();
+}
+$('#fOrden').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const lineas=[...$('#rows_orden').querySelectorAll('.lrow')].map(r=>({
+    producto_id:r.querySelector('.row-prod-sel').value,
+    cantidad_ped:num(r.querySelector('.row-qty').value),
+    precio_unit:num(r.querySelector('.row-precio').value)||null
+  })).filter(l=>l.producto_id&&l.cantidad_ped);
+  if(!lineas.length){setMsg('#ordenMsg','Añade al menos una línea con producto y cantidad.',false);return;}
+  const ok=await post('ordenes',{proveedor_id:f.proveedor_id.value,ubicacion_id:f.ubicacion_id.value,moneda:f.moneda.value||'USD',referencia:f.referencia.value||null,fecha_esperada_ms:toMs(f.fecha_esperada.value),lineas},'#ordenMsg');
+  if(ok){f.reset();$('#rows_orden').innerHTML='';loadOrdenes();toast('Orden creada');}
+};
+$('#oc_buscar').onclick=loadOrdenes;
+
+// ── Cuentas (GL / presupuesto) ──
+async function loadCuentas(){
+  const r=await api('cuentas').catch(()=>null);const tb=$('#ctaRows');if(!tb)return;
+  if(!r){tb.innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-8">Error de red.</td></tr>';return;}
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');tb.innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-8">Sin autorización.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));CUENTAS=d.results||[];renderCuentas(CUENTAS);fillCtaSels();
+}
+function renderCuentas(list){
+  const tb=$('#ctaRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-8">Sin cuentas todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(c=>`<tr class="row">
+    <td class="mono text-[11px] font-bold">${esc(c.codigo||'—')}</td>
+    <td class="font-semibold text-[12px]">${esc(c.nombre||'—')}</td>
+    <td>${chipOf(c.tipo,CTATIPO)}</td>
+    <td>${c.activa!==false?'<span class="chip" style="color:#15803d;background:#dcfce7">Sí</span>':'<span class="chip" style="color:#b91c1c;background:#fee2e2">No</span>'}</td>
+    <td><button class="btn-del" onclick="delCuenta('${esc(c.id)}')">✕</button></td>
+  </tr>`).join('');
+}
+function fillCtaSels(){
+  const opts=CUENTAS.map(c=>`<option value="${esc(c.id)}">${esc(c.codigo)} — ${esc(c.nombre)}</option>`).join('');
+  $$('select.cta-sel').forEach(s=>{const cv=s.value;s.innerHTML='<option value="">-- Cuenta GL --</option>'+opts;if(cv)s.value=cv;});
+}
+async function delCuenta(id){
+  if(!confirm('¿Eliminar cuenta?'))return;
+  const r=await api('cuentas/'+id,{method:'DELETE'});
+  if(r.ok){toast('Cuenta eliminada');loadCuentas();}
+  else{const d=await r.json().catch(()=>({}));toast(d.error||d.message||'No se pudo eliminar (posiblemente en uso)',false);}
+}
+$('#fCta').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const ok=await post('cuentas',{codigo:f.codigo.value,nombre:f.nombre.value,tipo:f.tipo.value,descripcion:f.descripcion.value||null},'#ctaMsg');
+  if(ok){f.reset();loadCuentas();toast('Cuenta registrada');}
+};
+
+// ── Facturas ──
+async function loadFacturas(){
+  const estado=$('#fac_estado')?.value||'';
+  const p=estado?'?estado='+encodeURIComponent(estado):'';
+  const r=await api('facturas'+p).catch(()=>null);
+  const tb=$('#facRows');if(!tb)return;
+  if(!r){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Error de red.</td></tr>';return;}
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin autorización.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));renderFacturas(d.results||[]);
+}
+function renderFacturas(list){
+  const tb=$('#facRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin facturas todavía.</td></tr>';return;}
+  const now=Date.now();
+  tb.innerHTML=list.map(fac=>{
+    const venc=fac.vencimiento_ms?Number(fac.vencimiento_ms):null;
+    const cls=venc&&venc<now&&fac.estado!=='pagada'&&fac.estado!=='anulada'?'vencido':'';
+    return`<tr class="row ${cls}" onclick="openFactura('${esc(fac.id)}')">
+      <td class="mono text-[11px] font-bold">${esc(fac.codigo||fac.id||'—')}</td>
+      <td class="font-semibold text-[12px]">${esc(fac.proveedor_nombre||'—')}</td>
+      <td class="text-[12px]">${esc(fac.cuenta_nombre||'—')}</td>
+      <td>${chipOf(fac.estado,FACEST)}</td>
+      <td class="mono text-[12px]">${fac.monto!=null?Number(fac.monto).toLocaleString('es-VE',{minimumFractionDigits:2}):'—'}</td>
+      <td class="mono text-[12px]">${fac.n_lineas??'—'}</td>
+      <td class="text-[11px]">${fdate(fac.vencimiento_ms)}</td>
+    </tr>`;
+  }).join('');
+}
+async function openFactura(id){
+  const r=await api('facturas/'+id).catch(()=>null);if(!r||!r.ok)return;
+  const d=await j(r).catch(()=>({}));
+  const fac=d.factura||d;const lines=d.lineas||[];
+  const monto=fac.monto!=null?Number(fac.monto).toLocaleString('es-VE',{minimumFractionDigits:2}):'—';
+  $('#facDetailMeta').innerHTML=`<b class="mono">${esc(fac.codigo||fac.id)}</b> ${chipOf(fac.estado,FACEST)} · Proveedor: <b>${esc(fac.proveedor_nombre||'—')}</b> · Cuenta: <b>${esc(fac.cuenta_nombre||'—')}</b> · Monto: <b class="mono">${monto} ${esc(fac.moneda||'USD')}</b> · Vence: ${fdate(fac.vencimiento_ms)}`;
+  $('#facDetailLines').innerHTML=lines.length?lines.map(l=>{
+    const sub=l.cantidad!=null&&l.precio_unit!=null?Number(l.cantidad*l.precio_unit).toLocaleString('es-VE',{minimumFractionDigits:2}):'—';
+    return`<tr class="row">
+      <td class="text-[12px]">${esc(l.descripcion||'—')}</td>
+      <td class="text-[12px]">${esc(l.producto_nombre||'—')}</td>
+      <td class="mono text-[12px]">${l.cantidad??'—'}</td>
+      <td class="mono text-[12px]">${l.precio_unit!=null?Number(l.precio_unit).toLocaleString('es-VE',{minimumFractionDigits:2}):'—'}</td>
+      <td class="mono text-[12px]">${sub}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="5" class="py-4 text-center text-on-surface-variant">Sin líneas.</td></tr>';
+  buildFacActions(fac);
+  setMsg('#facActMsg','',true);
+  $('#facDetail').classList.remove('hidden');
+}
+$('#facDetailClose').onclick=()=>$('#facDetail').classList.add('hidden');
+function buildFacActions(fac){
+  const el=$('#facActions');const est=fac.estado||'borrador';let acts=[];
+  if(est==='borrador')
+    acts.push(`<button onclick="patchFac('${esc(fac.id)}','emitida')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">→ Emitir</button>`);
+  if(est==='emitida')
+    acts.push(`<button onclick="pagarFac('${esc(fac.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Pagar</button>`);
+  if(est==='borrador'||est==='emitida')
+    acts.push(`<button onclick="patchFac('${esc(fac.id)}','anulada')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Anular</button>`);
+  el.innerHTML=acts.join('');
+}
+async function patchFac(id,estado){
+  const r=await api('facturas/'+id,{method:'PATCH',body:JSON.stringify({estado})});
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Estado actualizado');loadFacturas();openFactura(id);}
+  else{const d=await r.json().catch(()=>({}));setMsg('#facActMsg',d.error||'Error al actualizar',false);}
+}
+async function pagarFac(id){
+  const r=await api('facturas/'+id+'/pagar',{method:'POST',body:JSON.stringify({})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Factura pagada');loadFacturas();openFactura(id);}
+  else setMsg('#facActMsg',d.error||'Error al pagar',false);
+}
+function addFacRow(){
+  const div=document.createElement('div');div.className='lrow';
+  div.style.gridTemplateColumns='1fr 1fr 65px 100px auto';
+  const pOpts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+  div.innerHTML=`<input placeholder="Descripción*" class="inp-sm fac-desc">
+    <select class="inp-sm row-prod-sel fac-prod"><option value="">-- Producto (opc.) --</option>${pOpts}</select>
+    <input type="number" min="0" placeholder="Cant." class="inp-sm fac-qty">
+    <input type="number" min="0" step="0.01" placeholder="Precio u." class="inp-sm fac-precio">
+    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove();calcFacTotal()">✕</button>`;
+  div.querySelector('.fac-qty').addEventListener('input',calcFacTotal);
+  div.querySelector('.fac-precio').addEventListener('input',calcFacTotal);
+  $('#rows_fac').appendChild(div);
+}
+function calcFacTotal(){
+  let sum=0;
+  $$('#rows_fac .lrow').forEach(r=>{
+    const q=parseFloat(r.querySelector('.fac-qty').value)||0;
+    const p=parseFloat(r.querySelector('.fac-precio').value)||0;
+    sum+=q*p;
+  });
+  const el=$('#facTotalPreview');if(el)el.textContent=sum.toLocaleString('es-VE',{minimumFractionDigits:2});
+}
+$('#fFac').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const lineas=[...$('#rows_fac').querySelectorAll('.lrow')].map(r=>({
+    descripcion:r.querySelector('.fac-desc').value,
+    producto_id:r.querySelector('.fac-prod').value||null,
+    cantidad:num(r.querySelector('.fac-qty').value),
+    precio_unit:num(r.querySelector('.fac-precio').value)||null
+  })).filter(l=>l.descripcion&&l.cantidad);
+  if(!lineas.length){setMsg('#facMsg','Añade al menos una línea con descripción y cantidad.',false);return;}
+  const ok=await post('facturas',{proveedor_id:f.proveedor_id.value,cuenta_id:f.cuenta_id.value,orden_id:f.orden_id.value||null,moneda:f.moneda.value||'USD',vencimiento_ms:toMs(f.vencimiento.value),lineas},'#facMsg');
+  if(ok){f.reset();$('#rows_fac').innerHTML='';calcFacTotal();loadFacturas();toast('Factura creada');}
+};
+$('#fac_buscar').onclick=loadFacturas;
 
 // ── Generic POST ──
 async function post(endpoint,body,msgSel){
