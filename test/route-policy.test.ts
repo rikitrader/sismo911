@@ -10,6 +10,9 @@ const GATED: Array<[string, string]> = [
   ['/api/admin/dedupe-personas', 'POST'],    // isAdminWrite (/api/admin)
   ['/api/contacts', 'POST'],                 // isAdminWrite
   ['/api/suministros/productos', 'POST'],    // isAdminWrite (/api/suministros)
+  ['/api/suministros/productos', 'GET'],     // division gated end-to-end → suministros:read
+  ['/api/suministros/tablero/resumen', 'GET'], // read API gated → suministros:read
+  ['/suministros', 'GET'],                   // SPA shell → page gate (suministros:read)
   ['/api/reports/queue', 'GET'],             // isReportModeration
   ['/api/reports/abc', 'PATCH'],             // isReportModeration
   ['/api/persons/queue', 'GET'],             // isPersonModeration
@@ -36,7 +39,6 @@ const OPEN: Array<[string, string]> = [
   ['/api/reports', 'POST'],                  // citizen report submission
   ['/api/persons', 'POST'],                  // citizen missing-person report
   ['/api/sat/pytorch-results', 'POST'],      // explicit public callback
-  ['/api/suministros/productos', 'GET'],     // suministros reads are public; only writes gated
   ['/api/health', 'GET'],
   ['/', 'GET'],
 ];

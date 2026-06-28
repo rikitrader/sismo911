@@ -139,7 +139,7 @@ app.use('*', async (c, next) => {
   // every other gated surface require `ops:console` (operator/admin equivalent).
   let authorized = false;
   if (decision.kind === 'login') authorized = !!user;
-  else if (decision.kind === 'page') authorized = await authorize(c.env, user, LEGACY_OPS_PERM);
+  else if (decision.kind === 'page') authorized = await authorize(c.env, user, decision.perm ?? LEGACY_OPS_PERM);
   else authorized = await authorize(c.env, user, decision.perm);
 
   if (authorized && isUnsafe && !isSameSite) return c.json({ error: 'bad_origin' }, 403);
@@ -443,11 +443,18 @@ app.get('/console/', serveConsole);
 
 // Root is host-branched (see run_worker_first '/'): the SUMINISTROS subdomain
 // serves the inventory SPA shell; every other host serves the DESAPARECIDOS
-// registry (the app's post-quake front door).
-app.get('/', (c) =>
-  new URL(c.req.url).hostname === 'suministros.sismo911.com'
-    ? serveAsset(c, '/suministros')
-    : serveAsset(c, '/personas'));
+// registry (the app's post-quake front door). The SUMINISTROS division is GATED
+// (staff-only) — its subdomain root requires suministros:read, else → login.
+app.get('/', async (c) => {
+  if (new URL(c.req.url).hostname === 'suministros.sismo911.com') {
+    const user = await getUserFromRequest(c.env, c).catch(() => null);
+    if (!(await authorize(c.env, user, 'suministros:read'))) {
+      return c.redirect('/login?next=' + encodeURIComponent('/'), 302);
+    }
+    return serveAsset(c, '/suministros');
+  }
+  return serveAsset(c, '/personas');
+});
 app.get('/terremotos', (c) => serveAsset(c, '/'));
 
 // Per-person social cards: a shared /familia?persona=<id> link rewrites the page's
