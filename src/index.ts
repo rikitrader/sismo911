@@ -47,7 +47,9 @@ import { flotaMisiones } from './routes/flota-misiones';
 import { flotaRastreo } from './routes/flota-rastreo';
 import { flotaTablero } from './routes/flota-tablero';
 import { verifyUnitToken, unitTokenFromRequest } from './lib/flota-token';
+import { flotaAdmin } from './routes/flota-admin';
 export { FlotaTracking } from './realtime/flota-tracking';
+export { FleetLive } from './realtime/fleet-live';
 import { sumUbicaciones } from './routes/suministros-ubicaciones';
 import { sumCategorias } from './routes/suministros-categorias';
 import { sumProductos } from './routes/suministros-productos';
@@ -152,7 +154,8 @@ app.use('*', async (c, next) => {
   // is already covered by the /api/acopio admin-write rule above.
   const isAcopioReview = method === 'GET' && path === '/api/acopio/submissions';
   const isFlotaApi = path.startsWith('/api/flota'); // internal dispatch console — operator/admin only for ALL methods (reads expose responder GPS/PII)
-  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration && !isSatWrite && !isAcopioReview && !isFlotaApi) return next();
+  const isFlotaAdminApi = path.startsWith('/api/admin/flota'); // live-GPS admin surface — operator/admin only for ALL methods (incl. GET snapshot + admin WS)
+  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration && !isSatWrite && !isAcopioReview && !isFlotaApi && !isFlotaAdminApi) return next();
 
   // Field-unit GPS ingest: a valid per-unit token authorizes ONLY
   // POST /api/flota/rastreo/posicion without an operator session (and bypasses
@@ -292,6 +295,34 @@ app.route('/api/flota/flotas', flotaFlotas);       // fleets (groupings of units
 app.route('/api/flota/misiones', flotaMisiones);   // dispatch missions + lifecycle state machine + waypoints + activity
 app.route('/api/flota/rastreo', flotaRastreo);     // live unit GPS ingest + map reads
 app.route('/api/flota/tablero', flotaTablero);     // command dashboard aggregates (resumen + mapa)
+
+// FLOTA LIVE GPS — Uber-style, emergency-safe phone tracking.
+// Admin/operator surface (units, scoped tokens, live snapshot/WS) — gated all
+// methods by isFlotaAdminApi.
+app.route('/api/admin/flota', flotaAdmin);
+
+// Phone PWA (public; the URL token is the credential, validated by the WS).
+app.get('/flota/track/:token', (c) => c.env.ASSETS.fetch(new Request(new URL('/flota-track.html', c.req.url))));
+
+// Admin live map page (gated by isAdminPage → redirects unauth to /login).
+app.get('/admin/flota/live', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-flota-live.html', c.req.url))));
+
+// Unit GPS WebSocket: verify token + unit active, then hand to the FleetLive DO
+// tagged as a unit. Public path (token-validated here); never log the token.
+app.get('/ws/flota/unit', async (c) => {
+  if (c.req.header('Upgrade') !== 'websocket') return c.json({ error: 'expected_websocket' }, 426);
+  const v = await verifyUnitToken(c.env, unitTokenFromRequest(c.req.raw)).catch(() => null);
+  if (!v) return c.json({ error: 'invalid_token' }, 401);
+  const unit = await c.env.DB.prepare(`SELECT status FROM flota_units WHERE id = ?`).bind(v.unitId)
+    .first() as { status: string } | null;
+  if (!unit || unit.status !== 'active') return c.json({ error: 'unit_inactive' }, 403);
+  const headers = new Headers(c.req.raw.headers);
+  headers.set('x-flota-role', 'unit');
+  headers.set('x-flota-unit-id', v.unitId);
+  headers.set('x-flota-token-id', v.tokenId);
+  const id = c.env.FLEET_LIVE.idFromName('global');
+  return c.env.FLEET_LIVE.get(id).fetch(new Request(c.req.url, { method: 'GET', headers }));
+});
 
 // SUMINISTROS — Inventory & supply-chain management (OpenBoxes core, re-coded
 // serverless). Served at suministros.sismo911.com + /suministros. GET public;

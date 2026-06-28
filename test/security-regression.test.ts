@@ -51,8 +51,13 @@ describe('C3 — FleetOps reads require an operator session', () => {
   const idx = readFileSync('src/index.ts', 'utf8');
   it('the auth gate covers ALL /api/flota methods (not just writes)', () => {
     expect(idx).toContain("const isFlotaApi = path.startsWith('/api/flota')");
-    // the bypass (return next()) must exclude flota requests
-    expect(idx).toMatch(/&& !isFlotaApi\) return next\(\)/);
+    // the bypass (return next()) must exclude flota requests (additional gate
+    // terms like !isFlotaAdminApi may follow, but !isFlotaApi must be in the chain)
+    expect(idx).toMatch(/&& !isFlotaApi(?: && ![A-Za-z]+)*\) return next\(\)/);
+  });
+  it('the live-GPS admin surface is also fully gated', () => {
+    expect(idx).toContain("const isFlotaAdminApi = path.startsWith('/api/admin/flota')");
+    expect(idx).toMatch(/&& !isFlotaAdminApi\) return next\(\)/);
   });
 });
 
