@@ -83,49 +83,50 @@
     @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
     .status-dot { animation: blink 1.8s ease-in-out infinite; }
 
-    /* ---- Sismo ticker (wall-street stock tape) ---- */
+    /* ---- Sismo banner (one event at a time, swaps every 5s — no scrolling) ---- */
     .ticker {
-      position: relative; overflow: hidden; white-space: nowrap;
+      position: relative; overflow: hidden;
       background: #0b1220; color: #e8edf7;
       border: 1px solid rgba(255,255,255,.08);
-      border-radius: 10px; height: 44px; display: flex; align-items: center;
+      border-radius: 10px; min-height: 48px; display: flex; align-items: stretch;
     }
     .ticker-label {
-      position: relative; z-index: 2; flex: 0 0 auto; height: 100%;
-      display: flex; align-items: center; gap: 7px;
-      padding: 0 14px; font-family: 'Public Sans', sans-serif;
+      flex: 0 0 auto; display: flex; align-items: center; gap: 7px;
+      padding: 0 16px; font-family: 'Public Sans', sans-serif;
       font-weight: 800; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
       background: #c8102e; color: #fff;
-      box-shadow: 8px 0 16px rgba(11,18,32,.7);
     }
     .ticker-label .pip {
       width: 7px; height: 7px; border-radius: 9999px; background: #fff;
-      animation: blink 1s ease-in-out infinite;
+      animation: blink 1.1s ease-in-out infinite;
     }
-    .ticker-track {
-      display: inline-flex; align-items: center; gap: 0;
-      will-change: transform; animation: ticker-scroll 48s linear infinite;
+    /* the single rotating slot — fades on each swap, no horizontal motion */
+    .ticker-slot {
+      flex: 1 1 auto; min-width: 0; display: flex; align-items: center;
+      padding: 0 18px; overflow: hidden;
+      transition: opacity .25s ease, transform .25s ease;
     }
-    .ticker:hover .ticker-track { animation-play-state: paused; }
-    @keyframes ticker-scroll {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
-    }
+    .ticker-slot.fade { opacity: 0; transform: translateY(-4px); }
     .tick {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 0 18px; font-family: 'JetBrains Mono', monospace; font-size: 13px;
-      border-right: 1px solid rgba(255,255,255,.07);
+      display: inline-flex; align-items: baseline; gap: 10px;
+      font-family: 'JetBrains Mono', monospace; white-space: nowrap; max-width: 100%;
     }
-    .tick .mag { font-weight: 700; }
-    .tick .arrow { font-size: 11px; opacity: .85; }
-    .tick .place { color: #aab4c5; font-family: 'Inter', sans-serif; font-size: 12px; }
-    .tick .ago { color: #6b7686; font-size: 11px; }
+    .tick .mag { font-weight: 700; font-size: 16px; }
+    .tick .arrow { font-size: 12px; opacity: .9; }
+    .tick .place { color: #d7dde8; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tick .ago { color: #7a8699; font-size: 12px; flex: 0 0 auto; }
     .tick-crit .mag, .tick-crit .arrow { color: #ff5a6e; }
     .tick-warn .mag, .tick-warn .arrow { color: #ffa23d; }
     .tick-safe .mag, .tick-safe .arrow { color: #5fd17a; }
-    /* major quakes (M>=6) flash to grab the eye, like a halted stock */
-    .tick-major { animation: tick-flash 1.1s steps(1,end) infinite; }
-    @keyframes tick-flash { 0%,100% { background: rgba(200,16,46,.0); } 50% { background: rgba(200,16,46,.28); } }
+    /* major quakes (M>=6) flash the whole slot to grab the eye */
+    .ticker-slot.tick-major { animation: tick-flash 1.1s steps(1,end) infinite; }
+    @keyframes tick-flash { 0%,100% { background: rgba(200,16,46,0); } 50% { background: rgba(200,16,46,.30); } }
+    /* position dots */
+    .ticker-dots { flex: 0 0 auto; display: flex; align-items: center; gap: 5px; padding: 0 14px; }
+    .ticker-dots .dot { width: 5px; height: 5px; border-radius: 9999px; background: rgba(255,255,255,.22); transition: background .2s ease, transform .2s ease; }
+    .ticker-dots .dot.on { background: #ff5a6e; transform: scale(1.35); }
+    @media (max-width: 640px) { .ticker-dots { display: none; } .tick .place { font-size: 13px; } }
 
     /* ---- New-quake toast ---- */
     #quake-toasts { position: fixed; top: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 360px; }
@@ -187,12 +188,14 @@
       <!-- Toast stack for new-sismo notifications (polled from /api/events) -->
       <div id="quake-toasts" aria-live="polite"></div>
 
-      <!-- ============ SISMO TICKER (wall-street stock tape) ============ -->
-      <!-- Placed ABOVE the alerta roja. Scrolls the latest sismos with a color
-           per magnitude; M>=6 flash. Fed live from /api/events each refresh. -->
-      <section id="ticker" class="ticker" aria-label="Cinta de sismos en vivo" title="Últimos sismos · USGS + FUNVISIS">
+      <!-- ============ SISMO BANNER ============ -->
+      <!-- Placed ABOVE the alerta roja. Shows ONE sismo at a time, colored by
+           magnitude, and swaps to the next every 5s with a soft fade (no
+           scrolling — far easier to read). Fed live from /api/events. -->
+      <section id="ticker" class="ticker" aria-label="Sismos en vivo" title="Últimos sismos · USGS + FUNVISIS">
         <div class="ticker-label"><span class="pip"></span>Sismos en vivo</div>
-        <div class="ticker-track" id="ticker-track"></div>
+        <div class="ticker-slot" id="ticker-slot" aria-live="polite"></div>
+        <div class="ticker-dots" id="ticker-dots" aria-hidden="true"></div>
       </section>
 
       <!-- PAGER impact alert — shown only when a recent event carries a USGS alert level -->
@@ -503,32 +506,65 @@
     renderTicker(quakes);
   }
 
-  // ---- Wall-street-style ticker tape of the latest sismos ----
-  // Newest first, colored per magnitude; M>=6 flash. Duplicated inline so the
-  // CSS marquee (translateX -50%) loops seamlessly. Up/down arrow vs. the run's
-  // average magnitude, like a stock quote.
-  function renderTicker(quakes) {
-    const track = document.getElementById('ticker-track');
-    if (!track) return;
-    const items = (quakes || []).slice().sort((a, b) => b.time - a.time).slice(0, 24);
-    if (!items.length) { track.innerHTML = '<span class="tick tick-safe"><span class="place">Sin sismos recientes en la región.</span></span>'; return; }
-    const avg = items.reduce((s, q) => s + q.mag, 0) / items.length;
-    const cell = (q) => {
-      const s = sev(q.mag);
-      const cls = s === 'critical' ? 'tick-crit' : s === 'warning' ? 'tick-warn' : 'tick-safe';
-      const major = q.mag >= 6 ? ' tick-major' : '';
-      const up = q.mag >= avg;
-      const arrow = up ? '▲' : '▼';
-      const place = esPlace(q.place).split(',')[0];
-      return `<span class="tick ${cls}${major}">
+  // ---- Live sismo banner (one event at a time, swaps every 5s) ----
+  // Simpler, far more readable than a scrolling tape: shows a single quake,
+  // colored by magnitude, then fades to the next every 5 seconds. Position dots
+  // on the right show where we are in the list. Newest first; M>=6 flash.
+  let tickerItems = [];
+  let tickerIdx = 0;
+  let tickerTimer = null;
+  const TICKER_MS = 5000;     // swap cadence
+  const TICKER_MAX = 10;      // how many recent quakes to cycle through
+
+  function tickerCell(q, avg) {
+    const s = sev(q.mag);
+    const cls = s === 'critical' ? 'tick-crit' : s === 'warning' ? 'tick-warn' : 'tick-safe';
+    const arrow = q.mag >= avg ? '▲' : '▼';
+    const place = esPlace(q.place).split(',')[0];
+    return { cls, major: q.mag >= 6,
+      html: `<span class="tick ${cls}">
         <span class="mag">M ${q.mag.toFixed(1)}</span>
         <span class="arrow">${arrow}</span>
         <span class="place">${esc(place)}</span>
         <span class="ago">${timeAgo(q.time)}</span>
-      </span>`;
+      </span>` };
+  }
+
+  function paintTicker(animate) {
+    const slot = document.getElementById('ticker-slot');
+    const dots = document.getElementById('ticker-dots');
+    if (!slot || !tickerItems.length) return;
+    const avg = tickerItems.reduce((s, q) => s + q.mag, 0) / tickerItems.length;
+    const cur = tickerCell(tickerItems[tickerIdx], avg);
+    const apply = () => {
+      slot.innerHTML = cur.html;
+      slot.classList.toggle('tick-major', cur.major);
+      slot.classList.remove('fade');
     };
-    const row = items.map(cell).join('');
-    track.innerHTML = row + row; // duplicate for seamless -50% loop
+    if (animate) { slot.classList.add('fade'); setTimeout(apply, 250); }
+    else apply();
+    if (dots) dots.innerHTML = tickerItems
+      .map((_, k) => `<span class="dot${k === tickerIdx ? ' on' : ''}"></span>`).join('');
+  }
+
+  function renderTicker(quakes) {
+    const slot = document.getElementById('ticker-slot');
+    if (!slot) return;
+    tickerItems = (quakes || []).slice().sort((a, b) => b.time - a.time).slice(0, TICKER_MAX);
+    if (!tickerItems.length) {
+      slot.classList.remove('tick-major', 'fade');
+      slot.innerHTML = '<span class="tick tick-safe"><span class="place">Sin sismos recientes en la región.</span></span>';
+      const dots = document.getElementById('ticker-dots'); if (dots) dots.innerHTML = '';
+      if (tickerTimer) { clearInterval(tickerTimer); tickerTimer = null; }
+      return;
+    }
+    if (tickerIdx >= tickerItems.length) tickerIdx = 0;
+    paintTicker(false); // refresh current entry in place (no flicker on data poll)
+    if (tickerTimer) clearInterval(tickerTimer);
+    tickerTimer = setInterval(() => {
+      tickerIdx = (tickerIdx + 1) % tickerItems.length;
+      paintTicker(true);
+    }, TICKER_MS);
   }
 
   // ---- PAGER impact alert banner (surfaces alert level, shaking intensity, felt reports) ----
