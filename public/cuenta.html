@@ -6,6 +6,8 @@
 <title>Mi cuenta — SISMO911</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo.png">
+<link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#f5f7fb">
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css">
@@ -1531,24 +1533,84 @@ select,input { font-family:var(--font); }
 
     <!-- ── Seguridad ────────────────────────────────────────────────── -->
     <div class="panel" data-panel="seguridad" role="tabpanel">
+
       <div class="card">
-        <div class="empty-state">
-          <span class="empty-icon" aria-hidden="true">🔐</span>
-          <div class="empty-title">Seguridad</div>
-          <div class="empty-text">Disponible en esta sección próximamente</div>
+        <div class="card-title">Privacidad y seguridad</div>
+        <div class="card-subtitle">Controla cómo se comparte tu información y notificaciones de pago.</div>
+        <div id="sec-rows">
+          <div class="skeleton skel-line" style="margin-bottom:10px;"></div>
+          <div class="skeleton skel-line m" style="margin-bottom:10px;"></div>
+          <div class="skeleton skel-line s"></div>
         </div>
       </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px;">Notas de seguridad</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;">
+            <span style="font-size:1rem;flex-shrink:0;" aria-hidden="true">🔒</span>
+            <span style="font-size:.82rem;color:var(--muted);line-height:1.6;">Las llaves de tu billetera están protegidas por Crossmint.</span>
+          </div>
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;">
+            <span style="font-size:1rem;flex-shrink:0;" aria-hidden="true">🛡</span>
+            <span style="font-size:.82rem;color:var(--muted);line-height:1.6;">SISMO911 nunca almacena llaves privadas.</span>
+          </div>
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;">
+            <span style="font-size:1rem;flex-shrink:0;" aria-hidden="true">🔗</span>
+            <span style="font-size:.82rem;color:var(--muted);line-height:1.6;">Los enlaces de pago pueden ser públicos si los activas.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px;">Sesión</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;" id="sec-session-info">
+          <div class="skeleton skel-line s"></div>
+        </div>
+      </div>
+
     </div>
 
     <!-- ── Ajustes ──────────────────────────────────────────────────── -->
     <div class="panel" data-panel="ajustes" role="tabpanel">
+
       <div class="card">
-        <div class="empty-state">
-          <span class="empty-icon" aria-hidden="true">⚙️</span>
-          <div class="empty-title">Ajustes</div>
-          <div class="empty-text">Disponible en esta sección próximamente</div>
+        <div class="card-title">Visibilidad de tarjetas</div>
+        <div class="card-subtitle">Elige qué mostrar en tu cuenta y perfil público.</div>
+        <div id="ajustes-card-rows">
+          <div class="skeleton skel-line" style="margin-bottom:10px;"></div>
+          <div class="skeleton skel-line m" style="margin-bottom:10px;"></div>
+          <div class="skeleton skel-line s"></div>
         </div>
       </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div class="card-title" style="margin:0;">Preferencias</div>
+          <button class="btn btn-secondary btn-sm" id="ajustes-edit-btn">&#x270F;&#xFE0F; Editar perfil</button>
+        </div>
+        <div id="ajustes-profile-summary">
+          <div class="skeleton skel-line" style="margin-bottom:8px;"></div>
+          <div class="skeleton skel-line m" style="margin-bottom:8px;"></div>
+          <div class="skeleton skel-line s"></div>
+        </div>
+      </div>
+
+      <div class="card" style="text-align:center;padding:28px 24px;">
+        <img src="/logo.png" alt="SISMO911" width="48" height="48"
+             style="border-radius:12px;margin:0 auto 12px;display:block;">
+        <div style="font-family:var(--font-display);font-weight:800;font-size:1.05rem;color:var(--text);margin-bottom:4px;">
+          SISMO911 &middot; Fuerza de Protecci&oacute;n Civil
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:14px;">
+          Plataforma de emergencia s&iacute;smica &middot; Venezuela
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <a href="/donar" style="font-size:.8rem;color:var(--brand-2);text-decoration:none;font-weight:600;">Donar</a>
+          <a href="/" style="font-size:.8rem;color:var(--muted);text-decoration:none;">Inicio</a>
+        </div>
+      </div>
+
     </div>
 
   </div><!-- /#content -->
@@ -3949,6 +4011,129 @@ function wireRetModal() {
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ── Build: Security tab ────────────────────────────────────────────────── */
+function buildSecurityTab(settings, profile) {
+  const rowsEl = document.getElementById('sec-rows');
+  if (rowsEl) {
+    const s = settings || {};
+    const rows = [
+      ['sec_payment_emails',   'Correos de pago',                                  'Recibe un correo por cada pago.',                                        !!s.sec_payment_emails],
+      ['sec_public_page',      'Página de pago pública',                           'Permite que tu perfil de cobro sea visible públicamente.',               !!s.sec_public_page],
+      ['sec_hide_email',       'Ocultar mi correo del perfil público',             'Tu correo no se muestra en tu página de pago pública.',                  !!s.sec_hide_email],
+      ['sec_require_login',    'Exigir inicio de sesión para acciones sensibles',  'Se pedirá confirmación al realizar acciones sensibles.',                  !!s.sec_require_login],
+      ['sec_receipt_notifs',   'Notificaciones de recibo',                         'Recibe una notificación por cada recibo generado.',                       !!s.sec_receipt_notifs],
+      ['sec_audit_visibility', 'Visibilidad del registro de auditoría',            'Permite que los administradores vean tu registro de auditoría.',          !!s.sec_audit_visibility],
+    ];
+    rowsEl.innerHTML = rows.map(([k, l, d, c]) => toggleRow(k, l, d, c)).join('');
+    rowsEl.querySelectorAll('input[data-pref-key]').forEach(inp => {
+      inp.addEventListener('change', async () => {
+        const key = inp.dataset.prefKey;
+        const val = inp.checked;
+        inp.setAttribute('aria-checked', val ? 'true' : 'false');
+        inp.disabled = true;
+        try {
+          const r = await fetch('/api/profile/payment-settings', {
+            method:'PATCH', credentials:'same-origin',
+            headers:{'content-type':'application/json'},
+            body: JSON.stringify({ [key]: val }),
+          });
+          if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+          const d = await r.json().catch(() => ({}));
+          if (r.ok && d.ok) {
+            if (d.settings) { _settings = {..._settings, ...d.settings}; }
+            toast('Preferencia guardada ✓');
+          } else {
+            inp.checked = !val;
+            inp.setAttribute('aria-checked', !val ? 'true' : 'false');
+            toast(d.error || 'No se pudo guardar la preferencia.', 'error');
+          }
+        } catch(e) {
+          inp.checked = !val;
+          inp.setAttribute('aria-checked', !val ? 'true' : 'false');
+          toast('Error de red. Intenta de nuevo.', 'error');
+        } finally {
+          inp.disabled = false;
+        }
+      });
+    });
+  }
+
+  const sessionEl = document.getElementById('sec-session-info');
+  if (sessionEl && profile) {
+    const [rl, rc] = roleInfo(profile.role);
+    sessionEl.innerHTML = `<span class="${esc(rc)}">${esc(rl)}</span>
+      <span style="font-size:.83rem;color:var(--muted);">Tu cuenta usa autenticación por sesión segura.</span>`;
+  }
+}
+
+/* ── Build: Ajustes tab ─────────────────────────────────────────────────── */
+function buildAjustesTab(settings, profile) {
+  const rowsEl = document.getElementById('ajustes-card-rows');
+  if (rowsEl) {
+    const s = settings || {};
+    const rows = [
+      ['show_wallet_card',         'Mostrar tarjeta de billetera',               'Muestra el resumen de tu billetera en el panel principal.',    !!s.show_wallet_card],
+      ['hide_balance',             'Ocultar montos de saldo',                    'Los saldos aparecen ocultados por defecto.',                   !!s.hide_balance],
+      ['show_payout_card',         'Mostrar tarjeta de retiros',                 'Muestra el panel de retiros en tu página de cuenta.',          !!s.show_payout_card],
+      ['show_payout_methods',      'Mostrar métodos de pago públicamente',       'Tus métodos de cobro son visibles en tu perfil público.',      !!s.show_payout_methods],
+      ['require_withdraw_confirm', 'Exigir confirmación antes de retirar',       'Se mostrará un paso extra de confirmación al retirar fondos.', !!s.require_withdraw_confirm],
+    ];
+    rowsEl.innerHTML = rows.map(([k, l, d, c]) => toggleRow(k, l, d, c)).join('');
+    rowsEl.querySelectorAll('input[data-pref-key]').forEach(inp => {
+      inp.addEventListener('change', async () => {
+        const key = inp.dataset.prefKey;
+        const val = inp.checked;
+        inp.setAttribute('aria-checked', val ? 'true' : 'false');
+        inp.disabled = true;
+        try {
+          const r = await fetch('/api/profile/payment-settings', {
+            method:'PATCH', credentials:'same-origin',
+            headers:{'content-type':'application/json'},
+            body: JSON.stringify({ [key]: val }),
+          });
+          if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+          const d = await r.json().catch(() => ({}));
+          if (r.ok && d.ok) {
+            if (d.settings) { _settings = {..._settings, ...d.settings}; }
+            toast('Preferencia guardada ✓');
+          } else {
+            inp.checked = !val;
+            inp.setAttribute('aria-checked', !val ? 'true' : 'false');
+            toast(d.error || 'No se pudo guardar la preferencia.', 'error');
+          }
+        } catch(e) {
+          inp.checked = !val;
+          inp.setAttribute('aria-checked', !val ? 'true' : 'false');
+          toast('Error de red. Intenta de nuevo.', 'error');
+        } finally {
+          inp.disabled = false;
+        }
+      });
+    });
+  }
+
+  const summaryEl = document.getElementById('ajustes-profile-summary');
+  if (summaryEl && profile) {
+    const langMap = {es:'Español', en:'English', pt:'Português'};
+    const row = (label, value, last) =>
+      `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;${last?'':'border-bottom:1px solid var(--border);'}font-size:.875rem;gap:8px;">
+        <span style="color:var(--muted);font-weight:500;flex-shrink:0;">${esc(label)}</span>
+        <span style="font-weight:600;color:var(--text);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;">${esc(value)}</span>
+      </div>`;
+    summaryEl.innerHTML =
+      row('Nombre', profile.name  || '—') +
+      row('Correo', profile.email || '—') +
+      row('Idioma', langMap[profile.language] || profile.language || 'Español') +
+      row('País',   profile.country || '—', true);
+  }
+
+  const editBtn = document.getElementById('ajustes-edit-btn');
+  if (editBtn && !editBtn._wired) {
+    editBtn._wired = true;
+    editBtn.addEventListener('click', () => openModal(_profile));
+  }
+}
+
 /* ── Main boot ──────────────────────────────────────────────────────────── */
 async function fetchPaymentSummary() {
   const errHtml = (msg) => `
@@ -4024,6 +4209,8 @@ async function fetchPaymentSummary() {
   buildHero(profile, wallet);
   buildOverview(profile, null);          /* skeleton KPIs while summary loads */
   buildWallet(wallet, x402, _settings);
+  buildSecurityTab(_settings, profile);
+  buildAjustesTab(_settings, profile);
   fetchPaymentSummary();                 /* async: fills KPIs + charts */
   wirePagosForm();
   loadPaymentLinks();                    /* async: populates Pagos + QR tabs */
