@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMO911 — Pagos x402 (Reconciliación)</title>
+  <meta name="description" content="Reconciliación operativa de pagos x402 (USDC sobre HTTP). Acceso restringido." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://sismo911.com/admin/x402" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#0b1830" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/app.css" />
+  <script src="/quake-clock.js"></script>
+  <style>
+    body{background:#eef0f4}
+    .eoc-bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%)}
+    .eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7a8092}
+    .card{background:#fff;border:1px solid #d7dbe4;border-radius:.7rem}
+    .mono{font-family:'JetBrains Mono',monospace}
+    .dot{display:inline-block;width:.55rem;height:.55rem;border-radius:9999px;vertical-align:middle}
+    .badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:700;border-radius:9999px;padding:.12rem .55rem;white-space:nowrap}
+    table.dt{width:100%;font-size:.78rem;border-collapse:collapse}
+    table.dt th{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;text-align:left;padding:.45rem .6rem;background:#f4f6f9;position:sticky;top:0}
+    table.dt td{padding:.45rem .6rem;border-top:1px solid #eceef3;vertical-align:top}
+    .tile{background:#fff;border:1px solid #d7dbe4;border-radius:.7rem;padding:.9rem 1rem;position:relative;overflow:hidden}
+    .tile::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,#13284f)}
+    .tile .v{font-family:'Public Sans',sans-serif;font-weight:900;font-size:1.7rem;line-height:1}
+    .tile .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#5a6172;font-weight:700;margin-top:.3rem}
+    .tile .s{font-size:.72rem;color:#7a8092;margin-top:.1rem}
+  </style>
+</head>
+<body class="font-sans text-on-surface">
+  <header class="eoc-bar text-white">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-3">
+        <img src="/logo.svg" alt="SISMO911" class="h-10 w-10" />
+        <div>
+          <div class="font-display font-extrabold text-lg leading-none">SISMO911</div>
+          <div class="text-[10px] tracking-[0.18em] text-white/60 mt-0.5">PAGOS x402 · RECONCILIACIÓN</div>
+        </div>
+      </div>
+      <nav class="flex items-center gap-4 text-sm font-medium text-white/85">
+        <span id="hpip" class="flex items-center gap-1.5 text-[11px] text-white/70"><span id="hpipDot" class="dot" style="background:#64748b"></span> <span id="hpipLabel">CARGANDO…</span></span>
+        <a href="/admin" class="hover:text-white">← Consola</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-6 space-y-5">
+    <div class="flex items-end justify-between flex-wrap gap-3">
+      <div>
+        <div class="eyebrow">Tesorería · pagos sobre HTTP</div>
+        <h1 class="font-display font-extrabold text-2xl leading-tight">Reconciliación de pagos x402</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="lastUpdate" class="text-[11px] text-on-surface-variant mono">—</span>
+        <button id="refreshBtn" class="bg-primary text-white font-semibold rounded-md px-3 py-2 text-xs">↻ Actualizar</button>
+      </div>
+    </div>
+
+    <!-- auth / error banner -->
+    <div id="authBanner" class="hidden card p-3 text-sm flex items-center justify-between gap-3" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c">
+      <span id="authBannerMsg"></span>
+      <a href="/login?next=/admin/x402" class="bg-primary text-white font-bold rounded-md px-3 py-1.5 text-xs whitespace-nowrap">Inicia sesión como operador →</a>
+    </div>
+
+    <!-- health banner -->
+    <div id="healthCard" class="card p-4">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-3">
+          <span id="hDot" class="dot" style="width:.8rem;height:.8rem;background:#64748b"></span>
+          <div>
+            <div class="eyebrow">Estado de la pasarela x402</div>
+            <div id="hStatus" class="font-display font-extrabold text-lg leading-tight">—</div>
+          </div>
+        </div>
+        <div id="hGrid" class="flex flex-wrap gap-x-6 gap-y-1 text-[12px]"></div>
+      </div>
+      <div id="hNote" class="hidden mt-3 text-[12px] rounded-md p-2.5" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0"></div>
+    </div>
+
+    <!-- status summary tiles -->
+    <div>
+      <div class="eyebrow mb-2">Resumen por estado</div>
+      <div id="tiles" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"></div>
+    </div>
+
+    <!-- recent payments -->
+    <div class="card overflow-hidden">
+      <div class="px-4 pt-4 pb-2 flex items-center justify-between flex-wrap gap-2">
+        <span class="eyebrow">Pagos recientes (últimos 100)</span>
+        <span id="rowCount" class="text-[11px] text-on-surface-variant mono">—</span>
+      </div>
+      <div class="overflow-x-auto" style="max-height:62vh">
+        <table class="dt">
+          <thead>
+            <tr>
+              <th>Hora</th><th>Estado</th><th>Monto</th><th>Red</th>
+              <th>Pagador</th><th>Recibe (payTo)</th><th>Tx</th><th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="8" class="text-center text-on-surface-variant py-8">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="text-[11px] text-on-surface-variant">Reconciliación entre todos los usuarios receptores. Los montos están en USD (liquidados en USDC). Las transacciones liquidadas enlazan al explorador de bloques. Acceso de operador requerido.</p>
+  </main>
+
+<script>
+const $=s=>document.querySelector(s);
+const api=(p,o)=>fetch('/api/'+p,Object.assign({credentials:'same-origin'},o));
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const hhmm=ms=>ms?new Date(Number(ms)).toLocaleString('es-VE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
+const usd=n=>(n==null||n==='')?'—':'$'+Number(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const trunc=(s,h=6,t=4)=>{ s=String(s||''); if(!s)return ''; return s.length<=h+t+2?s:s.slice(0,h)+'…'+s.slice(-t); };
+
+// Estados conocidos del ciclo de pago.
+const STATUSES=['required','verified','settled','failed','expired'];
+const ST_META={
+  required:{label:'Requerido', color:'#64748b', bg:'#f1f5f9', fg:'#475569'},
+  verified:{label:'Verificado', color:'#0891b2', bg:'#ecfeff', fg:'#0e7490'},
+  settled: {label:'Liquidado', color:'#16a34a', bg:'#f0fdf4', fg:'#15803d'},
+  failed:  {label:'Fallido',   color:'#dc2626', bg:'#fef2f2', fg:'#b91c1c'},
+  expired: {label:'Expirado',  color:'#d97706', bg:'#fffbeb', fg:'#b45309'},
+};
+function stMeta(s){ return ST_META[s] || {label:s||'—', color:'#64748b', bg:'#f1f5f9', fg:'#475569'}; }
+
+// Explorador de bloques por chainId (Base mainnet 8453 · Base Sepolia 84532).
+function explorerTx(chainId, hash){
+  if(!hash) return null;
+  const id=Number(chainId);
+  if(id===8453) return 'https://basescan.org/tx/'+hash;
+  if(id===84532) return 'https://sepolia.basescan.org/tx/'+hash;
+  return null;
+}
+
+function showAuth(msg){ $('#authBannerMsg').textContent=msg||'Sesión de operador requerida.'; $('#authBanner').classList.remove('hidden'); }
+function clearAuth(){ $('#authBanner').classList.add('hidden'); }
+
+// ---------------- health ----------------
+function yesno(v){ if(v===true)return '<b style="color:#15803d">sí</b>'; if(v===false)return '<b style="color:#b91c1c">no</b>'; return '<b style="color:#64748b">n/d</b>'; }
+function renderHealth(h){
+  const HS={
+    live:{label:'EN VIVO', color:'#16a34a'},
+    degraded:{label:'DEGRADADO', color:'#d97706'},
+    disabled:{label:'DESACTIVADO', color:'#64748b'},
+  };
+  const meta=HS[h&&h.status]||{label:'DESCONOCIDO',color:'#64748b'};
+  $('#hStatus').textContent=meta.label;
+  $('#hStatus').style.color=meta.color;
+  $('#hDot').style.background=meta.color;
+  $('#hpipDot').style.background=meta.color;
+  $('#hpipLabel').textContent=meta.label;
+  $('#hGrid').innerHTML=[
+    ['Facilitador configurado', yesno(h.facilitatorConfigured)],
+    ['Facilitador alcanzable', yesno(h.facilitatorReachable)],
+    ['Pagos habilitados', yesno(h.paymentsEnabledFlag)],
+    ['Red', '<b class="mono">'+esc(h.network||'—')+'</b>'+(h.chainId?' <span class="text-on-surface-variant mono">('+esc(h.chainId)+')</span>':'')],
+    ['Activo (asset)', '<b class="mono">'+esc(h.asset||'—')+'</b>'],
+  ].map(([l,v])=>`<span class="text-on-surface-variant">${l}: ${v}</span>`).join('');
+  const note=$('#hNote');
+  if(h.status==='disabled'){
+    note.classList.remove('hidden');
+    note.textContent='Los pagos x402 no están en vivo — configura X402_FACILITATOR_URL + X402_PAYMENTS_ENABLED=true.';
+  }else{ note.classList.add('hidden'); }
+}
+
+// ---------------- tiles ----------------
+function renderTiles(counts){
+  const by={}; (counts||[]).forEach(c=>{ by[c.status]={n:Number(c.n)||0, usd:Number(c.usd)||0}; });
+  // Show known statuses first (even at 0), then any extra statuses returned.
+  const extra=Object.keys(by).filter(s=>!STATUSES.includes(s));
+  const order=[...STATUSES, ...extra];
+  $('#tiles').innerHTML=order.map(s=>{
+    const m=stMeta(s), d=by[s]||{n:0,usd:0};
+    return `<div class="tile" style="--accent:${m.color}">
+      <div class="v" style="color:${m.color}">${d.n.toLocaleString('es-VE')}</div>
+      <div class="l">${esc(m.label)}</div>
+      <div class="s mono">${usd(d.usd)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ---------------- rows ----------------
+function renderRows(recent, health){
+  const rows=recent||[];
+  $('#rowCount').textContent=rows.length+(rows.length===1?' pago':' pagos');
+  const tb=$('#rows');
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="8" class="text-center text-on-surface-variant py-8">Sin pagos registrados todavía.</td></tr>'; return; }
+  tb.innerHTML=rows.map(r=>{
+    const m=stMeta(r.status);
+    const badge=`<span class="badge" style="background:${m.bg};color:${m.fg}"><span class="dot" style="background:${m.color}"></span>${esc(m.label)}</span>`;
+    const chainId=r.chain_id!=null?r.chain_id:(health&&health.chainId);
+    const url=explorerTx(chainId, r.tx_hash);
+    const tx=r.tx_hash
+      ? (url?`<a href="${esc(url)}" target="_blank" rel="noopener" class="underline text-primary mono">${esc(trunc(r.tx_hash))}</a>`:`<span class="mono">${esc(trunc(r.tx_hash))}</span>`)
+      : '<span class="text-on-surface-variant">—</span>';
+    const reason=(r.status==='failed'&&r.invalid_reason)?`<span style="color:#b91c1c">${esc(r.invalid_reason)}</span>`:'<span class="text-on-surface-variant">—</span>';
+    return `<tr>
+      <td class="whitespace-nowrap mono text-[11px]">${esc(hhmm(r.created_ms))}</td>
+      <td>${badge}</td>
+      <td class="mono whitespace-nowrap">${usd(r.amount_usd)}</td>
+      <td class="mono text-[11px]">${esc(r.network||'—')}</td>
+      <td class="mono" title="${esc(r.payer||'')}">${r.payer?esc(trunc(r.payer)):'—'}</td>
+      <td class="mono" title="${esc(r.pay_to||'')}">${r.pay_to?esc(trunc(r.pay_to)):'—'}</td>
+      <td>${tx}</td>
+      <td class="max-w-[180px]">${reason}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------------- load ----------------
+async function load(){
+  let health=null;
+  // Health first (smaller, also tells us auth state).
+  try{
+    const hr=await api('x402/health');
+    if(hr.status===401){ showAuth('Inicia sesión como operador para ver la reconciliación.'); $('#hpipLabel').textContent='NO AUTORIZADO'; return; }
+    if(hr.status===403){ showAuth('Tu cuenta no tiene permiso de operador (ops:console).'); $('#hpipLabel').textContent='SIN PERMISO'; return; }
+    if(hr.ok){ health=await hr.json().catch(()=>null); if(health) renderHealth(health); }
+  }catch(e){ /* keep going to reconcile */ }
+
+  try{
+    const rr=await api('x402/admin/reconcile');
+    if(rr.status===401){ showAuth('Inicia sesión como operador para ver la reconciliación.'); return; }
+    if(rr.status===403){ showAuth('Tu cuenta no tiene permiso de operador (ops:console).'); return; }
+    if(!rr.ok){ showAuth('No se pudo cargar la reconciliación (HTTP '+rr.status+').'); return; }
+    clearAuth();
+    const d=await rr.json().catch(()=>({}));
+    renderTiles(d.counts||[]);
+    renderRows(d.recent||[], health);
+    $('#lastUpdate').textContent='Act. '+new Date().toLocaleTimeString('es-VE');
+  }catch(e){
+    showAuth('Error de red al cargar la reconciliación.');
+  }
+}
+
+$('#refreshBtn').onclick=load;
+load();
+</script>
+</body>
+</html>
