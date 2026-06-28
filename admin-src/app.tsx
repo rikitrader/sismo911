@@ -11,7 +11,12 @@ import { DashboardPage } from './pages/Dashboard';
 import { UsersPage } from './pages/Users';
 import { RolesPage } from './pages/Roles';
 import { PermissionsPage } from './pages/Permissions';
-import { AuditPage, LoginHistoryPage, SessionsPage } from './pages/EventLogs';
+import { AuditPage, LoginHistoryPage } from './pages/EventLogs';
+import { SessionsPage } from './pages/Sessions';
+import { OrganizationPage } from './pages/Organization';
+import { FeatureFlagsPage } from './pages/FeatureFlags';
+import { SecurityPage } from './pages/Security';
+import { rbac } from './api';
 
 const COLLAPSE_KEY = 'sismo-admin-nav-collapsed';
 
@@ -20,9 +25,12 @@ function PageRouter({ route }: { route: string }) {
     case 'users': return <UsersPage />;
     case 'roles': return <RolesPage />;
     case 'permissions': return <PermissionsPage />;
+    case 'organization': return <OrganizationPage />;
+    case 'feature-flags': return <FeatureFlagsPage />;
     case 'audit': return <AuditPage />;
     case 'login-history': return <LoginHistoryPage />;
     case 'sessions': return <SessionsPage />;
+    case 'security': return <SecurityPage />;
     case 'dashboard':
     default: return <DashboardPage />;
   }
@@ -43,6 +51,14 @@ export function App() {
     const h = () => setUnauth(true);
     addEventListener('rbac-unauthorized', h);
     return () => removeEventListener('rbac-unauthorized', h);
+  }, []);
+
+  // Boot auth gate: probe the API once so any landing route (not just Dashboard)
+  // flips to the sign-in screen when there's no admin session. A 401 from the
+  // probe is broadcast by the api helper and caught by the listener above; a 403
+  // (authenticated but lacks a permission) is left to the per-page handlers.
+  useEffect(() => {
+    rbac.dashboard().catch(() => {});
   }, []);
 
   // Cmd/Ctrl-K to open palette.

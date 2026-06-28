@@ -12,7 +12,7 @@ export function SignInScreen() {
         <p class="text-muted text-[13.5px] mt-2 leading-relaxed">
           Necesitas una sesión de administrador para acceder a la consola.
         </p>
-        <a class="btn btn-primary w-full mt-6" href="/login?next=/console">
+        <a class="btn btn-primary w-full mt-6" href="/login?next=/console/">
           Ir a iniciar sesión
         </a>
       </div>
