@@ -94,6 +94,8 @@
     <button class="seg" data-tab="donaciones">Donaciones</button>
     <button class="seg" data-tab="ordenes">Órdenes</button>
     <button class="seg" data-tab="finanzas">Finanzas</button>
+    <button class="seg" data-tab="picklists">Picklists</button>
+    <button class="seg" data-tab="envios">Envíos</button>
   </div>
 
   <!-- ═══ TABLERO ═══ -->
@@ -737,6 +739,160 @@
     </div>
   </section>
 
+  <!-- ═══ PICKLISTS ═══ -->
+  <section data-panel="picklists" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="eyebrow">Picklists</div>
+          <select id="pk_estado" class="inp-sm">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="en_proceso">En proceso</option>
+            <option value="completada">Completada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+          <button id="pk_buscar" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto" style="max-height:50vh">
+            <table class="dt">
+              <thead><tr><th>Código</th><th>Ubicación</th><th>Estado</th><th>Asignado</th><th>#líneas</th><th>Fecha</th></tr></thead>
+              <tbody id="pkRows"><tr><td colspan="6" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="pkDetail" class="hidden card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="eyebrow">Detalle de picklist</div>
+            <button id="pkDetailClose" class="text-xs font-semibold text-on-surface-variant">✕ Cerrar</button>
+          </div>
+          <div id="pkDetailMeta" class="text-sm"></div>
+          <div class="overflow-x-auto">
+            <table class="dt"><thead><tr><th>Producto</th><th>Lote</th><th>Cant. sol.</th><th>Cant. prep.</th><th>Disponible</th><th id="pkPickHead" class="hidden">A preparar</th></tr></thead>
+            <tbody id="pkDetailLines"></tbody></table>
+          </div>
+          <div id="pkActions" class="flex flex-wrap gap-2 items-center"></div>
+          <p id="pkActMsg" class="text-xs text-center"></p>
+        </div>
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Nueva picklist</div>
+        <form id="fPk" class="space-y-2">
+          <div><label class="lbl">Ubicación</label><select id="pkUbicSel" name="ubicacion_id" required><option value="">-- Seleccionar --</option></select></div>
+          <input name="asignado_a" placeholder="Asignado a" />
+          <input name="referencia" placeholder="Referencia" />
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <div class="eyebrow">Líneas</div>
+              <button type="button" class="btn-add" onclick="addPkRow()">+ Añadir</button>
+            </div>
+            <div id="rows_pk" class="space-y-1.5"></div>
+          </div>
+          <button class="w-full bg-secondary text-white font-bold rounded py-2 text-sm">Crear picklist</button>
+          <p id="pkMsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ ENVÍOS ═══ -->
+  <section data-panel="envios" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="eyebrow">Envíos</div>
+          <select id="env_estado" class="inp-sm">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="despachado">Despachado</option>
+            <option value="en_transito">En tránsito</option>
+            <option value="recibido">Recibido</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <button id="env_buscar" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto" style="max-height:50vh">
+            <table class="dt">
+              <thead><tr><th>Código</th><th>Origen</th><th>Destino</th><th>Método</th><th>Estado</th><th>#cont.</th><th>#líneas</th><th>Ref.</th></tr></thead>
+              <tbody id="envRows"><tr><td colspan="8" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="envDetail" class="hidden card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="eyebrow">Detalle de envío</div>
+            <button id="envDetailClose" class="text-xs font-semibold text-on-surface-variant">✕ Cerrar</button>
+          </div>
+          <div id="envDetailMeta" class="text-sm"></div>
+          <div class="eyebrow mt-1">Contenedores</div>
+          <div id="envDetailConts" class="flex flex-wrap gap-2 text-sm"></div>
+          <div class="overflow-x-auto">
+            <table class="dt"><thead><tr><th>Producto</th><th>Lote</th><th>Contenedor</th><th>Cantidad</th></tr></thead>
+            <tbody id="envDetailLines"></tbody></table>
+          </div>
+          <div id="envActions" class="flex flex-wrap gap-2 items-center"></div>
+          <p id="envActMsg" class="text-xs text-center"></p>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div class="card p-4">
+          <div class="eyebrow mb-3">Nuevo envío</div>
+          <form id="fEnv" class="space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <div><label class="lbl">Origen</label><select id="envOrigenSel" name="origen_id" required><option value="">-- Seleccionar --</option></select></div>
+              <div><label class="lbl">Destino</label><select id="envDestinoSel" name="destino_id" required><option value="">-- Seleccionar --</option></select></div>
+            </div>
+            <div><label class="lbl">Método de envío</label><select id="envMetodoSel" name="metodo_id"><option value="">-- Sin método --</option></select></div>
+            <div class="grid grid-cols-2 gap-2">
+              <input name="num_referencia" placeholder="Núm. referencia" />
+              <input name="transportista" placeholder="Transportista" />
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <div class="eyebrow">Contenedores</div>
+                <button type="button" class="btn-add" onclick="addEnvContRow()">+ Añadir</button>
+              </div>
+              <div id="rows_env_cont" class="space-y-1.5"></div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <div class="eyebrow">Líneas</div>
+                <button type="button" class="btn-add" onclick="addEnvRow()">+ Añadir</button>
+              </div>
+              <div id="rows_env" class="space-y-1.5"></div>
+            </div>
+            <button class="w-full bg-secondary text-white font-bold rounded py-2 text-sm">Crear envío</button>
+            <p id="envMsg" class="text-xs text-center"></p>
+          </form>
+        </div>
+        <div class="card p-4">
+          <div class="eyebrow mb-3">Métodos de envío</div>
+          <div class="overflow-x-auto mb-3" style="max-height:200px">
+            <table class="dt"><thead><tr><th>Nombre</th><th>Transportista</th><th>Modo</th><th></th></tr></thead>
+            <tbody id="meRows"><tr><td colspan="4" class="text-center text-on-surface-variant py-4">Cargando…</td></tr></tbody></table>
+          </div>
+          <form id="fMe" class="space-y-2">
+            <input name="nombre" placeholder="Nombre*" required />
+            <div class="grid grid-cols-2 gap-2">
+              <input name="transportista" placeholder="Transportista" />
+              <select name="modo">
+                <option value="terrestre">Terrestre</option>
+                <option value="aereo">Aéreo</option>
+                <option value="maritimo">Marítimo</option>
+                <option value="fluvial">Fluvial</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <button class="w-full bg-secondary text-white font-bold rounded py-1.5 text-xs">Agregar método</button>
+            <p id="meMsg" class="text-xs text-center"></p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <p class="text-[11px] text-on-surface-variant">Actualización manual · las acciones de escritura requieren sesión de operador.</p>
 </main>
 
@@ -761,6 +917,10 @@ const DONTIPO={individual:{l:'Individual',c:'#475569',bg:'#e2e8f0'},empresa:{l:'
 const OCEST={borrador:{l:'Borrador',c:'#475569',bg:'#e2e8f0'},aprobada:{l:'Aprobada',c:'#15803d',bg:'#dcfce7'},recibida_parcial:{l:'Rec. parcial',c:'#b45309',bg:'#fef3c7'},recibida:{l:'Recibida',c:'#0891b2',bg:'#cffafe'},cancelada:{l:'Cancelada',c:'#b91c1c',bg:'#fee2e2'}};
 const FACEST={borrador:{l:'Borrador',c:'#475569',bg:'#e2e8f0'},emitida:{l:'Emitida',c:'#1d4ed8',bg:'#dbeafe'},pagada:{l:'Pagada',c:'#15803d',bg:'#dcfce7'},anulada:{l:'Anulada',c:'#b91c1c',bg:'#fee2e2'}};
 const CTATIPO={presupuesto:{l:'Presupuesto',c:'#7c3aed',bg:'#ede9fe'},gasto:{l:'Gasto',c:'#b91c1c',bg:'#fee2e2'},activo:{l:'Activo',c:'#15803d',bg:'#dcfce7'},pasivo:{l:'Pasivo',c:'#b45309',bg:'#fef3c7'},ingreso:{l:'Ingreso',c:'#0891b2',bg:'#cffafe'}};
+const PICKEST={pendiente:{l:'Pendiente',c:'#475569',bg:'#e2e8f0'},en_proceso:{l:'En proceso',c:'#b45309',bg:'#fef3c7'},completada:{l:'Completada',c:'#15803d',bg:'#dcfce7'},cancelada:{l:'Cancelada',c:'#b91c1c',bg:'#fee2e2'}};
+const ENVEST={pendiente:{l:'Pendiente',c:'#475569',bg:'#e2e8f0'},despachado:{l:'Despachado',c:'#1d4ed8',bg:'#dbeafe'},en_transito:{l:'En tránsito',c:'#b45309',bg:'#fef3c7'},recibido:{l:'Recibido',c:'#15803d',bg:'#dcfce7'},cancelado:{l:'Cancelado',c:'#b91c1c',bg:'#fee2e2'}};
+const MODOENV={terrestre:{l:'Terrestre',c:'#475569',bg:'#e2e8f0'},aereo:{l:'Aéreo',c:'#1d4ed8',bg:'#dbeafe'},maritimo:{l:'Marítimo',c:'#0891b2',bg:'#cffafe'},fluvial:{l:'Fluvial',c:'#15803d',bg:'#dcfce7'},otro:{l:'Otro',c:'#7c3aed',bg:'#ede9fe'}};
+const CONTTIPO={caja:{l:'Caja',c:'#475569',bg:'#e2e8f0'},pallet:{l:'Pallet',c:'#1d4ed8',bg:'#dbeafe'},saco:{l:'Saco',c:'#b45309',bg:'#fef3c7'},nevera:{l:'Nevera',c:'#0891b2',bg:'#cffafe'},bidon:{l:'Bidón',c:'#7c3aed',bg:'#ede9fe'}};
 function chipOf(k,map){const m=map[k]||{l:k||'—',c:'#475569',bg:'#e2e8f0'};return`<span class="chip" style="color:${m.c};background:${m.bg}">${esc(m.l)}</span>`;}
 
 // ── Toast / messages ──
@@ -800,6 +960,8 @@ function onTab(t){
   else if(t==='donaciones'){ensureUbic();ensureProds();loadDonaciones();}
   else if(t==='ordenes'){ensureUbic();ensureProds();ensureProvs();loadOrdenes();}
   else if(t==='finanzas'){ensureProvs();loadCuentas();}
+  else if(t==='picklists'){ensureUbic();loadPicklists();}
+  else if(t==='envios'){ensureUbic();loadEnvios();loadMetodosEnvio();}
 }
 
 // ── Ubicaciones ──
@@ -823,6 +985,9 @@ function fillUbicSelects(){
   const rqs=$('#fReq select[name="ubicacion_id"]');if(rqs){const c=rqs.value;rqs.innerHTML='<option value="">-- Ubicación solicitante --</option>'+opts;if(c)rqs.value=c;}
   // inventory filter
   const fi=$('#fi_ubic');if(fi){const c=fi.value;fi.innerHTML='<option value="">Todas las ubicaciones</option>'+opts;if(c)fi.value=c;}
+  // envio form selects
+  const eos=$('#envOrigenSel');if(eos){const c=eos.value;eos.innerHTML='<option value="">-- Seleccionar --</option>'+opts;if(c)eos.value=c;}
+  const eds=$('#envDestinoSel');if(eds){const c=eds.value;eds.innerHTML='<option value="">-- Seleccionar --</option>'+opts;if(c)eds.value=c;}
 }
 function renderUbic(list){
   const tb=$('#ubicRows');if(!tb)return;
@@ -1580,6 +1745,273 @@ $('#fFac').onsubmit=async e=>{e.preventDefault();const f=e.target;
   if(ok){f.reset();$('#rows_fac').innerHTML='';calcFacTotal();loadFacturas();toast('Factura creada');}
 };
 $('#fac_buscar').onclick=loadFacturas;
+
+// ── Picklists ──
+async function loadPicklists(){
+  const estado=$('#pk_estado')?.value||'';
+  const p=estado?'?estado='+encodeURIComponent(estado):'';
+  const r=await api('picklists'+p).catch(()=>null);
+  const tb=$('#pkRows');if(!tb)return;
+  if(!r){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Error de red.</td></tr>';return;}
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin autorización.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));renderPicklists(d.results||[]);
+}
+function renderPicklists(list){
+  const tb=$('#pkRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin picklists todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(pk=>`<tr class="row" onclick="openPicklist('${esc(pk.id)}')">
+    <td class="mono text-[11px] font-bold">${esc(pk.codigo||pk.id||'—')}</td>
+    <td class="text-[12px]">${esc(pk.ubicacion_nombre||'—')}</td>
+    <td>${chipOf(pk.estado,PICKEST)}</td>
+    <td class="text-[12px]">${esc(pk.asignado_a||'—')}</td>
+    <td class="mono text-[12px]">${pk.n_lineas??'—'}</td>
+    <td class="text-[11px]">${fdate(pk.created_ms)}</td>
+  </tr>`).join('');
+}
+async function openPicklist(id){
+  const r=await api('picklists/'+id).catch(()=>null);if(!r||!r.ok)return;
+  const d=await j(r).catch(()=>({}));
+  const pk=d.picklist||d;const lines=d.lineas||[];
+  $('#pkDetailMeta').innerHTML=`<b class="mono">${esc(pk.codigo||pk.id)}</b> ${chipOf(pk.estado,PICKEST)} · Ubicación: <b>${esc(pk.ubicacion_nombre||'—')}</b> · Asignado: <b>${esc(pk.asignado_a||'—')}</b>${pk.referencia?` · Ref: ${esc(pk.referencia)}`:''}`;
+  const canPick=pk.estado!=='completada'&&pk.estado!=='cancelada';
+  const hd=$('#pkPickHead');if(hd)hd.classList.toggle('hidden',!canPick);
+  $('#pkDetailLines').innerHTML=lines.length?lines.map(l=>`<tr class="row" data-linea-id="${esc(l.id)}">
+    <td class="font-semibold text-[12px]">${esc(l.producto_nombre||'—')}</td>
+    <td class="mono text-[11px]">${esc(l.lote||'—')}</td>
+    <td class="mono text-[12px]">${l.cantidad_sol??'—'}</td>
+    <td class="mono text-[12px]">${l.cantidad_prep??'—'}</td>
+    <td class="mono text-[12px]">${l.disponible??'—'}</td>
+    ${canPick?`<td><input type="number" min="0" value="${l.cantidad_sol??0}" placeholder="0" class="inp-sm pk-pick-qty" style="width:70px"></td>`:'<td class="text-on-surface-variant">—</td>'}
+  </tr>`).join(''):'<tr><td colspan="6" class="py-4 text-center text-on-surface-variant">Sin líneas.</td></tr>';
+  buildPkActions(pk);
+  setMsg('#pkActMsg','',true);
+  $('#pkDetail').classList.remove('hidden');
+}
+$('#pkDetailClose').onclick=()=>$('#pkDetail').classList.add('hidden');
+$('#pk_buscar').onclick=loadPicklists;
+function buildPkActions(pk){
+  const el=$('#pkActions');const est=pk.estado||'pendiente';let acts=[];
+  if(est!=='completada'&&est!=='cancelada'){
+    acts.push(`<button onclick="pickPicklist('${esc(pk.id)}')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">✎ Preparar</button>`);
+    acts.push(`<button onclick="completarPicklist('${esc(pk.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Completar (despachar)</button>`);
+    acts.push(`<button onclick="cancelarPicklist('${esc(pk.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+  }
+  el.innerHTML=acts.join('');
+}
+async function pickPicklist(id){
+  const lineas=[...$('#pkDetailLines').querySelectorAll('tr[data-linea-id]')].map(row=>{
+    const inp=row.querySelector('.pk-pick-qty');
+    return{linea_id:row.dataset.lineaId,cantidad_pick:inp?num(inp.value):null};
+  }).filter(l=>l.linea_id&&l.cantidad_pick!=null);
+  if(!lineas.length){setMsg('#pkActMsg','Ingresa cantidades a preparar.',false);return;}
+  const r=await api('picklists/'+id+'/pick',{method:'POST',body:JSON.stringify({lineas})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Picklist actualizada');loadPicklists();openPicklist(id);}
+  else setMsg('#pkActMsg',d.error||'Error al preparar',false);
+}
+async function completarPicklist(id){
+  if(!confirm('¿Completar y despachar esta picklist? Se descontará el stock.'))return;
+  const r=await api('picklists/'+id+'/completar',{method:'POST',body:JSON.stringify({})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Picklist completada y stock descontado');loadPicklists();openPicklist(id);}
+  else setMsg('#pkActMsg',d.error||'Error al completar',false);
+}
+async function cancelarPicklist(id){
+  if(!confirm('¿Cancelar esta picklist?'))return;
+  const r=await api('picklists/'+id,{method:'PATCH',body:JSON.stringify({estado:'cancelada'})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Picklist cancelada');loadPicklists();openPicklist(id);}
+  else setMsg('#pkActMsg',d.error||'Error al cancelar',false);
+}
+function addPkRow(){
+  const div=document.createElement('div');div.className='lrow';
+  div.style.gridTemplateColumns='1fr 80px auto';
+  const iOpts=(ICACHE['pk']||[]).map(i=>`<option value="${esc(i.item_id)}">${esc(i.producto_nombre)} – ${esc(i.lote||'s/lote')} (${i.disponible})</option>`).join('');
+  div.innerHTML=`<select class="inp-sm row-item-sel"><option value="">-- Ítem --</option>${iOpts}</select>
+    <input type="number" min="0" placeholder="Cant. sol." class="inp-sm row-qty">
+    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+  $('#rows_pk').appendChild(div);
+}
+$('#pkUbicSel').onchange=function(){loadItems('pk',this.value);};
+$('#fPk').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const lineas=[...$('#rows_pk').querySelectorAll('.lrow')].map(r=>({
+    item_id:r.querySelector('.row-item-sel').value,cantidad_sol:num(r.querySelector('.row-qty').value)
+  })).filter(l=>l.item_id&&l.cantidad_sol);
+  if(!lineas.length){setMsg('#pkMsg','Añade al menos una línea con ítem y cantidad.',false);return;}
+  const ok=await post('picklists',{ubicacion_id:f.ubicacion_id.value,asignado_a:f.asignado_a.value||null,referencia:f.referencia.value||null,lineas},'#pkMsg');
+  if(ok){f.reset();$('#rows_pk').innerHTML='';ICACHE['pk']=[];loadPicklists();toast('Picklist creada');}
+};
+
+// ── Métodos de envío ──
+let METODOS_ENVIO=[];
+async function loadMetodosEnvio(){
+  const r=await api('metodos-envio').catch(()=>null);
+  const tb=$('#meRows');if(!tb)return;
+  if(!r||!r.ok){tb.innerHTML='<tr><td colspan="4" class="text-center text-on-surface-variant py-4">Sin datos.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));METODOS_ENVIO=d.results||[];renderMetodosEnvio(METODOS_ENVIO);fillMetodoSel();
+}
+function renderMetodosEnvio(list){
+  const tb=$('#meRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="4" class="text-center text-on-surface-variant py-4">Sin métodos todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(m=>`<tr class="row">
+    <td class="font-semibold text-[12px]">${esc(m.nombre||'—')}</td>
+    <td class="text-[12px]">${esc(m.transportista||'—')}</td>
+    <td>${chipOf(m.modo,MODOENV)}</td>
+    <td><button class="btn-del" onclick="delMetodo('${esc(m.id)}')">✕</button></td>
+  </tr>`).join('');
+}
+function fillMetodoSel(){
+  const opts=METODOS_ENVIO.map(m=>`<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join('');
+  const sel=$('#envMetodoSel');if(!sel)return;
+  const cv=sel.value;sel.innerHTML='<option value="">-- Sin método --</option>'+opts;if(cv)sel.value=cv;
+}
+async function delMetodo(id){
+  if(!confirm('¿Eliminar método de envío?'))return;
+  const r=await api('metodos-envio/'+id,{method:'DELETE'});
+  if(r.ok){toast('Método eliminado');loadMetodosEnvio();}
+  else{const d=await r.json().catch(()=>({}));toast(d.error||'Error al eliminar',false);}
+}
+$('#fMe').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const ok=await post('metodos-envio',{nombre:f.nombre.value,transportista:f.transportista.value||null,modo:f.modo.value},'#meMsg');
+  if(ok){f.reset();loadMetodosEnvio();toast('Método agregado');}
+};
+
+// ── Envíos ──
+async function loadEnvios(){
+  const estado=$('#env_estado')?.value||'';
+  const p=estado?'?estado='+encodeURIComponent(estado):'';
+  const r=await api('envios'+p).catch(()=>null);
+  const tb=$('#envRows');if(!tb)return;
+  if(!r){tb.innerHTML='<tr><td colspan="8" class="text-center text-on-surface-variant py-8">Error de red.</td></tr>';return;}
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');tb.innerHTML='<tr><td colspan="8" class="text-center text-on-surface-variant py-8">Sin autorización.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));renderEnvios(d.results||[]);
+}
+function renderEnvios(list){
+  const tb=$('#envRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="8" class="text-center text-on-surface-variant py-8">Sin envíos todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(env=>`<tr class="row" onclick="openEnvio('${esc(env.id)}')">
+    <td class="mono text-[11px] font-bold">${esc(env.codigo||env.id||'—')}</td>
+    <td class="text-[12px]">${esc(env.origen_nombre||'—')}</td>
+    <td class="text-[12px]">${esc(env.destino_nombre||'—')}</td>
+    <td class="text-[12px]">${esc(env.metodo_nombre||'—')}</td>
+    <td>${chipOf(env.estado,ENVEST)}</td>
+    <td class="mono text-[12px]">${env.n_contenedores??'—'}</td>
+    <td class="mono text-[12px]">${env.n_lineas??'—'}</td>
+    <td class="text-[12px]">${esc(env.num_referencia||'—')}</td>
+  </tr>`).join('');
+}
+async function openEnvio(id){
+  const r=await api('envios/'+id).catch(()=>null);if(!r||!r.ok)return;
+  const d=await j(r).catch(()=>({}));
+  const env=d.envio||d;const conts=d.contenedores||[];const lines=d.lineas||[];
+  $('#envDetailMeta').innerHTML=`<b class="mono">${esc(env.codigo||env.id)}</b> ${chipOf(env.estado,ENVEST)} · De: <b>${esc(env.origen_nombre||'—')}</b> → <b>${esc(env.destino_nombre||'—')}</b> · Método: <b>${esc(env.metodo_nombre||'—')}</b>${env.num_referencia?` · Ref: ${esc(env.num_referencia)}`:''}`;
+  $('#envDetailConts').innerHTML=conts.length?conts.map((c,i)=>`<div class="card px-2 py-1 text-[11px] flex items-center gap-1.5"><span class="mono font-bold">#${i+1}</span>${chipOf(c.tipo,CONTTIPO)}${c.codigo?` <span class="mono">${esc(c.codigo)}</span>`:''}${c.descripcion?` <span class="text-on-surface-variant">${esc(c.descripcion)}</span>`:''}</div>`).join(''):'<span class="text-on-surface-variant text-sm">Sin contenedores.</span>';
+  $('#envDetailLines').innerHTML=lines.length?lines.map(l=>`<tr class="row">
+    <td class="font-semibold text-[12px]">${esc(l.producto_nombre||'—')}</td>
+    <td class="mono text-[11px]">${esc(l.lote||'—')}</td>
+    <td class="text-[12px]">${l.contenedor_idx!=null?`#${Number(l.contenedor_idx)+1}`:'—'}</td>
+    <td class="mono text-[12px]">${l.cantidad??'—'}</td>
+  </tr>`).join(''):'<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">Sin líneas.</td></tr>';
+  buildEnvActions(env);
+  setMsg('#envActMsg','',true);
+  $('#envDetail').classList.remove('hidden');
+}
+$('#envDetailClose').onclick=()=>$('#envDetail').classList.add('hidden');
+$('#env_buscar').onclick=loadEnvios;
+function buildEnvActions(env){
+  const el=$('#envActions');const est=env.estado||'pendiente';let acts=[];
+  if(est==='pendiente'){
+    acts.push(`<button onclick="despacharEnvio('${esc(env.id)}')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">→ Despachar</button>`);
+    acts.push(`<button onclick="cancelarEnvio('${esc(env.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+  }
+  if(est==='despachado'){
+    acts.push(`<button onclick="patchEnvio('${esc(env.id)}','en_transito')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b45309">↗ En tránsito</button>`);
+    acts.push(`<button onclick="recibirEnvio('${esc(env.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Recibir</button>`);
+  }
+  if(est==='en_transito')
+    acts.push(`<button onclick="recibirEnvio('${esc(env.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Recibir</button>`);
+  el.innerHTML=acts.join('');
+}
+async function despacharEnvio(id){
+  const r=await api('envios/'+id+'/despachar',{method:'POST',body:JSON.stringify({})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Envío despachado — stock descontado del origen');loadEnvios();openEnvio(id);}
+  else setMsg('#envActMsg',d.error||'Error al despachar',false);
+}
+async function recibirEnvio(id){
+  if(!confirm('¿Confirmar recepción? Se añadirá el stock en el destino.'))return;
+  const r=await api('envios/'+id+'/recibir',{method:'POST',body:JSON.stringify({})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Envío recibido — stock añadido al destino');loadEnvios();openEnvio(id);}
+  else setMsg('#envActMsg',d.error||'Error al recibir',false);
+}
+async function patchEnvio(id,estado){
+  const r=await api('envios/'+id,{method:'PATCH',body:JSON.stringify({estado})});
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Estado actualizado');loadEnvios();openEnvio(id);}
+  else{const d=await r.json().catch(()=>({}));setMsg('#envActMsg',d.error||'Error al actualizar',false);}
+}
+async function cancelarEnvio(id){
+  if(!confirm('¿Cancelar este envío?'))return;
+  const r=await api('envios/'+id,{method:'PATCH',body:JSON.stringify({estado:'cancelado'})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Envío cancelado');loadEnvios();openEnvio(id);}
+  else setMsg('#envActMsg',d.error||'Error al cancelar',false);
+}
+let _envContCount=0;
+function addEnvContRow(){
+  _envContCount++;
+  const div=document.createElement('div');div.className='lrow';
+  div.style.gridTemplateColumns='110px 100px 1fr auto';
+  div.innerHTML=`<select class="inp-sm env-cont-tipo" onchange="rebuildContSels()">
+      <option value="caja">Caja</option><option value="pallet">Pallet</option>
+      <option value="saco">Saco</option><option value="nevera">Nevera</option><option value="bidon">Bidón</option>
+    </select>
+    <input placeholder="Código" class="inp-sm env-cont-codigo" oninput="rebuildContSels()">
+    <input placeholder="Descripción" class="inp-sm env-cont-desc">
+    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove();rebuildContSels()">✕</button>`;
+  $('#rows_env_cont').appendChild(div);
+  rebuildContSels();
+}
+function rebuildContSels(){
+  const conts=[...$('#rows_env_cont').querySelectorAll('.lrow')];
+  const opts=conts.map((c,i)=>`<option value="${i}">#${i+1} ${esc(c.querySelector('.env-cont-tipo').value)} ${esc(c.querySelector('.env-cont-codigo').value||'')}</option>`).join('');
+  $$('#rows_env .env-cont-sel').forEach(s=>{const cv=s.value;s.innerHTML='<option value="">-- Contenedor --</option>'+opts;if(cv)s.value=cv;});
+}
+function addEnvRow(){
+  const div=document.createElement('div');div.className='lrow';
+  div.style.gridTemplateColumns='1fr 80px 120px auto';
+  const iOpts=(ICACHE['env']||[]).map(i=>`<option value="${esc(i.item_id)}">${esc(i.producto_nombre)} – ${esc(i.lote||'s/lote')} (${i.disponible})</option>`).join('');
+  const conts=[...$('#rows_env_cont').querySelectorAll('.lrow')];
+  const cOpts=conts.map((c,i)=>`<option value="${i}">#${i+1} ${esc(c.querySelector('.env-cont-tipo').value)}</option>`).join('');
+  div.innerHTML=`<select class="inp-sm row-item-sel"><option value="">-- Ítem --</option>${iOpts}</select>
+    <input type="number" min="0" placeholder="Cant." class="inp-sm row-qty">
+    <select class="inp-sm env-cont-sel"><option value="">-- Contenedor --</option>${cOpts}</select>
+    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+  $('#rows_env').appendChild(div);
+}
+$('#envOrigenSel').onchange=function(){loadItems('env',this.value);};
+$('#fEnv').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const contenedores=[...$('#rows_env_cont').querySelectorAll('.lrow')].map(r=>({
+    tipo:r.querySelector('.env-cont-tipo').value,
+    codigo:r.querySelector('.env-cont-codigo').value||null,
+    descripcion:r.querySelector('.env-cont-desc').value||null
+  }));
+  const lineas=[...$('#rows_env').querySelectorAll('.lrow')].map(r=>({
+    item_id:r.querySelector('.row-item-sel').value,
+    cantidad:num(r.querySelector('.row-qty').value),
+    contenedor_idx:r.querySelector('.env-cont-sel').value!==''?num(r.querySelector('.env-cont-sel').value):null
+  })).filter(l=>l.item_id&&l.cantidad);
+  if(!lineas.length){setMsg('#envMsg','Añade al menos una línea con ítem y cantidad.',false);return;}
+  const ok=await post('envios',{origen_id:f.origen_id.value,destino_id:f.destino_id.value,metodo_id:f.metodo_id.value||null,num_referencia:f.num_referencia.value||null,transportista:f.transportista.value||null,contenedores,lineas},'#envMsg');
+  if(ok){f.reset();$('#rows_env_cont').innerHTML='';$('#rows_env').innerHTML='';_envContCount=0;loadEnvios();toast('Envío creado');}
+};
 
 // ── Generic POST ──
 async function post(endpoint,body,msgSel){
