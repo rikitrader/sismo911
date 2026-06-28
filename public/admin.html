@@ -80,6 +80,7 @@
       <button data-tab="mantenimiento" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant whitespace-nowrap">Mantenimiento</button>
       <button data-tab="aid" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant whitespace-nowrap">Red de Ayuda</button>
       <button data-tab="adapters" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant whitespace-nowrap">Fuentes de Datos</button>
+      <button data-tab="medicos" class="tab px-4 py-3 font-display font-semibold text-sm border-b-2 border-transparent text-on-surface-variant whitespace-nowrap">Médicos (Telemedicina)</button>
     </div>
   </nav>
 
@@ -301,6 +302,18 @@
         <div id="status-box" class="space-y-2 font-mono text-sm"></div>
       </div>
     </section>
+
+    <!-- ===== MÉDICOS (telemedicina doctor approval — C1 security gate) ===== -->
+    <section id="panel-medicos" class="hidden space-y-4">
+      <div class="bg-white rounded-lg border border-outline-variant/60 p-5">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="font-display font-bold text-lg">Médicos pendientes de aprobación</h2>
+          <button id="med-refresh" class="bg-primary text-white font-semibold rounded-md px-3 py-1.5 text-xs">↻ Actualizar</button>
+        </div>
+        <p class="text-sm text-on-surface-variant mb-4">Un médico que se registra queda en <b>pendiente</b> y NO puede ver casos ni datos de pacientes hasta que un operador lo apruebe. Verifica la identidad/licencia antes de aprobar.</p>
+        <div id="med-pending" class="divide-y divide-outline-variant/40"></div>
+      </div>
+    </section>
   </main>
 
 <script>
@@ -321,13 +334,13 @@
 
   // ===== Tabs =====
   const tabs = document.querySelectorAll('.tab');
-  const PANELS=['dashboard','persons','contacts','acopio','mantenimiento','aid','adapters'];
+  const PANELS=['dashboard','persons','contacts','acopio','mantenimiento','aid','adapters','medicos'];
   function show(name){
     tabs.forEach(t=>{const on=t.dataset.tab===name; t.classList.toggle('border-secondary',on); t.classList.toggle('text-primary',on); t.classList.toggle('border-transparent',!on); t.classList.toggle('text-on-surface-variant',!on);});
     PANELS.forEach(n=>document.getElementById('panel-'+n).classList.toggle('hidden',n!==name));
     if(name==='dashboard')loadDashboard();
     if(name==='persons')loadPersons();
-    if(name==='contacts')loadContacts(); if(name==='adapters')loadStatus(); if(name==='acopio')loadAcopio(); if(name==='aid')loadAid();
+    if(name==='contacts')loadContacts(); if(name==='adapters')loadStatus(); if(name==='acopio')loadAcopio(); if(name==='aid')loadAid(); if(name==='medicos')loadMedicos();
   }
   tabs.forEach(t=>t.onclick=()=>show(t.dataset.tab));
 
@@ -694,6 +707,36 @@
     if(r.ok){ e.target.reset(); document.getElementById('aid-form').classList.add('hidden'); loadAid(); }
     else alert('Error: '+(r.error||'desconocido'));
   };
+
+  // ===== Médicos (telemedicina) — approve/reject pending doctors (C1 gate) =====
+  async function loadMedicos(){
+    const box=document.getElementById('med-pending');
+    box.innerHTML='<div class="py-4 text-sm text-on-surface-variant">Cargando…</div>';
+    let d; try{ d=await api('telemedicina/doctors/pending',{credentials:'same-origin'}); }catch(e){ d=null; }
+    if(!d||!d.ok){ box.innerHTML='<div class="py-4 text-sm text-error">No autorizado o error al cargar (inicia sesión como operador).</div>'; return; }
+    const items=d.items||[];
+    if(!items.length){ box.innerHTML='<div class="py-4 text-sm text-on-surface-variant">No hay médicos pendientes. ✓</div>'; return; }
+    box.innerHTML=items.map(m=>`<div class="py-3 flex flex-wrap items-center gap-3">
+      <div class="flex-1 min-w-[220px]">
+        <div class="font-semibold">${esc(m.full_name)} <span class="text-xs text-on-surface-variant">· ${esc(m.specialty||'general')}</span></div>
+        <div class="text-xs text-on-surface-variant mono">${esc(m.email||'')}${m.country?' · '+esc(m.country):''}${m.license_no?' · lic. '+esc(m.license_no):''}</div>
+        ${m.bio?`<div class="text-xs text-on-surface-variant mt-0.5">${esc(m.bio)}</div>`:''}
+      </div>
+      <button data-act="approve" data-id="${esc(m.id)}" class="bg-safe text-white font-semibold rounded-md px-3 py-1.5 text-xs">Aprobar</button>
+      <button data-act="reject" data-id="${esc(m.id)}" class="bg-error text-white font-semibold rounded-md px-3 py-1.5 text-xs">Rechazar</button>
+    </div>`).join('');
+  }
+  // Approve/reject POST to the operator-gated endpoints (same-origin sends the session cookie
+  // + Origin header so the central CSRF/role gate authorizes the write).
+  window.medSet=async (id,act)=>{
+    if(act==='reject' && !confirm('¿Rechazar a este médico? No podrá acceder al panel.')) return;
+    let r; try{ r=await api('telemedicina/doctors/'+encodeURIComponent(id)+'/'+act,{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:'{}'}); }catch(e){ r=null; }
+    if(r&&r.ok) loadMedicos(); else alert('Error: '+((r&&r.error)||'no autorizado'));
+  };
+  document.getElementById('med-pending').addEventListener('click',e=>{
+    const b=e.target.closest('button[data-act]'); if(b) window.medSet(b.dataset.id,b.dataset.act);
+  });
+  document.getElementById('med-refresh').onclick=loadMedicos;
 
   // ===== initial route =====
   const H=location.hash.replace('#','');
