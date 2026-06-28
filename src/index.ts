@@ -86,7 +86,10 @@ import { allowedOrigins, isAllowedOrigin, setSecurityHeaders, rateLimit } from '
 import { backfillBatch } from './lib/flota-ingest';
 import { audit } from './lib/audit';
 
-const app = new Hono<{ Bindings: Env }>();
+// `app` is exported so the route-coverage test (test/api-route-coverage.test.ts)
+// can enumerate every registered route and assert each /api/* route is classified
+// by the gate — the safety net that makes default-deny impossible to bypass.
+export const app = new Hono<{ Bindings: Env }>();
 app.use('*', async (c, next) => {
   setSecurityHeaders(c);
   await next();
@@ -120,6 +123,12 @@ app.use('*', async (c, next) => {
   const method = c.req.method;
   const decision = evaluateGate(path, method);
   if (decision.kind === 'open') return next();
+
+  // M1 default-deny: an /api route that is neither gated nor on the public
+  // allow-list fails closed. (Completeness of the allow-list vs the real route
+  // table is enforced by test/api-route-coverage.test.ts, so this should only
+  // ever fire for an unregistered/unclassified path.)
+  if (decision.kind === 'deny') return c.json({ error: 'forbidden' }, 403);
 
   // Field-unit GPS ingest: a valid per-unit token authorizes ONLY
   // POST /api/flota/rastreo/posicion without an operator session (and bypasses
