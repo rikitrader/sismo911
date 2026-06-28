@@ -4,6 +4,7 @@ import { uid } from '../lib/db';
 import { rateLimit, validLatLon, blurCoord, nameHasSpam, textHasLink, requestIp, isImageBytes } from '../lib/security';
 import { audit } from '../lib/audit';
 import { getUserFromRequest } from '../lib/auth';
+import { sha256Hex, imageDimensions, logCustody } from '../lib/evidence';
 import { scoreCase } from '../lib/case-score';
 import { recomputeCaseScore } from '../lib/case-score-sync';
 import { edgeCached } from '../lib/edge-cache';
@@ -671,20 +672,26 @@ persons.post('/:id/attachments', async (c) => {
   const key = `cases/${id}/${attId}.${ext}`;
   await c.env.PERSON_PHOTOS.put(key, bytes, { httpMetadata: { contentType: fileType } });
   const me = await getUserFromRequest(c.env, c).catch(() => null);
+  // Evidence integrity: hash the immutable original + capture pixel dimensions.
+  const sha256 = await sha256Hex(bytes).catch(() => null);
+  const dims = imageDimensions(bytes);
+  const now = Date.now();
   await c.env.DB.prepare(
-    `INSERT INTO case_attachments (id, person_id, kind, r2_key, filename, content_type, size, description, category, source, verification, uploaded_by, lat, lon, created_ms)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO case_attachments (id, person_id, kind, r2_key, filename, content_type, size, description, category, source, verification, uploaded_by, lat, lon, created_ms, original_sha256, status, width, height, updated_ms)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     attId, id, kind, key, filename ? String(filename).slice(0, 200) : null, fileType, bytes.length,
     meta.description ? String(meta.description).slice(0, 1000) : null,
     meta.category ? String(meta.category).slice(0, 40) : null,
     meta.source ? String(meta.source).slice(0, 40) : 'operator',
     'unverified', me?.email ?? me?.id ?? null,
-    meta.lat ? Number(meta.lat) : null, meta.lon ? Number(meta.lon) : null, Date.now()
+    meta.lat ? Number(meta.lat) : null, meta.lon ? Number(meta.lon) : null, now,
+    sha256, 'draft', dims?.width ?? null, dims?.height ?? null, now
   ).run();
-  await c.env.DB.prepare(`UPDATE persons SET updated_ms = ? WHERE id = ?`).bind(Date.now(), id).run();
-  await audit(c, 'persons.attachment_add', { id, attId, kind });
-  return c.json({ ok: true, id: attId }, 201);
+  await c.env.DB.prepare(`UPDATE persons SET updated_ms = ? WHERE id = ?`).bind(now, id).run();
+  await logCustody(c, attId, id, 'uploaded', { kind, size: bytes.length, sha256 });
+  await audit(c, 'persons.attachment_add', { id, attId, kind, sha256 });
+  return c.json({ ok: true, id: attId, sha256 }, 201);
 });
 persons.get('/:id/attachments/:aid/file', async (c) => {
   const row: any = await c.env.DB.prepare(`SELECT r2_key, content_type, filename FROM case_attachments WHERE id = ? AND person_id = ?`).bind(c.req.param('aid'), c.req.param('id')).first();

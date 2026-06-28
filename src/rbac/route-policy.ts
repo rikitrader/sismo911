@@ -47,7 +47,7 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   '/api/acopio', '/api/agencias', '/api/aid-orgs', '/api/alerts', '/api/auth',
   '/api/blog', '/api/botiquin', '/api/campaigns', '/api/campaigns-mine', '/api/chat', '/api/checkins',
   '/api/comms', '/api/contacts', '/api/damage', '/api/danos-estructurales',
-  '/api/donations', '/api/emergencia', '/api/facilities', '/api/familia',
+  '/api/donations', '/api/e', '/api/emergencia', '/api/facilities', '/api/familia',
   '/api/funding', '/api/humanitarian', '/api/mascotas', '/api/monitor',
   '/api/persons', '/api/push', '/api/rav', '/api/rbac', '/api/reports',
   '/api/resources', '/api/sat', '/api/shelters', '/api/sos', '/api/suministros',
@@ -88,7 +88,7 @@ export function evaluateGate(path: string, method: string): GateDecision {
 
   const isDocketSubmit = method === 'POST' && /^\/api\/persons\/[^/]+\/docket$/.test(path);
 
-  const isCaseAdmin = /^\/api\/persons\/[^/]+\/(attachments|tasks|messages|victims|case|audit)(\/|$)/.test(path);
+  const isCaseAdmin = /^\/api\/persons\/[^/]+\/(attachments|tasks|messages|victims|case|audit|evidence)(\/|$)/.test(path);
 
   const isSosTriage =
     (path === '/api/sos' && method === 'GET') ||

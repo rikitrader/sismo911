@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>SISMO911 — Galería de Evidencias</title>
+  <meta name="description" content="Galería de evidencias del expediente — acceso restringido." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#0b1830" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/app.css" />
+  <style>
+    body{background:#eef0f4;font-family:Inter,system-ui,sans-serif;color:#1a1c1e}
+    .mono{font-family:'JetBrains Mono',monospace}
+    .eoc-bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%)}
+    .eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7a8092}
+    .card{background:#fff;border:1px solid #d7dbe4;border-radius:.7rem}
+    input,select,textarea{width:100%;border:1px solid #c4c6d0;border-radius:.5rem;padding:.45rem .6rem;font-size:.85rem;background:#fff}
+    .btn{display:inline-flex;align-items:center;gap:.35rem;font:700 13px 'Public Sans';border-radius:.5rem;padding:.5rem .8rem;cursor:pointer;border:1px solid transparent;white-space:nowrap}
+    .btn-p{background:#bb0027;color:#fff}.btn-p:hover{background:#a0001f}
+    .btn-g{background:#fff;color:#13284f;border-color:#c4c6d0}.btn-g:hover{background:#f1f3f8}
+    .btn-d{background:#13284f;color:#fff}.btn-d:hover{background:#0b1830}
+    .chip{display:inline-flex;align-items:center;gap:.25rem;font-size:.62rem;font-weight:800;padding:.1rem .45rem;border-radius:9999px;text-transform:uppercase;letter-spacing:.03em}
+    /* gallery grid + masonry */
+    #grid.grid-mode{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem}
+    #grid.masonry-mode{column-width:200px;column-gap:.75rem}
+    #grid.masonry-mode .tile{break-inside:avoid;margin-bottom:.75rem;display:inline-block;width:100%}
+    .tile{background:#fff;border:1px solid #d7dbe4;border-radius:.6rem;overflow:hidden;cursor:pointer;transition:box-shadow .15s,transform .15s;position:relative}
+    .tile:hover{box-shadow:0 4px 16px rgba(11,24,48,.18);transform:translateY(-2px)}
+    .tile img,.tile .doc{display:block;width:100%;background:#0b1830;object-fit:cover}
+    .grid-mode .tile img{aspect-ratio:1}
+    .tile .doc{aspect-ratio:1;display:flex;align-items:center;justify-content:center;color:#9fb0d0;font-size:2.4rem}
+    .tile .meta{padding:.45rem .55rem}
+    .badges{position:absolute;top:.4rem;left:.4rem;display:flex;gap:.25rem;flex-wrap:wrap;max-width:80%}
+    .selbox{position:absolute;top:.4rem;right:.4rem;width:1.3rem;height:1.3rem;border-radius:.3rem;border:2px solid #fff;background:rgba(0,0,0,.35)}
+    .tile.sel .selbox{background:#bb0027}
+    .dz{border:2px dashed #9fb0d0;border-radius:.7rem;background:#f6f8fc;transition:.15s}
+    .dz.drag{border-color:#bb0027;background:#fff5f6}
+    /* viewer */
+    #viewer{position:fixed;inset:0;background:rgba(7,14,28,.97);z-index:60;display:none;flex-direction:column}
+    #vstage{flex:1;position:relative;overflow:hidden;touch-action:none}
+    #vwrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transform-origin:center center}
+    #vimg{display:block;max-width:none;user-select:none;-webkit-user-drag:none}
+    #vcanvas{position:absolute;top:0;left:0;touch-action:none}
+    .vtoolbar{display:flex;gap:.3rem;align-items:center;flex-wrap:wrap}
+    .vtool{width:2.1rem;height:2.1rem;display:inline-flex;align-items:center;justify-content:center;border-radius:.45rem;background:rgba(255,255,255,.08);color:#dbe4f5;border:1px solid rgba(255,255,255,.12);cursor:pointer;font-size:1rem}
+    .vtool:hover{background:rgba(255,255,255,.18)}
+    .vtool.on{background:#bb0027;color:#fff;border-color:#bb0027}
+    .vpanel{width:340px;max-width:100%;background:#0f1c34;color:#dbe4f5;overflow-y:auto;border-left:1px solid rgba(255,255,255,.1)}
+    .vpanel input,.vpanel select,.vpanel textarea{background:#13284f;border-color:#27406e;color:#fff}
+    .pin{position:absolute;width:1.5rem;height:1.5rem;margin:-.75rem 0 0 -.75rem;border-radius:9999px 9999px 9999px 2px;background:#bb0027;color:#fff;font:800 .7rem sans-serif;display:flex;align-items:center;justify-content:center;transform:rotate(45deg);box-shadow:0 1px 4px rgba(0,0,0,.5);cursor:pointer}
+    .pin span{transform:rotate(-45deg)}
+    .seg{display:flex;border:1px solid #c4c6d0;border-radius:.5rem;overflow:hidden}
+    .seg button{flex:1;padding:.4rem;font:700 12px 'Public Sans';background:#fff;color:#5a6172;border:0;cursor:pointer}
+    .seg button.on{background:#13284f;color:#fff}
+    .hidden{display:none!important}
+    @media(max-width:640px){.vpanel{width:100%;position:absolute;inset:auto 0 0 0;max-height:55%}}
+  </style>
+</head>
+<body>
+  <!-- ===== Header ===== -->
+  <header class="eoc-bar text-white sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+      <a href="/admin-casos" class="text-white/80 hover:text-white text-xl leading-none" title="Volver">←</a>
+      <div class="min-w-0 flex-1">
+        <div class="eyebrow text-white/60">Galería de Evidencias</div>
+        <div class="font-display font-extrabold text-lg leading-tight truncate" id="caseName">—</div>
+        <div class="mono text-[11px] text-white/55" id="caseId">—</div>
+      </div>
+      <button id="btnPrintSel" class="btn btn-g">🖨️ Imprimir selección</button>
+      <button id="btnUpload" class="btn btn-p">⤓ Cargar evidencia</button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-5 space-y-4">
+    <!-- Filters -->
+    <div class="card p-3 grid grid-cols-2 md:grid-cols-6 gap-2 items-end">
+      <div class="col-span-2 md:col-span-1"><div class="eyebrow mb-1">Buscar</div><input id="fq" placeholder="texto / archivo"></div>
+      <div><div class="eyebrow mb-1">Tipo</div><select id="fkind"><option value="">Todos</option><option value="photo">Foto</option><option value="video">Video</option><option value="document">Documento</option><option value="voice">Audio</option><option value="report">Informe</option></select></div>
+      <div><div class="eyebrow mb-1">Estado</div><select id="fstatus"><option value="">Todos</option><option value="draft">Borrador</option><option value="reviewed">Revisada</option><option value="verified">Verificada</option><option value="disputed">En disputa</option><option value="archived">Archivada</option></select></div>
+      <div><div class="eyebrow mb-1">Etiqueta</div><input id="ftag" placeholder="etiqueta"></div>
+      <div><div class="eyebrow mb-1">Subido por</div><input id="fuploader" placeholder="correo"></div>
+      <div class="flex gap-2">
+        <div class="seg flex-1" id="viewToggle"><button data-v="grid" class="on">▦ Cuadrícula</button><button data-v="masonry">▤ Mosaico</button></div>
+      </div>
+    </div>
+
+    <div id="stats" class="text-xs text-on-surface-variant"></div>
+
+    <!-- Upload drawer -->
+    <div id="uploader" class="card p-4 hidden">
+      <div class="eyebrow mb-2">Cargar evidencia (original inmutable + SHA-256)</div>
+      <div id="dropzone" class="dz p-6 text-center mb-3">
+        <div class="text-3xl mb-1">📤</div>
+        <div class="text-sm font-semibold">Arrastra archivos aquí o</div>
+        <div class="mt-2 flex flex-wrap gap-2 justify-center">
+          <label class="btn btn-g">Elegir archivos<input id="fileInput" type="file" multiple accept="image/*,video/*,application/pdf,audio/*" class="hidden"></label>
+          <label class="btn btn-g">📷 Cámara<input id="camInput" type="file" accept="image/*" capture="environment" class="hidden"></label>
+        </div>
+        <p class="text-[11px] text-on-surface-variant mt-2">Máx 25 MB · foto, video, PDF, audio</p>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+        <div><div class="eyebrow mb-1">Tipo</div><select id="uKind"><option value="photo">Foto</option><option value="video">Video</option><option value="document">Documento</option><option value="voice">Audio</option><option value="report">Informe</option></select></div>
+        <div><div class="eyebrow mb-1">Categoría</div><select id="uCat"><option value="evidencia">Evidencia</option><option value="parte_policial">Parte policial</option><option value="identificacion">Identificación</option><option value="escena">Escena</option><option value="otro">Otro</option></select></div>
+        <div class="col-span-2"><div class="eyebrow mb-1">Etiquetas (coma)</div><input id="uTags" placeholder="daño, vehículo, norte"></div>
+        <div class="col-span-2 md:col-span-4"><div class="eyebrow mb-1">Descripción</div><input id="uDesc" placeholder="qué muestra esta evidencia"></div>
+      </div>
+      <div id="uList" class="space-y-1 text-xs"></div>
+    </div>
+
+    <!-- Grid -->
+    <div id="grid" class="grid-mode"></div>
+    <div id="empty" class="card p-10 text-center text-on-surface-variant hidden">
+      <div class="text-4xl mb-2">🗂️</div><div class="font-semibold">Sin evidencias todavía</div>
+      <p class="text-sm">Carga fotos, videos o documentos para empezar el expediente de evidencias.</p>
+    </div>
+  </main>
+
+  <!-- ===== Fullscreen viewer ===== -->
+  <div id="viewer">
+    <div class="eoc-bar text-white px-3 py-2 flex items-center gap-2 flex-wrap">
+      <button id="vClose" class="vtool" title="Cerrar (Esc)">✕</button>
+      <button id="vPrev" class="vtool" title="Anterior (←)">‹</button>
+      <button id="vNext" class="vtool" title="Siguiente (→)">›</button>
+      <div class="mono text-[11px] text-white/70 px-1" id="vCount">—</div>
+      <div class="flex-1"></div>
+      <div class="vtoolbar">
+        <button class="vtool" data-z="out" title="Alejar (-)">➖</button>
+        <button class="vtool" data-z="in" title="Acercar (+)">➕</button>
+        <button class="vtool" data-z="fit" title="Ajustar (0)">⤢</button>
+        <button class="vtool" data-z="actual" title="Tamaño real (1)">1:1</button>
+        <button class="vtool" data-z="rotate" title="Rotar (R)">↻</button>
+        <button class="vtool" data-z="full" title="Pantalla completa (F)">⛶</button>
+      </div>
+    </div>
+    <!-- annotation toolbar -->
+    <div class="bg-[#0b1830] text-white px-3 py-1.5 flex items-center gap-1 flex-wrap border-t border-white/10">
+      <span class="eyebrow text-white/50 mr-1">Anotar</span>
+      <button class="vtool atool on" data-tool="pan" title="Mover">✋</button>
+      <button class="vtool atool" data-tool="freehand" title="Trazo libre">✎</button>
+      <button class="vtool atool" data-tool="line" title="Línea">／</button>
+      <button class="vtool atool" data-tool="arrow" title="Flecha">↗</button>
+      <button class="vtool atool" data-tool="rect" title="Rectángulo">▭</button>
+      <button class="vtool atool" data-tool="ellipse" title="Elipse">◯</button>
+      <button class="vtool atool" data-tool="text" title="Texto">T</button>
+      <button class="vtool atool" data-tool="highlight" title="Resaltar">▮</button>
+      <button class="vtool atool" data-tool="redact" title="Censurar/Ocultar">█</button>
+      <select id="stickerSel" class="vtool atool" data-tool="sticker" style="width:auto;padding:0 .4rem" title="Marcador">
+        <option value="">😀 Marcador</option>
+        <option value="⚠️">⚠️ Alerta</option><option value="🚨">🚨 Urgente</option><option value="✅">✅ Verificado</option>
+        <option value="🧍">🧍 Persona</option><option value="🚗">🚗 Vehículo</option><option value="📍">📍 Lugar</option>
+        <option value="💥">💥 Daño</option><option value="📄">📄 Documento</option><option value="🩺">🩺 Médico</option><option value="👮">👮 Policía</option>
+      </select>
+      <input type="color" id="aColor" value="#ff2d2d" class="vtool" style="padding:0;width:2.1rem" title="Color">
+      <select id="aWidth" class="vtool" style="width:auto;padding:0 .3rem" title="Grosor"><option value="2">Fino</option><option value="4" selected>Medio</option><option value="8">Grueso</option><option value="14">Extra</option></select>
+      <button class="vtool" id="aUndo" title="Deshacer (Ctrl+Z)">↺</button>
+      <button class="vtool" id="aRedo" title="Rehacer">↻</button>
+      <button class="vtool" id="aDel" title="Borrar seleccionada (Supr)">🗑️</button>
+      <div class="flex-1"></div>
+      <button class="vtool" id="aExport" title="Exportar copia anotada">⤓ Copia</button>
+      <button class="vtool" id="vShare" title="Compartir">🔗</button>
+      <button class="vtool" id="vViral" title="Crear contenido viral 9:16">📱</button>
+      <button class="vtool" id="vPrint" title="Imprimir ficha">🖨️</button>
+    </div>
+    <div class="flex-1 flex min-h-0">
+      <div id="vstage"><div id="vwrap"><img id="vimg" alt=""><canvas id="vcanvas"></canvas></div><div id="pinLayer" style="position:absolute;inset:0;pointer-events:none"></div></div>
+      <aside class="vpanel p-3 space-y-4" id="vpanel"></aside>
+    </div>
+  </div>
+
+  <input type="hidden" id="x">
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const api=(p,o)=>fetch('/api/'+p,Object.assign({credentials:'same-origin'},o));
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const fmtD=ms=>ms?new Date(ms).toLocaleString('es-VE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+const bytes=n=>n==null?'—':n<1024?n+' B':n<1048576?(n/1024).toFixed(0)+' KB':(n/1048576).toFixed(1)+' MB';
+const qs=new URLSearchParams(location.search);
+const CASE=qs.get('case')||''; const CASENAME=qs.get('name')||'';
+const KIND_ICON={photo:'🖼️',video:'🎞️',document:'📄',voice:'🎙️',gps:'📍',report:'📑'};
+const STATUS={draft:['Borrador','#64748b','#e2e8f0'],reviewed:['Revisada','#1d4ed8','#dbeafe'],verified:['Verificada','#15803d','#dcfce7'],disputed:['Disputa','#b91c1c','#fee2e2'],archived:['Archivada','#6b7280','#f1f5f9']};
+let ITEMS=[], VIEWIDX=-1, CURITEM=null;
+
+$('#caseName').textContent=CASENAME||'Expediente';
+$('#caseId').textContent=CASE||'(sin caso)';
+document.title='Evidencias — '+(CASENAME||CASE);
+
+// ---------- list / grid ----------
+function filters(){const p=new URLSearchParams();
+  if($('#fq').value)p.set('q',$('#fq').value);
+  if($('#fkind').value)p.set('kind',$('#fkind').value);
+  if($('#fstatus').value)p.set('status',$('#fstatus').value);
+  if($('#ftag').value)p.set('tag',$('#ftag').value.trim());
+  if($('#fuploader').value)p.set('uploader',$('#fuploader').value.trim());
+  return p.toString();}
+async function load(){
+  if(!CASE){$('#stats').innerHTML='<span class="text-secondary font-semibold">Falta el parámetro ?case= — abre la galería desde un expediente.</span>';return;}
+  const r=await api('persons/'+encodeURIComponent(CASE)+'/evidence?'+filters());
+  if(r.status===401){$('#stats').innerHTML='<span class="text-secondary font-semibold">Sesión de operador requerida.</span> <a class="underline" href="/login?next='+encodeURIComponent(location.pathname+location.search)+'">Iniciar sesión</a>';return;}
+  const {items=[]}=await r.json().catch(()=>({items:[]}));
+  ITEMS=items; render();
+}
+function render(){
+  const g=$('#grid'); $('#empty').classList.toggle('hidden',ITEMS.length>0);
+  $('#stats').textContent=ITEMS.length+' evidencia(s)';
+  g.innerHTML=ITEMS.map((a,i)=>{
+    const isImg=(a.content_type||'').startsWith('image/');
+    const st=STATUS[a.status]||STATUS.draft;
+    const media=isImg?`<img loading="lazy" src="${a.file_url}" alt="">`:`<div class="doc">${KIND_ICON[a.kind]||'📄'}</div>`;
+    const badges=`<div class="badges"><span class="chip" style="color:${st[1]};background:${st[2]}">${st[0]}</span>${a.annotation_count?`<span class="chip" style="color:#fff;background:#7c3aed">✎ ${a.annotation_count}</span>`:''}${a.comment_count?`<span class="chip" style="color:#fff;background:#0369a1">💬 ${a.comment_count}</span>`:''}${a.original_sha256?'<span class="chip" style="color:#fff;background:#15803d" title="Hash íntegro">🔒</span>':''}</div>`;
+    return `<div class="tile" data-i="${i}">${media}${badges}<div class="selbox" data-sel="${i}"></div><div class="meta"><div class="text-xs font-semibold truncate">${esc(a.description||a.filename||KIND_ICON[a.kind]+' '+a.kind)}</div><div class="text-[10px] text-on-surface-variant truncate">${fmtD(a.created_ms)} · ${bytes(a.size)}</div></div></div>`;
+  }).join('');
+  g.querySelectorAll('.tile').forEach(t=>t.addEventListener('click',e=>{
+    if(e.target.classList.contains('selbox')){e.stopPropagation();t.classList.toggle('sel');return;}
+    openViewer(+t.dataset.i);
+  }));
+}
+['#fq','#ftag','#fuploader'].forEach(s=>$(s).addEventListener('input',debounce(load,350)));
+['#fkind','#fstatus'].forEach(s=>$(s).addEventListener('change',load));
+$('#viewToggle').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#viewToggle button').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#grid').className=b.dataset.v+'-mode';});
+function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
+
+// ---------- upload ----------
+$('#btnUpload').onclick=()=>$('#uploader').classList.toggle('hidden');
+const dz=$('#dropzone');
+['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('drag');}));
+dz.addEventListener('drop',e=>uploadFiles(e.dataTransfer.files));
+$('#fileInput').addEventListener('change',e=>uploadFiles(e.target.files));
+$('#camInput').addEventListener('change',e=>uploadFiles(e.target.files));
+async function uploadFiles(files){
+  const list=$('#uList'); const tags=$('#uTags').value.split(',').map(s=>s.trim()).filter(Boolean);
+  for(const f of files){
+    const row=document.createElement('div');row.className='flex items-center gap-2';
+    row.innerHTML=`<span class="flex-1 truncate">${esc(f.name)}</span><span class="text-on-surface-variant">${bytes(f.size)}</span><span class="st">⏳</span>`;
+    list.prepend(row);
+    if(f.size>26214400){row.querySelector('.st').textContent='✕ >25MB';continue;}
+    const fd=new FormData();fd.append('file',f);
+    fd.append('kind',$('#uKind').value);fd.append('category',$('#uCat').value);
+    if($('#uDesc').value)fd.append('description',$('#uDesc').value);
+    try{
+      const r=await api('persons/'+encodeURIComponent(CASE)+'/attachments',{method:'POST',body:fd});
+      const j=await r.json();
+      if(!r.ok){row.querySelector('.st').textContent='✕';continue;}
+      row.querySelector('.st').innerHTML=j.sha256?'<span title="'+j.sha256+'">🔒✓</span>':'✓';
+      if(tags.length||$('#fstatus')){await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+j.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({tags,status:'draft'})}).catch(()=>{});}
+    }catch(_){row.querySelector('.st').textContent='✕';}
+  }
+  load();
+}
+
+// ---------- print selected bundle ----------
+$('#btnPrintSel').onclick=async()=>{
+  const ids=$$('.tile.sel').map(t=>ITEMS[+t.dataset.i].id);
+  if(!ids.length){alert('Selecciona evidencias (casilla superior derecha) para imprimir.');return;}
+  const r=await api('persons/'+encodeURIComponent(CASE)+'/evidence/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids})});
+  const {items=[]}=await r.json();
+  printSheet(items);
+};
+
+// ===================== VIEWER =====================
+const stage=$('#vstage'),wrap=$('#vwrap'),vimg=$('#vimg'),cv=$('#vcanvas'),ctx=cv.getContext('2d');
+let zoom=1,rot=0,panX=0,panY=0,natW=0,natH=0;
+let TOOL='pan',annos=[],redoStack=[],selAnno=-1,drawing=null;
+let comments=[];
+
+async function openViewer(i){
+  VIEWIDX=i;CURITEM=ITEMS[i];annos=[];redoStack=[];selAnno=-1;
+  $('#viewer').style.display='flex';document.body.style.overflow='hidden';
+  $('#vCount').textContent=(i+1)+' / '+ITEMS.length;
+  const isImg=(CURITEM.content_type||'').startsWith('image/');
+  vimg.style.display=isImg?'block':'none';cv.style.display=isImg?'block':'none';
+  const det=await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id).then(r=>r.json()).catch(()=>({}));
+  CURITEM=Object.assign(CURITEM,det.item||{});
+  annos=(det.annotations||[]).map(a=>({id:a.id,shape:a.shape,...a.data}));
+  comments=det.comments||[];
+  renderPanel();
+  if(isImg){
+    vimg.onload=()=>{natW=vimg.naturalWidth;natH=vimg.naturalHeight;fit();drawAnnos();renderPins();};
+    vimg.src=CURITEM.file_url;
+  }else{renderPins();}
+}
+function closeViewer(){$('#viewer').style.display='none';document.body.style.overflow='';load();}
+$('#vClose').onclick=closeViewer;
+$('#vPrev').onclick=()=>VIEWIDX>0&&openViewer(VIEWIDX-1);
+$('#vNext').onclick=()=>VIEWIDX<ITEMS.length-1&&openViewer(VIEWIDX+1);
+
+// zoom / pan / rotate
+function applyTransform(){wrap.style.transform=`translate(calc(-50% + ${panX}px),calc(-50% + ${panY}px)) scale(${zoom}) rotate(${rot}deg)`;}
+function fit(){const sw=stage.clientWidth-20,sh=stage.clientHeight-20;zoom=Math.min(sw/natW,sh/natH,1);panX=panY=0;rot=0;sizeImg();applyTransform();}
+function sizeImg(){vimg.style.width=natW+'px';vimg.style.height=natH+'px';cv.width=natW;cv.height=natH;cv.style.width=natW+'px';cv.style.height=natH+'px';}
+$$('.vtool[data-z]').forEach(b=>b.onclick=()=>{const z=b.dataset.z;
+  if(z==='in')zoom=Math.min(zoom*1.25,8);else if(z==='out')zoom=Math.max(zoom/1.25,.05);
+  else if(z==='fit')return fit();else if(z==='actual'){zoom=1;panX=panY=0;}
+  else if(z==='rotate')rot=(rot+90)%360;else if(z==='full'){if(!document.fullscreenElement)$('#viewer').requestFullscreen?.();else document.exitFullscreen?.();return;}
+  applyTransform();});
+stage.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.min(Math.max(zoom*(e.deltaY<0?1.1:.9),.05),8);applyTransform();},{passive:false});
+
+// pointer: pan OR draw depending on tool
+let panning=null;
+stage.addEventListener('pointerdown',e=>{
+  if(e.target.classList.contains('pin'))return;
+  if(TOOL==='pan'){panning={x:e.clientX-panX,y:e.clientY-panY};stage.setPointerCapture(e.pointerId);return;}
+  if((CURITEM.content_type||'').startsWith('image/'))startDraw(e);
+});
+stage.addEventListener('pointermove',e=>{
+  if(panning){panX=e.clientX-panning.x;panY=e.clientY-panning.y;applyTransform();return;}
+  if(drawing)moveDraw(e);
+});
+stage.addEventListener('pointerup',e=>{if(panning){panning=null;return;}if(drawing)endDraw(e);});
+
+// map screen → normalized image coords (account for zoom/rotate-0..we ignore rotation for drawing)
+function toNorm(e){const r=cv.getBoundingClientRect();let x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;return{x:Math.max(0,Math.min(1,x)),y:Math.max(0,Math.min(1,y))};}
+
+function startDraw(e){
+  const p=toNorm(e);const color=$('#aColor').value,w=+$('#aWidth').value/Math.max(natW,1);
+  if(TOOL==='text'){const t=prompt('Texto de la anotación:');if(!t)return;persist({shape:'text',x:p.x,y:p.y,text:t,color,size:+$('#aWidth').value*4});return;}
+  if(TOOL==='sticker'){const s=$('#stickerSel').value;if(!s){alert('Elige un marcador en el menú.');return;}persist({shape:'sticker',x:p.x,y:p.y,sticker:s});return;}
+  if(TOOL==='freehand'){drawing={shape:'freehand',points:[p],color,stroke:w};return;}
+  drawing={shape:TOOL,x0:p.x,y0:p.y,x1:p.x,y1:p.y,color,stroke:w};
+}
+function moveDraw(e){const p=toNorm(e);if(drawing.shape==='freehand')drawing.points.push(p);else{drawing.x1=p.x;drawing.y1=p.y;}drawAnnos(drawing);}
+function endDraw(){if(!drawing)return;const d=drawing;drawing=null;
+  if(d.shape==='freehand'&&d.points.length<2)return drawAnnos();
+  if(d.shape!=='freehand'&&Math.abs(d.x1-d.x0)<.005&&Math.abs(d.y1-d.y0)<.005)return drawAnnos();
+  persist(d);
+}
+async function persist(d){
+  const shape=d.shape;const data={...d};delete data.shape;
+  annos.push({shape,...data});redoStack=[];drawAnnos();
+  try{const r=await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id+'/annotations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shape,data})});const j=await r.json();if(j.id)annos[annos.length-1].id=j.id;}catch(_){}
+  renderPanel();
+}
+function drawAnnos(live){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const all=live?annos.concat([live]):annos;
+  all.forEach((a,i)=>drawShape(a,i===selAnno));
+}
+function drawShape(a,sel){
+  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+  const W=cv.width,H=cv.height;const lw=(a.stroke||.004)*W;
+  ctx.strokeStyle=a.color||'#ff2d2d';ctx.fillStyle=a.color||'#ff2d2d';ctx.lineWidth=Math.max(lw,1);
+  const X=v=>v*W,Y=v=>v*H;
+  if(a.shape==='freehand'){ctx.beginPath();a.points.forEach((p,i)=>i?ctx.lineTo(X(p.x),Y(p.y)):ctx.moveTo(X(p.x),Y(p.y)));ctx.stroke();}
+  else if(a.shape==='line'){ctx.beginPath();ctx.moveTo(X(a.x0),Y(a.y0));ctx.lineTo(X(a.x1),Y(a.y1));ctx.stroke();}
+  else if(a.shape==='arrow'){arrow(X(a.x0),Y(a.y0),X(a.x1),Y(a.y1),Math.max(lw,2));}
+  else if(a.shape==='rect'){ctx.strokeRect(X(Math.min(a.x0,a.x1)),Y(Math.min(a.y0,a.y1)),Math.abs(X(a.x1)-X(a.x0)),Math.abs(Y(a.y1)-Y(a.y0)));}
+  else if(a.shape==='ellipse'){ctx.beginPath();ctx.ellipse((X(a.x0)+X(a.x1))/2,(Y(a.y0)+Y(a.y1))/2,Math.abs(X(a.x1)-X(a.x0))/2,Math.abs(Y(a.y1)-Y(a.y0))/2,0,0,7);ctx.stroke();}
+  else if(a.shape==='highlight'){ctx.globalAlpha=.3;ctx.fillRect(X(Math.min(a.x0,a.x1)),Y(Math.min(a.y0,a.y1)),Math.abs(X(a.x1)-X(a.x0)),Math.abs(Y(a.y1)-Y(a.y0)));ctx.globalAlpha=1;}
+  else if(a.shape==='redact'){ctx.fillStyle='#000';ctx.fillRect(X(Math.min(a.x0,a.x1)),Y(Math.min(a.y0,a.y1)),Math.abs(X(a.x1)-X(a.x0)),Math.abs(Y(a.y1)-Y(a.y0)));ctx.fillStyle='#fff';ctx.font=`${H*.02}px sans-serif`;ctx.fillText('CENSURADO',X(Math.min(a.x0,a.x1))+4,Y(Math.min(a.y0,a.y1))+H*.025);}
+  else if(a.shape==='text'){ctx.font=`700 ${(a.size||16)}px Inter,sans-serif`;ctx.fillText(a.text||'',X(a.x),Y(a.y));}
+  else if(a.shape==='sticker'){ctx.font=`${H*.05}px serif`;ctx.fillText(a.sticker||'⚠️',X(a.x)-H*.025,Y(a.y)+H*.02);}
+  if(sel){ctx.strokeStyle='#3b82f6';ctx.lineWidth=2;ctx.setLineDash([6,4]);const b=bbox(a,W,H);ctx.strokeRect(b.x-4,b.y-4,b.w+8,b.h+8);}
+  ctx.restore();
+}
+function arrow(x0,y0,x1,y1,lw){const a=Math.atan2(y1-y0,x1-x0),h=Math.max(lw*4,12);ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x1-h*Math.cos(a-.4),y1-h*Math.sin(a-.4));ctx.lineTo(x1-h*Math.cos(a+.4),y1-h*Math.sin(a+.4));ctx.closePath();ctx.fill();}
+function bbox(a,W,H){if(a.shape==='freehand'){const xs=a.points.map(p=>p.x*W),ys=a.points.map(p=>p.y*H);return{x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)};}if(a.shape==='text'||a.shape==='sticker')return{x:a.x*W-10,y:a.y*H-20,w:80,h:30};return{x:Math.min(a.x0,a.x1)*W,y:Math.min(a.y0,a.y1)*H,w:Math.abs(a.x1-a.x0)*W,h:Math.abs(a.y1-a.y0)*H};}
+
+// tools
+$$('.atool').forEach(b=>b.addEventListener('click',()=>{
+  if(b.dataset.tool==='sticker')return; // select handles it
+  $$('.atool').forEach(x=>x.classList.remove('on'));b.classList.add('on');TOOL=b.dataset.tool;selAnno=-1;drawAnnos();
+}));
+$('#stickerSel').addEventListener('focus',()=>{$$('.atool').forEach(x=>x.classList.remove('on'));$('#stickerSel').classList.add('on');TOOL='sticker';});
+$('#aUndo').onclick=async()=>{if(!annos.length)return;const a=annos.pop();redoStack.push(a);drawAnnos();if(a.id)await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id+'/annotations/'+a.id,{method:'DELETE'}).catch(()=>{});renderPanel();};
+$('#aRedo').onclick=()=>{const a=redoStack.pop();if(!a)return;const{shape,...rest}=a;delete rest.id;persist({shape,...rest});};
+$('#aDel').onclick=$('#aUndo').onclick;
+
+// download original
+function downloadOriginal(){const a=document.createElement('a');a.href=CURITEM.file_url;a.download=CURITEM.filename||'evidencia';a.click();
+  api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id+'/custody').catch(()=>{});}
+
+// export annotated copy (bakes original + annotations into a downloadable image)
+$('#aExport').onclick=async()=>{const blob=await compositeBlob({redact:true,watermark:false});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='evidencia-anotada.jpg';a.click();};
+
+async function compositeBlob({redact=true,watermark=true,maxDim=1600}={}){
+  const scale=Math.min(1,maxDim/Math.max(natW,natH));const W=Math.round(natW*scale),H=Math.round(natH*scale);
+  const oc=document.createElement('canvas');oc.width=W;oc.height=H;const o=oc.getContext('2d');
+  o.drawImage(vimg,0,0,W,H);
+  // re-render annotations (redactions baked opaque) onto the offscreen at scale
+  drawAnnosOn(o,W,H,redact);
+  if(watermark)drawWatermark(o,W,H);
+  return await new Promise(res=>oc.toBlob(b=>res(b),'image/jpeg',.9));
+}
+function drawAnnosOn(o,W,H,redactOpaque){
+  const Xc=v=>v*W,Yc=v=>v*H;
+  annos.forEach(a=>{o.save();o.lineCap='round';o.lineJoin='round';const lw=Math.max((a.stroke||.004)*W,1);o.strokeStyle=a.color||'#ff2d2d';o.fillStyle=a.color||'#ff2d2d';o.lineWidth=lw;
+    if(a.shape==='freehand'){o.beginPath();a.points.forEach((p,i)=>i?o.lineTo(Xc(p.x),Yc(p.y)):o.moveTo(Xc(p.x),Yc(p.y)));o.stroke();}
+    else if(a.shape==='line'){o.beginPath();o.moveTo(Xc(a.x0),Yc(a.y0));o.lineTo(Xc(a.x1),Yc(a.y1));o.stroke();}
+    else if(a.shape==='arrow'){const ang=Math.atan2((a.y1-a.y0)*H,(a.x1-a.x0)*W),hh=Math.max(lw*4,12);o.beginPath();o.moveTo(Xc(a.x0),Yc(a.y0));o.lineTo(Xc(a.x1),Yc(a.y1));o.stroke();o.beginPath();o.moveTo(Xc(a.x1),Yc(a.y1));o.lineTo(Xc(a.x1)-hh*Math.cos(ang-.4),Yc(a.y1)-hh*Math.sin(ang-.4));o.lineTo(Xc(a.x1)-hh*Math.cos(ang+.4),Yc(a.y1)-hh*Math.sin(ang+.4));o.closePath();o.fill();}
+    else if(a.shape==='rect'){o.strokeRect(Xc(Math.min(a.x0,a.x1)),Yc(Math.min(a.y0,a.y1)),Math.abs((a.x1-a.x0)*W),Math.abs((a.y1-a.y0)*H));}
+    else if(a.shape==='ellipse'){o.beginPath();o.ellipse((Xc(a.x0)+Xc(a.x1))/2,(Yc(a.y0)+Yc(a.y1))/2,Math.abs((a.x1-a.x0)*W)/2,Math.abs((a.y1-a.y0)*H)/2,0,0,7);o.stroke();}
+    else if(a.shape==='highlight'){o.globalAlpha=.3;o.fillRect(Xc(Math.min(a.x0,a.x1)),Yc(Math.min(a.y0,a.y1)),Math.abs((a.x1-a.x0)*W),Math.abs((a.y1-a.y0)*H));o.globalAlpha=1;}
+    else if(a.shape==='redact'){o.fillStyle='#000';o.fillRect(Xc(Math.min(a.x0,a.x1)),Yc(Math.min(a.y0,a.y1)),Math.abs((a.x1-a.x0)*W),Math.abs((a.y1-a.y0)*H));}
+    else if(a.shape==='text'){o.font=`700 ${(a.size||16)*W/natW}px Inter,sans-serif`;o.fillText(a.text||'',Xc(a.x),Yc(a.y));}
+    else if(a.shape==='sticker'){o.font=`${H*.05}px serif`;o.fillText(a.sticker||'⚠️',Xc(a.x)-H*.025,Yc(a.y)+H*.02);}
+    o.restore();});
+}
+function drawWatermark(o,W,H){o.save();o.globalAlpha=.16;o.fillStyle='#000';o.translate(W/2,H/2);o.rotate(-Math.PI/7);o.textAlign='center';o.font=`800 ${Math.round(W*.06)}px 'Public Sans',sans-serif`;for(let y=-H;y<H;y+=W*.16)o.fillText('SISMO911 · EVIDENCIA',0,y);o.restore();}
+
+// ---------- side panel (metadata, status, tags, comments, custody) ----------
+function renderPanel(){
+  const a=CURITEM;const st=STATUS[a.status]||STATUS.draft;
+  $('#vpanel').innerHTML=`
+    <div><div class="font-display font-bold text-base">${esc(a.filename||a.kind)}</div>
+      <div class="text-[11px] text-white/50 mono break-all">SHA-256: ${a.original_sha256?esc(a.original_sha256.slice(0,24))+'…':'—'}</div></div>
+    <div class="grid grid-cols-2 gap-2 text-[12px]">
+      <div><div class="eyebrow text-white/40">Tipo</div>${KIND_ICON[a.kind]||''} ${esc(a.kind)}</div>
+      <div><div class="eyebrow text-white/40">Tamaño</div>${bytes(a.size)}${a.width?` · ${a.width}×${a.height}`:''}</div>
+      <div><div class="eyebrow text-white/40">Subido por</div>${esc(a.uploaded_by||'—')}</div>
+      <div><div class="eyebrow text-white/40">Fecha</div>${fmtD(a.created_ms)}</div>
+    </div>
+    <div><div class="eyebrow text-white/40 mb-1">Estado de evidencia</div>
+      <select id="pStatus">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${k===a.status?'selected':''}>${v[0]}</option>`).join('')}</select></div>
+    <div><div class="eyebrow text-white/40 mb-1">Descripción / notas</div><textarea id="pDesc" rows="2">${esc(a.description||'')}</textarea>
+      <div class="flex gap-2 mt-1"><input id="pTags" placeholder="etiquetas (coma)" value="${esc((a.tags||[]).join(', '))}"><button class="btn btn-g" id="pSave" style="white-space:nowrap">Guardar</button></div></div>
+    <div class="flex flex-wrap gap-1">
+      <button class="vtool" id="pDownload" title="Descargar original">⤓ Original</button>
+      <button class="vtool" id="pDelete" title="Eliminar (papelera)">🗑️ Eliminar</button>
+    </div>
+    <div><div class="seg" id="panelTabs"><button data-pt="comments" class="on">💬 Comentarios</button><button data-pt="custody">🔗 Custodia</button></div>
+      <div id="ptBody" class="mt-2"></div></div>`;
+  $('#pSave').onclick=async()=>{const tags=$('#pTags').value.split(',').map(s=>s.trim()).filter(Boolean);
+    await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+a.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:$('#pDesc').value,status:$('#pStatus').value,tags})});a.status=$('#pStatus').value;a.tags=tags;a.description=$('#pDesc').value;$('#pSave').textContent='✓';setTimeout(()=>$('#pSave').textContent='Guardar',1200);};
+  $('#pStatus').onchange=()=>{};
+  $('#pDownload').onclick=downloadOriginal;
+  $('#pDelete').onclick=async()=>{if(!confirm('¿Mover esta evidencia a la papelera? (borrado reversible, queda en la cadena de custodia)'))return;await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+a.id,{method:'DELETE'});closeViewer();};
+  $('#panelTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#panelTabs button').forEach(x=>x.classList.remove('on'));b.classList.add('on');b.dataset.pt==='custody'?showCustody():showComments();});
+  showComments();
+}
+function showComments(){
+  const general=comments.filter(c=>c.kind!=='pin');
+  $('#ptBody').innerHTML=`
+    <div class="space-y-1 mb-2 max-h-48 overflow-y-auto">${general.length?general.map(c=>`<div class="text-[12px] border-b border-white/10 pb-1"><b>${c.kind==='internal'?'🔒 ':c.kind==='pin'?'📍 ':''}${esc(c.author||'—')}</b> <span class="text-white/40">${fmtD(c.created_ms)}</span><div>${esc(c.body)}</div></div>`).join(''):'<div class="text-white/40 text-xs">Sin comentarios.</div>'}</div>
+    <textarea id="cBody" rows="2" placeholder="Comentario o nota…"></textarea>
+    <div class="flex gap-2 mt-1"><select id="cKind" style="flex:1"><option value="general">General</option><option value="internal">Nota interna</option></select><button class="btn btn-p" id="cAdd">Añadir</button></div>
+    <p class="text-[10px] text-white/40 mt-1">Tip: con la herramienta ✋ haz clic sobre la imagen para fijar un comentario a una coordenada.</p>`;
+  $('#cAdd').onclick=async()=>{const body=$('#cBody').value.trim();if(!body)return;await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body,kind:$('#cKind').value})});const d=await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id+'/comments').then(r=>r.json());comments=d.comments||[];showComments();renderPins();};
+}
+async function showCustody(){
+  const d=await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id+'/custody').then(r=>r.json()).catch(()=>({custody:[]}));
+  const EV={uploaded:'⤓ Subida',viewed:'👁️ Vista',annotated:'✎ Anotada',annotation_deleted:'✎ Anotación borrada',commented:'💬 Comentario',status_change:'🔁 Cambio de estado',printed:'🖨️ Impresa',shared:'🔗 Compartida',share_revoked:'🚫 Enlace revocado',share_viewed:'👁️ Vista pública',downloaded:'⤓ Descargada',deleted:'🗑️ Eliminada',restored:'♻️ Restaurada'};
+  $('#ptBody').innerHTML=`<div class="space-y-1 max-h-72 overflow-y-auto text-[12px]">${(d.custody||[]).map(c=>`<div class="border-b border-white/10 pb-1"><b>${EV[c.event]||c.event}</b> <span class="text-white/40">${fmtD(c.created_ms)}</span><div class="text-white/60">${esc(c.actor||'sistema')} ${c.actor_role?'· '+esc(c.actor_role):''} ${c.ip?'· '+esc(c.ip):''}</div></div>`).join('')||'<div class="text-white/40">Sin eventos.</div>'}</div>`;
+}
+// pinned comments overlay
+function renderPins(){
+  const layer=$('#pinLayer');layer.innerHTML='';
+  comments.filter(c=>c.kind==='pin'&&c.x!=null).forEach((c,i)=>{
+    const el=document.createElement('div');el.className='pin';el.style.pointerEvents='auto';
+    const r=cv.getBoundingClientRect(),sr=stage.getBoundingClientRect();
+    el.style.left=(r.left-sr.left+c.x*r.width)+'px';el.style.top=(r.top-sr.top+c.y*r.height)+'px';
+    el.innerHTML='<span>'+(i+1)+'</span>';el.title=c.body;layer.appendChild(el);
+  });
+}
+// click-to-pin when in pan mode + shift, OR a dedicated behavior: alt+click places pin
+stage.addEventListener('click',async e=>{
+  if(!e.altKey||TOOL!=='pan'||!(CURITEM.content_type||'').startsWith('image/'))return;
+  const p=toNorm(e);const body=prompt('Comentario fijado a este punto:');if(!body)return;
+  await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body,kind:'pin',x:p.x,y:p.y})});
+  const d=await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id+'/comments').then(r=>r.json());comments=d.comments||[];renderPins();
+});
+
+// ---------- share ----------
+$('#vShare').onclick=()=>shareFlow('item');
+$('#vViral').onclick=()=>viralFlow();
+async function shareFlow(scope){
+  if(!(CURITEM.content_type||'').startsWith('image/')){alert('Por ahora solo se comparten imágenes (copia censurada).');return;}
+  const days=prompt('¿Cuántos días debe durar el enlace? (1–30)','7');if(days===null)return;
+  const blob=await compositeBlob({redact:true,watermark:true});
+  const fd=new FormData();fd.append('file',new File([blob],'share.jpg',{type:'image/jpeg'}));
+  fd.append('scope',scope);fd.append('expires_days',days);fd.append('redacted','1');fd.append('watermark','1');
+  fd.append('title',(CURITEM.description||'Evidencia').slice(0,120));
+  const r=await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id+'/share',{method:'POST',body:fd});
+  const j=await r.json();if(!j.ok){alert('No se pudo crear el enlace.');return;}
+  shareDialog(location.origin+j.url,'Evidencia · expediente '+CASE);
+}
+function shareDialog(url,text){
+  const enc=encodeURIComponent(url),et=encodeURIComponent(text);
+  const html=`<div style="position:fixed;inset:0;background:rgba(7,14,28,.85);z-index:80;display:flex;align-items:center;justify-content:center" id="sd">
+    <div class="card" style="max-width:460px;width:92%;padding:1.2rem">
+      <div class="eyebrow mb-2">Enlace seguro (copia censurada + marca de agua)</div>
+      <div style="display:flex;gap:.4rem"><input id="sdUrl" value="${esc(url)}" readonly><button class="btn btn-d" id="sdCopy">Copiar</button></div>
+      <p class="text-[11px] text-on-surface-variant mt-1">⚠️ No expone el original ni datos privados. Caduca automáticamente y puede revocarse.</p>
+      <div class="grid grid-cols-3 gap-2 mt-3">
+        <a class="btn btn-g" target="_blank" href="https://wa.me/?text=${et}%20${enc}">WhatsApp</a>
+        <a class="btn btn-g" target="_blank" href="https://t.me/share/url?url=${enc}&text=${et}">Telegram</a>
+        <a class="btn btn-g" target="_blank" href="https://twitter.com/intent/tweet?url=${enc}&text=${et}">X</a>
+        <a class="btn btn-g" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=${enc}">Facebook</a>
+        <a class="btn btn-g" target="_blank" href="https://www.linkedin.com/sharing/share-offsite/?url=${enc}">LinkedIn</a>
+        <button class="btn btn-g" id="sdNative">Compartir…</button>
+      </div>
+      <button class="btn btn-g w-full mt-3" id="sdClose">Cerrar</button>
+    </div></div>`;
+  const d=document.createElement('div');d.innerHTML=html;document.body.appendChild(d);
+  d.querySelector('#sdCopy').onclick=()=>{navigator.clipboard.writeText(url);d.querySelector('#sdCopy').textContent='✓';};
+  d.querySelector('#sdNative').onclick=()=>navigator.share?navigator.share({title:text,url}):alert('Web Share no disponible.');
+  d.querySelector('#sdClose').onclick=()=>d.remove();
+  d.querySelector('#sd').onclick=e=>{if(e.target.id==='sd')d.remove();};
+}
+
+// ---------- viral 9:16 ----------
+async function viralFlow(){
+  if(!(CURITEM.content_type||'').startsWith('image/')){alert('El generador viral usa imágenes.');return;}
+  const title=prompt('Título de la tarjeta:', (CURITEM.description||'ALERTA SISMO911').slice(0,60));if(title===null)return;
+  const caption=prompt('Texto / llamado a la acción:','Si tienes información, repórtalo en sismo911.com')||'';
+  const cta=prompt('Hashtags:','#Sismo911 #Venezuela #Emergencia')||'';
+  const W=1080,H=1920,oc=document.createElement('canvas');oc.width=W;oc.height=H;const o=oc.getContext('2d');
+  o.fillStyle='#0b1830';o.fillRect(0,0,W,H);
+  // photo card (redacted+watermark via offscreen)
+  const photo=await compositeBlob({redact:true,watermark:true,maxDim:1080});const pimg=new Image();await new Promise(r=>{pimg.onload=r;pimg.src=URL.createObjectURL(photo);});
+  const pw=W-120,ph=Math.min(pimg.height*(pw/pimg.width),H*0.52),py=360;
+  o.fillStyle='#13284f';o.fillRect(40,py-20,W-80,ph+40);
+  o.drawImage(pimg,60,py,pw,ph);
+  // header band
+  o.fillStyle='#bb0027';o.fillRect(0,0,W,200);o.fillStyle='#fff';o.font="900 64px 'Public Sans',sans-serif";o.fillText('SISMO911',60,130);
+  o.font="700 34px 'Public Sans',sans-serif";o.fillText('EVIDENCIA',60,180);
+  // title + caption
+  o.fillStyle='#fff';o.font="800 60px 'Public Sans',sans-serif";wrapText(o,title.toUpperCase(),60,py+ph+110,W-120,66);
+  o.fillStyle='#cbd5e1';o.font="400 40px Inter,sans-serif";wrapText(o,caption,60,py+ph+260,W-120,52);
+  o.fillStyle='#ffd23f';o.font="700 38px Inter,sans-serif";o.fillText(cta,60,H-120);
+  o.fillStyle='#94a3b8';o.font="600 30px Inter,sans-serif";o.fillText('sismo911.com',60,H-60);
+  const blob=await new Promise(r=>oc.toBlob(r,'image/jpeg',.92));
+  // offer download + share-link
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sismo911-viral-9x16.jpg';a.click();
+  if(confirm('Tarjeta descargada. ¿Crear también un enlace seguro para compartirla?')){
+    const fd=new FormData();fd.append('file',new File([blob],'viral.jpg',{type:'image/jpeg'}));fd.append('scope','viral');fd.append('expires_days','30');fd.append('title',title.slice(0,120));
+    const r=await api('persons/'+encodeURIComponent(CASE)+'/evidence/'+CURITEM.id+'/share',{method:'POST',body:fd});const j=await r.json();if(j.ok)shareDialog(location.origin+j.url,title);
+  }
+}
+function wrapText(o,text,x,y,maxW,lh){const words=String(text).split(' ');let line='',yy=y;for(const w of words){const t=line+w+' ';if(o.measureText(t).width>maxW&&line){o.fillText(line,x,yy);line=w+' ';yy+=lh;}else line=t;}o.fillText(line,x,yy);}
+
+// ---------- print evidence sheet ----------
+$('#vPrint').onclick=async()=>{await api('persons/'+encodeURIComponent(CASE)+'/evidence/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:[CURITEM.id]})}).catch(()=>{});printSheet([CURITEM],true);};
+function printSheet(items,withImg){
+  const w=window.open('','_blank');if(!w)return alert('Permite ventanas emergentes para imprimir.');
+  const rows=items.map(it=>`
+    <section style="page-break-after:always;border:1px solid #ccc;padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;border-bottom:2px solid #0b1830;padding-bottom:6px">
+        <div><b style="font-size:18px">SISMO911 · FICHA DE EVIDENCIA</b><div style="font-size:11px;color:#555">Expediente ${esc(CASE)} — ${esc(CASENAME||'')}</div></div>
+        <div style="text-align:right;font-size:11px">Evidencia ${esc(it.id)}<br>${fmtD(it.created_ms)}</div>
+      </div>
+      ${withImg&&(it.content_type||'').startsWith('image/')?`<img src="${it.file_url||CURITEM.file_url}" style="max-width:100%;max-height:380px;margin:10px 0;border:1px solid #ddd">`:''}
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <tr><td style="font-weight:700;width:140px;padding:3px">Tipo</td><td>${esc(it.kind)}</td></tr>
+        <tr><td style="font-weight:700;padding:3px">Archivo</td><td>${esc(it.filename||'—')} (${bytes(it.size)})</td></tr>
+        <tr><td style="font-weight:700;padding:3px">Estado</td><td>${esc((STATUS[it.status]||['—'])[0])} · ${esc(it.verification||'')}</td></tr>
+        <tr><td style="font-weight:700;padding:3px">Subido por</td><td>${esc(it.uploaded_by||'—')}</td></tr>
+        <tr><td style="font-weight:700;padding:3px">SHA-256</td><td style="font-family:monospace;font-size:10px;word-break:break-all">${esc(it.original_sha256||'—')}</td></tr>
+        <tr><td style="font-weight:700;padding:3px">Descripción</td><td>${esc(it.description||'—')}</td></tr>
+      </table>
+      <div style="margin-top:8px;font-size:11px;color:#555">Verificación / enlace del caso: ${location.origin}/admin-casos?case=${esc(CASE)}</div>
+      <div style="margin-top:6px;font-size:10px;color:#888">Documento generado por SISMO911 — cadena de custodia registrada. La integridad del original se valida con el hash SHA-256.</div>
+    </section>`).join('');
+  w.document.write(`<html><head><title>Ficha de evidencia</title></head><body style="font-family:Arial,sans-serif;padding:14px">${rows}<scr`+`ipt>window.onload=()=>window.print()</scr`+`ipt></body></html>`);
+  w.document.close();
+}
+
+// keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if($('#viewer').style.display!=='flex')return;
+  if(e.target.matches('input,textarea,select'))return;
+  if(e.key==='Escape')closeViewer();else if(e.key==='ArrowLeft')$('#vPrev').click();else if(e.key==='ArrowRight')$('#vNext').click();
+  else if(e.key==='+'||e.key==='=')document.querySelector('[data-z=in]').click();else if(e.key==='-')document.querySelector('[data-z=out]').click();
+  else if(e.key==='0')fit();else if(e.key==='1'){zoom=1;panX=panY=0;applyTransform();}
+  else if(e.key.toLowerCase()==='r')document.querySelector('[data-z=rotate]').click();else if(e.key.toLowerCase()==='f')document.querySelector('[data-z=full]').click();
+  else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();$('#aUndo').click();}
+  else if(e.key==='Delete')$('#aDel').click();
+});
+window.addEventListener('resize',()=>{if($('#viewer').style.display==='flex'&&natW){renderPins();}});
+
+load();
+</script>
+</body>
+</html>
