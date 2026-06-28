@@ -183,6 +183,9 @@ export const ROLE_DEPARTMENTS = {
   logistics: 'dept_logistica', finance: 'dept_finanzas',
   hr: 'dept_administracion', support: 'dept_administracion', developer: 'dept_tecnologia',
   super_admin: null, owner: null, read_only: null, guest: null, citizen: null,
+  // SUMINISTROS division area roles (seeded by 0050; assigned by 0060).
+  sum_warehouse: 'dept_logistica', sum_dispatch: 'dept_logistica',
+  sum_inventory: 'dept_logistica', sum_purchasing: 'dept_logistica',
 };
 
 // ── Default field-level policies (sensitive fields) ─────────────────────────
