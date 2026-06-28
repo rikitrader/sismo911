@@ -85,6 +85,16 @@ flotaAdmin.post('/units/:id/revoke-token', async (c) => {
   return c.json({ ok: true, revokedCount: n });
 });
 
+// GET /units/:id/tokens — list a unit's tokens (metadata only; NEVER the secret).
+flotaAdmin.get('/units/:id/tokens', async (c) => {
+  const id = c.req.param('id');
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, label, expires_at, revoked_at, created_at, created_by
+     FROM flota_unit_tokens WHERE unit_id = ? ORDER BY created_at DESC LIMIT 200`
+  ).bind(id).all();
+  return c.json({ results: results ?? [] });
+});
+
 // GET /live — admin WebSocket subscription (Upgrade) OR JSON snapshot of active
 // units + their latest fix + active dispatch (for initial map render).
 flotaAdmin.get('/live', async (c) => {
