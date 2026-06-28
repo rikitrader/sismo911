@@ -24,6 +24,11 @@ describe('security: CORS origins', () => {
     expect(isAllowedOrigin(env, 'https://sismo911.com')).toBe(true);
     expect(isAllowedOrigin(env, 'https://app.sismo911.com')).toBe(true);
   });
+  it('allows the SUMINISTROS division subdomain (its SPA issues same-origin operator writes)', () => {
+    // Regression: without this, every write from suministros.sismo911.com is
+    // rejected with bad_origin even for a logged-in operator.
+    expect(isAllowedOrigin(envWith(), 'https://suministros.sismo911.com')).toBe(true);
+  });
   it('allows localhost dev origins', () => {
     expect(isAllowedOrigin(envWith(), 'http://localhost:8787')).toBe(true);
     expect(isAllowedOrigin(envWith(), 'http://127.0.0.1:3000')).toBe(true);

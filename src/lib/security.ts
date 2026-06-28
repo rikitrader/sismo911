@@ -5,6 +5,10 @@ const DEFAULT_ORIGINS = [
   'https://sismo911.com',
   'https://www.sismo911.com',
   'https://app.sismo911.com',
+  // SUMINISTROS division is served from its own subdomain (custom_domain route);
+  // its SPA issues same-origin operator writes from this Origin, so it must be
+  // trusted by the CSRF same-site check or every write returns bad_origin.
+  'https://suministros.sismo911.com',
 ];
 
 export function allowedOrigins(env: Env): string[] {
