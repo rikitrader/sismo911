@@ -54,6 +54,27 @@ export interface TestEnv {
   [k: string]: any;
 }
 
+/**
+ * Canonical ordered RBAC migration set for tests. Any test that authenticates a
+ * session or resolves permissions MUST apply these — getUserFromRequest reads
+ * sessions.impersonator_id (0054) + users.status (0046) and the engine reads
+ * user_roles.expires_ms (0052), so a partial list causes spurious SQL errors.
+ * Single source of truth so a new migration is added in ONE place.
+ */
+export const RBAC_MIGRATIONS = [
+  'migrations/0004_auth.sql',
+  'migrations/0002_ops.sql',
+  'migrations/0009_password_resets.sql',
+  'migrations/0046_rbac_workforce.sql',
+  'migrations/0047_rbac_seed.sql',
+  'migrations/0050_mfa_sessions.sql',
+  'migrations/0050_suministros_areas.sql',
+  'migrations/0051_org_flags.sql',
+  'migrations/0052_rbac_finegrained.sql',
+  'migrations/0053_lifecycle.sql',
+  'migrations/0054_impersonation.sql',
+];
+
 /** Build a fresh in-memory DB with the given migration files applied. */
 export function makeDb(
   migrations: string[] = ['migrations/0037_flota.sql', 'migrations/0045_fleet_live_gps.sql'],

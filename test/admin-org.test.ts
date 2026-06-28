@@ -1,19 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
-import { makeDb, makeEnv, type D1Mock } from './helpers/d1';
+import { makeDb, makeEnv, type D1Mock, RBAC_MIGRATIONS } from './helpers/d1';
 import { hashPassword } from '../src/lib/auth';
 import { adminOrg } from '../src/routes/admin-org';
 
 // Real-SQLite harness: apply the actual base + RBAC migrations so the org/dept/
 // team routes run their real SQL against the seeded org + permission catalog.
-const MIGRATIONS = [
-  'migrations/0004_auth.sql',
-  'migrations/0002_ops.sql',
-  'migrations/0046_rbac_workforce.sql',
-  'migrations/0047_rbac_seed.sql',
-  'migrations/0052_rbac_finegrained.sql', // fine-grained perms + user_roles.expires_ms
-  'migrations/0051_org_flags.sql',
-];
+const MIGRATIONS = RBAC_MIGRATIONS;
 
 async function setup() {
   const db: D1Mock = makeDb(MIGRATIONS);

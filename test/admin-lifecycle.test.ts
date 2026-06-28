@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
-import { makeDb, makeEnv, type D1Mock } from './helpers/d1';
+import { makeDb, makeEnv, type D1Mock, RBAC_MIGRATIONS } from './helpers/d1';
 import { hashPassword } from '../src/lib/auth';
 import { getEffectivePermissions } from '../src/rbac/engine';
 import { adminLifecycle } from '../src/routes/admin-lifecycle';
@@ -9,15 +9,7 @@ import { createInvitation } from '../src/lib/invite';
 // Real-SQLite harness: base auth/ops tables + the full RBAC stack so the engine
 // resolves seeded roles/permissions. 0052 adds user_roles.expires_ms (read by the
 // engine for temp-role expiry); 0053 adds the lifecycle columns/table.
-const MIGRATIONS = [
-  'migrations/0004_auth.sql',           // users + sessions
-  'migrations/0002_ops.sql',            // audit
-  'migrations/0012_rate_buckets.sql',   // rate_buckets (accept rate-limit)
-  'migrations/0046_rbac_workforce.sql', // rbac tables + ALTER users/sessions + invitations
-  'migrations/0047_rbac_seed.sql',      // permission catalog + system roles
-  'migrations/0052_rbac_finegrained.sql', // fine-grained perms + user_roles.expires_ms
-  'migrations/0053_lifecycle.sql',      // invitations.phone/approved_by + approval_requests
-];
+const MIGRATIONS = RBAC_MIGRATIONS;
 
 async function setup() {
   const db: D1Mock = makeDb(MIGRATIONS);

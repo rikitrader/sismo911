@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
-import { makeDb, makeEnv, type D1Mock } from './helpers/d1';
+import { makeDb, makeEnv, type D1Mock, RBAC_MIGRATIONS } from './helpers/d1';
 import { hashPassword } from '../src/lib/auth';
 import { adminSessions } from '../src/routes/admin-sessions';
 import { generateTotp } from '../src/lib/totp';
@@ -8,14 +8,7 @@ import { generateTotp } from '../src/lib/totp';
 // Real-SQLite harness: apply the actual base + RBAC + MFA migrations so the
 // route handlers run their real SQL (engine resolution, seeded catalog/roles,
 // revoked_ms filtering, etc.).
-const MIGRATIONS = [
-  'migrations/0004_auth.sql',           // users + sessions
-  'migrations/0002_ops.sql',            // audit
-  'migrations/0046_rbac_workforce.sql', // rbac tables + ALTER users/sessions (mfa_*, status, revoked_ms)
-  'migrations/0047_rbac_seed.sql',      // permission catalog + system roles
-  'migrations/0052_rbac_finegrained.sql', // fine-grained perms + user_roles.expires_ms
-  'migrations/0050_mfa_sessions.sql',   // mfa_backup_codes, session device cols, trusted_devices
-];
+const MIGRATIONS = RBAC_MIGRATIONS;
 
 async function setup() {
   const db: D1Mock = makeDb(MIGRATIONS);
