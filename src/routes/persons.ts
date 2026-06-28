@@ -564,8 +564,21 @@ persons.get('/:id/docket', async (c) => {
     ...pubPerson, event_mag: event?.mag ?? null, event_alert: event?.alert ?? null,
     docket_count: docket.length, last_activity_ms: lastActivityMs,
   });
+  // Investigation board + identity badge. PUBLIC sees verified leads + a boolean
+  // "identity confirmed" badge only — never the cédula or any verification record
+  // (those are operator-only via /api/persons/:id/identity). Best-effort.
+  let identity_verified = false; let intel: any[] = [];
+  try {
+    const idv: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM case_identity WHERE person_id = ? AND result='match'`).bind(id).first().catch(() => ({ n: 0 }));
+    identity_verified = (idv?.n || 0) > 0;
+    const { results: leads } = await c.env.DB.prepare(
+      `SELECT id, type, url, platform, title, detail, lat, lon, source, status, created_ms
+       FROM case_intel WHERE person_id = ?${op ? '' : " AND status='verified'"} ORDER BY created_ms DESC LIMIT 200`
+    ).bind(id).all<any>();
+    intel = (leads ?? []).map((l: any) => op ? l : { id: l.id, type: l.type, url: l.url, platform: l.platform, title: l.title, detail: l.detail, lat: l.lat, lon: l.lon, created_ms: l.created_ms });
+  } catch (e: any) { console.error('[docket] intel/identity badge failed:', e?.message ?? e); }
   c.header('Cache-Control', 'no-store'); c.header('Vary', 'Cookie');
-  return c.json({ person: scored, event, docket, operator: op });
+  return c.json({ person: scored, event, docket, operator: op, identity_verified, intel });
 });
 
 // POST /api/persons/:id/docket — submit a tracing update (LOGIN REQUIRED, any
