@@ -307,7 +307,13 @@ export const PUBLIC_COMMAND_ASSETS: Record<string, string> = {
 for (const [routePath, assetPath] of Object.entries(PUBLIC_COMMAND_ASSETS)) {
   app.get(routePath, (c) => serveAsset(c, assetPath));
 }
-app.get('/', (c) => serveAsset(c, '/personas'));
+// Root is host-branched (see run_worker_first '/'): the SUMINISTROS subdomain
+// serves the inventory SPA shell; every other host serves the DESAPARECIDOS
+// registry (the app's post-quake front door).
+app.get('/', (c) =>
+  new URL(c.req.url).hostname === 'suministros.sismo911.com'
+    ? serveAsset(c, '/suministros')
+    : serveAsset(c, '/personas'));
 app.get('/terremotos', (c) => serveAsset(c, '/'));
 
 // Per-person social cards: a shared /familia?persona=<id> link rewrites the page's
