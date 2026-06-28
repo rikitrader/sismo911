@@ -159,6 +159,12 @@ binding = "AI"
 name = "EMAIL"
 
 [vars]
+# Social login (Google OAuth): the client ID is PUBLIC, so it belongs here. The
+# client SECRET is a Worker Secret (never here): `wrangler secret put OAUTH_GOOGLE_CLIENT_SECRET`.
+# Uncomment + set this to your Google OAuth client ID to turn on the "Continuar
+# con Google" buttons. Register redirect URI https://sismo911.com/api/auth/oauth/google/callback
+# (and the workers.dev one) + authorized origin https://sismo911.com in Google Cloud Console.
+# OAUTH_GOOGLE_CLIENT_ID = "xxxxxxxx.apps.googleusercontent.com"
 # Venezuela bounding box for the USGS FDSN query (min/max lat/lon).
 USGS_MINLAT = "-2"
 USGS_MAXLAT = "16"
