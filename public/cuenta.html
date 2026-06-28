@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css">
 <script src="/app-shell.js" defer></script>
+<script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <style>
 /* ── Design System ──────────────────────────────────────────────────────── */
@@ -523,6 +524,143 @@ select,input { font-family:var(--font); }
   .tab-pill { padding:8px 13px; font-size:.77rem; }
   .hero-card { padding:20px 18px 18px; }
 }
+
+/* ── Payment Links ───────────────────────────────────────────────────────── */
+.pl-section { margin-bottom:18px; }
+.pl-section-header {
+  display:flex; align-items:center; gap:8px;
+  font-size:.76rem; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.06em;
+  padding:8px 0 10px; border-bottom:1px solid var(--border); margin-bottom:10px;
+}
+.pl-kind-pill {
+  display:inline-flex; align-items:center; padding:2px 8px; border-radius:100px;
+  font-size:.69rem; font-weight:700; letter-spacing:.01em;
+}
+.pl-kind-x402     { background:rgba(46,125,50,.12);  color:var(--success); }
+.pl-kind-donation { background:rgba(11,95,255,.10);  color:var(--brand-2); }
+.pl-kind-stripe   { background:rgba(99,91,255,.12);  color:#6356e5; }
+.pl-kind-invoice  { background:rgba(245,158,11,.10); color:#b45309; }
+@media (prefers-color-scheme:dark) {
+  .pl-kind-stripe  { color:#a09cf7; }
+  .pl-kind-invoice { color:var(--warning); }
+}
+.pl-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-md); padding:18px 20px 14px;
+  box-shadow:var(--shadow-sm); margin-bottom:10px;
+  transition:box-shadow .18s ease;
+}
+.pl-card:hover { box-shadow:var(--shadow-md); }
+.pl-card-top { display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.pl-card-title {
+  font-family:var(--font-display); font-weight:700;
+  font-size:.93rem; color:var(--text); flex:1; min-width:0; line-height:1.35;
+}
+.pl-active-pill {
+  display:inline-flex; align-items:center; padding:2px 9px;
+  border-radius:100px; font-size:.68rem; font-weight:700; flex-shrink:0;
+}
+.pl-active-on  { background:rgba(46,125,50,.10); color:var(--success); }
+.pl-active-off { background:var(--border); color:var(--muted); }
+.pl-price {
+  font-family:var(--font-display); font-weight:800; font-size:1.1rem;
+  color:var(--brand-2); letter-spacing:-.02em; margin-bottom:4px;
+}
+.pl-slug {
+  font-family:'SFMono-Regular',Consolas,'Courier New',monospace;
+  font-size:.72rem; color:var(--muted); background:var(--surface-2);
+  border:1px solid var(--border); border-radius:6px;
+  padding:3px 8px; display:inline-block; max-width:100%;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:8px;
+}
+.pl-stats { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px; }
+.pl-stat { font-size:.76rem; color:var(--muted); }
+.pl-stat strong { color:var(--text); font-weight:700; }
+.pl-actions {
+  display:flex; gap:6px; flex-wrap:wrap;
+  border-top:1px solid var(--border); padding-top:12px;
+}
+.pl-icon-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:5px; min-width:40px; min-height:40px;
+  padding:7px 12px; border-radius:10px;
+  border:1px solid var(--border); background:var(--surface-2);
+  color:var(--text); font-size:.78rem; font-weight:600;
+  cursor:pointer; transition:all .16s ease; white-space:nowrap; line-height:1;
+}
+.pl-icon-btn:hover { border-color:var(--brand-2); color:var(--brand-2); background:rgba(11,95,255,.05); }
+.pl-icon-btn.danger:hover { border-color:var(--danger); color:var(--danger); background:rgba(220,38,38,.05); }
+.pl-icon-btn:disabled { opacity:.4; cursor:not-allowed; pointer-events:none; }
+.pl-icon-btn:focus-visible { outline:2px solid var(--brand-2); outline-offset:2px; }
+.pl-coming-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:2px 9px; border-radius:100px; font-size:.68rem; font-weight:700;
+  background:var(--surface-2); color:var(--muted); border:1px dashed var(--border);
+}
+.pl-empty-section { font-size:.81rem; color:var(--muted); padding:10px 0 4px; font-style:italic; }
+.pl-skel-card { height:130px; border-radius:var(--radius-md); margin-bottom:10px; }
+.pl-archive-confirm {
+  display:none; align-items:center; gap:8px;
+  font-size:.8rem; color:var(--danger); padding:8px 0; flex-wrap:wrap;
+}
+.pl-archive-confirm.show { display:flex; }
+
+/* ── QR Tab ─────────────────────────────────────────────────────────────── */
+.qr-selector { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+.qr-link-pill {
+  padding:8px 16px; border-radius:100px;
+  border:1px solid var(--border); background:var(--surface-2);
+  font-size:.81rem; font-weight:600; color:var(--muted);
+  cursor:pointer; transition:all .16s ease; line-height:1;
+  min-height:38px; display:flex; align-items:center; gap:6px;
+}
+.qr-link-pill.selected { border-color:var(--brand-2); color:var(--brand-2); background:rgba(11,95,255,.07); }
+.qr-link-pill:focus-visible { outline:2px solid var(--brand-2); outline-offset:2px; }
+.qr-print-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-md); padding:28px 24px;
+  box-shadow:var(--shadow-md); max-width:360px;
+  margin:0 auto; text-align:center;
+}
+.qr-brand-row { display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:18px; }
+.qr-brand-row img { width:36px; height:36px; border-radius:8px; object-fit:contain; }
+.qr-brand-name {
+  font-family:var(--font-display); font-weight:800;
+  font-size:.93rem; color:var(--brand); letter-spacing:-.01em;
+}
+.qr-link-title {
+  font-family:var(--font-display); font-weight:700;
+  font-size:1.05rem; color:var(--text); margin-bottom:6px; line-height:1.3;
+}
+.qr-amount {
+  font-family:var(--font-display); font-weight:800;
+  font-size:1.35rem; color:var(--brand-2); letter-spacing:-.025em; margin-bottom:4px;
+}
+.qr-currency { font-size:.78rem; color:var(--muted); margin-bottom:18px; }
+.qr-canvas-wrap {
+  display:inline-block; padding:12px; background:#fff;
+  border-radius:14px; margin:0 auto 14px; box-shadow:var(--shadow-sm);
+}
+.qr-url {
+  font-family:'SFMono-Regular',Consolas,'Courier New',monospace;
+  font-size:.68rem; color:var(--muted); word-break:break-all;
+  margin-bottom:12px; line-height:1.55;
+}
+.qr-caption { font-size:.78rem; color:var(--muted); font-weight:600; letter-spacing:.01em; }
+.qr-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:20px; }
+
+/* Print: show only the QR card */
+@media print {
+  * { visibility:hidden !important; }
+  .qr-print-card, .qr-print-card * { visibility:visible !important; }
+  .qr-print-card {
+    position:fixed !important; top:50% !important; left:50% !important;
+    transform:translate(-50%,-50%) !important;
+    border:none !important; box-shadow:none !important;
+    background:#fff !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -725,22 +863,141 @@ select,input { font-family:var(--font); }
 
     <!-- ── Pagos ────────────────────────────────────────────────────── -->
     <div class="panel" data-panel="pagos" role="tabpanel">
-      <div class="card">
-        <div class="empty-state">
-          <span class="empty-icon" aria-hidden="true">💳</span>
-          <div class="empty-title">Pagos</div>
-          <div class="empty-text">Disponible en esta sección próximamente</div>
+
+      <!-- Header row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div>
+          <div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--text);letter-spacing:-.02em;">
+            Enlaces de pago
+          </div>
+          <div style="font-size:.82rem;color:var(--muted);margin-top:2px;">
+            Crea y gestiona tus enlaces de cobro en USDC y otras monedas
+          </div>
+        </div>
+        <button class="btn btn-primary" id="pagos-new-btn">
+          <span aria-hidden="true">＋</span> Nuevo enlace
+        </button>
+      </div>
+
+      <!-- Inline create / edit form -->
+      <div class="card" id="pl-form-card" style="display:none;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <h3 class="modal-title" id="pl-form-title" style="margin:0;padding:0;font-size:1rem;">
+            Nuevo enlace de pago
+          </h3>
+          <button class="modal-close-btn" id="pl-form-close" aria-label="Cancelar">✕</button>
+        </div>
+        <form id="pl-form" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="pl-f-title">
+              Título <span style="color:var(--danger)" aria-hidden="true">*</span>
+            </label>
+            <input class="form-control" id="pl-f-title" type="text" required
+                   placeholder="ej. Donación de emergencia">
+            <div class="form-err" id="pl-f-title-err">El título es obligatorio.</div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="pl-f-slug">Slug (URL)</label>
+              <input class="form-control" id="pl-f-slug" type="text"
+                     placeholder="ej. donacion-emergencia" autocomplete="off">
+              <div class="form-helper" id="pl-slug-hint"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pl-f-kind">Proveedor</label>
+              <select class="form-control" id="pl-f-kind">
+                <option value="x402">x402 · USDC (en vivo)</option>
+                <option value="donation">Donación</option>
+                <option value="stripe" disabled>Stripe (próximamente)</option>
+                <option value="invoice" disabled>Factura manual (próximamente)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="pl-f-amount">
+                Monto <span style="color:var(--danger)" aria-hidden="true">*</span>
+              </label>
+              <input class="form-control" id="pl-f-amount" type="number"
+                     min="0" step="0.01" placeholder="0.00">
+              <div class="form-err" id="pl-f-amount-err">El monto debe ser ≥ 0.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pl-f-currency">Moneda</label>
+              <select class="form-control" id="pl-f-currency">
+                <option value="USDC">USDC</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pl-f-description">Descripción (opcional)</label>
+            <textarea class="form-control" id="pl-f-description" rows="2"
+                      placeholder="Descripción del enlace de pago"
+                      style="resize:vertical;min-height:66px;"></textarea>
+          </div>
+          <div class="toggle-row" style="padding:10px 0;border-top:1px solid var(--border);margin-top:4px;">
+            <div class="toggle-label-wrap">
+              <div class="toggle-label-title">Activo</div>
+              <div class="toggle-label-desc">El enlace acepta pagos de inmediato.</div>
+            </div>
+            <label class="switch" aria-label="Activo">
+              <input type="checkbox" id="pl-f-active" checked role="switch" aria-checked="true">
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+          <div class="form-err" id="pl-form-general-err" style="font-size:.82rem;margin-top:8px;"></div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="pl-submit-btn">Crear enlace</button>
+            <button type="button" class="btn btn-secondary" id="pl-cancel-btn">Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Loading skeleton -->
+      <div id="pagos-skeleton">
+        <div class="skeleton pl-skel-card"></div>
+        <div class="skeleton pl-skel-card"></div>
+        <div class="skeleton pl-skel-card" style="height:90px;"></div>
+      </div>
+
+      <!-- Error state -->
+      <div id="pagos-error" style="display:none;">
+        <div class="error-card">
+          <span class="error-card-icon">⚠️</span>
+          <div class="error-card-title">No se pudieron cargar los enlaces</div>
+          <div class="error-card-text" id="pagos-err-msg"></div>
+          <button class="btn btn-secondary" onclick="loadPaymentLinks()" style="margin-top:14px;">
+            Reintentar
+          </button>
         </div>
       </div>
+
+      <!-- Links list -->
+      <div id="pagos-list" style="display:none;"></div>
+
     </div>
 
     <!-- ── QR ───────────────────────────────────────────────────────── -->
     <div class="panel" data-panel="qr" role="tabpanel">
       <div class="card">
-        <div class="empty-state">
-          <span class="empty-icon" aria-hidden="true">📲</span>
-          <div class="empty-title">Código QR</div>
-          <div class="empty-text">Disponible en esta sección próximamente</div>
+        <div class="card-title" style="margin-bottom:4px;">Código QR de pago</div>
+        <div class="card-subtitle">
+          Selecciona un enlace activo con URL de pago para generar su código QR.
+        </div>
+
+        <!-- Loading skeleton -->
+        <div id="qr-loading">
+          <div class="skeleton" style="height:40px;border-radius:100px;margin-bottom:16px;"></div>
+          <div class="skeleton" style="height:320px;border-radius:var(--radius-md);"></div>
+        </div>
+
+        <!-- Content (shown after load) -->
+        <div id="qr-content" style="display:none;">
+          <!-- Link selector pills -->
+          <div class="qr-selector" id="qr-selector"></div>
+          <!-- QR print card + action buttons -->
+          <div id="qr-card-wrap"></div>
         </div>
       </div>
     </div>
@@ -1417,6 +1674,523 @@ document.getElementById('edit-form').addEventListener('submit', async e => {
   }
 });
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGOS + QR MODULE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Module state ────────────────────────────────────────────────────────── */
+let _payLinks      = [];
+let _selectedQRId  = null;
+let _qrInstance    = null;
+let _editingLinkId = null;
+
+/* ── Slugify ─────────────────────────────────────────────────────────────── */
+function slugify(text) {
+  return String(text).toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+}
+
+/* ── Kind config ─────────────────────────────────────────────────────────── */
+const KIND_CFG = {
+  x402:     { label:'x402 · USDC', cls:'pl-kind-x402',    live:true  },
+  donation: { label:'Donación',    cls:'pl-kind-donation', live:true  },
+  stripe:   { label:'Stripe',      cls:'pl-kind-stripe',   live:false },
+  invoice:  { label:'Factura',     cls:'pl-kind-invoice',  live:false },
+};
+
+const SECTION_ORDER = [
+  { kind:'x402',     title:'x402 · USDC' },
+  { kind:'donation', title:'Donaciones'   },
+  { kind:'stripe',   title:'Stripe'       },
+  { kind:'invoice',  title:'Facturas'     },
+];
+
+/* ── Load payment links ──────────────────────────────────────────────────── */
+async function loadPaymentLinks(silent) {
+  if (!silent) {
+    document.getElementById('pagos-skeleton').style.display = 'block';
+    document.getElementById('pagos-error').style.display   = 'none';
+    document.getElementById('pagos-list').style.display    = 'none';
+    document.getElementById('qr-loading').style.display    = 'block';
+    document.getElementById('qr-content').style.display    = 'none';
+  }
+  try {
+    const r = await fetch('/api/profile/payment-links', {credentials:'same-origin'});
+    if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) {
+      _payLinks = (d.links || []).filter(l => !l.archived);
+      document.getElementById('pagos-skeleton').style.display = 'none';
+      document.getElementById('pagos-list').style.display    = 'block';
+      renderPagosLinks();
+      document.getElementById('qr-loading').style.display = 'none';
+      document.getElementById('qr-content').style.display = 'block';
+      renderQRSelector();
+    } else {
+      throw new Error(d.error || 'Error al cargar');
+    }
+  } catch(e) {
+    document.getElementById('pagos-skeleton').style.display = 'none';
+    document.getElementById('qr-loading').style.display    = 'none';
+    document.getElementById('qr-content').style.display    = 'block';
+    renderQRSelector(); /* shows empty / no-links state */
+    if (!silent) {
+      document.getElementById('pagos-error').style.display  = 'block';
+      document.getElementById('pagos-err-msg').textContent  = e.message || 'Error de red';
+    }
+  }
+}
+
+/* ── Render pagos sections ───────────────────────────────────────────────── */
+function renderPagosLinks() {
+  const el = document.getElementById('pagos-list');
+  if (!el) return;
+  let total = 0;
+  let html  = '';
+
+  SECTION_ORDER.forEach(({kind, title}) => {
+    const cfg   = KIND_CFG[kind] || KIND_CFG.x402;
+    const links = _payLinks.filter(l => (l.kind || 'x402') === kind);
+    total += links.length;
+    html += `<div class="pl-section">
+      <div class="pl-section-header">
+        <span class="pl-kind-pill ${cfg.cls}">${esc(cfg.label)}</span>
+        ${esc(title)}
+        ${!cfg.live ? '<span class="pl-coming-badge">Próximamente</span>' : ''}
+      </div>`;
+    if (links.length) {
+      links.forEach(l => { html += renderLinkCard(l); });
+    } else {
+      html += `<p class="pl-empty-section">${cfg.live
+        ? 'Aún no tienes enlaces en esta categoría.'
+        : 'Sin enlaces · próximamente disponible.'
+      }</p>`;
+    }
+    html += `</div>`;
+  });
+
+  if (!total) {
+    el.innerHTML = `
+      <div class="empty-state" style="padding:56px 24px;">
+        <span class="empty-icon" aria-hidden="true">💳</span>
+        <div class="empty-title">Aún no tienes enlaces de pago</div>
+        <div class="empty-text">Crea el primero usando el botón "Nuevo enlace".</div>
+      </div>`;
+    return;
+  }
+  el.innerHTML = html;
+  wireLinkCardEvents(el);
+}
+
+/* ── Link card HTML ──────────────────────────────────────────────────────── */
+function renderLinkCard(link) {
+  const kind = link.kind || 'x402';
+  const cfg  = KIND_CFG[kind] || KIND_CFG.x402;
+  const hUrl = !!link.payUrl;
+  const act  = !!link.active;
+  const paid = Number(link.paid_count) || 0;
+
+  return `
+    <div class="pl-card" data-pl-id="${esc(link.id)}">
+      <div class="pl-card-top">
+        <div class="pl-card-title">${esc(link.title || 'Sin título')}</div>
+        <span class="pl-kind-pill ${cfg.cls}">${esc(cfg.label)}</span>
+        <span class="pl-active-pill ${act ? 'pl-active-on' : 'pl-active-off'}">${act ? '● Activo' : '○ Inactivo'}</span>
+        ${!cfg.live ? '<span class="pl-coming-badge">Sin cobro en vivo</span>' : ''}
+      </div>
+      <div class="pl-price">${fmtUSD(link.price_usd || 0)}
+        <span style="font-size:.75rem;font-weight:500;color:var(--muted);">${esc(link.currency || 'USDC')}</span>
+      </div>
+      <div class="pl-slug">/${esc(link.slug || link.id)}</div>
+      <div class="pl-stats">
+        <div class="pl-stat">Creado: <strong>${esc(fmtRelDate(link.created_ms))}</strong></div>
+        <div class="pl-stat">Pagos: <strong>${paid}</strong></div>
+        <div class="pl-stat">Ingresos: <strong>${fmtUSD(link.revenue_usd || 0)}</strong></div>
+      </div>
+      <div class="pl-actions">
+        <button class="pl-icon-btn" data-action="copy" data-id="${esc(link.id)}"
+                ${!hUrl ? 'disabled title="Sin URL de pago disponible"' : ''}
+                aria-label="Copiar enlace de pago">📋 Copiar</button>
+        <button class="pl-icon-btn" data-action="qr" data-id="${esc(link.id)}"
+                ${!hUrl ? 'disabled title="Sin URL de pago para QR"' : ''}
+                aria-label="Ver código QR">📲 QR</button>
+        <button class="pl-icon-btn" data-action="edit" data-id="${esc(link.id)}"
+                aria-label="Editar enlace">✏️ Editar</button>
+        <button class="pl-icon-btn" data-action="toggle" data-id="${esc(link.id)}"
+                aria-label="${act ? 'Desactivar enlace' : 'Activar enlace'}">${act ? '⏸ Desactivar' : '▶ Activar'}</button>
+        <button class="pl-icon-btn danger" data-action="archive" data-id="${esc(link.id)}"
+                aria-label="Archivar enlace">🗂 Archivar</button>
+      </div>
+      <div class="pl-archive-confirm" id="arch-${esc(link.id)}">
+        <span>¿Archivar este enlace?</span>
+        <button class="btn btn-secondary btn-sm" data-action="archive-confirm" data-id="${esc(link.id)}">Sí, archivar</button>
+        <button class="btn btn-secondary btn-sm" data-action="archive-cancel" data-id="${esc(link.id)}">Cancelar</button>
+      </div>
+    </div>`;
+}
+
+/* ── Wire card events ────────────────────────────────────────────────────── */
+function wireLinkCardEvents(listEl) {
+  listEl.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn || btn.disabled) return;
+    const action = btn.dataset.action;
+    const id     = btn.dataset.id;
+    const link   = _payLinks.find(l => l.id === id);
+
+    if (action === 'copy') {
+      if (!link || !link.payUrl) return;
+      const ok = await copyToClipboard(link.payUrl);
+      if (ok) toast('Enlace copiado al portapapeles ✓');
+
+    } else if (action === 'qr') {
+      if (!link || !link.payUrl) return;
+      _selectedQRId = id;
+      switchTab('qr');
+      renderQRSelector();
+
+    } else if (action === 'edit') {
+      if (!link) return;
+      openPLForm(link);
+
+    } else if (action === 'toggle') {
+      if (!link) return;
+      btn.disabled = true;
+      const newAct = !link.active;
+      try {
+        const r = await fetch(`/api/profile/payment-links/${encodeURIComponent(id)}`, {
+          method:'PATCH', credentials:'same-origin',
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify({active:newAct}),
+        });
+        if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) {
+          link.active = newAct;
+          toast(newAct ? 'Enlace activado ✓' : 'Enlace desactivado ✓');
+          renderPagosLinks();
+          renderQRSelector();
+        } else {
+          toast(d.error || 'No se pudo cambiar el estado.', 'error');
+          btn.disabled = false;
+        }
+      } catch(e) { toast('Error de red.', 'error'); btn.disabled = false; }
+
+    } else if (action === 'archive') {
+      const conf = document.getElementById(`arch-${id}`);
+      if (conf) conf.classList.add('show');
+
+    } else if (action === 'archive-cancel') {
+      const conf = document.getElementById(`arch-${id}`);
+      if (conf) conf.classList.remove('show');
+
+    } else if (action === 'archive-confirm') {
+      btn.disabled = true;
+      try {
+        const r = await fetch(`/api/profile/payment-links/${encodeURIComponent(id)}`, {
+          method:'DELETE', credentials:'same-origin',
+        });
+        if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+        const d = await r.json().catch(() => ({}));
+        if (r.ok) {
+          toast('Enlace archivado ✓');
+          await loadPaymentLinks(true);
+        } else {
+          toast(d.error || 'No se pudo archivar.', 'error');
+          btn.disabled = false;
+        }
+      } catch(e) { toast('Error de red.', 'error'); btn.disabled = false; }
+    }
+  });
+}
+
+/* ── Open / close the create-edit form ──────────────────────────────────── */
+function openPLForm(link) {
+  _editingLinkId = link ? link.id : null;
+  const card = document.getElementById('pl-form-card');
+
+  document.getElementById('pl-form-title').textContent       = link ? 'Editar enlace' : 'Nuevo enlace de pago';
+  document.getElementById('pl-f-title').value                = link ? (link.title       || '') : '';
+  document.getElementById('pl-f-slug').value                 = link ? (link.slug        || '') : '';
+  document.getElementById('pl-f-amount').value               = link && link.price_usd != null ? link.price_usd : '';
+  document.getElementById('pl-f-currency').value             = link ? (link.currency    || 'USDC') : 'USDC';
+  document.getElementById('pl-f-description').value          = link ? (link.description || '') : '';
+  document.getElementById('pl-f-kind').value                 = link ? (link.kind        || 'x402') : 'x402';
+  document.getElementById('pl-submit-btn').textContent       = link ? 'Guardar cambios' : 'Crear enlace';
+  const activeSw = document.getElementById('pl-f-active');
+  activeSw.checked = link ? !!link.active : true;
+  activeSw.setAttribute('aria-checked', activeSw.checked ? 'true' : 'false');
+  const hint = document.getElementById('pl-slug-hint');
+  hint.textContent = link && link.slug ? `/${link.slug}` : '';
+
+  clearPLFormErr();
+  card.style.display = 'block';
+  card.scrollIntoView({behavior:'smooth', block:'nearest'});
+  document.getElementById('pl-f-title').focus();
+}
+
+function closePLForm() {
+  document.getElementById('pl-form-card').style.display = 'none';
+  _editingLinkId = null;
+  clearPLFormErr();
+}
+
+function clearPLFormErr() {
+  ['pl-f-title-err','pl-f-amount-err','pl-form-general-err'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('show'); el.textContent = ''; }
+  });
+}
+
+/* ── Wire pagos panel controls ───────────────────────────────────────────── */
+function wirePagosForm() {
+  document.getElementById('pagos-new-btn').addEventListener('click', () => {
+    const card = document.getElementById('pl-form-card');
+    if (card.style.display === 'block' && !_editingLinkId) { closePLForm(); }
+    else { openPLForm(null); }
+  });
+
+  document.getElementById('pl-form-close').addEventListener('click', closePLForm);
+  document.getElementById('pl-cancel-btn').addEventListener('click', closePLForm);
+
+  /* Auto-slug from title (create only) */
+  document.getElementById('pl-f-title').addEventListener('input', e => {
+    if (_editingLinkId) return;
+    const slugEl = document.getElementById('pl-f-slug');
+    const hint   = document.getElementById('pl-slug-hint');
+    slugEl.value = slugify(e.target.value);
+    hint.textContent = slugEl.value ? `/${slugEl.value}` : '';
+  });
+
+  document.getElementById('pl-f-active').addEventListener('change', function() {
+    this.setAttribute('aria-checked', this.checked ? 'true' : 'false');
+  });
+
+  document.getElementById('pl-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearPLFormErr();
+
+    const title  = document.getElementById('pl-f-title').value.trim();
+    const slug   = document.getElementById('pl-f-slug').value.trim();
+    const amtStr = document.getElementById('pl-f-amount').value;
+    const cur    = document.getElementById('pl-f-currency').value;
+    const desc   = document.getElementById('pl-f-description').value.trim();
+    const kind   = document.getElementById('pl-f-kind').value;
+    const active = document.getElementById('pl-f-active').checked;
+
+    let valid = true;
+    if (!title) {
+      const el = document.getElementById('pl-f-title-err');
+      el.textContent = 'El título es obligatorio.';
+      el.classList.add('show');
+      document.getElementById('pl-f-title').focus();
+      valid = false;
+    }
+    const amtNum = parseFloat(amtStr);
+    if (amtStr !== '' && (isNaN(amtNum) || amtNum < 0)) {
+      const el = document.getElementById('pl-f-amount-err');
+      el.textContent = 'El monto debe ser un número ≥ 0.';
+      el.classList.add('show');
+      if (valid) document.getElementById('pl-f-amount').focus();
+      valid = false;
+    }
+    if (!valid) return;
+
+    const btn  = document.getElementById('pl-submit-btn');
+    const orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = _editingLinkId ? 'Guardando…' : 'Creando…';
+
+    try {
+      let r;
+      if (_editingLinkId) {
+        const body = {title, description:desc||null, currency:cur, kind, active};
+        if (amtStr !== '') body.price_usd = isNaN(amtNum) ? 0 : amtNum;
+        r = await fetch(`/api/profile/payment-links/${encodeURIComponent(_editingLinkId)}`, {
+          method:'PATCH', credentials:'same-origin',
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify(body),
+        });
+      } else {
+        const body = {title, currency:cur, description:desc||null, kind, active,
+                      price_usd: isNaN(amtNum) ? 0 : amtNum};
+        if (slug) body.slug = slug;
+        r = await fetch('/api/profile/payment-links', {
+          method:'POST', credentials:'same-origin',
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify(body),
+        });
+      }
+      if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+      const d = await r.json().catch(() => ({}));
+      if ((r.ok || r.status === 201) && d.ok !== false) {
+        toast(_editingLinkId ? 'Enlace actualizado ✓' : 'Enlace creado ✓');
+        closePLForm();
+        await loadPaymentLinks(true);
+      } else {
+        const errEl = document.getElementById('pl-form-general-err');
+        errEl.textContent = d.error || 'No se pudo guardar el enlace.';
+        errEl.classList.add('show');
+      }
+    } catch(err) {
+      const errEl = document.getElementById('pl-form-general-err');
+      errEl.textContent = 'Error de red. Intenta de nuevo.';
+      errEl.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = orig;
+    }
+  });
+}
+
+/* ── QR selector ─────────────────────────────────────────────────────────── */
+function renderQRSelector() {
+  const sel  = document.getElementById('qr-selector');
+  const wrap = document.getElementById('qr-card-wrap');
+  if (!sel) return;
+
+  const liveLinks = _payLinks.filter(l => l.payUrl);
+
+  if (!liveLinks.length) {
+    sel.innerHTML = '';
+    if (wrap) wrap.innerHTML = `
+      <div class="empty-state" style="padding:40px 24px;">
+        <span class="empty-icon" aria-hidden="true">📲</span>
+        <div class="empty-title">Sin enlaces con URL de pago</div>
+        <div class="empty-text">Crea un enlace de pago x402 para generar su código QR.</div>
+        <button class="btn btn-secondary" onclick="switchTab('pagos')" style="margin-top:16px;">
+          Ir a Pagos
+        </button>
+      </div>`;
+    return;
+  }
+
+  if (!_selectedQRId || !liveLinks.find(l => l.id === _selectedQRId)) {
+    _selectedQRId = liveLinks[0].id;
+  }
+
+  sel.innerHTML = liveLinks.map(l => {
+    const cfg = KIND_CFG[l.kind || 'x402'] || KIND_CFG.x402;
+    const sel_= _selectedQRId === l.id;
+    return `<button class="qr-link-pill${sel_ ? ' selected' : ''}"
+              data-qr-id="${esc(l.id)}" aria-pressed="${sel_}">
+      <span class="pl-kind-pill ${cfg.cls}" style="padding:1px 6px;font-size:.64rem;">
+        ${esc(cfg.label)}
+      </span>
+      ${esc(l.title || 'Enlace')}
+    </button>`;
+  }).join('');
+
+  sel.querySelectorAll('[data-qr-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _selectedQRId = btn.dataset.qrId;
+      renderQRSelector();
+    });
+  });
+
+  renderQRCard();
+}
+
+/* ── QR card ─────────────────────────────────────────────────────────────── */
+function renderQRCard() {
+  const wrap = document.getElementById('qr-card-wrap');
+  if (!wrap) return;
+
+  const link = _payLinks.find(l => l.id === _selectedQRId && l.payUrl);
+  if (!link) return;
+
+  if (_qrInstance) { try { _qrInstance.clear(); } catch(e) {} _qrInstance = null; }
+
+  wrap.innerHTML = `
+    <div class="qr-print-card" id="qr-print-card">
+      <div class="qr-brand-row">
+        <img src="/logo.png" alt="SISMO911" width="36" height="36">
+        <span class="qr-brand-name">SISMO911</span>
+      </div>
+      <div class="qr-link-title">${esc(link.title || 'Enlace de pago')}</div>
+      <div class="qr-amount">${fmtUSD(link.price_usd || 0)}</div>
+      <div class="qr-currency">${esc(link.currency || 'USDC')} · Base</div>
+      <div class="qr-canvas-wrap">
+        <div id="qr-canvas-el" style="line-height:0;"></div>
+      </div>
+      <div class="qr-url">${esc(link.payUrl)}</div>
+      <div class="qr-caption">Escanea para pagar</div>
+    </div>
+    <div class="qr-actions">
+      <button class="btn btn-primary"   id="qr-dl-btn"      >⬇ Descargar PNG</button>
+      <button class="btn btn-secondary" id="qr-copy-img-btn">📋 Copiar imagen</button>
+      <button class="btn btn-secondary" id="qr-print-btn"   >🖨 Imprimir</button>
+    </div>`;
+
+  if (typeof QRCode !== 'undefined') {
+    _qrInstance = new QRCode(document.getElementById('qr-canvas-el'), {
+      text:         link.payUrl,
+      width:        220,
+      height:       220,
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+  }
+
+  document.getElementById('qr-dl-btn').addEventListener('click',       () => downloadQRPNG(link));
+  document.getElementById('qr-copy-img-btn').addEventListener('click', copyQRImage);
+  document.getElementById('qr-print-btn').addEventListener('click',    () => window.print());
+}
+
+/* ── QR utilities ────────────────────────────────────────────────────────── */
+function getQRCanvasEl() {
+  const el = document.getElementById('qr-canvas-el');
+  if (!el) return null;
+  return el.querySelector('canvas') || el.querySelector('img') || null;
+}
+
+async function downloadQRPNG(link) {
+  try {
+    const el = getQRCanvasEl();
+    if (!el) { toast('QR no disponible aún.', 'error'); return; }
+    let dataUrl;
+    if (el.tagName === 'CANVAS') {
+      dataUrl = el.toDataURL('image/png');
+    } else {
+      const resp = await fetch(el.src);
+      const blob = await resp.blob();
+      dataUrl = await new Promise(res => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result);
+        fr.readAsDataURL(blob);
+      });
+    }
+    const a = document.createElement('a');
+    a.href     = dataUrl;
+    a.download = `${link.slug || link.id}-qr.png`;
+    a.click();
+    toast('QR descargado ✓');
+  } catch(e) { toast('No se pudo descargar el QR.', 'error'); }
+}
+
+async function copyQRImage() {
+  try {
+    const el = getQRCanvasEl();
+    if (!el) { toast('QR no disponible aún.', 'error'); return; }
+    let blob;
+    if (el.tagName === 'CANVAS') {
+      blob = await new Promise(res => el.toBlob(res, 'image/png'));
+    } else {
+      const resp = await fetch(el.src);
+      blob = await resp.blob();
+    }
+    if (!navigator.clipboard || !navigator.clipboard.write) {
+      toast('Copia de imagen no soportada en este navegador.', 'error'); return;
+    }
+    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+    toast('Imagen QR copiada al portapapeles ✓');
+  } catch(e) { toast('Copia no soportada en este navegador.', 'error'); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 /* ── Main boot ──────────────────────────────────────────────────────────── */
 async function fetchPaymentSummary() {
   const errHtml = (msg) => `
@@ -1493,6 +2267,8 @@ async function fetchPaymentSummary() {
   buildOverview(profile, null);          /* skeleton KPIs while summary loads */
   buildWallet(wallet, x402, _settings);
   fetchPaymentSummary();                 /* async: fills KPIs + charts */
+  wirePagosForm();
+  loadPaymentLinks();                    /* async: populates Pagos + QR tabs */
 
   /* 5. Wire quick actions */
   document.getElementById('qa-edit').addEventListener('click', () => openModal(_profile));
