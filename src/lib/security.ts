@@ -94,7 +94,9 @@ export function setSecurityHeaders(c: Context) {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://esm.sh",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' https://earthquake.usgs.gov https://api.weather.gov https://www.fema.gov https://overpass-api.de https://overpass.kumi.systems https://maps.mail.ru https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://esm.sh https://maps.googleapis.com https://maps.gstatic.com https://api.stripe.com https://staging.crossmint.com https://www.crossmint.com https://*.crossmint.com",
+    // OSM raster tiles for the MapLibre map on /laguaira are fetched via XHR (connect-src),
+    // unlike Leaflet's <img> tiles (img-src) used elsewhere — so the tile host is listed here.
+    "connect-src 'self' https://earthquake.usgs.gov https://api.weather.gov https://www.fema.gov https://overpass-api.de https://overpass.kumi.systems https://maps.mail.ru https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://esm.sh https://maps.googleapis.com https://maps.gstatic.com https://api.stripe.com https://staging.crossmint.com https://www.crossmint.com https://*.crossmint.com",
     // Crossmint Embedded Checkout (card → USDC) + its Stripe-Elements iframe.
     // Blog ("Noticias") source-video iframes: YouTube, TikTok, Instagram.
     "frame-src 'self' https://*.crossmint.com https://js.stripe.com https://*.stripe.com https://www.youtube-nocookie.com https://www.youtube.com https://www.tiktok.com https://www.instagram.com",
