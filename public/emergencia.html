@@ -137,13 +137,13 @@ function billboard(){
         ${pc!=null?`<div class="praise">${fmtMoney(p.raised_amount,p.currency)} de ${fmtMoney(p.goal_amount,p.currency)} · ${pc}%</div><div class="pbar"><i style="width:${pc}%"></i></div>`:''}
         <div class="bb-cta">
           <a class="btn btn-gold" href="/emergencia/${esc(p.slug)}">Ver perfil y ayudar →</a>
-          <button class="btn btn-ghost" onclick="quickShare(${i})">↗ Compartir</button>
+          <button class="btn btn-ghost" data-act="quickShare" data-a1="${i}">↗ Compartir</button>
         </div>
       </div>
     </div>`;
   }).join('') +
-    `<div class="bb-prog">${FEAT.map((_,i)=>`<span class="bb-dot${i===0?' on':''}" onclick="go(${i})"></span>`).join('')}</div>
-     ${FEAT.length>1?'<button class="bb-nav prev" onclick="go(idx-1)" aria-label="Anterior">‹</button><button class="bb-nav next" onclick="go(idx+1)" aria-label="Siguiente">›</button>':''}`;
+    `<div class="bb-prog">${FEAT.map((_,i)=>`<span class="bb-dot${i===0?' on':''}" data-act="__goTo" data-a1="${i}"></span>`).join('')}</div>
+     ${FEAT.length>1?'<button class="bb-nav prev" data-act="__goPrev" aria-label="Anterior">‹</button><button class="bb-nav next" data-act="__goNext" aria-label="Siguiente">›</button>':''}`;
   idx=0; arm();
   w.onmouseenter=()=>clearTimeout(timer); w.onmouseleave=arm;
 }
@@ -199,6 +199,17 @@ async function load(){
     $('bbwrap').innerHTML='<div class="empty" style="margin:0"><b>No se pudieron cargar los perfiles</b>Revisa tu conexión e intenta de nuevo.</div>';
   }
 }
+var ACTIONS={
+  quickShare:quickShare,
+  __goTo:function(a,el){go(+a);},
+  __goPrev:function(el){go(idx-1);},
+  __goNext:function(el){go(idx+1);}
+};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+  var el=e.target.closest("[data-act]");if(!el)return;
+  var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 load();
 </script>
 </body>

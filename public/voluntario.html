@@ -48,6 +48,12 @@
   .pill-av{font:700 12px Inter;color:#063;background:#e6f5ec;border:1px solid #c7e8d3;border-radius:8px;padding:4px 11px}
 </style>
 <script src="/app-shell.js" defer></script>
+<script>addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;
+if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}
+if(t.hasAttribute("data-fb-remove")){t.remove();return}
+if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html");return}
+if(t.hasAttribute("data-fb-noimg")){t.style.display="none";var n=t.parentNode&&t.parentNode.querySelector(".noimg");if(n)n.style.display="grid";return}
+if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.parentNode.innerHTML=t.getAttribute("data-fb-parent")}},true)</script>
 </head>
 <body class="font-sans">
 <main class="wrap">
@@ -95,7 +101,7 @@ function render(p){
   const flags=[v.has_vehicle?'🚗 Tiene vehículo':'',v.can_travel?'🧭 Puede trasladarse':''].filter(Boolean).join(' · ');
 
   $('root').innerHTML=`<div class="card">
-    ${v.photo_url?`<img class="photo" src="${esc(v.photo_url)}" alt="${esc(v.full_name)}" onerror="this.remove()">`:''}
+    ${v.photo_url?`<img class="photo" src="${esc(v.photo_url)}" alt="${esc(v.full_name)}" data-fb-remove>`:''}
     <div class="phead">
       ${avatar}
       <div style="min-width:0">

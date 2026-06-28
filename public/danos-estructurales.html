@@ -133,7 +133,7 @@
 
 <!-- Comments modal -->
 <div id="cmModal" class="fixed inset-0 z-[1150] bg-black/45 p-4 overflow-y-auto" style="display:none">
-  <div class="bg-white rounded-2xl max-w-md w-full mx-auto my-8 flex flex-col max-h-[85vh]" onclick="event.stopPropagation()">
+  <div id="cmInner" class="bg-white rounded-2xl max-w-md w-full mx-auto my-8 flex flex-col max-h-[85vh]">
     <div class="flex items-start justify-between gap-2 p-4 border-b border-outline-variant/50">
       <div><h3 id="cm_title" class="font-display font-extrabold leading-tight"></h3><div class="text-xs text-on-surface-variant">Comentarios de la comunidad</div></div>
       <button id="cmClose" class="text-2xl leading-none text-on-surface-variant" aria-label="Cerrar">×</button>
@@ -184,7 +184,7 @@ function render(){
     if(!layers[cat])layers[cat]=L.layerGroup().addTo(map);
     const trap=cat==='trapped_people'; const size=cat==='collapsed_building'||trap?16:12;
     const ic=L.divIcon({className:'',html:`<div class="dmk ${trap?'pulse':''}" style="position:relative;width:${size}px;height:${size}px;background:${color(r)}"></div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]});
-    const cm=r.src==='comm'?`<button onclick="openComments('${esc(r.id)}','${esc((r.title||'').replace(/'/g,''))}')" style="font-size:11px;color:#13284f;font-weight:700;margin-top:4px">💬 comentarios</button>`:'';
+    const cm=r.src==='comm'?`<button data-act="openComments" data-a1="${esc(r.id)}" data-a2="${esc((r.title||'').replace(/'/g,''))}" style="font-size:11px;color:#13284f;font-weight:700;margin-top:4px">💬 comentarios</button>`:'';
     L.marker([lat,lng],{icon:ic}).addTo(layers[cat]).bindPopup(
       `<div style="min-width:190px"><div style="font-weight:700;color:${color(r)}">${esc(CAT[cat]?.[0]||cat)}</div>
        <div style="font-weight:600;margin:2px 0">${esc(r.title||'')}</div>
@@ -216,8 +216,8 @@ function renderList(){const rows=listRows(),page=rows.slice(0,listShown);
       <div class="text-xs text-on-surface-variant mt-0.5">${esc(r.description||'')}</div>
       <div class="text-[11px] text-on-surface-variant mt-1">${esc(r.municipio||'—')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}</div>
       <div class="flex items-center gap-3 mt-1.5">
-        ${(LAT(r)&&LNG(r))?`<button onclick="goTo(${LAT(r)},${LNG(r)})" class="text-[11px] text-primary font-semibold">📍 ver en mapa</button>`:''}
-        ${r.src==='comm'?`<button onclick="openComments('${esc(r.id)}','${esc((r.title||'').replace(/'/g,''))}')" class="text-[11px] text-primary font-semibold">💬 comentarios</button>`:''}
+        ${(LAT(r)&&LNG(r))?`<button data-act="goTo" data-a1="${LAT(r)}" data-a2="${LNG(r)}" class="text-[11px] text-primary font-semibold">📍 ver en mapa</button>`:''}
+        ${r.src==='comm'?`<button data-act="openComments" data-a1="${esc(r.id)}" data-a2="${esc((r.title||'').replace(/'/g,''))}" class="text-[11px] text-primary font-semibold">💬 comentarios</button>`:''}
         ${r.source_url?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener" class="text-[11px] text-primary underline">fuente ↗</a>`:''}
       </div></div>`).join('')||'<p class="text-on-surface-variant text-sm col-span-full">Sin reportes que coincidan.</p>';
   $('#listMore').innerHTML=rows.length>listShown?'<button id="lmb" class="px-4 py-2 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>':'';
@@ -297,6 +297,21 @@ Promise.allSettled([
   if(pts.length){try{map.fitBounds(L.latLngBounds(pts).pad(0.2));}catch{}}
   $('#srcMeta').textContent=`${ALL.length.toLocaleString('es')} reportes`;
 }).catch(()=>{$('#loading').innerHTML='<div class="bg-white rounded-lg px-4 py-2 text-sm text-secondary shadow">No se pudieron cargar los daños.</div>';});
+
+// Modal content click must not bubble to the backdrop close (replaces inline stopPropagation handler)
+$('#cmInner').addEventListener('click',function(e){e.stopPropagation();});
+
+// ---- Delegated event dispatcher (replaces inline handlers for CSP) ----
+var ACTIONS={
+  openComments:function(id,title){openComments(id,title);},
+  goTo:function(lat,lng){goTo(+lat,+lng);},
+  __rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
+};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+  var el=e.target.closest("[data-act]");if(!el)return;
+  var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 </script>
 </body>
 </html>
