@@ -145,6 +145,13 @@ app.use('*', async (c, next) => {
   if (authorized && isUnsafe && user?.must_change_pw && path !== '/api/auth/change-password') {
     return c.json({ error: 'must_change_password', hint: 'Cambia tu contraseña temporal en /cambiar-clave antes de registrar operaciones.' }, 403);
   }
+  // Mandatory MFA enrollment: a user flagged mfa_required who has not yet enabled
+  // MFA may read, but cannot perform gated writes until they enroll — except the
+  // MFA enrollment endpoints themselves, change-password, and logout.
+  if (authorized && isUnsafe && user?.mfa_required && !user?.mfa_enabled &&
+      !path.startsWith('/api/rbac/mfa/') && path !== '/api/auth/change-password' && path !== '/api/auth/logout') {
+    return c.json({ error: 'mfa_enrollment_required', hint: 'Activa la verificación en dos pasos en /seguridad antes de registrar operaciones.' }, 403);
+  }
   if (authorized) { if (user) c.header('X-User-Role', user.role); return next(); }
 
   // Unauthenticated/unauthorized: redirect HTML admin pages to login, JSON gets 401.

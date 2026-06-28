@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMO911 — Verificación en dos pasos (MFA)</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#0b1830" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/qrcode@1.5.4/build/qrcode.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#0b1830,#13284f);font-family:'Inter',system-ui,sans-serif;color:#1a1c1e;padding:1.5rem}
+    .card{background:#fff;border-radius:1rem;max-width:480px;width:100%;padding:2rem 1.75rem;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .brand{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem}
+    .brand img{height:34px;width:34px}.brand b{font-family:'Public Sans',sans-serif;font-weight:900;font-size:1.15rem;color:#00173a}
+    h1{font-family:'Public Sans',sans-serif;font-size:1.2rem;margin:.6rem 0 .25rem}
+    p.sub{font-size:.85rem;color:#44474f;margin:0 0 1.1rem}
+    ol{font-size:.85rem;color:#44474f;padding-left:1.1rem;margin:0 0 1rem}
+    #qr{display:flex;justify-content:center;margin:.5rem 0}
+    #qr canvas{border:1px solid #d7dbe4;border-radius:.5rem;padding:.4rem;background:#fff}
+    .secret{font-family:'JetBrains Mono',monospace;font-size:.85rem;background:#f4f6f9;border:1px solid #d7dbe4;border-radius:.5rem;padding:.55rem;text-align:center;word-break:break-all;margin:.3rem 0 1rem}
+    label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#44474f;margin:.5rem 0 .3rem}
+    input{width:100%;border:1px solid #c4c6d0;border-radius:.55rem;padding:.65rem .7rem;font-size:1.1rem;letter-spacing:.3em;text-align:center;font-family:'JetBrains Mono',monospace}
+    button{width:100%;margin-top:1rem;background:#bb0027;color:#fff;border:0;border-radius:.55rem;padding:.8rem;font-size:.95rem;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.6;cursor:wait}
+    .msg{margin-top:.9rem;font-size:.85rem;padding:.55rem .7rem;border-radius:.5rem;display:none}
+    .msg.err{display:block;background:#fdecee;color:#9b1c2e;border:1px solid #f3b9c1}
+    .msg.ok{display:block;background:#e8f5ec;color:#1b6b32;border:1px solid #b6dcc1}
+    .codes{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin:.7rem 0}
+    .codes span{font-family:'JetBrains Mono',monospace;font-size:.9rem;background:#fff;border:1px dashed #c4c6d0;border-radius:.4rem;padding:.45rem;text-align:center}
+    .warn{font-size:.78rem;color:#9b1c2e;margin-top:.4rem}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand"><img src="/logo.svg" alt="SISMO911" /><b>SISMO911</b></div>
+    <h1>Verificación en dos pasos (MFA)</h1>
+    <p class="sub">Tu cuenta requiere activar MFA antes de registrar operaciones.</p>
+
+    <div id="setup">
+      <ol>
+        <li>Instala una app de autenticación (Google Authenticator, Authy, 1Password…).</li>
+        <li>Escanea este código QR (o ingresa la clave manualmente).</li>
+        <li>Escribe el código de 6 dígitos que muestra la app.</li>
+      </ol>
+      <div id="qr"></div>
+      <label>Clave (entrada manual)</label>
+      <div class="secret" id="secret">…</div>
+      <form id="f">
+        <label for="code">Código de 6 dígitos</label>
+        <input id="code" inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" required />
+        <button id="b" type="submit">Activar MFA</button>
+      </form>
+    </div>
+
+    <div id="done" class="hidden">
+      <div class="msg ok">✓ MFA activado. Guarda estos códigos de respaldo en un lugar seguro — se muestran una sola vez y cada uno sirve para un único inicio de sesión si pierdes tu teléfono.</div>
+      <div class="codes" id="codes"></div>
+      <p class="warn">No los compartas. Después de guardarlos, continúa.</p>
+      <button id="cont" type="button">Continuar</button>
+    </div>
+
+    <div id="m" class="msg"></div>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const msg = (t, ok) => { const m = $('m'); m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); };
+    const nextUrl = () => new URLSearchParams(location.search).get('next') || '/';
+    let secret = '';
+    async function enroll() {
+      try {
+        const r = await fetch('/api/rbac/mfa/enroll', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{}' });
+        if (r.status === 401) { location.href = '/login?next=' + encodeURIComponent('/seguridad'); return; }
+        const d = await r.json();
+        if (!d.secret) { msg('No se pudo iniciar el registro de MFA.'); return; }
+        secret = d.secret; $('secret').textContent = secret;
+        if (window.QRCode && d.otpauth_uri) {
+          const c = document.createElement('canvas'); $('qr').innerHTML = ''; $('qr').appendChild(c);
+          window.QRCode.toCanvas(c, d.otpauth_uri, { width: 188, margin: 1 }, (e) => { if (e) $('qr').textContent = 'Usa la clave manual abajo.'; });
+        }
+      } catch { msg('Error de red al iniciar MFA.'); }
+    }
+    $('f').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = $('code').value.replace(/\s+/g, '');
+      if (!/^\d{6}$/.test(code)) return msg('Ingresa los 6 dígitos.');
+      $('b').disabled = true;
+      try {
+        const r = await fetch('/api/rbac/mfa/verify', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code }) });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) {
+          $('m').className = 'msg';
+          $('setup').classList.add('hidden');
+          const wrap = $('codes'); wrap.innerHTML = '';
+          (d.backup_codes || []).forEach((c) => { const s = document.createElement('span'); s.textContent = c; wrap.appendChild(s); });
+          $('done').classList.remove('hidden');
+        } else if (r.status === 401) { location.href = '/login?next=' + encodeURIComponent('/seguridad'); }
+        else { msg(d.error === 'bad_code' ? 'Código incorrecto. Verifica la hora de tu teléfono e intenta de nuevo.' : (d.hint || 'No se pudo activar MFA.')); }
+      } catch { msg('Error de red.'); }
+      $('b').disabled = false;
+    });
+    $('cont').addEventListener('click', () => location.href = nextUrl());
+    enroll();
+  </script>
+</body>
+</html>
