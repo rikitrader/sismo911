@@ -94,6 +94,9 @@
     <section class="card" style="padding:.95rem 1.1rem">
       <div class="eyebrow" style="margin-bottom:.5rem">Conexión</div>
       <div class="statline"><span id="pip" class="pip stopped"></span><span id="statusLabel">Detenido</span></div>
+      <div id="bufLine" class="statline hidden" style="margin-top:.45rem;font-size:.82rem;color:rgba(255,255,255,.72)">
+        <span aria-hidden="true">⏳</span><span><b id="bufCount">0</b> posiciones en cola (sin conexión) — se enviarán al reconectar</span>
+      </div>
     </section>
 
     <!-- Alerts -->
@@ -183,6 +186,87 @@
   }
 
   // ---------------- WebSocket ----------------
+  // ---------------- offline buffer (IndexedDB) ----------------
+  // GPS fixes captured while the socket is down are queued here and flushed to
+  // POST /flota/track/backfill (token-auth, backfill mode) on reconnect/online.
+  var DB_NAME = 'flota-gps', STORE = 'queue', MAX_QUEUE = 1000, FLUSH_BATCH = 200;
+  var idbReady = null, flushing = false;
+  function idb() {
+    if (idbReady) return idbReady;
+    idbReady = new Promise(function (res, rej) {
+      if (!('indexedDB' in window)) { rej(new Error('no-idb')); return; }
+      var r = indexedDB.open(DB_NAME, 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true }); };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error); };
+    });
+    return idbReady;
+  }
+  function idbCount() {
+    return idb().then(function (db) { return new Promise(function (res, rej) {
+      var rq = db.transaction(STORE, 'readonly').objectStore(STORE).count();
+      rq.onsuccess = function () { res(rq.result); }; rq.onerror = function () { rej(rq.error); };
+    }); });
+  }
+  function idbAdd(fix) {
+    idb().then(function (db) { return new Promise(function (res, rej) {
+      var tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).add({ fix: fix });
+      tx.oncomplete = res; tx.onerror = function () { rej(tx.error); };
+    }); }).then(trimQueue).then(refreshBufUI).catch(function () {});
+  }
+  function trimQueue() {
+    return idbCount().then(function (n) {
+      if (n <= MAX_QUEUE) return;
+      return idb().then(function (db) { return new Promise(function (res) {
+        var drop = n - MAX_QUEUE; var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).openCursor().onsuccess = function (e) {
+          var cur = e.target.result; if (cur && drop > 0) { cur.delete(); drop--; cur.continue(); }
+        };
+        tx.oncomplete = res;
+      }); });
+    });
+  }
+  function idbAll(limit) {
+    return idb().then(function (db) { return new Promise(function (res) {
+      var items = []; var tx = db.transaction(STORE, 'readonly');
+      tx.objectStore(STORE).openCursor().onsuccess = function (e) {
+        var cur = e.target.result; if (cur && items.length < limit) { items.push({ id: cur.key, fix: cur.value.fix }); cur.continue(); }
+      };
+      tx.oncomplete = function () { res(items); };
+    }); });
+  }
+  function idbDel(ids) {
+    return idb().then(function (db) { return new Promise(function (res, rej) {
+      var tx = db.transaction(STORE, 'readwrite'); var s = tx.objectStore(STORE);
+      ids.forEach(function (id) { s.delete(id); });
+      tx.oncomplete = res; tx.onerror = function () { rej(tx.error); };
+    }); });
+  }
+  function refreshBufUI() {
+    return idbCount().then(function (n) {
+      if (n > 0) { $('bufCount').textContent = String(n); $('bufLine').classList.remove('hidden'); }
+      else { hide($('bufLine')); }
+    }).catch(function () {});
+  }
+  function flushBuffer() {
+    if (flushing || !token) return;
+    flushing = true;
+    idbAll(FLUSH_BATCH).then(function (items) {
+      if (!items.length) { flushing = false; return refreshBufUI(); }
+      return fetch('/flota/track/backfill', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'authorization': 'Bearer ' + token },
+        body: JSON.stringify({ fixes: items.map(function (it) { return it.fix; }) })
+      }).then(function (r) {
+        if (!r.ok) throw new Error('http ' + r.status);
+        return idbDel(items.map(function (it) { return it.id; }));
+      }).then(function () {
+        flushing = false;
+        return refreshBufUI().then(function () { return idbCount(); }).then(function (n) { if (n > 0) flushBuffer(); });
+      });
+    }).catch(function () { flushing = false; });
+  }
+
   function wsUrl() {
     var scheme = location.protocol === 'https:' ? 'wss' : 'ws';
     return scheme + '://' + location.host + '/ws/flota/unit?token=' + encodeURIComponent(token);
@@ -208,6 +292,8 @@
       }, 25000);
       // If we already have a fix waiting, push it immediately.
       sendFix();
+      // Upload anything captured while we were disconnected.
+      flushBuffer();
     });
 
     ws.addEventListener('message', function (ev) {
@@ -288,12 +374,9 @@
     showBanner($('gpsBanner'), 'err', msg);
   }
 
-  function sendFix() {
-    if (!active || !lastFix) return;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  function buildFix() {
     var c = lastFix.coords;
-    var payload = {
-      type: 'gps',
+    return {
       lat: c.latitude,
       lng: c.longitude,
       accuracy: c.accuracy,
@@ -302,12 +385,28 @@
       battery: batteryPct,
       recordedAt: new Date(lastFix.timestamp).toISOString()
     };
-    try { ws.send(JSON.stringify(payload)); } catch (e) { return; }
-    // reflect the sent fix in the UI (last sent)
+  }
+
+  function reflectFix() {
+    var c = lastFix.coords;
     $('lastLat').textContent = c.latitude.toFixed(6);
     $('lastLng').textContent = c.longitude.toFixed(6);
     $('lastAcc').textContent = c.accuracy != null ? Math.round(c.accuracy) + ' m' : '—';
     $('lastTime').textContent = fmtTime(lastFix.timestamp);
+  }
+
+  function sendFix() {
+    if (!active || !lastFix) return;
+    var fix = buildFix();
+    reflectFix();
+    // Live over the socket when connected; otherwise buffer for upload on reconnect.
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({ type: 'gps', lat: fix.lat, lng: fix.lng, accuracy: fix.accuracy, heading: fix.heading, speed: fix.speed, battery: fix.battery, recordedAt: fix.recordedAt }));
+        return;
+      } catch (e) { /* fall through to buffer */ }
+    }
+    idbAdd(fix);
   }
 
   function startWatch() {
@@ -385,6 +484,10 @@
 
   // initial state
   setStatus('stopped', 'Detenido');
+
+  // Offline buffer: show any pending count + flush as soon as connectivity returns.
+  refreshBufUI();
+  window.addEventListener('online', flushBuffer);
 
   // PWA: register the shared offline-shell service worker (best-effort).
   if ('serviceWorker' in navigator) { try { navigator.serviceWorker.register('/sw.js'); } catch (e) {} }

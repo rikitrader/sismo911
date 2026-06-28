@@ -42,6 +42,12 @@ describe('Flota GPS page is wired as the installable app', () => {
   it('the service worker precaches the bare /flota/track shell', () => {
     expect(readFileSync('public/sw.js', 'utf8')).toContain("'/flota/track'");
   });
+  it('buffers GPS offline (IndexedDB queue) and flushes to the backfill endpoint', () => {
+    expect(html).toContain("indexedDB.open"); // offline queue
+    expect(html).toContain("'/flota/track/backfill'"); // flush target
+    expect(html).toContain("window.addEventListener('online', flushBuffer)"); // reconnect trigger
+    expect(html).toContain('idbAdd(fix)'); // buffer when socket is down
+  });
   it('prompts for a tracking token when launched without one', () => {
     expect(html).toContain('id="tokenPrompt"');
     expect(html).toContain('id="tokenInput"');

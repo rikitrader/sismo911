@@ -27,7 +27,8 @@ export type GpsResult = { ok: true; value: GpsClean } | { ok: false; error: stri
 // Tunables.
 export const MAX_ACCURACY_M = 2000;      // reject wildly imprecise fixes
 export const MAX_FUTURE_MS = 60_000;     // tolerate ≤1 min device clock skew ahead
-export const MAX_STALE_MS = 5 * 60_000;  // older than 5 min → stale, reject
+export const MAX_STALE_MS = 5 * 60_000;  // older than 5 min → stale, reject (live)
+export const MAX_BACKFILL_MS = 24 * 60 * 60_000; // buffered/offline fixes: accept up to 24h old
 export const MAX_JUMP_MPS = 130;         // ~468 km/h: above this between two fixes = impossible jump
 
 const num = (v: unknown): number | null => {
@@ -46,8 +47,11 @@ function parseRecordedAt(v: unknown): number | null {
   return null;
 }
 
-/** Validate + normalize a raw GPS payload. `now` is the server time (unix-ms). */
-export function validateGps(input: GpsInput, now: number): GpsResult {
+/** Validate + normalize a raw GPS payload. `now` is the server time (unix-ms).
+ *  `maxStaleMs` bounds how old `recordedAt` may be — MAX_STALE_MS for live,
+ *  MAX_BACKFILL_MS for buffered/offline uploads. Future timestamps are always
+ *  bounded by MAX_FUTURE_MS (clock-skew). */
+export function validateGps(input: GpsInput, now: number, maxStaleMs: number = MAX_STALE_MS): GpsResult {
   if (input == null || typeof input !== 'object') return { ok: false, error: 'malformed_payload' };
 
   const lat = num(input.lat);
@@ -63,7 +67,7 @@ export function validateGps(input: GpsInput, now: number): GpsResult {
   const recorded_at = parseRecordedAt(input.recordedAt);
   if (recorded_at == null) return { ok: false, error: 'bad_timestamp' };
   if (recorded_at > now + MAX_FUTURE_MS) return { ok: false, error: 'timestamp_future' };
-  if (recorded_at < now - MAX_STALE_MS) return { ok: false, error: 'timestamp_stale' };
+  if (recorded_at < now - maxStaleMs) return { ok: false, error: 'timestamp_stale' };
 
   let heading = num(input.heading);
   if (heading != null) heading = ((heading % 360) + 360) % 360;
