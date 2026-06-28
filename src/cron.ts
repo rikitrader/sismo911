@@ -30,6 +30,7 @@ import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
 import { backfillHospitalMatches } from './ingest/hospital-match';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
+import { ingestCasualties } from './ingest/casualty-cron';
 
 // Drain the hospital cross-match a bounded number of pages per tick (whole
 // registry completes over a few ticks; thereafter it re-scans for new intakes).
@@ -126,6 +127,11 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   '45 * * * *': [
     { name: 'social-monitor', run: ingestSocialMonitor },
     { name: 'blog', run: ingestBlog },
+    // Trailing casualty (fallecidos/heridos/desaparecidos) poller. Self-throttles
+    // to every 3h (UTC hour % 3) INSIDE the job — the account is capped at 5 cron
+    // triggers (all used), so we ride :45 instead of adding a 6th schedule. Light
+    // (≤3 external fetches, only on the 3h tick); every figure passes gateCasualty.
+    { name: 'casualties', run: ingestCasualties },
     { name: 'rav-photos', run: (env) => analyzeRavPhotos(env) },
     // Cheap (AI-free) content-hash backfill for R2-mirrored photos, run RIGHT
     // BEFORE the phash dedupe so this tick's freshly hashed rows are deduped in
