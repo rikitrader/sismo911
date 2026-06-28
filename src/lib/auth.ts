@@ -19,6 +19,7 @@ export interface User {
   id: string; email: string; name: string; role: Role;
   rank: string | null; unit: string | null; phone: string | null;
   wallet_address?: string | null;
+  must_change_pw?: number;
 }
 
 // ---- crypto helpers ----
@@ -65,11 +66,11 @@ export async function getUserFromRequest(env: Env, c: Context): Promise<User | n
   const token = getSessionToken(c);
   if (token) {
     const row: any = await env.DB.prepare(
-      `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,u.wallet_address,s.expires_ms
+      `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,u.wallet_address,u.must_change_pw,s.expires_ms
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?`
     ).bind(token).first();
     if (row && row.expires_ms >= Date.now()) {
-      return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone, wallet_address: row.wallet_address };
+      return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone, wallet_address: row.wallet_address, must_change_pw: row.must_change_pw ?? 0 };
     }
   }
 

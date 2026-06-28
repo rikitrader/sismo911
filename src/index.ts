@@ -135,6 +135,11 @@ app.use('*', async (c, next) => {
   else authorized = await authorize(c.env, user, decision.perm);
 
   if (authorized && isUnsafe && !isSameSite) return c.json({ error: 'bad_origin' }, 403);
+  // Forced password rotation: a user flagged must_change_pw may read, but cannot
+  // perform ANY gated write until they set a new password (POST /api/auth/change-password).
+  if (authorized && isUnsafe && user?.must_change_pw && path !== '/api/auth/change-password') {
+    return c.json({ error: 'must_change_password', hint: 'Cambia tu contraseña temporal en /cambiar-clave antes de registrar operaciones.' }, 403);
+  }
   if (authorized) { if (user) c.header('X-User-Role', user.role); return next(); }
 
   // Unauthenticated/unauthorized: redirect HTML admin pages to login, JSON gets 401.

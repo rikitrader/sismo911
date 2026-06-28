@@ -70,7 +70,9 @@
     const body=Object.fromEntries(new FormData(form));
     const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
-    if(r.ok&&d.ok){ msg.className='text-sm text-center mt-3 text-safe'; msg.textContent='Bienvenido'; location.href=dest(d.user.role); }
+    if(r.ok&&d.ok){ msg.className='text-sm text-center mt-3 text-safe';
+      if(d.must_change_pw){ msg.textContent='Debes cambiar tu contraseña temporal'; location.href='/cambiar-clave?next='+encodeURIComponent(dest(d.user.role)); }
+      else { msg.textContent='Bienvenido'; location.href=dest(d.user.role); } }
     else { msg.className='text-sm text-center mt-3 text-secondary'; msg.textContent={invalid_credentials:'Credenciales inválidas',email_taken:'Ese correo ya está registrado',password_min_8:'La contraseña debe tener 8+ caracteres',email_invalid:'Correo inválido',name_required:'Falta el nombre'}[d.error]||'Error'; }
   }
   lf.onsubmit=e=>{e.preventDefault();submit(lf,'/api/auth/login');};

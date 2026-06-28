@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { hashPassword, verifyPassword, createSession, setSessionCookie, clearSession, getUserFromRequest } from '../lib/auth';
+import { hashPassword, verifyPassword, createSession, setSessionCookie, clearSession, getUserFromRequest, getSessionToken } from '../lib/auth';
 import { rateLimit } from '../lib/security';
 import { audit } from '../lib/audit';
 import { sendEmail, randomToken, sha256hex, resetEmail, welcomeEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
@@ -177,7 +177,7 @@ auth.post('/login', async (c) => {
   } catch { /* ignore */ }
   const { token, expires } = await createSession(c.env, row.id, c.req.header('user-agent'));
   setSessionCookie(c, token);
-  return c.json({ ok: true, token, expires, user: { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit } });
+  return c.json({ ok: true, token, expires, must_change_pw: row.must_change_pw ?? 0, user: { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, must_change_pw: row.must_change_pw ?? 0 } });
 });
 
 function envTokenMatches(expected: string | undefined, got: unknown): boolean {
@@ -193,6 +193,37 @@ function envTokenMatches(expected: string | undefined, got: unknown): boolean {
 // POST /api/auth/logout
 auth.post('/logout', async (c) => {
   await clearSession(c.env, c);
+  return c.json({ ok: true });
+});
+
+// POST /api/auth/change-password — authenticated self-service password change.
+// Clears the forced-rotation flag (must_change_pw) and burns every OTHER session
+// for the user. Required after first login for provisioned operator accounts: the
+// gate blocks all writes until this succeeds.
+auth.post('/change-password', async (c) => {
+  const limited = await rateLimit(c.env, c, 'auth_change_pw', 10, 600);
+  if (limited) return limited;
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const b = await c.req.json().catch(() => null);
+  const current = typeof b?.current_password === 'string' ? b.current_password : '';
+  const next = typeof b?.new_password === 'string' ? b.new_password : '';
+  if (next.length < 10) return c.json({ error: 'weak_password', hint: 'mínimo 10 caracteres' }, 400);
+  const row: any = await c.env.DB.prepare(`SELECT pw_hash, pw_salt FROM users WHERE id = ?`).bind(me.id).first();
+  if (!row || !(await verifyPassword(current, row.pw_hash, row.pw_salt))) {
+    return c.json({ error: 'invalid_current_password' }, 403);
+  }
+  if (await verifyPassword(next, row.pw_hash, row.pw_salt)) {
+    return c.json({ error: 'same_password', hint: 'usa una contraseña distinta a la temporal' }, 400);
+  }
+  const { hash, salt } = await hashPassword(next);
+  await c.env.DB.prepare(`UPDATE users SET pw_hash = ?, pw_salt = ?, must_change_pw = 0 WHERE id = ?`)
+    .bind(hash, salt, me.id).run();
+  // Invalidate every OTHER session for this user (keep the current one).
+  const tok = getSessionToken(c) ?? '';
+  await c.env.DB.prepare(`DELETE FROM sessions WHERE user_id = ? AND token <> ?`).bind(me.id, tok).run();
+  await audit(c, 'auth.change_password', { user_id: me.id });
+  fireEmail(c, me.email, passwordChangedEmail(me.name));
   return c.json({ ok: true });
 });
 
