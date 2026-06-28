@@ -190,7 +190,8 @@ familia.get('/person/:id', async (c) => {
        FROM persons WHERE id = ?`
     ).bind(id).first();
     if (!r || (!op && r.review !== 'approved')) return c.json({ error: 'not_found' }, 404);
-    c.header('Cache-Control', 'public, max-age=120');
+    // Operator responses include the reporter phone (PII) → never publicly cached.
+    c.header('Cache-Control', op ? 'private, no-store' : 'public, max-age=120');
     return c.json({
       id: r.id, full_name: r.full_name, age: r.age, last_seen: r.last_seen,
       since: null, reporter: op ? (r.contact_phone || null) : null, description: r.notes || null,
@@ -204,10 +205,15 @@ familia.get('/person/:id', async (c) => {
      FROM personas WHERE id = ? AND moderation = 'approved'`
   ).bind(id).first();
   if (!p) return c.json({ error: 'not_found' }, 404);
-  c.header('Cache-Control', 'public, max-age=120');
+  // SECURITY: `contacto` is the reporter's phone (PII). It is operator-only on every
+  // other surface (mapPerson + the per_ branch above); the personas branch previously
+  // leaked it to ANY anonymous caller. Redact for non-operators, and never publicly
+  // cache an operator response (which carries the PII).
+  const op = await isOperator(c);
+  c.header('Cache-Control', op ? 'private, no-store' : 'public, max-age=120');
   return c.json({
     id: p.id, full_name: p.nombre, age: p.edad, last_seen: p.ubicacion,
-    since: p.fecha || null, reporter: p.contacto || null, description: p.descripcion || null,
+    since: p.fecha || null, reporter: op ? (p.contacto || null) : null, description: p.descripcion || null,
     status: estadoToStatus(p.estado), estado: p.estado, found_by: p.localizado_por || null,
     photo_url: (p.foto_r2 || p.foto) ? `/api/familia/photo/${p.id}` : null,
     share_url: `https://sismo911.com/familia?persona=${p.id}`,
