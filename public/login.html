@@ -67,7 +67,13 @@
     ff.classList.add('hidden'); lf.classList.toggle('hidden',n!=='login'); rf.classList.toggle('hidden',n!=='register'); showSocial(true); msg.textContent='';});
   function dest(role){
     const isOp = role==='operator' || role==='admin';
-    if (isOp) return (next.startsWith('/login') || next==='/') ? '/admin' : next;
+    // On the SUMINISTROS subdomain, "/" IS the staff app — keep operators/admins
+    // there instead of bouncing them to the global /admin console.
+    const onSuministros = location.hostname === 'suministros.sismo911.com';
+    if (isOp) {
+      if (onSuministros) return (next.startsWith('/login')) ? '/' : next;
+      return (next.startsWith('/login') || next==='/') ? '/admin' : next;
+    }
     // Citizens can never go to an admin/login destination — send them to their account.
     return (next.startsWith('/admin') || next.startsWith('/login')) ? '/cuenta' : next;
   }
