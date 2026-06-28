@@ -4,6 +4,7 @@ import type { Env } from './types';
 import { events } from './routes/events';
 import { persons } from './routes/persons';
 import { evidence, evidenceShare } from './routes/evidence';
+import { investigation } from './routes/investigation';
 import { contacts } from './routes/contacts';
 import { alerts } from './routes/alerts';
 import { facilities } from './routes/facilities';
@@ -287,6 +288,7 @@ app.route('/mcp', mcp);
 app.route('/api/events', events);
 app.route('/api/persons', persons);
 app.route('/api/persons', evidence);   // Evidence Photo Gallery (operator) — gated as persons:moderate via route-policy isCaseAdmin
+app.route('/api/persons', investigation); // Investigation CRM + identity verification — /intel & /identity gated persons:moderate; POST /:id/tip public
 app.route('/api/e', evidenceShare);    // public signed-link share view (serves pre-baked redacted composites only)
 app.route('/api/contacts', contacts);
 app.route('/api/auth', auth);
