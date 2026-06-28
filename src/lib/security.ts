@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import type { Env } from '../types';
+import { STRICT_SCRIPT_SRC } from './csp';
 
 const DEFAULT_ORIGINS = [
   'https://sismo911.com',
@@ -53,30 +54,40 @@ export function setSecurityHeaders(c: Context) {
   c.header('Cross-Origin-Opener-Policy', 'same-origin');
   c.header('Cross-Origin-Resource-Policy', 'same-origin');
   c.header('Origin-Agent-Cluster', '?1');
+  const directives = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    'upgrade-insecure-requests',
+    // 'unsafe-eval' removed: no page loads the Tailwind Play CDN (CSS is built to
+    // static app.css) and no remaining script source needs eval(). 'unsafe-inline'
+    // stays in the ENFORCING policy only because pages still carry inline <script>
+    // blocks. The Report-Only header below runs the STRICT (hashed, no unsafe-inline)
+    // policy in parallel to measure what must be refactored before we can enforce it.
+    "script-src 'self' 'unsafe-inline' https://unpkg.com https://esm.sh https://static.cloudflareinsights.com https://maps.googleapis.com https://js.stripe.com https://*.crossmint.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://esm.sh",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self' https://earthquake.usgs.gov https://api.weather.gov https://www.fema.gov https://overpass-api.de https://overpass.kumi.systems https://maps.mail.ru https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://esm.sh https://maps.googleapis.com https://maps.gstatic.com https://api.stripe.com https://staging.crossmint.com https://www.crossmint.com https://*.crossmint.com",
+    // Crossmint Embedded Checkout (card → USDC) + its Stripe-Elements iframe.
+    // Blog ("Noticias") source-video iframes: YouTube, TikTok, Instagram.
+    "frame-src 'self' https://*.crossmint.com https://js.stripe.com https://*.stripe.com https://www.youtube-nocookie.com https://www.youtube.com https://www.tiktok.com https://www.instagram.com",
+    "worker-src 'self'",
+    "manifest-src 'self'",
+  ];
+  c.header('Content-Security-Policy', directives.join('; '));
+  // Report-Only strict CSP (observational; blocks NOTHING): same directives, but a
+  // hashed script-src with NO 'unsafe-inline'. Violations (the 19 inline-handler
+  // pages + the dynamic Worker-rendered pages) are POSTed to /api/csp-report so we
+  // can refactor them, then flip this to the enforcing header. (M5/M1 vault item.)
   c.header(
-    'Content-Security-Policy',
+    'Content-Security-Policy-Report-Only',
     [
-      "default-src 'self'",
-      "base-uri 'self'",
-      "object-src 'none'",
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-      'upgrade-insecure-requests',
-      // 'unsafe-eval' removed: no page loads the Tailwind Play CDN (CSS is built to
-      // static app.css) and no remaining script source needs eval(). 'unsafe-inline'
-      // stays only because pages still carry inline <script> blocks (migrating to
-      // hashes/nonces to drop it is tracked in the private security vault).
-      "script-src 'self' 'unsafe-inline' https://unpkg.com https://esm.sh https://static.cloudflareinsights.com https://maps.googleapis.com https://js.stripe.com https://*.crossmint.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://esm.sh",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://earthquake.usgs.gov https://api.weather.gov https://www.fema.gov https://overpass-api.de https://overpass.kumi.systems https://maps.mail.ru https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://esm.sh https://maps.googleapis.com https://maps.gstatic.com https://api.stripe.com https://staging.crossmint.com https://www.crossmint.com https://*.crossmint.com",
-      // Crossmint Embedded Checkout (card → USDC) + its Stripe-Elements iframe.
-      // Blog ("Noticias") source-video iframes: YouTube, TikTok, Instagram.
-      "frame-src 'self' https://*.crossmint.com https://js.stripe.com https://*.stripe.com https://www.youtube-nocookie.com https://www.youtube.com https://www.tiktok.com https://www.instagram.com",
-      "worker-src 'self'",
-      "manifest-src 'self'",
-    ].join('; ')
+      ...directives.map((d) => (d.startsWith('script-src') ? `script-src ${STRICT_SCRIPT_SRC}` : d)),
+      'report-uri /api/csp-report',
+    ].join('; '),
   );
 }
 
