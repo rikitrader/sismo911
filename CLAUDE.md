@@ -13,6 +13,19 @@ Inherits all global rules from `~/CLAUDE.md` (ship cycle, worktrees, deploy wait
 - **The ONLY sanctioned deletion path:** `~/.claude/scripts/safe-branch-delete.sh <branch> [main]` (fail-closed; verifies the merge first). **Never** hand-run `gh pr merge --delete-branch`, `git push origin --delete <branch>`, or `git branch -D <branch>` on a PR branch.
 - **On any merge conflict: STOP** — do not delete branches, recreate commits, or `--force`. Recover the work (`gh pr checkout <PR>` / `git fetch origin pull/<PR>/head:…` / `git reflog`), resolve on a `recovery/pr-<PR>-conflict-fix` branch keeping BOTH sides' behavior (imports/types/routes/migrations/tests), verify (no `<<<<<<<`/`=======`/`>>>>>>>` remain; tsc + tests + build green), then re-PR. Full protocol in `~/CLAUDE.md` → **Merge-Conflict Recovery**.
 
+## Per-Agent Git Worktrees (REQUIRED — never use the shared checkout)
+
+**Every agent works ONLY inside its own isolated git worktree, never the shared canonical checkout.** Sharing one working tree across concurrent agents has repeatedly caused: a commit landing on local `main` when another agent ran `git checkout` mid-task, a dirty/diverged `main`, `node_modules` corruption from racing `npm install`s (`ENOTDIR` / `Cannot find module 'anymatch'` → failed deploys), and general checkout races. A worktree gives each agent an isolated working directory while sharing the same `.git`.
+
+**Required at the start of every task — create/enter your worktree before any edit, commit, or branch op:**
+```bash
+wt=$(./scripts/agent-worktree.sh <branch-name>) && cd "$wt"
+# …edit, commit, push, open PR from inside "$wt"…
+```
+`scripts/agent-worktree.sh` wraps `~/.claude/scripts/agent-worktree.sh`: it bases a NEW branch on a freshly-fetched `origin/main`, resumes an existing branch idempotently (keyed by branch), and prints the worktree path. Helpers: `--list`, `--trace`, `--remove <branch>`, `--prune`.
+
+**Hard prohibitions:** do NOT commit in the canonical checkout (a `pre-commit` guard blocks it — do **not** bypass with `ALLOW_MAIN_COMMIT=1` just to avoid making a worktree); do NOT run `npm install` / `wrangler deploy` in the shared checkout while others may be working it (deploy from your worktree, or via `~/.claude/scripts/ship-deploy.sh`). The canonical checkout is coordination/read-only. Full rule: `~/CLAUDE.md` → **Per-Agent Git Worktrees**.
+
 ## Vault Recording (Enforce-Rule — imperative, never ask)
 
 - **Record EVERY change + its full history to the project vault, automatically, AFTER deploy — never asking.**
