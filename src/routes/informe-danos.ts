@@ -2,14 +2,12 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 
 // Informe de Evaluación de Daños — Costa de La Guaira (terremoto doble Mw7.2+Mw7.5,
-// Falla de San Sebastián, 24-jun-2026). Analiza los 820 reportes de /danos a través
-// de tres lentes (estructural, geológica, gestión de desastres) con revisión
-// adversarial (red-team). Gráficos servidos como estáticos desde /informe-danos/assets/.
+// Falla de San Sebastián, 24-jun-2026). Renderizado DENTRO del marco principal del
+// sitio: incluye /app.css + /app-shell.js (la barra lateral/menú se inyecta sola) y
+// el contenido va en <main>. Gráficos servidos como estáticos desde /informe-danos/assets/.
 export const informeDanos = new Hono<{ Bindings: Env }>();
 
-const REPORT_CSS = `@page { size: A4; margin: 18mm 16mm 20mm 16mm;
-  @bottom-center { content: "SISMO911 · Informe de Daños — Costa de La Guaira · " counter(page) "/" counter(pages); font-size: 8pt; color: #66788a; }
-}
+const REPORT_CSS = `
 body { font-family: "Helvetica Neue", Arial, sans-serif; color: #0b1b2b; font-size: 10.5pt; line-height: 1.45; }
 h1 { color: #0b2545; font-size: 21pt; border-bottom: 3px solid #b3261e; padding-bottom: 6px; }
 h2 { color: #0b2545; font-size: 15pt; margin-top: 22px; border-bottom: 1px solid #c9d3dd; padding-bottom: 3px; page-break-after: avoid; }
@@ -772,18 +770,32 @@ const PAGE = `<!DOCTYPE html><html lang="es"><head>
 <meta property="og:description" content="71% de los colapsos reportados se concentran en la costa de La Guaira. Análisis multidisciplinario con revisión adversarial.">
 <meta property="og:url" content="https://sismo911.com/informe-danos"><meta property="og:image" content="https://sismo911.com/og/og-default.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>body{background:#f5f7fa;margin:0}.report-wrap{max-width:900px;margin:0 auto;padding:24px 20px 60px;font-family:'Inter',Arial,sans-serif}
-${REPORT_CSS}
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>
+body{background:#f9f9fc}
+.report-wrap{font-family:'Inter',Arial,sans-serif;color:#0b1b2b}
 .report-wrap h1,.report-wrap h2,.report-wrap h3,.report-wrap h4{font-family:'Public Sans',sans-serif}
-@media(max-width:640px){.report-wrap{padding:14px}}
-.toolbar{position:sticky;top:0;z-index:30;background:#00173a;color:#fff;display:flex;gap:14px;align-items:center;padding:10px 16px;flex-wrap:wrap}
-.toolbar a{color:#fff;text-decoration:none;font-size:13px;font-weight:600}.toolbar a:hover{opacity:.75}.toolbar .sp{margin-left:auto}
-.btn{background:#b3261e;color:#fff!important;padding:6px 12px;border-radius:6px}</style></head>
-<body>
-<div class="toolbar"><a href="/"><b>SISMO911</b></a><a href="/danos">Mapa de daños</a><a href="/estados">Estados</a><a href="/refugios">Refugios</a><span class="sp"></span><a class="btn" href="/informe-danos.pdf" download>Descargar PDF</a></div>
-<div class="report-wrap">${REPORT_BODY}</div>
+${REPORT_CSS}
+</style>
+<script src="/app-shell.js" defer></script>
+</head>
+<body class="font-sans text-on-surface">
+<main class="mx-auto max-w-5xl px-4 py-6">
+  <div class="mb-4 flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <div class="text-[11px] font-extrabold tracking-widest uppercase text-on-surface-variant">Informe de evaluación de daños</div>
+      <h1 class="font-display font-extrabold text-2xl leading-tight">Costa de La Guaira — Terremoto del 24-jun-2026</h1>
+      <p class="text-sm text-on-surface-variant mt-1">Análisis de los 820 reportes de <a href="/danos" class="text-primary hover:underline">/danos</a> · lentes estructural · geológica · gestión de desastres · revisión adversarial.</p>
+    </div>
+    <a class="shrink-0 inline-flex items-center gap-2 rounded-lg bg-primary text-white px-4 py-2 text-sm font-semibold hover:opacity-90" href="/informe-danos.pdf" download>
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+      Descargar PDF
+    </a>
+  </div>
+  <article class="report-wrap card p-5 sm:p-7">${REPORT_BODY}</article>
+</main>
 </body></html>`;
 
 informeDanos.get('/informe-danos', (c) => c.html(PAGE));

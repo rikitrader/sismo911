@@ -134,6 +134,13 @@ $('#q').addEventListener('input',()=>{clearTimeout(debounce);debounce=setTimeout
 $('#clear').onclick=()=>{$('#minMag').value='';$('#from').value='';$('#to').value='';$('#q').value='';reload();};
 $('#prev').onclick=()=>{if(page>1){page--;load();window.scrollTo({top:0,behavior:'smooth'});}};
 $('#next').onclick=()=>{if(page<totalPages){page++;load();window.scrollTo({top:0,behavior:'smooth'});}};
+// Prefill filters from URL params so deep-links from the live "Sismos en vivo"
+// banner land here filtered to a locality (e.g. /archivo?q=Naiguatá&from=quake).
+(function initFromURL(){
+  const sp=new URLSearchParams(location.search);
+  const set=(id,key)=>{const v=sp.get(key); if(v!=null&&v!==''){$(id).value=v;}};
+  set('#q','q'); set('#minMag','minMag'); set('#from','from'); set('#to','to');
+})();
 load();
 </script>
 </body>
