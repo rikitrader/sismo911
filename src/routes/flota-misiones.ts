@@ -7,8 +7,8 @@ import { rateLimit, validLatLon } from '../lib/security';
 // Tables: flota_misiones + flota_mision_waypoints + flota_mision_actividad;
 // also reads/updates flota_unidades.estado_op when a unit is assigned/freed.
 //
-// Mounted at /api/flota/misiones. Gating (src/index.ts ADMIN_WRITE_PREFIXES
-// '/api/flota'): all writes here are operator-only; all GET reads are public.
+// Mounted at /api/flota/misiones. Gating: the whole /api/flota surface is
+// operator/admin-only (src/index.ts isFlotaApi) — including GET reads.
 
 export const flotaMisiones = new Hono<{ Bindings: Env }>();
 
