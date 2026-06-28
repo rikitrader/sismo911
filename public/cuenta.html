@@ -51,6 +51,42 @@ document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logou
     <a href="/donar" class="inline-block mt-3 text-sm text-primary hover:underline">→ Ver campañas para donar</a>
   </div>`;
 
+  // x402 — citizen-facing "Pagos recibidos". Cobra por recursos/servicios y recibe USDC vía protocolo x402.
+  html+=`<div id="x402sec" class="bg-white border border-outline-variant/60 rounded-lg p-5 mb-6">
+    <div class="flex items-center justify-between gap-3 mb-1">
+      <h2 class="font-display font-bold text-lg">Pagos recibidos</h2>
+      <span class="text-xs bg-primary text-white px-2 py-0.5 rounded-full">x402 · USDC</span></div>
+    <p class="text-on-surface-variant text-sm mb-4">Cobra por recursos o servicios y recibe el pago en USDC directo a tu billetera, mediante el protocolo x402. Comparte un enlace de cobro y quien lo abra paga al instante.</p>
+
+    <div id="x402status" class="text-sm mb-5"><span class="text-on-surface-variant">Cargando…</span></div>
+
+    <div class="mb-5">
+      <h3 class="font-display font-bold text-sm mb-2">Mis cobros</h3>
+      <div id="x402resources" class="space-y-2 mb-3"><p class="text-on-surface-variant text-sm">Cargando…</p></div>
+      <details class="border border-outline-variant/60 rounded-lg">
+        <summary class="cursor-pointer select-none px-3 py-2 text-sm font-bold text-primary">+ Nuevo cobro / actualizar</summary>
+        <div class="px-3 py-3 border-t border-outline-variant/40 space-y-2">
+          <div><label class="block text-xs text-on-surface-variant mb-1">Título</label>
+            <input id="x402-title" class="w-full border border-outline-variant rounded px-3 py-2 text-sm" placeholder="Ej. Reporte de daños (PDF)"></div>
+          <div><label class="block text-xs text-on-surface-variant mb-1">Slug del enlace</label>
+            <input id="x402-slug" class="w-full border border-outline-variant rounded px-3 py-2 text-sm" placeholder="reporte-danos" autocapitalize="off" autocomplete="off" spellcheck="false">
+            <p class="text-on-surface-variant text-xs mt-1">Minúsculas, números y guiones. Si repites un slug existente, se actualiza ese cobro.</p></div>
+          <div><label class="block text-xs text-on-surface-variant mb-1">Precio (USD)</label>
+            <input id="x402-price" type="number" step="0.01" min="0" inputmode="decimal" class="w-full border border-outline-variant rounded px-3 py-2 text-sm" placeholder="1.00"></div>
+          <div><label class="block text-xs text-on-surface-variant mb-1">Descripción (opcional)</label>
+            <input id="x402-desc" class="w-full border border-outline-variant rounded px-3 py-2 text-sm" placeholder="Descripción breve para quien paga"></div>
+          <button id="x402-save" class="bg-primary text-white text-sm font-bold rounded-lg px-4 py-2">Guardar cobro</button>
+          <div id="x402-formerr" class="text-secondary text-xs"></div>
+        </div>
+      </details>
+    </div>
+
+    <div>
+      <h3 class="font-display font-bold text-sm mb-2">Historial de pagos</h3>
+      <div id="x402payments"><p class="text-on-surface-variant text-sm">Cargando…</p></div>
+    </div>
+  </div>`;
+
   if(u.role==='operator'||u.role==='admin'){
     html+=`<a href="/admin" class="block bg-primary text-white rounded-lg p-5 mb-6 hover:bg-primary-container transition">
       <div class="font-display font-bold text-lg">→ Consola de Operaciones</div>
@@ -87,6 +123,95 @@ document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logou
         ${['citizen','operator','admin'].map(r=>`<option value="${r}" ${x.role===r?'selected':''}>${ROLE[r][0]}</option>`).join('')}</select></td></tr>`).join('');
     document.querySelectorAll('.role-sel').forEach(s=>s.onchange=async()=>{await fetch('/api/auth/users/'+s.dataset.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({role:s.value})});});
   }
+
+  // ===== x402: Pagos recibidos =====
+  const X402_NET={'eip155:8453':['https://basescan.org/tx/','Base'],'eip155:84532':['https://sepolia.basescan.org/tx/','Base Sepolia']};
+  const SLUG_RE=/^[a-z0-9][a-z0-9-]{0,63}$/;
+  const PAY_STATUS={paid:['Pagado','bg-safe'],settled:['Liquidado','bg-safe'],pending:['Pendiente','bg-warning'],invalid:['Inválido','bg-secondary'],failed:['Fallido','bg-secondary']};
+  const truncHash=s=>{s=s||'';return s.length>14?s.slice(0,8)+'…'+s.slice(-6):s;};
+  const fmtMoney=n=>'$'+Number(n||0).toFixed(2);
+  const fmtDate=t=>{if(!t)return '—';try{const d=new Date(t);return d.toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});}catch(e){return '—';}};
+  const copyBtn=v=>`<button class="x402-copy text-primary hover:underline text-xs font-bold shrink-0" data-copy="${esc(v)}">copiar</button>`;
+
+  async function loadX402Status(){
+    const el=document.getElementById('x402status'); if(!el) return;
+    let d; try{ d=await fetch('/api/x402/me').then(r=>r.json()); }catch(e){ el.innerHTML='<span class="text-on-surface-variant">No disponible</span>'; return; }
+    if(!d||!d.ok){ el.innerHTML='<span class="text-on-surface-variant">No disponible</span>'; return; }
+    const x=d.x402||{}, rc=d.received||{};
+    let badge;
+    if(x.live) badge=`<span class="inline-block bg-safe text-white text-xs font-bold px-2 py-0.5 rounded-full">Activo</span> <span class="text-on-surface-variant">Recibes pagos en USDC (red ${esc(x.network||'—')})</span>`;
+    else if(x.registered) badge=`<span class="inline-block bg-warning text-white text-xs font-bold px-2 py-0.5 rounded-full">Registrado</span> <span class="text-on-surface-variant">Los pagos se activarán pronto</span>`;
+    else badge=`<span class="inline-block bg-[#9aa0a6] text-white text-xs font-bold px-2 py-0.5 rounded-full">No disponible</span>`;
+    const payTo=x.payTo?`<div class="mt-2 flex items-center gap-2"><code class="bg-surface-container rounded px-2 py-1 text-xs break-all">${esc(x.payTo)}</code>${copyBtn(x.payTo)}</div>`:'';
+    el.innerHTML=`<div>${badge}</div>${payTo}<div class="mt-2 text-on-surface-variant">Recibido: ${rc.count||0} pagos · ${fmtMoney(rc.usd)}</div>`;
+  }
+
+  async function loadX402Resources(){
+    const el=document.getElementById('x402resources'); if(!el) return;
+    let d; try{ d=await fetch('/api/x402/resources').then(r=>r.json()); }catch(e){ el.innerHTML='<p class="text-on-surface-variant text-sm">No se pudieron cargar los cobros.</p>'; return; }
+    const list=(d&&d.resources)||[];
+    if(!list.length){ el.innerHTML='<p class="text-on-surface-variant text-sm">Aún no tienes cobros. Crea uno abajo.</p>'; return; }
+    el.innerHTML=list.map(r=>{
+      const payUrl=`${location.origin}/api/x402/pay/${u.id}/${r.slug}`;
+      const active=r.active?'<span class="bg-safe text-white text-xs font-bold px-2 py-0.5 rounded-full">Activo</span>':'<span class="bg-[#9aa0a6] text-white text-xs font-bold px-2 py-0.5 rounded-full">Inactivo</span>';
+      return `<div class="border border-outline-variant/60 rounded px-3 py-2 text-sm">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-bold">${esc(r.title)}</span>
+          <span class="flex items-center gap-2 shrink-0"><span class="text-on-surface-variant">${fmtMoney(r.price_usd)}</span>${active}</span>
+        </div>
+        <div class="text-on-surface-variant text-xs mt-1">slug: <code>${esc(r.slug)}</code></div>
+        <div class="mt-1 flex items-center gap-2"><code class="bg-surface-container rounded px-2 py-1 text-xs break-all flex-1 min-w-0">${esc(payUrl)}</code>${copyBtn(payUrl)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadX402Payments(){
+    const el=document.getElementById('x402payments'); if(!el) return;
+    let d; try{ d=await fetch('/api/x402/payments').then(r=>r.json()); }catch(e){ el.innerHTML='<p class="text-on-surface-variant text-sm">No se pudieron cargar los pagos.</p>'; return; }
+    const list=(d&&d.payments)||[];
+    if(!list.length){ el.innerHTML='<p class="text-on-surface-variant text-sm">Aún no has recibido pagos.</p>'; return; }
+    el.innerHTML=`<div class="border border-outline-variant/60 rounded-lg overflow-x-auto"><table class="w-full text-sm"><thead class="bg-[#eeeef0] text-left text-xs uppercase text-on-surface-variant font-display"><tr><th class="px-3 py-2">Fecha</th><th class="px-3">Concepto</th><th class="px-3">Monto</th><th class="px-3">Estado</th><th class="px-3">Tx</th></tr></thead><tbody>`+
+      list.map(p=>{
+        const [stl,stc]=PAY_STATUS[p.status]||[p.status||'—','bg-[#9aa0a6]'];
+        const net=X402_NET[p.network];
+        const tx=p.tx_hash?(net?`<a href="${net[0]}${esc(p.tx_hash)}" target="_blank" rel="noopener" class="text-primary hover:underline font-mono text-xs">${esc(truncHash(p.tx_hash))}</a>`:`<span class="font-mono text-xs">${esc(truncHash(p.tx_hash))}</span>`):'—';
+        const concept=esc(p.description||p.resource_url||'—');
+        const reason=p.status==='invalid'&&p.invalid_reason?`<div class="text-secondary text-xs">${esc(p.invalid_reason)}</div>`:'';
+        return `<tr class="border-t border-outline-variant/40 align-top"><td class="px-3 py-2 text-xs whitespace-nowrap">${esc(fmtDate(p.created_ms))}</td><td class="px-3">${concept}${reason}</td><td class="px-3 whitespace-nowrap">${fmtMoney(p.amount_usd)}</td><td class="px-3"><span class="${stc} text-white text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">${esc(stl)}</span></td><td class="px-3">${tx}</td></tr>`;
+      }).join('')+`</tbody></table></div>`;
+  }
+
+  const x402Save=document.getElementById('x402-save');
+  if(x402Save) x402Save.onclick=async()=>{
+    const ferr=document.getElementById('x402-formerr'); ferr.textContent='';
+    const title=document.getElementById('x402-title').value.trim();
+    const slug=document.getElementById('x402-slug').value.trim().toLowerCase();
+    const price=parseFloat(document.getElementById('x402-price').value);
+    const desc=document.getElementById('x402-desc').value.trim();
+    if(!title){ ferr.textContent='El título es obligatorio.'; return; }
+    if(!SLUG_RE.test(slug)){ ferr.textContent='Slug inválido: usa minúsculas, números y guiones (ej. reporte-danos).'; return; }
+    if(!(price>0)){ ferr.textContent='El precio debe ser mayor a 0.'; return; }
+    x402Save.disabled=true; const orig=x402Save.textContent; x402Save.textContent='Guardando…';
+    let r,d;
+    try{ r=await fetch('/api/x402/resources',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({slug,title,description:desc,price_usd:price,mime_type:'application/octet-stream',active:true})}); d=await r.json().catch(()=>({})); }
+    catch(e){ ferr.textContent='No se pudo guardar el cobro. Intenta más tarde.'; x402Save.disabled=false; x402Save.textContent=orig; return; }
+    if(r.ok&&d.ok){
+      document.getElementById('x402-title').value=''; document.getElementById('x402-slug').value=''; document.getElementById('x402-price').value=''; document.getElementById('x402-desc').value='';
+      await loadX402Resources();
+    } else {
+      const map={slug_invalid:'Slug inválido: usa minúsculas, números y guiones.',title_required:'El título es obligatorio.',price_invalid:'El precio no es válido.'};
+      ferr.textContent=map[d&&d.error]||'No se pudo guardar el cobro. Intenta más tarde.';
+    }
+    x402Save.disabled=false; x402Save.textContent=orig;
+  };
+
+  const x402sec=document.getElementById('x402sec');
+  if(x402sec) x402sec.addEventListener('click',e=>{
+    const b=e.target.closest('.x402-copy'); if(!b) return;
+    navigator.clipboard&&navigator.clipboard.writeText(b.dataset.copy||'').then(()=>{ const o=b.textContent; b.textContent='¡copiado!'; setTimeout(()=>{b.textContent=o;},1200); }).catch(()=>{});
+  });
+
+  loadX402Status(); loadX402Resources(); loadX402Payments();
 })();
 </script>
 </body>
