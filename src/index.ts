@@ -13,6 +13,7 @@ import { misc } from './routes/misc';
 import { damage } from './routes/damage';
 import { satellite } from './routes/satellite';
 import { auth } from './routes/auth';
+import { oauth } from './routes/oauth';
 import { x402, wellKnownX402 } from './routes/x402';
 import { profile } from './routes/profile';
 import { familia } from './routes/familia';
@@ -289,6 +290,7 @@ app.route('/api/persons', evidence);   // Evidence Photo Gallery (operator) — 
 app.route('/api/e', evidenceShare);    // public signed-link share view (serves pre-baked redacted composites only)
 app.route('/api/contacts', contacts);
 app.route('/api/auth', auth);
+app.route('/api/auth/oauth', oauth); // social login (Google OAuth) — public; under the /api/auth allowlist
 app.route('/api/x402', x402);        // x402 payment receiving: per-user wallet accepts USDC over HTTP (verify+settle via facilitator)
 app.route('/api/profile', profile);  // Profile Command Center: self-scoped profile/wallet/payments/accounting/withdrawals
 // x402 service discovery (public). Agents/clients read this to learn the network + pay-URL template.

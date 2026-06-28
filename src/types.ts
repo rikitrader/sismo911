@@ -61,6 +61,12 @@ export interface Env {
   GOOGLE_REFRESH_TOKEN?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  // Social login (OAuth) — DEDICATED client, separate from the Drive integration
+  // above. Public client id lives in wrangler.toml [vars]; the secret is a Worker
+  // Secret (`wrangler secret put OAUTH_GOOGLE_CLIENT_SECRET`). Social buttons only
+  // appear when BOTH are set, so the feature is inert until configured.
+  OAUTH_GOOGLE_CLIENT_ID?: string;
+  OAUTH_GOOGLE_CLIENT_SECRET?: string;
   // Cloudflare Email Sending binding (transactional email). Optional until the
   // sismo911.com domain is onboarded to Email Sending.
   EMAIL?: { send(message: {
