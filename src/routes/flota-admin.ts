@@ -106,3 +106,72 @@ flotaAdmin.get('/live', async (c) => {
   ).all();
   return c.json({ units: results ?? [], now: Date.now() });
 });
+
+// ── Dispatches (assign a unit to a case/emergency) ───────────────────────────
+
+const DISPATCH_STATUS = ['assigned', 'enroute', 'onscene', 'cleared'];
+
+// POST /units/:id/dispatch — assign the unit to a case. The unit must exist and
+// be active, and must not already have an open (non-cleared) dispatch.
+flotaAdmin.post('/units/:id/dispatch', async (c) => {
+  const unitId = c.req.param('id');
+  const unit = await c.env.DB.prepare(`SELECT status FROM flota_units WHERE id = ?`).bind(unitId)
+    .first() as { status: string } | null;
+  if (!unit) return c.json({ error: 'unit no encontrada' }, 404);
+  if (unit.status !== 'active') return c.json({ error: 'unit_inactive' }, 409);
+
+  const open = await c.env.DB.prepare(
+    `SELECT id FROM flota_dispatches WHERE unit_id = ? AND status != 'cleared' LIMIT 1`
+  ).bind(unitId).first();
+  if (open) return c.json({ error: 'unit_ya_despachada' }, 409);
+
+  const b = await c.req.json().catch(() => ({} as any));
+  const case_id = str(b?.case_id, 120);
+  const status = DISPATCH_STATUS.includes(b?.status) && b.status !== 'cleared' ? b.status : 'assigned';
+  const by = await actorId(c);
+  const id = uid('dsp');
+  const now = Date.now();
+  await c.env.DB.prepare(
+    `INSERT INTO flota_dispatches (id, unit_id, case_id, status, assigned_by, assigned_at) VALUES (?,?,?,?,?,?)`
+  ).bind(id, unitId, case_id, status, by, now).run();
+  await audit(c.env, { actorId: by, unitId, action: 'unit.update', meta: { dispatch: id, case_id, status } });
+  return c.json({ ok: true, id, unit_id: unitId, case_id, status, assigned_at: now }, 201);
+});
+
+// PATCH /dispatches/:id — advance status; 'cleared' stamps cleared_at.
+flotaAdmin.patch('/dispatches/:id', async (c) => {
+  const id = c.req.param('id');
+  const b = await c.req.json().catch(() => ({} as any));
+  const status = str(b?.status, 20);
+  if (!status || !DISPATCH_STATUS.includes(status)) return c.json({ error: 'status inválido' }, 400);
+  const row = await c.env.DB.prepare(`SELECT unit_id, status FROM flota_dispatches WHERE id = ?`).bind(id)
+    .first() as { unit_id: string; status: string } | null;
+  if (!row) return c.json({ error: 'no encontrado' }, 404);
+  if (row.status === 'cleared') return c.json({ error: 'despacho_cerrado' }, 409);
+
+  const cleared = status === 'cleared' ? Date.now() : null;
+  await c.env.DB.prepare(
+    `UPDATE flota_dispatches SET status = ?, cleared_at = COALESCE(?, cleared_at) WHERE id = ?`
+  ).bind(status, cleared, id).run();
+  const by = await actorId(c);
+  await audit(c.env, { actorId: by, unitId: row.unit_id, action: 'unit.update', meta: { dispatch: id, status } });
+  return c.json({ ok: true, id, status, cleared_at: cleared });
+});
+
+// GET /dispatches — list; ?status= and ?unit_id= filters; ?open=1 for non-cleared.
+flotaAdmin.get('/dispatches', async (c) => {
+  const where: string[] = [];
+  const vals: unknown[] = [];
+  const status = c.req.query('status');
+  if (status && DISPATCH_STATUS.includes(status)) { where.push('d.status = ?'); vals.push(status); }
+  const unitId = c.req.query('unit_id');
+  if (unitId) { where.push('d.unit_id = ?'); vals.push(unitId); }
+  if (c.req.query('open') === '1') where.push("d.status != 'cleared'");
+  const sql =
+    `SELECT d.*, u.name AS unit_name, u.type AS unit_type
+     FROM flota_dispatches d LEFT JOIN flota_units u ON u.id = d.unit_id
+     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+     ORDER BY d.assigned_at DESC LIMIT 500`;
+  const { results } = await c.env.DB.prepare(sql).bind(...vals).all();
+  return c.json({ results: results ?? [] });
+});
