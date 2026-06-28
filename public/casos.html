@@ -677,6 +677,25 @@ async function loadAportes(id){
     }).join('');
   }catch{g.innerHTML='<div style="grid-column:1/-1;color:var(--muted)">No se pudieron cargar los aportes.</div>';}
 }
+// Operator-only contact blob (e.g. "Wuimberly Morales, +584122344014, frandybelg@gmail.com")
+// is stored in one field. Parse out a name, phone and email so the phone is tap-to-call
+// (tel:) and the email is tap-to-mail (mailto:) on mobile. Falls back to the raw text.
+function contactCard(raw){
+  const s=String(raw||'').trim();
+  if(!s)return '';
+  const email=(s.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/)||[])[0]||'';
+  let rest=email?s.replace(email,''):s;
+  const phone=(rest.match(/\+?\d[\d\s().-]{6,}\d/)||[])[0]||'';
+  let name=(phone?rest.replace(phone,''):rest).replace(/[,;|]+/g,' ').replace(/\s+/g,' ').trim();
+  const tel=phone.replace(/[^\d+]/g,'');
+  const L='color:#bcd0f4;text-decoration:none';
+  const rows=[];
+  if(name)rows.push(`<span>${esc(name)}</span>`);
+  if(phone)rows.push(`<a href="tel:${esc(tel)}" style="${L}">📞 ${esc(phone.trim())}</a>`);
+  if(email)rows.push(`<a href="mailto:${esc(email)}" style="${L}">✉️ ${esc(email)}</a>`);
+  if(!rows.length)rows.push(`<span>${esc(s)}</span>`);
+  return `<div class="mcard"><div class="k">Contacto</div><div class="vv" style="display:flex;flex-direction:column;gap:4px">${rows.join('')}</div></div>`;
+}
 function renderCase(d){
   const p=d.person, e=d.event, dock=d.docket||[];
   $('#cv_caseno').textContent=caseNo(p);
@@ -695,8 +714,9 @@ function renderCase(d){
     ['Movimientos',String(dock.length)],
   ];
   if(OP&&p.assigned_to)meta.push(['Asignado a',p.assigned_to]);
-  if(OP&&p.contact_phone)meta.push(['Contacto',p.contact_phone]);
-  $('#cv_meta').innerHTML=meta.map(([k,v])=>`<div class="mcard"><div class="k">${esc(k)}</div><div class="vv">${esc(v)}</div></div>`).join('');
+  let metaHtml=meta.map(([k,v])=>`<div class="mcard"><div class="k">${esc(k)}</div><div class="vv">${esc(v)}</div></div>`).join('');
+  if(OP&&p.contact_phone)metaHtml+=contactCard(p.contact_phone);
+  $('#cv_meta').innerHTML=metaHtml;
   // Standard case clock: count from the sismo — the case's linked event if any,
   // else the canonical quake origin (quake-clock.js). Case-open time is only a
   // last resort if neither is available.
