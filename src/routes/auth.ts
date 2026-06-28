@@ -6,6 +6,7 @@ import { rateLimit } from '../lib/security';
 import { audit } from '../lib/audit';
 import { sendEmail, randomToken, sha256hex, resetEmail, welcomeEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
 import { createWalletForEmail, isCrossmintConfigured } from '../lib/crossmint';
+import { x402Network, x402Asset } from '../lib/x402';
 
 export const auth = new Hono<{ Bindings: Env }>();
 
@@ -19,10 +20,14 @@ async function provisionWallet(env: Env, userId: string, email: string): Promise
     if (!isCrossmintConfigured(env)) return;
     const w = await createWalletForEmail(env, email);
     if (!w) return;
+    // Same UPDATE enables x402 receiving on the wallet: the address becomes the
+    // payTo, with the configured network + USDC asset. "All features" on by default.
     await env.DB.prepare(
-      `UPDATE users SET wallet_address = ?, wallet_locator = ?, wallet_chain = ?, wallet_created_ms = ?
+      `UPDATE users SET wallet_address = ?, wallet_locator = ?, wallet_chain = ?, wallet_created_ms = ?,
+              x402_enabled = 1, x402_pay_to = ?, x402_network = ?, x402_asset = ?, x402_enabled_ms = ?
        WHERE id = ? AND wallet_address IS NULL`
-    ).bind(w.address, w.locator, w.chain, Date.now(), userId).run();
+    ).bind(w.address, w.locator, w.chain, Date.now(),
+           w.address, x402Network(env), x402Asset(env), Date.now(), userId).run();
   } catch (e: any) {
     console.error('[auth] wallet provisioning failed:', e?.message ?? e);
   }
@@ -87,11 +92,13 @@ auth.post('/wallet', async (c) => {
   const w = await createWalletForEmail(c.env, me.email);
   if (!w) return c.json({ error: 'wallet_create_failed' }, 502);
   await c.env.DB.prepare(
-    `UPDATE users SET wallet_address = ?, wallet_locator = ?, wallet_chain = ?, wallet_created_ms = ?
+    `UPDATE users SET wallet_address = ?, wallet_locator = ?, wallet_chain = ?, wallet_created_ms = ?,
+            x402_enabled = 1, x402_pay_to = ?, x402_network = ?, x402_asset = ?, x402_enabled_ms = ?
      WHERE id = ? AND wallet_address IS NULL`
-  ).bind(w.address, w.locator, w.chain, Date.now(), me.id).run();
+  ).bind(w.address, w.locator, w.chain, Date.now(),
+         w.address, x402Network(c.env), x402Asset(c.env), Date.now(), me.id).run();
   await audit(c, 'wallet.create', { user_id: me.id });
-  return c.json({ ok: true, wallet: { address: w.address, chain: w.chain } });
+  return c.json({ ok: true, wallet: { address: w.address, chain: w.chain, x402: { enabled: true, payTo: w.address, network: x402Network(c.env) } } });
 });
 
 // POST /api/auth/forgot-password — always returns ok (no user enumeration).
