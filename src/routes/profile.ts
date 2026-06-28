@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { getUserFromRequest } from '../lib/auth';
 import { audit } from '../lib/audit';
+import { uid } from '../lib/db';
 import { x402Network, x402Asset } from '../lib/x402';
 
 // Profile Command Center API. Every endpoint self-authenticates and is scoped to
@@ -187,4 +188,109 @@ profile.get('/payments/summary', async (c) => {
     monthly: ((monthly.results ?? []) as any[]).reverse().map((r) => ({ ym: r.ym, n: Number(r.n) || 0, usd: Number(r.usd) || 0 })),
     top_links: ((topLinks.results ?? []) as any[]).map((r) => ({ title: r.title, n: Number(r.n) || 0, usd: Number(r.usd) || 0 })),
   });
+});
+
+// ── Payment links (map onto x402_resources) ───────────────────────────────────
+// A "payment link" is an x402 resource enriched with a provider kind + currency.
+// Only kind='x402' settles on-chain today; stripe/donation/invoice are recorded
+// but flagged not-live (the UI labels them clearly — no fake settlement).
+const LINK_KINDS = ['x402', 'stripe', 'donation', 'invoice'];
+const slugify = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
+const slugOk = (s: string) => /^[a-z0-9][a-z0-9-]{0,47}$/.test(s);
+
+function payUrlFor(reqUrl: string, userId: string, slug: string, kind: string): string | null {
+  if (kind !== 'x402') return null; // only x402 has a live pay endpoint
+  return new URL(`/api/x402/pay/${userId}/${slug}`, reqUrl).toString();
+}
+
+// GET /api/profile/payment-links — caller's links + per-link paid count + revenue.
+profile.get('/payment-links', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const includeArchived = c.req.query('archived') === '1';
+  const { results } = await c.env.DB.prepare(
+    `SELECT r.id, r.slug, r.title, r.description, r.price_usd, r.currency, r.kind, r.active,
+            r.archived_ms, r.created_ms, r.updated_ms,
+            COUNT(p.id) AS paid_count, COALESCE(SUM(p.amount_usd),0) AS revenue_usd
+       FROM x402_resources r
+       LEFT JOIN x402_payments p ON p.resource_id = r.id AND p.status = 'settled'
+      WHERE r.user_id = ? ${includeArchived ? '' : 'AND r.archived_ms IS NULL'}
+      GROUP BY r.id ORDER BY r.created_ms DESC`
+  ).bind(me.id).all();
+  const links = ((results ?? []) as any[]).map((r) => ({
+    id: r.id, slug: r.slug, title: r.title, description: r.description ?? null,
+    price_usd: Number(r.price_usd) || 0, currency: r.currency || 'USDC', kind: r.kind || 'x402',
+    active: Boolean(r.active), archived: Boolean(r.archived_ms),
+    created_ms: r.created_ms, updated_ms: r.updated_ms,
+    paid_count: Number(r.paid_count) || 0, revenue_usd: Number(r.revenue_usd) || 0,
+    payUrl: payUrlFor(c.req.url, me.id, r.slug, r.kind || 'x402'),
+    live: (r.kind || 'x402') === 'x402',
+  }));
+  return c.json({ ok: true, links });
+});
+
+// POST /api/profile/payment-links — create a link (auto-slug from title if absent).
+profile.post('/payment-links', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
+  const title = str(b.title, 120);
+  if (!title) return c.json({ error: 'title_required' }, 400);
+  let slug = b.slug ? slugify(String(b.slug)) : slugify(title);
+  if (!slugOk(slug)) return c.json({ error: 'slug_invalid' }, 400);
+  const price = Number(b.price_usd ?? b.amount);
+  if (!(price >= 0) || !isFinite(price)) return c.json({ error: 'price_invalid' }, 400);
+  const kind = LINK_KINDS.includes(b.kind) ? b.kind : 'x402';
+  const currency = str(b.currency, 8) || (kind === 'x402' ? 'USDC' : 'USD');
+  const active = b.active === false ? 0 : 1;
+  const now = Date.now();
+
+  // Unique (user, slug). On collision, append a short suffix rather than failing.
+  const exists: any = await c.env.DB.prepare(`SELECT 1 FROM x402_resources WHERE user_id=? AND slug=?`).bind(me.id, slug).first();
+  if (exists) slug = `${slug}-${Math.abs(now % 9000) + 1000}`.slice(0, 48);
+  const id = uid('res');
+  await c.env.DB.prepare(
+    `INSERT INTO x402_resources (id,user_id,slug,title,description,price_usd,price_version,mime_type,kind,currency,active,created_ms,updated_ms)
+     VALUES (?,?,?,?,?,?,1,'application/json',?,?,?,?,?)`
+  ).bind(id, me.id, slug, title, str(b.description, 500), price, kind, currency, active, now, now).run();
+  await audit(c, 'profile.link.create', { id, slug, kind });
+  return c.json({ ok: true, link: { id, slug, title, price_usd: price, currency, kind, active: Boolean(active), payUrl: payUrlFor(c.req.url, me.id, slug, kind), live: kind === 'x402' } }, 201);
+});
+
+// PATCH /api/profile/payment-links/:id — update title/price/description/active/kind.
+profile.patch('/payment-links/:id', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const id = c.req.param('id');
+  const owns: any = await c.env.DB.prepare(`SELECT id FROM x402_resources WHERE id=? AND user_id=?`).bind(id, me.id).first();
+  if (!owns) return c.json({ error: 'not_found' }, 404);
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
+  const sets: string[] = []; const vals: unknown[] = [];
+  if (b.title !== undefined) { const t = str(b.title, 120); if (!t) return c.json({ error: 'title_required' }, 400); sets.push('title=?'); vals.push(t); }
+  if (b.description !== undefined) { sets.push('description=?'); vals.push(str(b.description, 500)); }
+  if (b.price_usd !== undefined) { const p = Number(b.price_usd); if (!(p >= 0) || !isFinite(p)) return c.json({ error: 'price_invalid' }, 400); sets.push('price_usd=?'); vals.push(p); }
+  if (b.currency !== undefined) { sets.push('currency=?'); vals.push(str(b.currency, 8) || 'USD'); }
+  if (b.kind !== undefined) { if (!LINK_KINDS.includes(b.kind)) return c.json({ error: 'kind_invalid' }, 400); sets.push('kind=?'); vals.push(b.kind); }
+  if (b.active !== undefined) { if (typeof b.active !== 'boolean') return c.json({ error: 'active_must_be_boolean' }, 400); sets.push('active=?'); vals.push(b.active ? 1 : 0); }
+  if (!sets.length) return c.json({ error: 'nothing_to_update' }, 400);
+  sets.push('updated_ms=?'); vals.push(Date.now()); vals.push(id);
+  await c.env.DB.prepare(`UPDATE x402_resources SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
+  await audit(c, 'profile.link.update', { id, fields: sets.map((s) => s.split('=')[0]) });
+  return c.json({ ok: true });
+});
+
+// DELETE /api/profile/payment-links/:id — SOFT archive (preserve payment history FK).
+profile.delete('/payment-links/:id', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const id = c.req.param('id');
+  const owns: any = await c.env.DB.prepare(`SELECT id FROM x402_resources WHERE id=? AND user_id=?`).bind(id, me.id).first();
+  if (!owns) return c.json({ error: 'not_found' }, 404);
+  await c.env.DB.prepare(`UPDATE x402_resources SET active=0, archived_ms=?, updated_ms=? WHERE id=?`)
+    .bind(Date.now(), Date.now(), id).run();
+  await audit(c, 'profile.link.archive', { id });
+  return c.json({ ok: true, archived: true });
 });
