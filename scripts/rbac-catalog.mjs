@@ -171,6 +171,20 @@ export const ROLES = [
   { key: 'citizen',      name: 'Citizen (legacy)', perms: [], desc: 'Public user mapped from legacy users.role=citizen.' },
 ];
 
+// ── Role → department assignment (seeded by migrations/0059 onto
+// rbac_roles.department_id; departments themselves seeded by 0058). null = a
+// cross-cutting executive/utility/public role not owned by a single department. ──
+export const ROLE_DEPARTMENTS = {
+  operations_director: 'dept_operaciones', emergency_manager: 'dept_operaciones',
+  dispatcher: 'dept_operaciones', incident_commander: 'dept_operaciones',
+  case_manager: 'dept_operaciones', call_center: 'dept_operaciones',
+  volunteer: 'dept_operaciones', operator: 'dept_operaciones',
+  medical_director: 'dept_medico', doctor: 'dept_medico', nurse: 'dept_medico', paramedic: 'dept_medico',
+  logistics: 'dept_logistica', finance: 'dept_finanzas',
+  hr: 'dept_administracion', support: 'dept_administracion', developer: 'dept_tecnologia',
+  super_admin: null, owner: null, read_only: null, guest: null, citizen: null,
+};
+
 // ── Default field-level policies (sensitive fields) ─────────────────────────
 export const FIELD_POLICIES = [
   { resource: 'users',     field: 'phone',         visibility: 'perm', perm: 'users:read' },

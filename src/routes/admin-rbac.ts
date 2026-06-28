@@ -281,7 +281,10 @@ adminRbac.post('/invitations', requirePermission('users:invite'), async (c) => {
 
 adminRbac.get('/roles', requirePermission('roles:read'), async (c) => {
   const roles = ((await c.env.DB.prepare(
-    `SELECT id, key, name, description, inherits_json, is_system FROM rbac_roles ORDER BY is_system DESC, key`
+    `SELECT r.id, r.key, r.name, r.description, r.inherits_json, r.is_system,
+            r.department_id, d.name AS department_name
+       FROM rbac_roles r LEFT JOIN departments d ON d.id = r.department_id
+      ORDER BY r.is_system DESC, r.key`
   ).all()).results ?? []) as any[];
   const rp = ((await c.env.DB.prepare(
     `SELECT role_id, perm_key FROM role_permissions WHERE effect = 'allow'`
@@ -292,7 +295,8 @@ adminRbac.get('/roles', requirePermission('roles:read'), async (c) => {
     roles: roles.map((r) => ({
       id: r.id, key: r.key, name: r.name, description: r.description,
       inherits: (() => { try { return JSON.parse(r.inherits_json || '[]'); } catch { return []; } })(),
-      is_system: r.is_system, perms: permsByRole.get(r.id) ?? [],
+      is_system: r.is_system, department_id: r.department_id ?? null, department: r.department_name ?? null,
+      perms: permsByRole.get(r.id) ?? [],
     })),
   });
 });
@@ -346,6 +350,14 @@ adminRbac.patch('/roles/:id', requirePermission('roles:update'), async (c) => {
   if (b.name != null) { sets.push('name = ?'); binds.push(b.name); }
   if (b.description !== undefined) { sets.push('description = ?'); binds.push(b.description); }
   if (b.inherits !== undefined) { sets.push('inherits_json = ?'); binds.push(JSON.stringify(Array.isArray(b.inherits) ? b.inherits : [])); }
+  if (b.department_id !== undefined) {
+    // Reassign (or clear with null) the owning department; validate it exists in this org.
+    if (b.department_id !== null) {
+      const d: any = await c.env.DB.prepare('SELECT id FROM departments WHERE id = ? AND org_id = ?').bind(b.department_id, ORG).first();
+      if (!d) return c.json({ error: 'department_not_found' }, 400);
+    }
+    sets.push('department_id = ?'); binds.push(b.department_id);
+  }
   sets.push('updated_ms = ?'); binds.push(Date.now());
   binds.push(id);
   await c.env.DB.prepare(`UPDATE rbac_roles SET ${sets.join(', ')} WHERE id = ?`).bind(...binds).run();
