@@ -75,7 +75,38 @@ export function evaluateGate(path: string, method: string): GateDecision {
   if (!gated) return { kind: 'open' };
   if (isAdminPage) return { kind: 'page' };          // gated, but HTML → login redirect on fail
   if (isDocketSubmit) return { kind: 'login' };       // any logged-in user (citizen updates land 'pending')
+
+  // SUMINISTROS per-area least-privilege: each inventory write requires the
+  // permission for its function area (warehouse/dispatch/inventory/purchasing),
+  // not the coarse ops:console. Catalog/config writes (ubicaciones/categorías/
+  // productos) require suministros:manage (managers/admins). Reads are open.
+  if (isAdminWrite && path.startsWith('/api/suministros/')) {
+    return { kind: 'perm', perm: suministrosAreaPerm(path) };
+  }
+
   return { kind: 'perm', perm: LEGACY_OPS_PERM };
+}
+
+/** Map a /api/suministros write path to the area permission it requires. */
+function suministrosAreaPerm(path: string): string {
+  const p = path;
+  if (p.startsWith('/api/suministros/movimientos/recepcion') ||
+      p.startsWith('/api/suministros/movimientos/traslado') ||
+      p.startsWith('/api/suministros/requisiciones')) return 'suministros:warehouse';
+  if (p.startsWith('/api/suministros/movimientos/despacho') ||
+      p.startsWith('/api/suministros/picklists') ||
+      p.startsWith('/api/suministros/envios') ||
+      p.startsWith('/api/suministros/metodos-envio')) return 'suministros:dispatch';
+  if (p.startsWith('/api/suministros/movimientos/ajuste') ||
+      p.startsWith('/api/suministros/movimientos/conteo') ||
+      p.startsWith('/api/suministros/conteos')) return 'suministros:inventory';
+  if (p.startsWith('/api/suministros/proveedores') ||
+      p.startsWith('/api/suministros/ordenes') ||
+      p.startsWith('/api/suministros/donaciones') ||
+      p.startsWith('/api/suministros/facturas') ||
+      p.startsWith('/api/suministros/cuentas')) return 'suministros:purchasing';
+  // Catalog/config (ubicaciones, categorías, productos) + anything else → manage.
+  return 'suministros:manage';
 }
 
 export { WRITE_METHODS };
