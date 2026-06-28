@@ -4,6 +4,7 @@ import { uid } from '../lib/db';
 import { rateLimit, nameHasSpam, textHasLink, requestIp, maskContact, maskPhone, maskEmail } from '../lib/security';
 import { audit } from '../lib/audit';
 import { SKILL_KEYS, AVAILABILITY, deriveSkills, normalizeRow, statsFromRows } from '../lib/volunteer-skills';
+import { buildSocial, extractSocial, parseSocial } from '../lib/social';
 
 export const voluntarios = new Hono<{ Bindings: Env }>();
 
@@ -30,17 +31,19 @@ voluntarios.get('/', async (c) => {
   }
   if (skill && SKILLS.includes(skill)) { conds.push('lower(skills) LIKE ?'); binds.push(`%"${skill}"%`); }
   const { results } = await c.env.DB.prepare(
-    `SELECT id, full_name, city, state, area, skills, availability, has_vehicle, can_travel, experience, notes, contact_phone, email, created_ms
+    `SELECT id, full_name, city, state, area, skills, availability, has_vehicle, can_travel, experience, notes, contact_phone, email, social, created_ms
      FROM volunteers WHERE ${conds.join(' AND ')} ORDER BY created_ms DESC LIMIT ?`,
   ).bind(...binds, limit).all<any>();
   // Strip raw phone/email from the public list (anti-scraping) — only flags + mask.
+  // Social profiles ARE public by nature, so they're returned in full.
   const items = (results ?? []).map((r) => {
-    const { contact_phone, email, ...rest } = r;
+    const { contact_phone, email, social, ...rest } = r;
     return {
       ...rest,
       has_phone: !!String(contact_phone ?? '').replace(/\D/g, '').match(/\d{6,}/),
       has_email: !!String(email ?? '').includes('@'),
       contact_mask: maskPhone(contact_phone) || maskEmail(email),
+      social: parseSocial(social),
     };
   });
   return c.json({ ok: true, items, total: items.length }, 200, { 'Cache-Control': 'public, max-age=60' });
@@ -69,7 +72,7 @@ voluntarios.get('/profile/:id', async (c) => {
   if (id.startsWith('vol_')) {
     const r = await c.env.DB.prepare(
       `SELECT id, full_name, city, state, area, skills, availability, has_vehicle, can_travel,
-              experience, notes, contact_phone, email, created_ms
+              experience, notes, contact_phone, email, social, created_ms
          FROM volunteers WHERE id = ? AND moderation='approved' AND status='activo' LIMIT 1`,
     ).bind(id).first<any>().catch(() => null);
     if (!r) return c.json({ error: 'not_found' }, 404);
@@ -85,6 +88,7 @@ voluntarios.get('/profile/:id', async (c) => {
       has_phone: !!String(r.contact_phone ?? '').replace(/\D/g, '').match(/\d{6,}/),
       has_email: !!String(r.email ?? '').includes('@'),
       contact_mask: maskPhone(r.contact_phone) || maskEmail(r.email),
+      social: parseSocial(r.social),
       photo_url: null, lat: null, lng: null, created_at: r.created_ms ? new Date(r.created_ms).toISOString() : null,
     }, 200, { 'Cache-Control': 'public, max-age=120' });
   }
@@ -104,6 +108,7 @@ voluntarios.get('/profile/:id', async (c) => {
     availability: null, has_vehicle: false, can_travel: false,
     experience: null, notes: r.description,
     ...maskContact(r.contact),
+    social: extractSocial(r.contact, r.description),
     photo_url: r.photo_url, lat: r.lat, lng: r.lng, category: r.category, created_at: r.created_at,
   }, 200, { 'Cache-Control': 'public, max-age=120' });
 });
@@ -128,7 +133,7 @@ voluntarios.get('/directory', async (c) => {
   const [regRes, ravRes] = await Promise.all([
     c.env.DB.prepare(
       `SELECT id, full_name, city, state, area, skills, availability, has_vehicle, can_travel,
-              experience, notes, contact_phone, email, created_ms
+              experience, notes, contact_phone, email, social, created_ms
          FROM volunteers WHERE moderation='approved' AND status='activo'
          ORDER BY created_ms DESC LIMIT ?`,
     ).bind(SCAN_CAP).all<any>().catch(() => ({ results: [] as any[] })),
@@ -144,11 +149,13 @@ voluntarios.get('/directory', async (c) => {
       source: 'registered', id: r.id, full_name: r.full_name, city: r.city, state: r.state, area: r.area,
       skills: r.skills, availability: r.availability, has_vehicle: r.has_vehicle, can_travel: r.can_travel,
       experience: r.experience, notes: r.notes, contact_phone: r.contact_phone, email: r.email,
+      social: parseSocial(r.social),
       created_at: r.created_ms ? new Date(r.created_ms).toISOString() : null,
     }))),
     ...((ravRes.results ?? []).map((r) => normalizeRow({
       source: 'rav', id: r.id, full_name: r.title, city: r.city, state: r.state, area: r.area,
       notes: r.description, contact_phone: r.contact, photo_url: r.photo_url, lat: r.lat, lng: r.lng,
+      social: extractSocial(r.contact, r.description),
       created_at: r.created_at,
     }))),
   ];
@@ -240,6 +247,10 @@ voluntarios.post('/register', async (c) => {
   let skills: string[] = Array.isArray(b.skills) ? b.skills : String(b.skills || '').split(',');
   skills = skills.map((s) => String(s).trim().toLowerCase()).filter((s) => SKILLS.includes(s)).slice(0, 14);
   const availability = AVAIL.includes(String(b.availability)) ? String(b.availability) : null;
+  // Social profiles are sanitized to canonical URLs (buildSocial) so they bypass the
+  // link-spam gate above — a volunteer's Instagram/WhatsApp link is expected, not spam.
+  const social = buildSocial(b.social);
+  const socialJson = Object.keys(social).length ? JSON.stringify(social) : null;
 
   // Anti-duplicate: same name + contact → return the existing record.
   const existing = await c.env.DB.prepare(
@@ -251,15 +262,15 @@ voluntarios.post('/register', async (c) => {
   const id = uid('vol'); const now = Date.now();
   await c.env.DB.prepare(
     `INSERT INTO volunteers (id, full_name, contact_phone, email, city, state, area, skills, availability,
-        has_vehicle, can_travel, experience, notes, moderation, status, ip, created_at, created_ms)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        has_vehicle, can_travel, experience, notes, social, moderation, status, ip, created_at, created_ms)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   ).bind(
     id, name.slice(0, 120), contact.slice(0, 80) || null, email.slice(0, 120) || null,
     b.city ? String(b.city).slice(0, 80) : null, b.state ? String(b.state).slice(0, 80) : null,
     b.area ? String(b.area).slice(0, 120) : null,
     JSON.stringify(skills), availability, b.has_vehicle ? 1 : 0, b.can_travel ? 1 : 0,
     b.experience ? String(b.experience).slice(0, 200) : null, b.notes ? String(b.notes).slice(0, 1000) : null,
-    'approved', 'activo', requestIp(c), new Date(now).toISOString(), now,
+    socialJson, 'approved', 'activo', requestIp(c), new Date(now).toISOString(), now,
   ).run();
   return c.json({ ok: true, id, status: 'approved', message: '¡Gracias! Tu registro como voluntario está activo.' }, 201);
 });
