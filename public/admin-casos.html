@@ -441,6 +441,14 @@ async function loadDocketTab(){
   const nodes=[];
   if(e&&e.time_ms)nodes.push({ts:e.time_ms,kind:'sismo',detail:`${e.place_es||e.place||'Sismo'} — M${e.mag||'?'}`});
   nodes.push({ts:p.created_ms,kind:'opened',detail:'Expediente abierto'});
+  // Ingested status (e.g. "localizado") lives on the persona record, not the
+  // docket — surface it with full provenance so operators see who reported it
+  // found and can verify before trusting the status. Operator-only page.
+  if(p.status&&p.status!=='missing'&&p.status!=='unknown'){
+    const lbl=(ST[p.status]||{}).es||p.status;
+    const detail=`Reportada como ${lbl}.`+(p.localizado_por?` Reportó: ${p.localizado_por}`:'')+(p.localizado_relacion?` (${p.localizado_relacion})`:'')+(p.localizado_contacto?` · ${p.localizado_contacto}`:'')+(p.localizado_nota?`. Nota: ${p.localizado_nota}`:'');
+    nodes.push({ts:p.updated_ms||p.created_ms,kind:'status_change',status_to:p.status,detail,source:'familia',actor:p.localizado_por||null});
+  }
   d.forEach(x=>nodes.push(Object.assign({ts:x.created_ms},x)));
   nodes.sort((a,b)=>a.ts-b.ts);
   const KC={sismo:'#b3261e',opened:'#13284f',status_change:'#7a5b00'};

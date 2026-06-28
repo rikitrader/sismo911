@@ -677,6 +677,19 @@ function buildTimeline(d){
   const {person:p,event:e,docket=[]}=d; const nodes=[];
   if(e&&e.time_ms)nodes.push({ts:e.time_ms,kind:'sismo',detail:`${e.place_es||e.place||'Sismo'} — M${e.mag||'?'}${e.depth_km?`, ${e.depth_km} km de profundidad`:''}${e.alert?` · PAGER ${String(e.alert).toUpperCase()}`:''}`});
   nodes.push({ts:p.created_ms,kind:'opened',detail:'Expediente registrado en el sistema',location:p.last_seen});
+  // A non-"missing" status that arrived via the registry ingest lives on the
+  // persona record, not in the docket — without this it renders as a status
+  // from nowhere (empty cronología on a "Localizada" case). Surface it as a
+  // status node: operators see the full provenance (who reported, relation,
+  // note); the public sees a neutral, unverified community-report line, NEVER
+  // the reporter name / contact / note (those carry PII + a cédula).
+  if(p.status&&p.status!=='missing'&&p.status!=='unknown'){
+    const lbl=(ST[p.status]||{}).es||p.status;
+    const detail=OP
+      ? `Reportada como ${lbl}.`+(p.localizado_por?` Reportó: ${p.localizado_por}`:'')+(p.localizado_relacion?` (${p.localizado_relacion})`:'')+(p.localizado_nota?`. Nota: ${p.localizado_nota}`:'')
+      : `Reportada como ${lbl} · reporte comunitario sin verificación oficial.`;
+    nodes.push({ts:p.updated_ms||p.created_ms,kind:'status_change',status_to:p.status,detail,source:'familia',actor:OP?(p.localizado_por||null):null});
+  }
   for(const x of docket)nodes.push({ts:x.created_ms,kind:x.kind,detail:x.detail,location:x.location,status_from:x.status_from,status_to:x.status_to,source:x.source,actor:x.actor,review:x.review});
   nodes.sort((a,b)=>a.ts-b.ts);
   return nodes;
