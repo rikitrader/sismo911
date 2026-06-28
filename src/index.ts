@@ -10,6 +10,7 @@ import { alerts } from './routes/alerts';
 import { facilities } from './routes/facilities';
 import { shelters } from './routes/shelters';
 import { refugios } from './routes/refugios';
+import { triage } from './routes/triage';
 import { ops } from './routes/ops';
 import { misc } from './routes/misc';
 import { damage } from './routes/damage';
@@ -325,6 +326,7 @@ app.route('/api/alerts', alerts);
 app.route('/api/facilities', facilities);
 app.route('/api/shelters', shelters);
 app.route('/api/refugios', refugios); // shelter siting + evacuation logistics engine (La Guaira); GET public, writes refugios:manage
+app.route('/api/triage', triage);     // AI intake: free-text message → desaparecidos/mascotas/daños as pending (public, burst-limited)
 app.route('/api/damage', damage);
 app.route('/api/sat', satellite);    // satellite/GIS damage analysis (imagery proxy + Workers AI vision)
 app.route('/api/reports', reports);  // citizen damage-report map + comments + reactions + moderation
