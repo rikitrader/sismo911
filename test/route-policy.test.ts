@@ -19,6 +19,10 @@ const GATED: Array<[string, string]> = [
   ['/api/persons/abc', 'PATCH'],             // isPersonModeration
   ['/api/persons/abc/approve', 'POST'],      // endsWith approve
   ['/api/persons/abc/attachments', 'GET'],   // isCaseAdmin (all methods)
+  ['/api/persons/abc/intel', 'GET'],         // isCaseAdmin — investigation leads
+  ['/api/persons/abc/intel/xyz', 'PATCH'],   // isCaseAdmin
+  ['/api/persons/abc/identity', 'GET'],      // isCaseAdmin — identity records (operator-only)
+  ['/api/persons/abc/identity/verify', 'POST'], // isCaseAdmin
   ['/api/sos', 'GET'],                       // isSosTriage
   ['/api/sos/abc', 'PATCH'],                 // isSosTriage
   ['/api/damage', 'GET'],                    // isDamageReview
@@ -38,6 +42,7 @@ const OPEN: Array<[string, string]> = [
   ['/api/events', 'GET'],                    // public reads
   ['/api/reports', 'POST'],                  // citizen report submission
   ['/api/persons', 'POST'],                  // citizen missing-person report
+  ['/api/persons/abc/tip', 'POST'],          // PUBLIC citizen investigation tip (rate-limited in handler)
   ['/api/sat/pytorch-results', 'POST'],      // explicit public callback
   ['/api/health', 'GET'],
   ['/', 'GET'],

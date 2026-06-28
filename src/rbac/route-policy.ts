@@ -88,7 +88,10 @@ export function evaluateGate(path: string, method: string): GateDecision {
 
   const isDocketSubmit = method === 'POST' && /^\/api\/persons\/[^/]+\/docket$/.test(path);
 
-  const isCaseAdmin = /^\/api\/persons\/[^/]+\/(attachments|tasks|messages|victims|case|audit|evidence)(\/|$)/.test(path);
+  // Per-case operator surfaces (evidence, tasks, investigation leads, identity
+  // verification, …). NOTE: POST /api/persons/:id/tip is deliberately NOT here —
+  // it is the PUBLIC citizen-tip endpoint (rate-limited in its handler).
+  const isCaseAdmin = /^\/api\/persons\/[^/]+\/(attachments|tasks|messages|victims|case|audit|evidence|intel|identity)(\/|$)/.test(path);
 
   const isSosTriage =
     (path === '/api/sos' && method === 'GET') ||
