@@ -115,6 +115,17 @@ bucket_name = "sismo911-person-photos"
 binding = "DESAP_FOTOS"
 bucket_name = "desaparecidos-fotos"
 
+# FLOTA live-tracking Durable Object — real-time unit positions on the command
+# map (operator consoles subscribe via WebSocket; the GPS-ingest handler
+# publishes). SQLite-backed class → free-tier compatible.
+[[durable_objects.bindings]]
+name = "FLOTA_TRACKING"
+class_name = "FlotaTracking"
+
+[[migrations]]
+tag = "v1-flota-tracking"
+new_sqlite_classes = ["FlotaTracking"]
+
 [observability]
 enabled = true
 
