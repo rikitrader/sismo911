@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { rbac } from '../api';
-import type { Role, Permission } from '../api';
+import type { Role, Permission, RoleDiff, RolesExport, ImportSummary } from '../api';
 import { useResource } from '../hooks';
 import { PageHeader, Spinner, Field, EmptyState } from '../components/ui';
 import { DataTable } from '../components/DataTable';
 import type { Column } from '../components/DataTable';
 import { Drawer } from '../components/Drawer';
+import { Modal } from '../components/Modal';
 import { ForbiddenInline, ErrorInline } from '../components/StateScreens';
 import { Icon } from '../icons';
 import { toast } from '../toast';
@@ -43,7 +44,12 @@ export function RolesPage() {
   return (
     <div class="animate-fade-in">
       <PageHeader title="Roles" subtitle="Define roles, herencia y permisos"
-        actions={<button class="btn btn-primary" onClick={() => setEditing({ role: null })}><Icon.plus size={16} /> Nuevo rol</button>} />
+        actions={
+          <>
+            <RoleExportImport onImported={r.reload} />
+            <button class="btn btn-primary" onClick={() => setEditing({ role: null })}><Icon.plus size={16} /> Nuevo rol</button>
+          </>
+        } />
       {r.forbidden ? <ForbiddenInline /> : r.error ? <ErrorInline message={r.error} onRetry={r.reload} /> : (
         <DataTable rows={r.data?.roles || []} columns={columns} loading={r.loading} search searchKeys={['name', 'key', 'description']}
           onRowClick={(x) => setEditing({ role: x })} emptyTitle="No hay roles" emptyHint="Crea el primer rol para organizar permisos." />
@@ -72,6 +78,8 @@ function RoleEditor({ role, allRoles, categories, loadingPerms, onClose, onSaved
   const [inherits, setInherits] = useState<string[]>(role?.inherits || []);
   const [perms, setPerms] = useState<Set<string>>(new Set(role?.perms || []));
   const [busy, setBusy] = useState(false);
+  const [diff, setDiff] = useState<RoleDiff | null>(null);
+  const [committing, setCommitting] = useState(false);
   const locked = !!role?.is_system;
 
   const totalPerms = useMemo(() => Object.values(categories).reduce((a, b) => a + b.length, 0), [categories]);
@@ -88,17 +96,39 @@ function RoleEditor({ role, allRoles, categories, loadingPerms, onClose, onSaved
     setPerms((prev) => { const n = new Set(prev); keys.forEach((k) => allOn ? n.delete(k) : n.add(k)); return n; });
   }
 
+  const payload = () => ({ name: name.trim(), description: description.trim(), inherits, perms: [...perms] });
+
   async function save() {
     if (!name.trim() || (isNew && !key.trim())) { toast.error('Nombre y clave son obligatorios'); return; }
+    if (isNew) {
+      setBusy(true);
+      try { await rbac.createRole({ key: key.trim(), ...payload() }); toast.success('Rol creado'); onSaved(); }
+      catch (e: any) { toast.error(e?.message || 'No se pudo guardar el rol'); }
+      finally { setBusy(false); }
+      return;
+    }
+    // Existing role: preview the permission delta before committing the PATCH.
     setBusy(true);
-    const payload = { name: name.trim(), description: description.trim(), inherits, perms: [...perms] };
     try {
-      if (isNew) await rbac.createRole({ key: key.trim(), ...payload });
-      else await rbac.updateRole(role!.id, payload);
-      toast.success(isNew ? 'Rol creado' : 'Rol actualizado');
+      const d = await rbac.roleDiff(role!.id, [...perms], inherits);
+      setDiff(d);
+    } catch {
+      // Diff endpoint unavailable (e.g. server not yet deployed) → commit directly.
+      await commit();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function commit() {
+    setCommitting(true);
+    try {
+      await rbac.updateRole(role!.id, payload());
+      toast.success('Rol actualizado');
+      setDiff(null);
       onSaved();
     } catch (e: any) { toast.error(e?.message || 'No se pudo guardar el rol'); }
-    finally { setBusy(false); }
+    finally { setCommitting(false); }
   }
 
   return (
@@ -169,6 +199,138 @@ function RoleEditor({ role, allRoles, categories, loadingPerms, onClose, onSaved
             )}
         </div>
       </div>
+
+      <RoleDiffModal diff={diff} roleName={name} committing={committing} onCancel={() => setDiff(null)} onConfirm={commit} />
     </Drawer>
+  );
+}
+
+// ---------- Permission diff preview ----------
+function Chips({ items, tone, icon }: { items?: string[]; tone: 'add' | 'remove'; icon: keyof typeof Icon }) {
+  if (!items || items.length === 0) return null;
+  const cls = tone === 'add' ? 'bg-ok/12 text-ok border-ok/30' : 'bg-danger/12 text-danger border-danger/30';
+  const I = Icon[icon];
+  return (
+    <div class="flex flex-wrap gap-1.5">
+      {items.map((k) => (
+        <span key={k} class={`pill border font-mono text-[11px] ${cls}`}><I size={11} />{k}</span>
+      ))}
+    </div>
+  );
+}
+
+function RoleDiffModal({ diff, roleName, committing, onCancel, onConfirm }: {
+  diff: RoleDiff | null; roleName: string; committing: boolean; onCancel: () => void; onConfirm: () => void;
+}) {
+  const added = diff?.added || [];
+  const removed = diff?.removed || [];
+  const iAdded = diff?.inheritsAdded || [];
+  const iRemoved = diff?.inheritsRemoved || [];
+  const nothing = !added.length && !removed.length && !iAdded.length && !iRemoved.length;
+  return (
+    <Modal open={!!diff} onClose={committing ? () => {} : onCancel} title="Confirmar cambios del rol" width={500}
+      footer={
+        <>
+          <button class="btn btn-ghost" disabled={committing} onClick={onCancel}>Cancelar</button>
+          <button class="btn btn-primary" disabled={committing} onClick={onConfirm}>{committing ? <Spinner /> : <Icon.check size={16} />} Guardar cambios</button>
+        </>
+      }>
+      <div class="space-y-4">
+        <p class="text-[13px] text-muted">Revisa el delta de permisos de <b>{roleName}</b> antes de guardar.</p>
+        {nothing ? (
+          <p class="text-faint text-[13px]">No hay cambios en los permisos.</p>
+        ) : (
+          <div class="space-y-4">
+            {added.length > 0 && (
+              <div>
+                <div class="label-caps mb-2 text-ok">Añadidos · {added.length}</div>
+                <Chips items={added} tone="add" icon="plus" />
+              </div>
+            )}
+            {removed.length > 0 && (
+              <div>
+                <div class="label-caps mb-2 text-danger">Removidos · {removed.length}</div>
+                <Chips items={removed} tone="remove" icon="close" />
+              </div>
+            )}
+            {(iAdded.length > 0 || iRemoved.length > 0) && (
+              <div>
+                <div class="label-caps mb-2">Herencia</div>
+                <div class="space-y-1.5">
+                  <Chips items={iAdded} tone="add" icon="plus" />
+                  <Chips items={iRemoved} tone="remove" icon="close" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+// ---------- Export / Import ----------
+function RoleExportImport({ onImported }: { onImported: () => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [summary, setSummary] = useState<ImportSummary | null>(null);
+
+  async function exportRoles() {
+    setBusy(true);
+    try {
+      const data = await rbac.exportRoles();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'roles.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Roles exportados');
+    } catch (e: any) { toast.error(e?.message || 'No se pudieron exportar los roles'); }
+    finally { setBusy(false); }
+  }
+
+  async function onFile(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    setBusy(true);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as RolesExport;
+      const res = await rbac.importRoles(parsed);
+      setSummary(res);
+      toast.success('Roles importados');
+      onImported();
+    } catch (e: any) {
+      toast.error(e?.message || 'Archivo inválido o error al importar');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button class="btn btn-ghost btn-sm" disabled={busy} onClick={exportRoles}><Icon.download size={15} /> Exportar</button>
+      <button class="btn btn-ghost btn-sm" disabled={busy} onClick={() => fileRef.current?.click()}><Icon.upload size={15} /> Importar</button>
+      <input ref={fileRef} type="file" accept="application/json,.json" class="hidden" onChange={onFile} />
+
+      <Modal open={!!summary} onClose={() => setSummary(null)} title="Importación completada" width={380}
+        footer={<button class="btn btn-primary" onClick={() => setSummary(null)}>Listo</button>}>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          {[
+            { k: 'Creados', v: summary?.created ?? 0, cls: 'text-ok' },
+            { k: 'Actualizados', v: summary?.updated ?? 0, cls: 'text-[rgb(var(--accent))]' },
+            { k: 'Omitidos', v: summary?.skipped ?? 0, cls: 'text-faint' },
+          ].map((s) => (
+            <div key={s.k} class="surface-subtle bordered rounded-lg py-3">
+              <div class={`text-2xl font-semibold tabular-nums ${s.cls}`}>{s.v}</div>
+              <div class="label-caps mt-1">{s.k}</div>
+            </div>
+          ))}
+        </div>
+      </Modal>
+    </>
   );
 }

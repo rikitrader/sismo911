@@ -160,6 +160,37 @@ export const rbac = {
     api.del(`/feature-flags/${encodeURIComponent(moduleKey)}/${encodeURIComponent(scopeType)}/${encodeURIComponent(scopeId)}`),
   featureFlagsEffective: (userId: string) =>
     api.get<{ effective: EffectiveFlag[] }>(`/feature-flags/effective?user_id=${encodeURIComponent(userId)}`),
+
+  // ---- Wave 2 ----
+  // Invitations / approvals, temporary roles, impersonation, role diff/export/import,
+  // effective-permission inspection. Endpoints may 404 until the wave-2 server deploy
+  // lands — callers degrade gracefully and never crash the shell.
+  invitations: (status = '') =>
+    api.get<{ invitations: Invitation[] }>(`/invitations${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  createInvitation: (b: { email: string; roleKey?: string; channel: InviteChannel; phone?: string }) =>
+    api.post<Invitation>('/invitations', b),
+  revokeInvitation: (id: string) => api.post(`/invitations/${id}/revoke`, {}),
+  resendInvitation: (id: string) => api.post<Invitation>(`/invitations/${id}/resend`, {}),
+
+  approvals: () => api.get<ApprovalsResp>(`/approvals`),
+  approveUser: (id: string) => api.post(`/users/${id}/approve`, {}),
+  rejectUser: (id: string, reason?: string) => api.post(`/users/${id}/reject`, reason ? { reason } : {}),
+
+  tempRoles: (id: string) => api.get<TempRolesResp>(`/users/${id}/temp-roles`),
+  addTempRole: (id: string, roleKey: string, expires_ms: number) =>
+    api.post(`/users/${id}/temp-roles`, { roleKey, expires_ms }),
+  removeTempRole: (id: string, roleId: string) => api.del(`/users/${id}/temp-roles/${roleId}`),
+
+  impersonate: (userId: string, reason: string) => api.post(`/impersonate/${userId}`, { reason }),
+  stopImpersonate: () => api.post(`/impersonate/stop`, {}),
+
+  roleDiff: (id: string, perms: string[], inherits: string[]) =>
+    api.post<RoleDiff>(`/roles/${id}/diff`, { perms, inherits }),
+  exportRoles: () => api.get<RolesExport>(`/roles/export`),
+  importRoles: (data: RolesExport) => api.post<ImportSummary>(`/roles/import`, data),
+
+  effectivePermissions: (id: string) =>
+    api.get<EffectivePermissions>(`/users/${id}/effective-permissions`),
 };
 
 // ---- Wave 1 domain types ----
@@ -203,3 +234,54 @@ export interface FeatureFlagOverride {
   module_key: string; scope_type: FlagScope; scope_id: string; enabled: boolean;
 }
 export interface EffectiveFlag { module_key: string; label?: string; enabled: boolean; source?: string; }
+
+// ---- Wave 2 domain types ----
+export type InviteChannel = 'email' | 'sms' | 'qr';
+export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+export interface Invitation {
+  id: string;
+  email: string;
+  role_key?: string;
+  roleKey?: string;
+  channel?: InviteChannel;
+  status?: InvitationStatus | string;
+  link?: string;
+  token?: string;
+  phone?: string;
+  created_ms?: number | null;
+  expires_ms?: number | null;
+  invited_by?: string;
+}
+
+// /approvals may return pending users under any of these shapes.
+export interface ApprovalsResp { users?: UserRow[]; approvals?: UserRow[]; }
+
+export interface TempRole {
+  id: string;
+  role_key?: string;
+  roleKey?: string;
+  key?: string;
+  name?: string;
+  expires_ms?: number | null;
+  granted_ms?: number | null;
+}
+export interface TempRolesResp { tempRoles?: TempRole[]; temp_roles?: TempRole[]; roles?: TempRole[]; }
+
+export interface RoleDiff {
+  added: string[];
+  removed: string[];
+  inheritsAdded?: string[];
+  inheritsRemoved?: string[];
+}
+
+export interface RolesExport { version: number | string; roles: any[]; }
+export interface ImportSummary { created: number; updated: number; skipped: number; }
+
+export interface EffectivePermissions {
+  effective: string[];
+  bySource: {
+    roles: { role: string; perms: string[] }[];
+    direct: { perm: string; effect: 'allow' | 'deny' }[];
+    denied: string[];
+  };
+}
