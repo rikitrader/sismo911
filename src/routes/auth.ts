@@ -157,10 +157,24 @@ auth.post('/login', async (c) => {
   const b = await c.req.json().catch(() => null);
   const email = (b?.email || '').trim().toLowerCase();
   const row: any = await c.env.DB.prepare(`SELECT * FROM users WHERE email = ?`).bind(email).first();
+  const ip = c.req.header('cf-connecting-ip') ?? null;
+  const ua = c.req.header('user-agent') ?? null;
   if (!row || !(await verifyPassword(b?.password || '', row.pw_hash, row.pw_salt))) {
+    // Record the failed attempt (login_history) — wrapped so logging never breaks login.
+    try {
+      await c.env.DB.prepare(
+        `INSERT INTO login_history (id, user_id, email, ip, ua, ok, reason, created_ms) VALUES (?,?,?,?,?,?,?,?)`
+      ).bind(uid('lh'), row?.id ?? null, email, ip, ua, 0, 'invalid_credentials', Date.now()).run();
+    } catch { /* ignore */ }
     return c.json({ error: 'invalid_credentials' }, 401);
   }
-  await c.env.DB.prepare(`UPDATE users SET last_login_ms = ? WHERE id = ?`).bind(Date.now(), row.id).run();
+  await c.env.DB.prepare(`UPDATE users SET last_login_ms = ?, last_ip = ? WHERE id = ?`).bind(Date.now(), ip, row.id).run();
+  // Record the successful login (login_history) — wrapped so logging never breaks login.
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO login_history (id, user_id, email, ip, ua, ok, reason, created_ms) VALUES (?,?,?,?,?,?,?,?)`
+    ).bind(uid('lh'), row.id, email, ip, ua, 1, null, Date.now()).run();
+  } catch { /* ignore */ }
   const { token, expires } = await createSession(c.env, row.id, c.req.header('user-agent'));
   setSessionCookie(c, token);
   return c.json({ ok: true, token, expires, user: { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit } });
