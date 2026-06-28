@@ -511,6 +511,179 @@ select,input { font-family:var(--font); }
 }
 .prefs-section-sub { font-size:.78rem; color:var(--muted); margin-bottom:12px; }
 
+/* ── Retiros (Withdrawals) ───────────────────────────────────────────────── */
+.ret-balance-card {
+  background:linear-gradient(135deg,var(--brand) 0%,#0b3a8a 55%,var(--brand-2) 100%);
+  border-radius:var(--radius-lg); padding:26px 26px 20px;
+  margin-bottom:16px; box-shadow:var(--shadow-md); color:#fff;
+  position:relative; overflow:hidden;
+}
+.ret-balance-card::before {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(ellipse at 80% 10%,rgba(255,255,255,.09) 0%,transparent 55%);
+  pointer-events:none;
+}
+.ret-balance-label {
+  font-size:.75rem; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:rgba(255,255,255,.65); margin-bottom:6px;
+}
+.ret-balance-amount {
+  font-family:var(--font-display); font-weight:800;
+  font-size:2.2rem; letter-spacing:-.03em; line-height:1.1;
+  color:#fff; margin-bottom:4px; transition:filter .25s ease;
+}
+.ret-balance-amount.blurred { filter:blur(7px); user-select:none; }
+.ret-balance-sub { font-size:.77rem; color:rgba(255,255,255,.6); margin-bottom:18px; }
+.ret-balance-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.ret-btn-white {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:10px 20px; border-radius:12px;
+  background:#fff; color:var(--brand); font-size:.875rem; font-weight:700;
+  border:none; cursor:pointer; transition:all .18s ease; min-height:42px; line-height:1;
+}
+.ret-btn-white:hover { background:rgba(255,255,255,.88); transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,.15); }
+.ret-btn-white:disabled { opacity:.5; cursor:not-allowed; pointer-events:none; }
+.ret-btn-ghost {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:10px 16px; border-radius:12px;
+  background:rgba(255,255,255,.12); color:#fff; font-size:.82rem; font-weight:600;
+  border:1px solid rgba(255,255,255,.22); cursor:pointer;
+  transition:all .18s ease; min-height:42px; line-height:1;
+}
+.ret-btn-ghost:hover { background:rgba(255,255,255,.2); }
+.ret-last-payout { font-size:.72rem; color:rgba(255,255,255,.5); margin-top:9px; }
+/* Status badges */
+.ret-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 10px; border-radius:100px;
+  font-size:.71rem; font-weight:700; letter-spacing:.01em; white-space:nowrap;
+}
+.ret-badge-pending   { background:rgba(245,158,11,.15); color:#92400e; }
+.ret-badge-processing{ background:rgba(11,95,255,.12);  color:var(--brand-2); }
+.ret-badge-completed { background:rgba(46,125,50,.12);  color:var(--success); }
+.ret-badge-failed    { background:rgba(220,38,38,.10);  color:var(--danger); }
+.ret-badge-rejected  { background:rgba(220,38,38,.10);  color:var(--danger); }
+.ret-badge-cancelled { background:var(--border);        color:var(--muted); }
+.ret-badge-draft     { background:var(--border);        color:var(--muted); }
+.ret-badge-risk      { background:rgba(245,158,11,.15); color:#92400e; }
+@media (prefers-color-scheme:dark) {
+  .ret-badge-pending { background:rgba(245,158,11,.2); color:var(--warning); }
+  .ret-badge-risk    { background:rgba(245,158,11,.2); color:var(--warning); }
+}
+/* Request rows */
+.ret-req-row {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-md); padding:16px 18px; margin-bottom:10px;
+  box-shadow:var(--shadow-sm); transition:box-shadow .18s ease;
+}
+.ret-req-row:hover { box-shadow:var(--shadow-md); }
+.ret-req-top { display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:7px; }
+.ret-req-amount {
+  font-family:var(--font-display); font-weight:800;
+  font-size:1.05rem; color:var(--text); letter-spacing:-.02em; flex-shrink:0;
+}
+.ret-req-dest {
+  font-size:.78rem; color:var(--muted); flex:1; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ret-req-meta { display:flex; gap:10px; flex-wrap:wrap; font-size:.73rem; color:var(--muted); }
+.ret-req-note {
+  font-size:.75rem; color:var(--danger); margin-top:6px;
+  padding:6px 10px; background:rgba(220,38,38,.05); border-radius:8px;
+  border-left:3px solid var(--danger);
+}
+/* Section headers */
+.ret-section-title {
+  font-family:var(--font-display); font-weight:700; font-size:.88rem; color:var(--text);
+  margin:18px 0 10px; display:flex; align-items:center; gap:8px;
+}
+.ret-section-count {
+  font-size:.72rem; font-weight:700; padding:2px 8px;
+  border-radius:100px; background:var(--border); color:var(--muted);
+}
+/* Method grid (step 1) */
+.ret-method-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  gap:10px; margin-bottom:6px;
+}
+.ret-method-btn {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:7px; padding:16px 10px; border-radius:var(--radius-md);
+  border:1px solid var(--border); background:var(--surface-2);
+  color:var(--text); font-size:.79rem; font-weight:600; cursor:pointer;
+  transition:all .18s ease; text-align:center; min-height:84px;
+}
+.ret-method-btn:hover:not(:disabled) {
+  border-color:var(--brand-2); color:var(--brand-2);
+  background:rgba(11,95,255,.05); transform:translateY(-2px); box-shadow:var(--shadow-sm);
+}
+.ret-method-btn.selected {
+  border-color:var(--brand-2); background:rgba(11,95,255,.08);
+  color:var(--brand-2); box-shadow:0 0 0 2px rgba(11,95,255,.18);
+}
+.ret-method-btn:disabled { opacity:.45; cursor:not-allowed; }
+.ret-method-icon { font-size:1.55rem; line-height:1; }
+.ret-method-note { font-size:.68rem; color:var(--muted); font-weight:500; margin-top:1px; }
+/* Step indicator */
+.ret-steps { display:flex; align-items:center; margin-bottom:22px; }
+.ret-step {
+  display:flex; align-items:center; gap:6px;
+  font-size:.75rem; font-weight:600; color:var(--muted); flex:0 0 auto;
+}
+.ret-step-dot {
+  width:24px; height:24px; border-radius:50%;
+  background:var(--border); color:var(--muted);
+  display:flex; align-items:center; justify-content:center;
+  font-size:.7rem; font-weight:800; flex-shrink:0; transition:all .2s ease;
+}
+.ret-step.active .ret-step-dot { background:var(--brand-2); color:#fff; }
+.ret-step.done   .ret-step-dot { background:var(--success);  color:#fff; }
+.ret-step.active { color:var(--text); }
+.ret-step-line {
+  flex:1; height:2px; background:var(--border);
+  margin:0 6px; border-radius:1px; min-width:20px;
+}
+/* Confirm summary rows */
+.ret-confirm-row {
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding:9px 0; border-bottom:1px solid var(--border);
+  font-size:.84rem; gap:12px;
+}
+.ret-confirm-row:last-child { border-bottom:none; }
+.ret-confirm-label { color:var(--muted); flex-shrink:0; }
+.ret-confirm-value { font-weight:600; color:var(--text); text-align:right; }
+.ret-confirm-value.accent {
+  color:var(--brand-2); font-size:1.05rem;
+  font-family:var(--font-display); font-weight:800;
+}
+/* Compliance note */
+.ret-compliance-note {
+  background:rgba(11,95,255,.05); border:1px solid rgba(11,95,255,.14);
+  border-radius:12px; padding:12px 14px;
+  font-size:.77rem; color:var(--muted); line-height:1.6; margin-bottom:16px;
+}
+@media (prefers-color-scheme:dark) {
+  .ret-compliance-note { background:rgba(11,95,255,.1); border-color:rgba(11,95,255,.22); }
+}
+/* Saved methods */
+.ret-saved-method-row {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px; border:1px solid var(--border);
+  border-radius:10px; margin-bottom:6px; background:var(--surface-2); font-size:.82rem;
+}
+.ret-saved-method-label { flex:1; font-weight:600; color:var(--text); }
+.ret-saved-method-detail { color:var(--muted); font-size:.76rem; }
+/* Collapse toggle */
+.ret-collapse-btn {
+  display:flex; align-items:center; gap:8px;
+  background:none; border:none; cursor:pointer;
+  font-size:.84rem; font-weight:600; color:var(--muted);
+  padding:8px 0; transition:color .15s;
+}
+.ret-collapse-btn:hover { color:var(--text); }
+.ret-collapse-arrow { transition:transform .2s; display:inline-block; }
+.ret-collapse-btn.open .ret-collapse-arrow { transform:rotate(90deg); }
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width:600px) {
   .hero-top { flex-direction:column; gap:14px; }
@@ -888,6 +1061,99 @@ select,input { font-family:var(--font); }
   </div>
 </div>
 
+<!-- ── Withdrawal Modal ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="ret-modal"
+     role="dialog" aria-modal="true" aria-labelledby="ret-modal-title">
+  <div class="modal-card" style="max-width:520px;">
+    <button class="modal-close-btn" id="ret-modal-close" aria-label="Cerrar">✕</button>
+    <h2 class="modal-title" id="ret-modal-title">Solicitar retiro</h2>
+
+    <!-- Step indicator -->
+    <div class="ret-steps" id="ret-steps-bar" aria-hidden="true">
+      <div class="ret-step active" id="ret-step-ind-1">
+        <span class="ret-step-dot">1</span>
+        <span>Método</span>
+      </div>
+      <div class="ret-step-line"></div>
+      <div class="ret-step" id="ret-step-ind-2">
+        <span class="ret-step-dot">2</span>
+        <span>Datos</span>
+      </div>
+      <div class="ret-step-line"></div>
+      <div class="ret-step" id="ret-step-ind-3">
+        <span class="ret-step-dot">3</span>
+        <span>Confirmar</span>
+      </div>
+    </div>
+
+    <!-- Step 1: choose method -->
+    <div id="ret-s1">
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">
+        Selecciona cómo quieres recibir tu retiro.
+      </p>
+      <div class="ret-method-grid">
+        <button class="ret-method-btn" data-ret-method="usdc" type="button">
+          <span class="ret-method-icon">₿</span>
+          USDC
+          <span class="ret-method-note">Billetera cripto</span>
+        </button>
+        <button class="ret-method-btn" data-ret-method="pago_movil" type="button">
+          <span class="ret-method-icon">📱</span>
+          Pago Móvil
+          <span class="ret-method-note">Venezuela</span>
+        </button>
+        <button class="ret-method-btn" data-ret-method="bank" type="button">
+          <span class="ret-method-icon">🏦</span>
+          Banco
+          <span class="ret-method-note">Transferencia</span>
+        </button>
+        <button class="ret-method-btn" data-ret-method="cash" type="button">
+          <span class="ret-method-icon">💵</span>
+          Efectivo
+          <span class="ret-method-note">Asistencia manual</span>
+        </button>
+        <button class="ret-method-btn" data-ret-method="stripe" type="button" disabled>
+          <span class="ret-method-icon" style="opacity:.35;">💳</span>
+          Stripe
+          <span class="ret-method-note">Próximamente</span>
+        </button>
+      </div>
+      <div class="form-err" id="ret-s1-err" style="margin-top:8px;"></div>
+      <div class="form-actions" style="margin-top:20px;">
+        <button class="btn btn-primary" id="ret-s1-next" type="button" disabled>Continuar →</button>
+        <button class="btn btn-secondary" id="ret-s1-cancel" type="button">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- Step 2: method-specific form -->
+    <div id="ret-s2" style="display:none;">
+      <form id="ret-form" novalidate>
+        <div id="ret-form-fields"></div>
+        <div class="form-err" id="ret-s2-err" style="margin-top:4px;font-size:.82rem;"></div>
+        <div class="form-actions">
+          <button class="btn btn-primary" id="ret-s2-next" type="submit">Ver resumen →</button>
+          <button class="btn btn-secondary" id="ret-s2-back" type="button">← Atrás</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Step 3: confirmation -->
+    <div id="ret-s3" style="display:none;">
+      <div id="ret-s3-summary"></div>
+      <div class="ret-compliance-note" style="margin-top:14px;">
+        ⏳ <strong>Procesamiento manual</strong> — un operador revisará tu solicitud.
+        No se garantiza liquidación instantánea.
+      </div>
+      <div class="form-err" id="ret-s3-err" style="font-size:.82rem;margin-top:4px;"></div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="ret-s3-confirm" type="button">✓ Confirmar retiro</button>
+        <button class="btn btn-secondary" id="ret-s3-back" type="button">← Atrás</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- ── Main ───────────────────────────────────────────────────────────── -->
 <main class="page-wrap" id="app">
 
@@ -1171,13 +1437,96 @@ select,input { font-family:var(--font); }
 
     <!-- ── Retiros ──────────────────────────────────────────────────── -->
     <div class="panel" data-panel="retiros" role="tabpanel">
-      <div class="card">
-        <div class="empty-state">
-          <span class="empty-icon" aria-hidden="true">💸</span>
-          <div class="empty-title">Retiros</div>
-          <div class="empty-text">Disponible en esta sección próximamente</div>
+
+      <!-- Loading skeleton -->
+      <div id="ret-skel">
+        <div class="skeleton" style="height:155px;border-radius:var(--radius-lg);margin-bottom:16px;"></div>
+        <div class="kpi-grid" style="margin-bottom:16px;">
+          <div class="skeleton skel-kpi"></div>
+          <div class="skeleton skel-kpi"></div>
+          <div class="skeleton skel-kpi"></div>
+          <div class="skeleton skel-kpi"></div>
+          <div class="skeleton skel-kpi"></div>
+          <div class="skeleton skel-kpi"></div>
+        </div>
+        <div class="card">
+          <div class="skeleton skel-line m" style="margin-bottom:12px;"></div>
+          <div class="skeleton skel-line"></div>
+          <div class="skeleton skel-line s"></div>
         </div>
       </div>
+
+      <!-- Error state -->
+      <div id="ret-error" style="display:none;">
+        <div class="error-card">
+          <span class="error-card-icon">⚠️</span>
+          <div class="error-card-title">No se pudieron cargar los retiros</div>
+          <div class="error-card-text" id="ret-err-msg">Verifica tu conexión e intenta de nuevo.</div>
+          <button class="btn btn-secondary" onclick="loadWithdrawals()" style="margin-top:16px;">
+            Reintentar
+          </button>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div id="ret-content" style="display:none;">
+
+        <!-- 1. Balance card -->
+        <div class="ret-balance-card" role="region" aria-label="Saldo disponible para retiro">
+          <div class="ret-balance-label">Saldo disponible para retiro</div>
+          <div class="ret-balance-amount" id="ret-bal-amount">—</div>
+          <div class="ret-balance-sub" id="ret-bal-sub"></div>
+          <div class="ret-balance-actions">
+            <button class="ret-btn-white" id="ret-new-btn">
+              ↑ Retirar
+            </button>
+            <button class="ret-btn-ghost" id="ret-hide-btn">
+              <span id="ret-hide-icon">👁</span>
+              <span id="ret-hide-label">Ocultar saldo</span>
+            </button>
+          </div>
+          <div class="ret-last-payout" id="ret-last-payout"></div>
+        </div>
+
+        <!-- 2. KPI grid -->
+        <div class="kpi-grid" id="ret-kpi-grid" style="margin-bottom:16px;"></div>
+
+        <!-- 3. Compliance note -->
+        <div class="ret-compliance-note">
+          Los retiros se procesan manualmente y quedan <strong>en revisión</strong> hasta
+          que un operador los aprueba. No se garantiza liquidación instantánea.
+        </div>
+
+        <!-- 4. Saved methods -->
+        <div id="ret-methods-section" style="display:none;">
+          <div class="ret-section-title">Métodos guardados</div>
+          <div id="ret-methods-list"></div>
+        </div>
+
+        <!-- 5. Pending / processing requests -->
+        <div id="ret-pending-wrap"></div>
+
+        <!-- 6. Completed -->
+        <div id="ret-completed-wrap"></div>
+
+        <!-- 7. Cancelled / failed / rejected (collapsed) -->
+        <div id="ret-archived-wrap"></div>
+
+        <!-- Empty state (no requests at all) -->
+        <div id="ret-empty" style="display:none;">
+          <div class="empty-state" style="padding:48px 24px;">
+            <span class="empty-icon" aria-hidden="true">💸</span>
+            <div class="empty-title" id="ret-empty-title">Aún no has solicitado retiros</div>
+            <div class="empty-text" id="ret-empty-text">—</div>
+            <button class="btn btn-primary" style="margin-top:16px;"
+                    onclick="document.getElementById('ret-new-btn').click();">
+              Solicitar retiro
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /#ret-content -->
+
     </div>
 
     <!-- ── Seguridad ────────────────────────────────────────────────── -->
@@ -2781,6 +3130,823 @@ async function loadLedger() {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   RETIROS MODULE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+let _withdrawals  = { balance:{}, limits:{}, methods:[], requests:[] };
+let _retLoaded    = false;
+let _retLoading   = false;
+let _retBlurred   = false;
+let _retMethod    = null;   /* selected method type in step 1 */
+let _retFormData  = {};     /* captured from step 2 */
+let _retIdempKey  = null;   /* idempotency_key; generated on step-3 entry, cleared on success/close */
+
+/* ── Status badge ────────────────────────────────────────────────────────── */
+function retStatusBadge(status) {
+  const MAP = {
+    draft:          ['ret-badge-draft',       '○ Borrador'],
+    pending_review: ['ret-badge-pending',     '⏳ En revisión'],
+    processing:     ['ret-badge-processing',  '⚙ Procesando'],
+    completed:      ['ret-badge-completed',   '✓ Completado'],
+    failed:         ['ret-badge-failed',      '✕ Fallido'],
+    rejected:       ['ret-badge-rejected',    '✕ Rechazado'],
+    cancelled:      ['ret-badge-cancelled',   '○ Cancelado'],
+  };
+  const [cls, label] = MAP[status] || ['ret-badge-draft', esc(status || '?')];
+  return `<span class="ret-badge ${cls}">${label}</span>`;
+}
+
+function retMethodLabel(type) {
+  return ({usdc:'USDC', pago_movil:'Pago Móvil', bank:'Banco', cash:'Efectivo', stripe:'Stripe'}[type] || (type||'Desconocido'));
+}
+
+/* ── Load withdrawals ────────────────────────────────────────────────────── */
+async function loadWithdrawals(silent) {
+  if (_retLoading && !silent) return;
+  _retLoading = true;
+  if (!silent) {
+    document.getElementById('ret-skel').style.display    = 'block';
+    document.getElementById('ret-error').style.display   = 'none';
+    document.getElementById('ret-content').style.display = 'none';
+  }
+  try {
+    const r = await fetch('/api/profile/withdrawals', {credentials:'same-origin'});
+    if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || 'Error al cargar retiros');
+
+    _withdrawals = {
+      balance:  d.balance  || {},
+      limits:   d.limits   || {},
+      methods:  d.methods  || [],
+      requests: d.requests || [],
+    };
+    _retLoaded = true;
+
+    if (!silent) {
+      document.getElementById('ret-skel').style.display    = 'none';
+      document.getElementById('ret-content').style.display = 'block';
+    }
+    renderRetBalance();
+    renderRetKPIs();
+    renderRetMethods();
+    renderRetRequests();
+  } catch(e) {
+    if (!silent) {
+      document.getElementById('ret-skel').style.display  = 'none';
+      document.getElementById('ret-error').style.display = 'block';
+      const em = document.getElementById('ret-err-msg');
+      if (em) em.textContent = e.message || 'Verifica tu conexión e intenta de nuevo.';
+    }
+  } finally { _retLoading = false; }
+}
+
+/* ── Render: balance card ────────────────────────────────────────────────── */
+function renderRetBalance() {
+  const b  = _withdrawals.balance || {};
+  const avl= parseFloat(b.available_usd)       || 0;
+  const grs= parseFloat(b.gross_received_usd)  || 0;
+  const com= parseFloat(b.committed_usd)       || 0;
+
+  const amtEl = document.getElementById('ret-bal-amount');
+  if (amtEl) {
+    amtEl.textContent = fmtUSD(avl);
+    amtEl.classList.toggle('blurred', _retBlurred);
+  }
+  const subEl = document.getElementById('ret-bal-sub');
+  if (subEl) subEl.textContent = `Recibido: ${fmtUSD(grs)} · Comprometido en retiros: ${fmtUSD(com)}`;
+
+  const completed = (_withdrawals.requests || [])
+    .filter(r => r.status === 'completed')
+    .sort((a, b) => (b.completed_ms||0) - (a.completed_ms||0));
+  const lpEl = document.getElementById('ret-last-payout');
+  if (lpEl) lpEl.textContent = completed.length
+    ? `Último retiro completado: ${fmtRelDate(completed[0].completed_ms)}`
+    : '';
+
+  const newBtn  = document.getElementById('ret-new-btn');
+  const hideBtn = document.getElementById('ret-hide-btn');
+  if (newBtn && !newBtn._wired) {
+    newBtn._wired = true;
+    newBtn.addEventListener('click', openRetModal);
+  }
+  if (hideBtn && !hideBtn._wired) {
+    hideBtn._wired = true;
+    hideBtn.addEventListener('click', () => {
+      _retBlurred = !_retBlurred;
+      const am = document.getElementById('ret-bal-amount');
+      if (am) am.classList.toggle('blurred', _retBlurred);
+      const icon  = document.getElementById('ret-hide-icon');
+      const lbl   = document.getElementById('ret-hide-label');
+      if (icon) icon.textContent = _retBlurred ? '🙈' : '👁';
+      if (lbl)  lbl.textContent  = _retBlurred ? 'Mostrar saldo' : 'Ocultar saldo';
+    });
+  }
+}
+
+/* ── Render: KPI grid ────────────────────────────────────────────────────── */
+function renderRetKPIs() {
+  const reqs  = _withdrawals.requests || [];
+  const b     = _withdrawals.balance  || {};
+  const avl   = parseFloat(b.available_usd) || 0;
+
+  const pendR = reqs.filter(r => ['pending_review','processing'].includes(r.status));
+  const compR = reqs.filter(r => r.status === 'completed');
+  const pendSum = pendR.reduce((s,r) => s+(parseFloat(r.net_amount)||0), 0);
+  const compSum = compR.reduce((s,r) => s+(parseFloat(r.net_amount)||0), 0);
+  const feesSum = reqs.reduce((s,r) => s+(parseFloat(r.fee_amount)||0), 0);
+  const grossRcv= parseFloat(b.gross_received_usd) || 0;
+  const lastComp= compR.sort((a,b)=>(b.completed_ms||0)-(a.completed_ms||0))[0];
+
+  const ico = (d) => `<svg class="kpi-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const icoWallet  = ico(`<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2"/><circle cx="16" cy="14" r="1" fill="currentColor"/>`);
+  const icoClock   = ico(`<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`);
+  const icoCheck   = ico(`<polyline points="20 6 9 17 4 12"/>`);
+  const icoDollar  = ico(`<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>`);
+  const icoArrow   = ico(`<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>`);
+  const icoCal     = ico(`<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`);
+
+  const kpis = [
+    { icon:icoWallet, value:fmtUSD(avl),       label:'Saldo disponible',   note:'' },
+    { icon:icoClock,  value:fmtUSD(pendSum),    label:'Pendiente',          note:`${pendR.length} solicitud${pendR.length!==1?'es':''}` },
+    { icon:icoCheck,  value:fmtUSD(compSum),    label:'Completado',         note:`${compR.length} retiro${compR.length!==1?'s':''}` },
+    { icon:icoDollar, value:fmtUSD(feesSum),    label:'Comisiones pagadas', note:'x402 sin comisión' },
+    { icon:icoArrow,  value:fmtUSD(grossRcv),   label:'Neto recibido',      note:'' },
+    { icon:icoCal,    value:lastComp ? fmtRelDate(lastComp.completed_ms) : '—', label:'Último retiro', note:'' },
+  ];
+
+  const grid = document.getElementById('ret-kpi-grid');
+  if (!grid) return;
+  grid.innerHTML = kpis.map(k => `
+    <div class="kpi-card">
+      ${k.icon}
+      <div class="kpi-value">${esc(k.value)}</div>
+      <div class="kpi-label">${esc(k.label)}</div>
+      ${k.note ? `<div class="kpi-note">${esc(k.note)}</div>` : ''}
+    </div>`).join('');
+}
+
+/* ── Render: saved methods ───────────────────────────────────────────────── */
+function renderRetMethods() {
+  const methods = _withdrawals.methods || [];
+  const sec  = document.getElementById('ret-methods-section');
+  const list = document.getElementById('ret-methods-list');
+  if (!sec || !list) return;
+  if (!methods.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+
+  list.innerHTML = methods.map(m => {
+    const detail = (m.details && m.details.destination_summary) || m.label || '';
+    return `<div class="ret-saved-method-row">
+      <span class="ret-saved-method-label">${esc(m.label || retMethodLabel(m.type))}</span>
+      <span class="ret-saved-method-detail">${esc(detail)}</span>
+      ${m.is_default ? '<span class="ret-badge ret-badge-processing" style="font-size:.65rem;">Predeterminado</span>' : ''}
+      <button class="btn btn-secondary btn-sm" data-ret-del-method="${esc(m.id)}"
+              aria-label="Eliminar método">✕</button>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('[data-ret-del-method]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.retDelMethod;
+      btn.disabled = true;
+      try {
+        const r = await fetch(`/api/profile/withdrawal-methods/${encodeURIComponent(id)}`, {
+          method:'DELETE', credentials:'same-origin',
+        });
+        if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+        if (r.ok) { toast('Método eliminado ✓'); await loadWithdrawals(true); }
+        else {
+          const d = await r.json().catch(() => ({}));
+          toast(d.error || 'No se pudo eliminar el método.', 'error');
+          btn.disabled = false;
+        }
+      } catch(e) { toast('Error de red.', 'error'); btn.disabled = false; }
+    });
+  });
+}
+
+/* ── Render: request sections ───────────────────────────────────────────── */
+function renderRetRequests() {
+  const reqs  = _withdrawals.requests || [];
+  const emptyEl = document.getElementById('ret-empty');
+
+  if (!reqs.length) {
+    const b   = _withdrawals.balance || {};
+    const avl = parseFloat(b.available_usd) || 0;
+    const tEl = document.getElementById('ret-empty-title');
+    const dEl = document.getElementById('ret-empty-text');
+    if (tEl) tEl.textContent = 'Aún no has solicitado retiros';
+    if (dEl) dEl.textContent = `Tu saldo disponible es ${fmtUSD(avl)}. Pulsa "Retirar" para comenzar.`;
+    if (emptyEl) emptyEl.style.display = 'block';
+    ['ret-pending-wrap','ret-completed-wrap','ret-archived-wrap'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.innerHTML = '';
+    });
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  const pending  = reqs.filter(r => ['draft','pending_review','processing'].includes(r.status));
+  const completed= reqs.filter(r => r.status === 'completed');
+  const archived = reqs.filter(r => ['failed','rejected','cancelled'].includes(r.status));
+
+  renderRetSection('ret-pending-wrap',   pending,   'Pendientes',            true,  false);
+  renderRetSection('ret-completed-wrap', completed, 'Completados',           false, false);
+  renderRetSection('ret-archived-wrap',  archived,  'Cancelados / Fallidos', false, true);
+}
+
+function renderRetSection(wrapperId, reqs, title, showCancel, collapsed) {
+  const wrap = document.getElementById(wrapperId);
+  if (!wrap) return;
+  if (!reqs.length) { wrap.innerHTML = ''; return; }
+
+  const countBadge = `<span class="ret-section-count">${reqs.length}</span>`;
+  const bodyId     = `${wrapperId}-body`;
+
+  const rows = reqs.map(req => {
+    const srcAmt = parseFloat(req.amount_source) || 0;
+    const srcCur = req.source_currency || 'USD';
+    const netAmt = parseFloat(req.net_amount)    || 0;
+    const feeAmt = parseFloat(req.fee_amount)    || 0;
+    const payOut = req.payout_currency || srcCur;
+    const risk   = parseInt(req.risk_score)       || 0;
+    const destSum= req.destination_summary
+      ? `→ ${req.destination_summary}`
+      : (req.method_type ? `→ ${retMethodLabel(req.method_type)}` : '');
+
+    const riskBadge = risk >= 40
+      ? `<span class="ret-badge ret-badge-risk" title="Riesgo: ${risk}">⚑ Revisión manual</span>`
+      : '';
+
+    const dateMs = req.completed_ms || req.updated_ms || req.created_ms;
+
+    const cancelBtn = (showCancel && ['draft','pending_review'].includes(req.status))
+      ? `<button class="btn btn-secondary btn-sm" data-ret-cancel="${esc(req.id)}"
+               style="margin-top:8px;">Cancelar solicitud</button>`
+      : '';
+
+    const noteHtml = (req.review_note && ['rejected','failed'].includes(req.status))
+      ? `<div class="ret-req-note">📋 ${esc(req.review_note)}</div>`
+      : '';
+
+    return `<div class="ret-req-row">
+      <div class="ret-req-top">
+        <div class="ret-req-amount">${esc(fmtUSD(srcAmt))}
+          <span style="font-size:.75rem;font-weight:500;color:rgba(255,255,255,.55);">${esc(srcCur)}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          ${retStatusBadge(req.status)} ${riskBadge}
+        </div>
+      </div>
+      <div class="ret-req-dest" title="${esc(destSum)}">${esc(destSum)}</div>
+      <div class="ret-req-meta">
+        <span>Neto: <strong>${fmtUSD(netAmt)} ${esc(payOut)}</strong></span>
+        ${feeAmt > 0 ? `<span>Comisión: ${fmtUSD(feeAmt)}</span>` : ''}
+        ${req.exchange_rate ? `<span>Tasa: ${parseFloat(req.exchange_rate).toLocaleString('es-VE')}</span>` : ''}
+        <span>${fmtRelDate(dateMs)}</span>
+      </div>
+      ${noteHtml}
+      ${cancelBtn}
+    </div>`;
+  }).join('');
+
+  if (collapsed) {
+    wrap.innerHTML = `
+      <button class="ret-collapse-btn" id="${bodyId}-toggle"
+              aria-expanded="false" aria-controls="${bodyId}">
+        <span class="ret-collapse-arrow">▶</span> ${esc(title)} ${countBadge}
+      </button>
+      <div id="${bodyId}" style="display:none;">${rows}</div>`;
+    const toggleBtn = document.getElementById(`${bodyId}-toggle`);
+    if (toggleBtn) toggleBtn.addEventListener('click', () => {
+      const body = document.getElementById(bodyId);
+      const open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      toggleBtn.setAttribute('aria-expanded', !open);
+      toggleBtn.classList.toggle('open', !open);
+    });
+  } else {
+    wrap.innerHTML = `<div class="ret-section-title">${esc(title)} ${countBadge}</div>${rows}`;
+  }
+
+  wrap.querySelectorAll('[data-ret-cancel]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.retCancel;
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Cancelando…';
+      try {
+        const r = await fetch(`/api/profile/withdrawals/${encodeURIComponent(id)}/cancel`, {
+          method:'PATCH', credentials:'same-origin',
+        });
+        if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) {
+          toast('Solicitud cancelada ✓');
+          await loadWithdrawals();
+        } else if (r.status === 409) {
+          toast('Esta solicitud ya no se puede cancelar.', 'error');
+          btn.disabled = false; btn.textContent = orig;
+        } else {
+          toast(d.error || 'No se pudo cancelar.', 'error');
+          btn.disabled = false; btn.textContent = orig;
+        }
+      } catch(e) {
+        toast('Error de red.', 'error'); btn.disabled = false; btn.textContent = orig;
+      }
+    });
+  });
+}
+
+/* ── Modal open / close ──────────────────────────────────────────────────── */
+function openRetModal() {
+  _retMethod   = null;
+  _retFormData = {};
+  _retIdempKey = null;
+  /* Reset method selection */
+  document.querySelectorAll('[data-ret-method]').forEach(b => b.classList.remove('selected'));
+  const nextBtn = document.getElementById('ret-s1-next');
+  if (nextBtn) nextBtn.disabled = true;
+  const s1err = document.getElementById('ret-s1-err');
+  if (s1err) { s1err.textContent = ''; s1err.classList.remove('show'); }
+  retGoStep(1);
+  document.getElementById('ret-modal').classList.add('open');
+}
+
+function closeRetModal() {
+  document.getElementById('ret-modal').classList.remove('open');
+  _retMethod   = null;
+  _retFormData = {};
+  /* Keep _retIdempKey only if there's an active submit in flight — cleared on success anyway */
+}
+
+/* ── Step transitions ────────────────────────────────────────────────────── */
+function retGoStep(n) {
+  [1,2,3].forEach(i => {
+    const s   = document.getElementById(`ret-s${i}`);
+    const ind = document.getElementById(`ret-step-ind-${i}`);
+    if (s) s.style.display = i === n ? 'block' : 'none';
+    if (ind) {
+      ind.className = 'ret-step' + (i < n ? ' done' : i === n ? ' active' : '');
+    }
+  });
+
+  const titleMap = {1:'Solicitar retiro', 2:'Datos del retiro', 3:'Confirmar retiro'};
+  const titleEl  = document.getElementById('ret-modal-title');
+  if (titleEl) titleEl.textContent = titleMap[n] || 'Retiro';
+
+  if (n === 2 && _retMethod) {
+    renderRetFormFields(_retMethod);
+    const s2err = document.getElementById('ret-s2-err');
+    if (s2err) { s2err.textContent = ''; s2err.classList.remove('show'); }
+  }
+  if (n === 3) {
+    if (!_retIdempKey) {
+      _retIdempKey = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : (Math.random().toString(36).slice(2) + Date.now().toString(36));
+    }
+    showRetConfirm();
+    const s3err = document.getElementById('ret-s3-err');
+    if (s3err) { s3err.textContent = ''; s3err.classList.remove('show'); }
+  }
+}
+
+/* ── Step 2: render form fields ──────────────────────────────────────────── */
+function renderRetFormFields(method) {
+  const el = document.getElementById('ret-form-fields');
+  if (!el) return;
+
+  const b   = _withdrawals.balance || {};
+  const lim = _withdrawals.limits  || {};
+  const avl = parseFloat(b.available_usd)   || 0;
+  const min = parseFloat(lim.min_usd)       || 0.01;
+  const max = Math.min(parseFloat(lim.per_tx_usd) || avl, avl);
+
+  const prevAmt = _retFormData.amount_source || '';
+  const prevCur = _retFormData.source_currency || 'USD';
+
+  const amountField = `
+    <div class="form-group">
+      <label class="form-label" for="ret-f-amount">
+        Monto <span style="color:var(--danger)" aria-hidden="true">*</span>
+      </label>
+      <div style="display:flex;gap:8px;">
+        <input class="form-control" id="ret-f-amount" type="number"
+               min="${min}" max="${max}" step="0.01" placeholder="0.00"
+               style="flex:1;" required value="${esc(prevAmt)}">
+        <select class="form-control" id="ret-f-src-currency" style="width:100px;flex-shrink:0;">
+          <option value="USD"${prevCur==='USD'?' selected':''}>USD</option>
+          <option value="USDC"${prevCur==='USDC'?' selected':''}>USDC</option>
+        </select>
+      </div>
+      <div class="form-helper">Mínimo ${fmtUSD(min)} · Máximo ${fmtUSD(max)} · Disponible ${fmtUSD(avl)}</div>
+      <div class="form-err" id="ret-f-amount-err"></div>
+    </div>`;
+
+  let specific = '';
+
+  if (method === 'pago_movil') {
+    const rateRow = lim.exchange_rate
+      ? `<div class="form-group">
+           <label class="form-label">Tasa de cambio (referencial)</label>
+           <div class="readonly-display">
+             1 USD ≈ ${parseFloat(lim.exchange_rate).toLocaleString('es-VE')} VES
+             <span style="font-size:.71rem;color:var(--muted);margin-left:8px;">fijada por el operador</span>
+           </div>
+         </div>` : '';
+    specific = `
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="ret-f-banco">Banco <span style="color:var(--danger)">*</span></label>
+          <input class="form-control" id="ret-f-banco" type="text" placeholder="Ej. Banesco"
+                 value="${esc(_retFormData.banco||'')}">
+          <div class="form-err" id="ret-f-banco-err"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ret-f-banco-cod">Código de banco <span style="color:var(--danger)">*</span></label>
+          <input class="form-control" id="ret-f-banco-cod" type="text" placeholder="Ej. 0134" maxlength="6"
+                 value="${esc(_retFormData.banco_cod||'')}">
+          <div class="form-err" id="ret-f-banco-cod-err"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ret-f-telefono">Teléfono <span style="color:var(--danger)">*</span></label>
+        <input class="form-control" id="ret-f-telefono" type="tel" placeholder="04XX-XXXXXXX"
+               value="${esc(_retFormData.telefono||'')}">
+        <div class="form-err" id="ret-f-telefono-err"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="ret-f-cedula">Cédula / RIF <span style="color:var(--danger)">*</span></label>
+          <input class="form-control" id="ret-f-cedula" type="text" placeholder="V-12345678"
+                 value="${esc(_retFormData.cedula||'')}">
+          <div class="form-err" id="ret-f-cedula-err"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ret-f-titular">Titular <span style="color:var(--danger)">*</span></label>
+          <input class="form-control" id="ret-f-titular" type="text" placeholder="Nombre completo"
+                 value="${esc(_retFormData.titular||'')}">
+          <div class="form-err" id="ret-f-titular-err"></div>
+        </div>
+      </div>
+      ${rateRow}
+      <div class="form-group">
+        <label class="form-label" for="ret-f-notas">Notas (opcional)</label>
+        <textarea class="form-control" id="ret-f-notas" rows="2"
+                  placeholder="Indicaciones adicionales para el operador"
+                  style="resize:vertical;min-height:58px;">${esc(_retFormData.notas||'')}</textarea>
+      </div>`;
+
+  } else if (method === 'usdc') {
+    specific = `
+      <div class="form-group">
+        <label class="form-label" for="ret-f-wallet">
+          Dirección de billetera <span style="color:var(--danger)">*</span>
+        </label>
+        <input class="form-control" id="ret-f-wallet" type="text"
+               placeholder="0x… dirección Base/Ethereum"
+               value="${esc(_retFormData.wallet||'')}">
+        <div class="form-helper">Solo direcciones Base (USDC). Verifica dos veces — los envíos son irreversibles.</div>
+        <div class="form-err" id="ret-f-wallet-err"></div>
+      </div>`;
+
+  } else if (method === 'bank') {
+    specific = `
+      <div class="form-group">
+        <label class="form-label" for="ret-f-banco-b">Banco <span style="color:var(--danger)">*</span></label>
+        <input class="form-control" id="ret-f-banco-b" type="text" placeholder="Ej. Banco de Venezuela"
+               value="${esc(_retFormData.banco||'')}">
+        <div class="form-err" id="ret-f-banco-b-err"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ret-f-cuenta">Número de cuenta <span style="color:var(--danger)">*</span></label>
+        <input class="form-control" id="ret-f-cuenta" type="text" placeholder="XXXX-XXXX-XX-XXXXXXXXXX"
+               value="${esc(_retFormData.cuenta||'')}">
+        <div class="form-err" id="ret-f-cuenta-err"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ret-f-titular-b">Titular <span style="color:var(--danger)">*</span></label>
+        <input class="form-control" id="ret-f-titular-b" type="text" placeholder="Nombre del titular"
+               value="${esc(_retFormData.titular||'')}">
+        <div class="form-err" id="ret-f-titular-b-err"></div>
+      </div>`;
+
+  } else if (method === 'cash') {
+    specific = `
+      <div class="form-group">
+        <label class="form-label" for="ret-f-cash-nota">
+          Instrucciones <span style="color:var(--danger)">*</span>
+        </label>
+        <textarea class="form-control" id="ret-f-cash-nota" rows="3"
+                  placeholder="Describe cómo quieres recibir el efectivo (contacto, ubicación, etc.)"
+                  style="resize:vertical;min-height:74px;">${esc(_retFormData.cash_nota||'')}</textarea>
+        <div class="form-helper">El operador coordinará contigo los detalles del pago en efectivo.</div>
+        <div class="form-err" id="ret-f-cash-nota-err"></div>
+      </div>`;
+  }
+
+  const saveToggle = `
+    <div class="toggle-row" style="padding:10px 0;border-top:1px solid var(--border);margin-top:4px;">
+      <div class="toggle-label-wrap">
+        <div class="toggle-label-title">Guardar este destino</div>
+        <div class="toggle-label-desc">Guárdalo como método para futuros retiros.</div>
+      </div>
+      <label class="switch" aria-label="Guardar destino">
+        <input type="checkbox" id="ret-f-save-method" role="switch" aria-checked="false">
+        <span class="switch-slider"></span>
+      </label>
+    </div>`;
+
+  const confirmCheck = `
+    <div class="form-group" style="margin-top:10px;">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="ret-f-confirm-check"
+               style="margin-top:3px;width:16px;height:16px;accent-color:var(--brand-2);" required>
+        <span style="font-size:.82rem;color:var(--text);line-height:1.5;">
+          Confirmo que los datos son correctos y entiendo que el retiro quedará
+          <strong>en revisión</strong> hasta que un operador lo procese.
+        </span>
+      </label>
+      <div class="form-err" id="ret-f-check-err"></div>
+    </div>`;
+
+  el.innerHTML = amountField + specific + saveToggle + confirmCheck;
+}
+
+/* ── Step 2: validation ──────────────────────────────────────────────────── */
+function validateRetForm() {
+  const b   = _withdrawals.balance || {};
+  const lim = _withdrawals.limits  || {};
+  const avl = parseFloat(b.available_usd)    || 0;
+  const min = parseFloat(lim.min_usd)        || 0.01;
+  const maxTx = parseFloat(lim.per_tx_usd)   || Infinity;
+
+  /* Clear errors */
+  document.querySelectorAll('#ret-form-fields .form-err').forEach(e => {
+    e.textContent = ''; e.classList.remove('show');
+  });
+  const s2err = document.getElementById('ret-s2-err');
+  if (s2err) { s2err.textContent = ''; s2err.classList.remove('show'); }
+
+  let valid = true;
+  const fail = (id, msg) => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = msg; el.classList.add('show'); }
+    valid = false;
+  };
+
+  const amtStr = (document.getElementById('ret-f-amount') || {}).value || '';
+  const amtNum = parseFloat(amtStr);
+
+  if (!amtStr || isNaN(amtNum) || amtNum <= 0) {
+    fail('ret-f-amount-err', 'Ingresa un monto válido mayor a cero.');
+  } else if (amtNum < min) {
+    fail('ret-f-amount-err', `El mínimo de retiro es ${fmtUSD(min)}.`);
+  } else if (amtNum > maxTx) {
+    fail('ret-f-amount-err', `El límite por transacción es ${fmtUSD(maxTx)}.`);
+  } else if (amtNum > avl) {
+    fail('ret-f-amount-err', `Saldo insuficiente. Disponible: ${fmtUSD(avl)}.`);
+  }
+
+  const req = id => {
+    const el = document.getElementById(id);
+    return el && el.value.trim() !== '';
+  };
+
+  if (_retMethod === 'pago_movil') {
+    if (!req('ret-f-banco'))     fail('ret-f-banco-err',     'El banco es obligatorio.');
+    if (!req('ret-f-banco-cod')) fail('ret-f-banco-cod-err', 'El código de banco es obligatorio.');
+    if (!req('ret-f-telefono'))  fail('ret-f-telefono-err',  'El teléfono es obligatorio.');
+    if (!req('ret-f-cedula'))    fail('ret-f-cedula-err',    'La cédula o RIF es obligatorio.');
+    if (!req('ret-f-titular'))   fail('ret-f-titular-err',   'El nombre del titular es obligatorio.');
+  } else if (_retMethod === 'usdc') {
+    if (!req('ret-f-wallet'))    fail('ret-f-wallet-err',    'La dirección de billetera es obligatoria.');
+  } else if (_retMethod === 'bank') {
+    if (!req('ret-f-banco-b'))   fail('ret-f-banco-b-err',   'El banco es obligatorio.');
+    if (!req('ret-f-cuenta'))    fail('ret-f-cuenta-err',    'El número de cuenta es obligatorio.');
+    if (!req('ret-f-titular-b')) fail('ret-f-titular-b-err', 'El titular es obligatorio.');
+  } else if (_retMethod === 'cash') {
+    if (!req('ret-f-cash-nota')) fail('ret-f-cash-nota-err', 'Las instrucciones son obligatorias.');
+  }
+
+  const chk = document.getElementById('ret-f-confirm-check');
+  if (chk && !chk.checked) fail('ret-f-check-err', 'Debes confirmar que los datos son correctos.');
+
+  return valid;
+}
+
+/* ── Capture form → _retFormData ─────────────────────────────────────────── */
+function captureRetFormData() {
+  const lim  = _withdrawals.limits || {};
+  const get  = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const chked= id => { const el = document.getElementById(id); return el ? el.checked : false; };
+
+  _retFormData = {
+    method_type:     _retMethod,
+    amount_source:   get('ret-f-amount'),
+    source_currency: get('ret-f-src-currency') || 'USD',
+    payout_currency: _retMethod === 'pago_movil' ? 'VES' : (get('ret-f-src-currency') || 'USD'),
+    exchange_rate:   lim.exchange_rate || null,
+    save_method:     chked('ret-f-save-method'),
+  };
+
+  if (_retMethod === 'pago_movil') {
+    const banco = get('ret-f-banco');
+    const tel   = get('ret-f-telefono');
+    const last4 = tel.replace(/\D/g,'').slice(-4);
+    Object.assign(_retFormData, {
+      banco, banco_cod: get('ret-f-banco-cod'), telefono: tel,
+      cedula: get('ret-f-cedula'), titular: get('ret-f-titular'),
+      notas:  get('ret-f-notas'),
+      destination_summary: `Pago Móvil ${banco} ****${last4}`,
+      destination: { banco, banco_cod: get('ret-f-banco-cod'), telefono: tel,
+                     cedula: get('ret-f-cedula'), titular: get('ret-f-titular') },
+    });
+  } else if (_retMethod === 'usdc') {
+    const addr  = get('ret-f-wallet');
+    const last4 = addr.slice(-4);
+    Object.assign(_retFormData, {
+      wallet: addr,
+      destination_summary: `USDC ****${last4}`,
+      destination: { wallet_address: addr },
+    });
+  } else if (_retMethod === 'bank') {
+    const banco  = get('ret-f-banco-b');
+    const cuenta = get('ret-f-cuenta');
+    const last4  = cuenta.replace(/\D/g,'').slice(-4);
+    Object.assign(_retFormData, {
+      banco, cuenta, titular: get('ret-f-titular-b'),
+      destination_summary: `${banco} ****${last4}`,
+      destination: { banco, numero_cuenta: cuenta, titular: get('ret-f-titular-b') },
+    });
+  } else if (_retMethod === 'cash') {
+    const nota = get('ret-f-cash-nota');
+    Object.assign(_retFormData, {
+      cash_nota: nota,
+      destination_summary: 'Efectivo / asistencia manual',
+      destination: { notas: nota },
+    });
+  }
+}
+
+/* ── Step 3: show confirmation summary ───────────────────────────────────── */
+function showRetConfirm() {
+  const el  = document.getElementById('ret-s3-summary');
+  if (!el) return;
+  const fd  = _retFormData;
+  const lim = _withdrawals.limits || {};
+
+  const amtNum = parseFloat(fd.amount_source) || 0;
+  const fee    = 0; /* no fee currently */
+  const net    = amtNum - fee;
+  const rate   = parseFloat(fd.exchange_rate) || 0;
+
+  const rows = [
+    { label:'Método',          value: retMethodLabel(fd.method_type),   accent:false },
+    { label:'Monto a retirar', value: `${fmtUSD(amtNum)} ${esc(fd.source_currency||'USD')}`, accent:false },
+    { label:'Comisión',        value: fee === 0 ? 'Sin comisión' : fmtUSD(fee), accent:false },
+    { label:'Neto a pagar',    value: `${fmtUSD(net)} ${esc(fd.payout_currency||fd.source_currency||'USD')}`, accent:true },
+    { label:'Destino',         value: fd.destination_summary || '—', accent:false },
+  ];
+
+  if (rate > 0 && fd.payout_currency === 'VES') {
+    rows.push({ label:'Estimado en VES', value:`≈ ${(amtNum*rate).toLocaleString('es-VE',{maximumFractionDigits:2})} VES`, accent:false });
+  }
+  if (rate > 0) {
+    rows.push({ label:'Tasa de cambio', value:`1 USD ≈ ${rate.toLocaleString('es-VE')} VES (referencial)`, accent:false });
+  }
+  rows.push({ label:'Tiempo estimado', value:'Manual — sujeto a revisión del operador', accent:false });
+
+  el.innerHTML = rows.map(r => `
+    <div class="ret-confirm-row">
+      <span class="ret-confirm-label">${esc(r.label)}</span>
+      <span class="ret-confirm-value${r.accent?' accent':''}">${r.value}</span>
+    </div>`).join('');
+}
+
+/* ── Submit ──────────────────────────────────────────────────────────────── */
+async function submitRetWithdrawal() {
+  const btn  = document.getElementById('ret-s3-confirm');
+  const errEl= document.getElementById('ret-s3-err');
+  if (!btn || !errEl) return;
+
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  errEl.textContent = ''; errEl.classList.remove('show');
+
+  const fd   = _retFormData;
+  const body = {
+    method_type:     fd.method_type,
+    amount_source:   parseFloat(fd.amount_source),
+    source_currency: fd.source_currency || 'USD',
+    destination:     fd.destination || {},
+    idempotency_key: _retIdempKey,
+  };
+  if (fd.payout_currency) body.payout_currency = fd.payout_currency;
+  if (fd.exchange_rate)   body.exchange_rate    = fd.exchange_rate;
+
+  try {
+    const r = await fetch('/api/profile/withdrawals', {
+      method:'POST', credentials:'same-origin',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+    const d = await r.json().catch(() => ({}));
+
+    if ((r.status === 201 || r.status === 200) && (d.ok || d.idempotent)) {
+      /* Optional: save method */
+      if (fd.save_method && fd.method_type && fd.destination) {
+        try {
+          await fetch('/api/profile/withdrawal-methods', {
+            method:'POST', credentials:'same-origin',
+            headers:{'content-type':'application/json'},
+            body: JSON.stringify({ type:fd.method_type, label:fd.destination_summary, details:fd.destination }),
+          });
+        } catch(e) { /* non-fatal */ }
+      }
+      _retIdempKey = null;
+      toast('Solicitud enviada — en revisión ✓');
+      closeRetModal();
+      await loadWithdrawals();
+    } else {
+      const ERR = {
+        insufficient_balance: 'Saldo insuficiente para este retiro.',
+        amount_invalid:       'El monto ingresado no es válido.',
+        over_per_tx_limit:    `Límite por transacción: ${fmtUSD((_withdrawals.limits||{}).per_tx_usd)}.`,
+        over_daily_limit:     `Límite diario alcanzado: ${fmtUSD((_withdrawals.limits||{}).daily_usd)}.`,
+        method_invalid:       'El método de retiro no es válido.',
+        method_unavailable:   'Este método de retiro no está disponible ahora.',
+      };
+      const msg = ERR[d && d.error] || (d && d.error) || 'No se pudo enviar la solicitud.';
+      errEl.textContent = msg; errEl.classList.add('show');
+      /* keep _retIdempKey so a retry reuses same key */
+      btn.disabled = false; btn.textContent = orig;
+    }
+  } catch(e) {
+    errEl.textContent = 'Error de red. Verifica tu conexión e intenta de nuevo.';
+    errEl.classList.add('show');
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+/* ── Wire the withdrawal modal ───────────────────────────────────────────── */
+function wireRetModal() {
+  const overlay = document.getElementById('ret-modal');
+  if (!overlay) return;
+
+  document.getElementById('ret-modal-close').addEventListener('click', closeRetModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeRetModal(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && overlay.classList.contains('open')) closeRetModal();
+  });
+
+  /* Step 1: method pills */
+  overlay.querySelectorAll('[data-ret-method]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      overlay.querySelectorAll('[data-ret-method]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      _retMethod = btn.dataset.retMethod;
+      const nextBtn = document.getElementById('ret-s1-next');
+      if (nextBtn) nextBtn.disabled = false;
+      const s1err = document.getElementById('ret-s1-err');
+      if (s1err) { s1err.textContent = ''; s1err.classList.remove('show'); }
+    });
+  });
+
+  document.getElementById('ret-s1-next').addEventListener('click', () => {
+    if (!_retMethod) {
+      const err = document.getElementById('ret-s1-err');
+      if (err) { err.textContent = 'Selecciona un método para continuar.'; err.classList.add('show'); }
+      return;
+    }
+    retGoStep(2);
+  });
+
+  document.getElementById('ret-s1-cancel').addEventListener('click', closeRetModal);
+
+  /* Step 2 */
+  document.getElementById('ret-s2-back').addEventListener('click', () => retGoStep(1));
+
+  document.getElementById('ret-form').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!validateRetForm()) return;
+    captureRetFormData();
+    _retIdempKey = null; /* fresh key on next step-3 entry */
+    retGoStep(3);
+  });
+
+  /* Step 3 */
+  document.getElementById('ret-s3-back').addEventListener('click', () => {
+    _retIdempKey = null; /* regenerate key if user re-enters step 3 after going back */
+    retGoStep(2);
+  });
+
+  document.getElementById('ret-s3-confirm').addEventListener('click', submitRetWithdrawal);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Main boot ──────────────────────────────────────────────────────────── */
@@ -2866,6 +4032,12 @@ async function fetchPaymentSummary() {
   document.querySelector('[data-tab="contabilidad"]').addEventListener('click', () => {
     if (!_ledgerLoaded) loadLedger();
   });
+
+  /* Lazy-load retiros tab on first click */
+  document.querySelector('[data-tab="retiros"]').addEventListener('click', () => {
+    if (!_retLoaded) loadWithdrawals();
+  });
+  wireRetModal();
 
   /* 5. Wire quick actions */
   document.getElementById('qa-edit').addEventListener('click', () => openModal(_profile));
