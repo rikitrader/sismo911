@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { AGENCIAS, ESF, type Agencia } from '../data/agencias';
 import { AICORP, FLUJO } from '../data/ai_corp';
+import { cspNonce } from '../lib/security';
 
 // Gobierno IA de Venezuela — un gobierno autónomo operado por agentes de IA,
 // coordinado por "AI Corp Federal", TOTALMENTE detached del gobierno real de
@@ -27,7 +28,7 @@ function avatar(a: Agencia, size: number): string {
   // initials sit behind; the photo overlays absolutely and covers them when it
   // loads (onerror removes it → initials show). Absolute overlay avoids the
   // flexbox-shrink bug that hid the photo behind the initials.
-  return `<span class="ag-av" style="position:relative;width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;background:${col};color:#fff;font-family:'Public Sans',sans-serif;font-weight:800;font-size:${Math.round(size * 0.34)}px;flex:0 0 auto;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"><span>${e(initials(a.agent_name))}</span><img src="/agentes/${e(a.slug)}.webp" alt="${e(a.agent_name)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()"></span>`;
+  return `<span class="ag-av" style="position:relative;width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;background:${col};color:#fff;font-family:'Public Sans',sans-serif;font-weight:800;font-size:${Math.round(size * 0.34)}px;flex:0 0 auto;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"><span>${e(initials(a.agent_name))}</span><img src="/agentes/${e(a.slug)}.webp" alt="${e(a.agent_name)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" data-fb-remove></span>`;
 }
 
 function head(title: string, desc: string, canonical: string, leaflet = false): string {
@@ -60,6 +61,7 @@ const apex = () => AGENCIAS.find((a) => a.nivel === 'Central IA')!;
 
 // GET /ai-corp — el AI Corp Federal: orquestador + departamentos + flujo + proyectos
 agencias.get('/ai-corp', (c) => {
+  const nonce = cspNonce(c);
   const STEPCOL: Record<string, string> = { 'Detección': '#0369a1', 'Activación': '#e57200', 'Aprobación': '#16a34a', 'Financiamiento': '#d97706', 'Entrega': '#0891b2', 'Asistencia': '#db2777', 'Orquestación': '#7c3aed' };
   const orch = AICORP[0];
   const depts = AICORP.slice(1);
@@ -68,7 +70,7 @@ agencias.get('/ai-corp', (c) => {
       <div class="text-[12.5px] font-semibold">${e(s)}</div>
     </div>`).join('<div class="self-start mt-3 text-on-surface-variant">→</div>');
   const card = (d: typeof AICORP[number]) => `<div class="card p-4 flex items-start gap-3">
-      <span style="width:52px;height:52px;border-radius:14px;overflow:hidden;flex:0 0 auto;background:${STEPCOL[d.step] || '#7c3aed'};display:inline-block"><img src="/agentes/${e(d.slug)}.webp" alt="${e(d.name)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"></span>
+      <span style="width:52px;height:52px;border-radius:14px;overflow:hidden;flex:0 0 auto;background:${STEPCOL[d.step] || '#7c3aed'};display:inline-block"><img src="/agentes/${e(d.slug)}.webp" alt="${e(d.name)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" data-hide-on-err></span>
       <div class="min-w-0">
         <div class="chip" style="background:${STEPCOL[d.step] || '#7c3aed'};color:#fff">${e(d.step)}</div>
         <div class="font-display font-bold text-[15px] mt-1 leading-tight">${e(d.name)}</div>
@@ -99,7 +101,8 @@ agencias.get('/ai-corp', (c) => {
     <div id="projs" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"><p class="text-on-surface-variant text-sm col-span-full">Cargando proyectos…</p></div>
     <p class="text-xs text-on-surface-variant mt-8 border-t border-outline-variant/50 pt-3">${e(NOTE)}</p>
   </main>
-  <script>
+  <script nonce="${nonce}">
+  addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}if(t.hasAttribute("data-fb-remove")){t.remove();return}if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html")}},true);
   const fmt=n=>'$'+Math.round(Number(n)||0).toLocaleString('en-US');
   const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   fetch('/api/campaigns').then(r=>r.json()).then(d=>{
@@ -127,6 +130,7 @@ agencias.get('/api/agencias', (c) =>
 
 // GET /agencias — portal del Gobierno IA
 agencias.get('/agencias', (c) => {
+  const nonce = cspNonce(c);
   const ax = apex();
   const others = AGENCIAS.filter((a) => a.nivel !== 'Central IA');
   const estados = ['Nacional', ...Array.from(new Set(others.filter((a) => a.estado !== 'Nacional').map((a) => a.estado))).sort()];
@@ -188,7 +192,8 @@ agencias.get('/agencias', (c) => {
     <div id="dir">${sections}</div>
     <p class="text-xs text-on-surface-variant mt-8 border-t border-outline-variant/50 pt-3">${e(NOTE)}</p>
   </main>
-  <script>
+  <script nonce="${nonce}">
+  addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}if(t.hasAttribute("data-fb-remove")){t.remove();return}if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html")}},true);
   const q=document.getElementById('q'),estSel=document.getElementById('estSel');let niv='';
   function apply(){const v=q.value.trim().toLowerCase(),es=estSel.value;
     document.querySelectorAll('.est-sec').forEach(sec=>{let any=false;
@@ -212,6 +217,7 @@ agencias.get('/agencias', (c) => {
 
 // GET /agencias/:slug — ficha del agente IA
 agencias.get('/agencias/:slug', (c) => {
+  const nonce = cspNonce(c);
   const a = AGENCIAS.find((x) => x.slug === c.req.param('slug'));
   if (!a) return c.html(head('Agente no encontrado | SISMO911', 'No encontrado', '/agencias') +
     `<main class="mx-auto max-w-3xl px-4 py-16 text-center"><h1 class="font-display font-extrabold text-2xl mb-2">Agente no encontrado</h1><a href="/agencias" class="text-primary underline">← Volver al Gobierno IA</a></main>` + FOOT, 404);
@@ -260,9 +266,17 @@ agencias.get('/agencias/:slug', (c) => {
       <div class="flex flex-wrap gap-2">${children.slice(0, 60).map((p) => `<a href="/agencias/${e(p.slug)}" class="chip bg-surface-container hover:bg-surface-container-high">${e(p.acronym)}</a>`).join('')}</div></div>` : ''}
     ${parent ? `<div class="mb-4 text-sm"><span class="text-on-surface-variant">Reporta a:</span> <a href="/agencias/${e(parent.slug)}" class="text-primary hover:underline font-semibold">${e(parent.agency)}</a></div>` : ''}
 
-    <div class="flex flex-wrap gap-3 text-sm noprint mb-6"><a href="/agencias" class="text-primary hover:underline">← Gobierno IA</a><button onclick="window.print()" class="text-primary hover:underline">🖨️ Imprimir ficha</button></div>
+    <div class="flex flex-wrap gap-3 text-sm noprint mb-6"><a href="/agencias" class="text-primary hover:underline">← Gobierno IA</a><button data-act="__print" class="text-primary hover:underline">🖨️ Imprimir ficha</button></div>
     <p class="text-xs text-on-surface-variant border-t border-outline-variant/50 pt-3">${e(NOTE)}</p>
-  </main>`;
+  </main>
+  <script nonce="${nonce}">
+  addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}if(t.hasAttribute("data-fb-remove")){t.remove();return}if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html")}},true);
+  var ACTIONS={__print:function(){window.print();}};
+  function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+  ["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+    var el=e.target.closest("[data-act]");if(!el)return;var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+    var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
+  </script>`;
   return c.html(head(`${a.agent_name} — ${a.acronym} | Gobierno IA de Venezuela`,
     `${a.agency} (${a.acronym}) · agente IA ${a.nivel}. ${a.skills}`.slice(0, 180), '/agencias/' + a.slug) + body + FOOT,
     200, { 'Cache-Control': 'public, max-age=3600' });

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { ESTADOS, type Estado } from '../data/estados';
+import { cspNonce } from '../lib/security';
 
 // Mapa sísmico por estado. Plantilla única parametrizada por :slug que reúne,
 // para cualquiera de los 25 estados de Venezuela: la cartografía GIS del estado
@@ -55,6 +56,7 @@ const FOOT = `</body></html>`;
 
 // ---------- /estados : índice nacional ----------
 estados.get('/estados', (c) => {
+  const nonce = cspNonce(c);
   const list = [...ESTADOS].sort(byName);
   const cards = list.map((s) => `<a href="/estado/${e(s.slug)}" class="estcard">
     <div class="font-display font-bold text-primary">${e(s.name)}</div>
@@ -66,7 +68,7 @@ estados.get('/estados', (c) => {
   <div id="map" class="card mb-5"></div>
   <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">${cards}</div>
 </main>
-<script>
+<script nonce="${nonce}">
 const EST=${JSON.stringify(list.map((s) => ({ slug: s.slug, name: s.name, c: s.center })))};
 const map=L.map('map').setView([7.5,-66],6);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
@@ -95,6 +97,7 @@ ${urls}
 
 // ---------- /estado/:slug : plantilla por estado ----------
 estados.get('/estado/:slug', (c) => {
+  const nonce = cspNonce(c);
   const slug = c.req.param('slug');
   const st = ESTADOS.find((s) => s.slug === slug);
   if (!st) return c.notFound();
@@ -190,7 +193,14 @@ estados.get('/estado/:slug', (c) => {
   ${isLG ? `<p class="text-[11px] text-on-surface-variant mt-3">La capa “Deslave 1999 (ref.)” marca localidades documentadas como las más afectadas por la Tragedia de Vargas (dic. 1999); son referencias históricas de comunidad, no extensiones de flujo topografiadas.</p>` : ''}
   <p class="text-[11px] text-on-surface-variant mt-2">GIS: OpenStreetMap (ODbL). Sismos: USGS (dominio público) vía SISMO911. Daños: sosvenezuela2026.com.</p>
 </main>
-<script>
+<script nonce="${nonce}">
+// CSP-strict image fallback: inline error handlers are blocked, so mark the
+// image and handle the failure here in a capture-phase error listener instead.
+addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;
+  if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}
+  if(t.hasAttribute("data-fb-remove")){t.remove();return}
+  if(t.hasAttribute("data-fb-rmclosest")){var n=t.closest(t.getAttribute("data-fb-rmclosest"));if(n)n.remove();return}
+  if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html")}},true);
 const SLUG=${JSON.stringify(slug)}, BB=${JSON.stringify(bb)}, CEN=${JSON.stringify(st.center)}, ISLG=${isLG};
 // Point-in-polygon (ray casting, even-odd handles holes) against the real state
 // boundary — avoids the bbox over-count where adjacent states (Caracas cluster)
@@ -275,7 +285,7 @@ Promise.all([fetch('/api/danos-estructurales').then(r=>r.json()),bgReady]).then(
   const all=(d.reports||[]).filter(x=>inState(x.lng,x.lat));
   all.forEach(x=>{const iu=imgUrl(x.image_url);
     L.circleMarker([x.lat,x.lng],{radius:x.category==='collapsed_building'?7:5,color:'#fff',weight:1,fillColor:dColor(x.category),fillOpacity:.85})
-    .addTo(LY.damage).bindPopup('<div style="max-width:220px">'+(iu?'<img src="'+ge(iu)+'" style="width:100%;max-height:130px;object-fit:cover;border-radius:6px;margin-bottom:5px" loading="lazy" onerror="this.remove()">':'')+
+    .addTo(LY.damage).bindPopup('<div style="max-width:220px">'+(iu?'<img src="'+ge(iu)+'" style="width:100%;max-height:130px;object-fit:cover;border-radius:6px;margin-bottom:5px" loading="lazy" data-fb-remove>':'')+
     '<b>'+ge(x.title||'(sin nombre)')+'</b><br>'+ge(x.category==='collapsed_building'?'Colapsado':x.category==='damaged_building'?'Dañado':x.category)+
     (x.municipio?' · '+ge(x.municipio):'')+(x.parroquia?' / '+ge(x.parroquia):'')+(x.people_trapped?'<br>Atrapados: '+x.people_trapped:'')+
     (x.source_url?'<br><a href="'+ge(x.source_url)+'" target="_blank" rel="noopener">fuente ↗</a>':'')+'</div>');});
@@ -284,7 +294,7 @@ Promise.all([fetch('/api/danos-estructurales').then(r=>r.json()),bgReady]).then(
   const fg=document.getElementById('fotoGrid');
   document.getElementById('fotoN').textContent='('+ph.length+')';
   fg.innerHTML = ph.length? ph.map(p=>'<a class="ftile block relative aspect-square overflow-hidden rounded-lg bg-surface-container" href="'+ge(p.s||p.u)+'" target="_blank" rel="noopener" title="'+ge(p.t||'')+'">'+
-    '<img src="'+ge(p.u)+'" loading="lazy" class="w-full h-full object-cover" onerror="this.closest(\\'.ftile\\').remove()">'+
+    '<img src="'+ge(p.u)+'" loading="lazy" class="w-full h-full object-cover" data-fb-rmclosest=".ftile">'+
     '<span class="absolute bottom-0 inset-x-0 text-[10px] text-white px-1.5 py-1 leading-tight" style="background:linear-gradient(transparent,rgba(0,0,0,.75))">'+ge((p.t||'').slice(0,46))+'</span></a>').join('')
     : '<div class="text-[13px] text-on-surface-variant col-span-full">Aún no hay fotos adjuntas a los reportes de este estado.</div>';
   const col=all.filter(x=>x.category==='collapsed_building'), dam=all.filter(x=>x.category==='damaged_building');

@@ -3,6 +3,7 @@ import type { Env } from '../types';
 import { fetchBlogSources } from '../ingest/blog-sources';
 import { ingestBlog, writeArticle, deriveHeadline } from '../ingest/blog-cron';
 import { sanitizeHtml, isSafePublicUrl } from '../lib/sanitize';
+import { cspNonce } from '../lib/security';
 
 // Dynamic /blog ("Noticias") — a magazine of AI-written field reports, each
 // derived from a REAL scraped citizen post about the 24-J terremoto. Rendered
@@ -83,7 +84,7 @@ function shareBar(title: string, url: string) {
     `<a class="inline-flex items-center gap-1 text-sm font-semibold text-white rounded-lg px-3 py-2 hover:opacity-90 no-underline" style="background:${bg}" target="_blank" rel="noopener" href="${href}" aria-label="Compartir en ${label}">${label}</a>`;
   return `<div class="mt-6 flex flex-wrap items-center gap-2" aria-label="Compartir esta noticia">
     <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wide mr-1">Difundir</span>
-    <button onclick="navigator.share?navigator.share({title:document.title,url:location.href}):navigator.clipboard.writeText(location.href).then(()=>alert('Enlace copiado'))" class="inline-flex items-center gap-1 text-sm font-semibold border border-outline-variant rounded-lg px-3 py-2 hover:bg-surface-container" aria-label="Compartir o copiar el enlace">🔗 Compartir</button>
+    <button data-act="__share" class="inline-flex items-center gap-1 text-sm font-semibold border border-outline-variant rounded-lg px-3 py-2 hover:bg-surface-container" aria-label="Compartir o copiar el enlace">🔗 Compartir</button>
     ${btn('WhatsApp', `https://wa.me/?text=${tu}`, '#25D366')}
     ${btn('Facebook', `https://www.facebook.com/sharer/sharer.php?u=${u}`, '#1877F2')}
     ${btn('X', `https://twitter.com/intent/tweet?text=${t}&url=${u}`, '#111827')}
@@ -99,6 +100,7 @@ const platIcon = (p: string) =>
 
 // ---------------- index (magazine) ----------------
 blog.get('/blog', async (c) => {
+  const nonce = cspNonce(c);
   const page = Math.max(1, Number(c.req.query('page') || '1') || 1);
   const offset = (page - 1) * PAGE;
   const total = ((await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM blog_posts WHERE status='published'`).first<any>())?.n) ?? 0;
@@ -115,7 +117,7 @@ blog.get('/blog', async (c) => {
   const cover = (p: any) => `'${coverDataUri(p.place, p.platform)}'`;
   const heroCard = (p: any) => `<a href="/blog/${esc(p.slug)}" class="group block rounded-2xl overflow-hidden border border-outline-variant/60 bg-white hover:shadow-xl transition-shadow no-underline mb-8">
     <div class="aspect-[16/9] bg-cover bg-center relative" style="background-image:url(${cover(p)})">
-      <img src="${esc(p.image_url || '')}" alt="" loading="eager" fetchpriority="high" class="w-full h-full object-cover" onerror="this.style.display='none'">
+      <img src="${esc(p.image_url || '')}" alt="" loading="eager" fetchpriority="high" class="w-full h-full object-cover" data-hide-on-err>
       <span class="absolute top-3 left-3 bg-secondary text-white text-[11px] font-bold px-2 py-1 rounded">DESTACADA${p.video_url ? ' · 🎬 VIDEO' : ''}</span>
     </div>
     <div class="p-5 sm:p-7">
@@ -126,7 +128,7 @@ blog.get('/blog', async (c) => {
 
   const card = (p: any) => `<article class="group bg-white border border-outline-variant/60 rounded-xl overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
     <a href="/blog/${esc(p.slug)}" class="block aspect-[16/9] bg-cover bg-center relative" style="background-image:url(${cover(p)})">
-      <img src="${esc(p.image_url || '')}" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none'">
+      <img src="${esc(p.image_url || '')}" alt="" loading="lazy" class="w-full h-full object-cover" data-hide-on-err>
       ${p.video_url ? `<span class="absolute top-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">🎬 VIDEO</span>` : ''}
     </a>
     <div class="p-4 flex flex-col flex-1">
@@ -171,7 +173,11 @@ ${HEADER}
   </nav>
   <p class="mt-6 text-center"><a href="/blog/desaparecidos" class="text-primary font-semibold text-sm">Ver personas desaparecidas →</a></p>
 </div></main>
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
+<script nonce="${nonce}">if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;
+  if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}
+  if(t.hasAttribute("data-fb-remove")){t.remove();return}
+  if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html")}},true);</script>
 </body></html>`;
   return c.html(html);
 });
@@ -189,6 +195,7 @@ blog.get('/blog/rss.xml', async (c) => {
 
 // ---------------- single article ----------------
 blog.get('/blog/:slug', async (c) => {
+  const nonce = cspNonce(c);
   const slug = c.req.param('slug');
   if (RESERVED.has(slug)) return c.notFound(); // owned by desaparecidos.ts / rss
   const p = await c.env.DB.prepare(
@@ -222,7 +229,7 @@ blog.get('/blog/:slug', async (c) => {
     ],
   };
 
-  const heroBlock = embed || `<figure class="mb-5"><div class="w-full rounded-lg border border-outline-variant/60 overflow-hidden bg-cover bg-center" style="aspect-ratio:16/9;background-image:url('${coverDataUri(p.place, p.platform)}')"><img src="${esc(img)}" alt="${esc(p.headline)}" class="w-full h-full object-cover" loading="eager" decoding="async" onerror="this.style.display='none'"></div><figcaption class="mt-2 text-xs text-on-surface-variant">Reporte ciudadano desde ${esc(p.place)}${p.author ? ` · @${esc(p.author)}` : ''} en ${esc(platIcon(p.platform))}. ${eng ? `(${esc(eng)})` : ''}</figcaption></figure>`;
+  const heroBlock = embed || `<figure class="mb-5"><div class="w-full rounded-lg border border-outline-variant/60 overflow-hidden bg-cover bg-center" style="aspect-ratio:16/9;background-image:url('${coverDataUri(p.place, p.platform)}')"><img src="${esc(img)}" alt="${esc(p.headline)}" class="w-full h-full object-cover" loading="eager" decoding="async" data-hide-on-err></div><figcaption class="mt-2 text-xs text-on-surface-variant">Reporte ciudadano desde ${esc(p.place)}${p.author ? ` · @${esc(p.author)}` : ''} en ${esc(platIcon(p.platform))}. ${eng ? `(${esc(eng)})` : ''}</figcaption></figure>`;
 
   const html = `${HEAD(`${p.headline} — SISMO911`, p.meta_desc, canon, img,
     `<script type="application/ld+json">${JSON.stringify(ld)}</script><script type="application/ld+json">${JSON.stringify(crumb)}</script>`)}
@@ -247,7 +254,17 @@ ${HEADER}
     <p class="mt-6"><a href="/blog" class="text-primary font-semibold text-sm">← Volver a Noticias</a></p>
   </article>
 </div></main>
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
+<script nonce="${nonce}">if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+function __share(){navigator.share?navigator.share({title:document.title,url:location.href}):navigator.clipboard.writeText(location.href).then(function(){alert('Enlace copiado')});}
+var ACTIONS={__share:__share,__rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+  var el=e.target.closest("[data-act]");if(!el)return;var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
+addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;
+  if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}
+  if(t.hasAttribute("data-fb-remove")){t.remove();return}
+  if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html")}},true);</script>
 </body></html>`;
   return c.html(html);
 });
