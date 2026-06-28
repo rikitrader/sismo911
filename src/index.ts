@@ -10,6 +10,7 @@ import { alerts } from './routes/alerts';
 import { facilities } from './routes/facilities';
 import { shelters } from './routes/shelters';
 import { refugios } from './routes/refugios';
+import { casualties } from './routes/casualties';
 import { triage } from './routes/triage';
 import { ops } from './routes/ops';
 import { misc } from './routes/misc';
@@ -326,6 +327,7 @@ app.route('/api/alerts', alerts);
 app.route('/api/facilities', facilities);
 app.route('/api/shelters', shelters);
 app.route('/api/refugios', refugios); // shelter siting + evacuation logistics engine (La Guaira); GET public, writes refugios:manage
+app.route('/api/casualties', casualties); // multi-source casualty ledger (fallecidos/heridos/desaparecidos); GET public, POST /manual admin:maintenance
 app.route('/api/triage', triage);     // AI intake: free-text message → desaparecidos/mascotas/daños as pending (public, burst-limited)
 app.route('/api/damage', damage);
 app.route('/api/sat', satellite);    // satellite/GIS damage analysis (imagery proxy + Workers AI vision)
@@ -380,6 +382,10 @@ app.get('/flota/track', (c) => c.env.ASSETS.fetch(new Request(new URL('/flota-tr
 
 // Refugios & Evacuación dashboard (public): map + scoring + assignment + logistics.
 app.get('/refugios', (c) => c.env.ASSETS.fetch(new Request(new URL('/refugios.html', c.req.url))));
+
+// Víctimas y Fallecidos dashboard (public): multi-source casualty ledger with a
+// RED-ALERT banner, per-source figures, computed range, confidence + citations.
+app.get('/victimas', (c) => c.env.ASSETS.fetch(new Request(new URL('/victimas.html', c.req.url))));
 
 // Muro Sísmico (public): WhatsApp/Telegram-style community wall about the quakes
 // (reuses the /api/chat backend on the 'terremotos' channel).
