@@ -100,6 +100,7 @@ export interface Env {
   X402_NETWORK?: string;             // CAIP-2 override, e.g. 'eip155:8453' (Base). Default derives from CROSSMINT_CHAIN.
   X402_ASSET?: string;               // token contract override; default = USDC for the network
   X402_FACILITATOR_API_KEY?: string; // optional bearer for facilitators that require auth (e.g. CDP mainnet)
+  X402_PAYMENTS_ENABLED?: string;    // feature flag: 'true' + a facilitator → payments go LIVE (advertise + accept). Default off.
 
   // --- DB Ingestion Gatekeeper (src/security/*) -----------------------------
   // All optional: the gate has safe built-in defaults and degrades gracefully.
