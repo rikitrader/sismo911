@@ -61,7 +61,7 @@ export function setSecurityHeaders(c: Context) {
       // 'unsafe-eval' removed: no page loads the Tailwind Play CDN (CSS is built to
       // static app.css) and no remaining script source needs eval(). 'unsafe-inline'
       // stays only because pages still carry inline <script> blocks (migrating to
-      // hashes/nonces to drop it is tracked in HARDENING_PLAN.md).
+      // hashes/nonces to drop it is tracked in the private security vault).
       "script-src 'self' 'unsafe-inline' https://unpkg.com https://esm.sh https://static.cloudflareinsights.com https://maps.googleapis.com https://js.stripe.com https://*.crossmint.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://esm.sh",
       "font-src 'self' https://fonts.gstatic.com",
