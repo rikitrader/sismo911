@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMO911 — Alta de Unidades</title>
+  <meta name="description" content="Alta de unidades de respuesta + emisión de enlaces de seguimiento GPS. Acceso restringido." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#0b1830" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/app.css" />
+  <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    body{background:#eef0f4}
+    .eoc-bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%)}
+    .eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7a8092}
+    .card{background:#fff;border:1px solid #d7dbe4;border-radius:.7rem}
+    .mono{font-family:'JetBrains Mono',monospace}
+    .badge{display:inline-block;font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:.1rem .45rem;border-radius:.35rem}
+    .inp{display:block;width:100%;box-sizing:border-box;margin-top:.25rem;border:1px solid #cdd2dc;border-radius:.45rem;padding:.5rem .6rem;font-size:.9rem}
+    .uitem{border-top:1px solid #eceef3;padding:.7rem .9rem}
+    .ovl{position:fixed;inset:0;background:rgba(7,15,32,.55);display:flex;align-items:center;justify-content:center;padding:1rem;z-index:50}
+  </style>
+</head>
+<body class="font-sans text-on-surface">
+  <header class="eoc-bar text-white">
+    <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-3">
+        <img src="/logo.svg" alt="SISMO911" class="h-10 w-10" />
+        <div>
+          <div class="font-display font-extrabold text-lg leading-none">SISMO911</div>
+          <div class="text-[10px] tracking-[0.18em] text-white/60 mt-0.5">ALTA DE UNIDADES · FLOTA</div>
+        </div>
+      </div>
+      <nav class="flex items-center gap-4 text-sm font-medium text-white/85">
+        <a href="/admin/flota/live" class="hover:text-white">Mapa en vivo →</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 py-5 space-y-4">
+
+    <div id="authBanner" class="hidden card p-3 text-sm flex items-center justify-between gap-3" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c">
+      <span id="authBannerMsg"></span>
+      <a href="/login?next=/admin/flota/unidades" class="bg-primary text-white font-bold rounded-md px-3 py-1.5 text-xs whitespace-nowrap">Inicia sesión como operador →</a>
+    </div>
+
+    <!-- create unit -->
+    <div class="card p-4">
+      <div class="eyebrow mb-3">Nueva unidad de respuesta</div>
+      <div class="grid sm:grid-cols-4 gap-3 items-end">
+        <label class="text-[11px] text-on-surface-variant sm:col-span-2">Nombre
+          <input id="uName" type="text" autocomplete="off" placeholder="Ambulancia PC-01" class="inp" />
+        </label>
+        <label class="text-[11px] text-on-surface-variant">Tipo
+          <select id="uType" class="inp">
+            <option value="ambulancia">Ambulancia</option>
+            <option value="rescate">Rescate</option>
+            <option value="bomberos">Bomberos</option>
+            <option value="carga">Carga</option>
+            <option value="moto">Moto</option>
+            <option value="dron">Dron</option>
+            <option value="otro">Otro</option>
+          </select>
+        </label>
+        <button id="createBtn" class="bg-primary text-white font-semibold rounded-md px-3 py-2.5 text-sm">Crear unidad</button>
+      </div>
+      <div id="createMsg" class="text-[11px] mt-2 text-on-surface-variant"></div>
+    </div>
+
+    <!-- units -->
+    <div class="card overflow-hidden">
+      <div class="px-4 pt-4 pb-1 flex items-center justify-between">
+        <span class="eyebrow">Unidades</span>
+        <span id="uCount" class="text-[11px] text-on-surface-variant mono">—</span>
+      </div>
+      <div id="uList"><div class="px-4 py-8 text-center text-on-surface-variant text-sm">Cargando…</div></div>
+    </div>
+
+    <p class="text-[11px] text-on-surface-variant">El enlace de seguimiento (token) se muestra UNA sola vez al emitirlo. Compártelo con el teléfono de la unidad (escanea el QR o copia el enlace). Puedes revocarlo en cualquier momento. Acceso de operador requerido.</p>
+  </main>
+
+  <!-- token result overlay -->
+  <div id="tokOvl" class="ovl hidden">
+    <div class="card p-5 max-w-sm w-full text-center">
+      <div class="eyebrow mb-1">Enlace de seguimiento emitido</div>
+      <div id="tokUnit" class="font-extrabold text-lg mb-2">—</div>
+      <div id="tokQr" class="flex justify-center my-2"></div>
+      <div class="text-[11px] text-on-surface-variant mt-1 mb-1">Escanea con el teléfono de la unidad, o copia el enlace:</div>
+      <div class="mono text-[11px] break-all bg-surface-dim rounded p-2" id="tokUrl">—</div>
+      <div class="flex gap-2 mt-3">
+        <button id="tokCopy" class="flex-1 bg-primary text-white font-semibold rounded-md px-3 py-2 text-xs">Copiar enlace</button>
+        <button id="tokClose" class="flex-1 border rounded-md px-3 py-2 text-xs">Cerrar</button>
+      </div>
+      <div class="text-[10px] text-red-600 mt-2">⚠ No se mostrará de nuevo. Guárdalo ahora.</div>
+    </div>
+  </div>
+
+<script>
+const $=s=>document.querySelector(s);
+const api=(p,o)=>fetch('/api/'+p,Object.assign({credentials:'same-origin'},o));
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const hhmm=ms=>ms?new Date(Number(ms)).toLocaleString('es-VE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+const STBADGE={active:['Activa','#dcfce7','#166534'],inactive:['Inactiva','#e5e7eb','#374151'],suspended:['Suspendida','#fee2e2','#b91c1c']};
+function showAuth(m){$('#authBannerMsg').textContent=m||'Sesión de operador requerida.';$('#authBanner').classList.remove('hidden');}
+function clearAuth(){$('#authBanner').classList.add('hidden');}
+
+async function loadUnits(){
+  const r=await api('admin/flota/units');
+  if(r.status===401){showAuth('Sesión de operador requerida para administrar unidades.');return;}
+  if(!r.ok)return; clearAuth();
+  const units=((await r.json().catch(()=>({}))).results)||[];
+  $('#uCount').textContent=units.length+' unidad'+(units.length===1?'':'es');
+  $('#uList').innerHTML=units.length?units.map(u=>{
+    const b=STBADGE[u.status]||STBADGE.inactive;
+    return `<div class="uitem" data-id="${esc(u.id)}">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <div>
+          <div style="font-weight:800">${esc(u.name)} <span class="badge" style="background:${b[1]};color:${b[2]}">${b[0]}</span></div>
+          <div class="text-[11px] text-on-surface-variant">${esc(u.type)} · tokens activos: ${Number(u.active_tokens||0)} · último fix: ${u.last_fix_at?hhmm(u.last_fix_at):'—'}</div>
+        </div>
+        <div class="flex gap-2">
+          <button class="issue bg-primary text-white rounded px-2.5 py-1.5 text-[11px]" data-id="${esc(u.id)}" data-name="${esc(u.name)}">Emitir token</button>
+          <button class="toks border rounded px-2.5 py-1.5 text-[11px]" data-id="${esc(u.id)}">Tokens</button>
+        </div>
+      </div>
+      <div class="tokbox hidden mt-2"></div>
+    </div>`;
+  }).join(''):'<div class="px-4 py-8 text-center text-on-surface-variant text-sm">Aún no hay unidades. Crea la primera arriba.</div>';
+  document.querySelectorAll('.issue').forEach(btn=>btn.onclick=()=>issueToken(btn.dataset.id,btn.dataset.name));
+  document.querySelectorAll('.toks').forEach(btn=>btn.onclick=()=>toggleTokens(btn));
+}
+
+async function createUnit(){
+  const name=$('#uName').value.trim(), type=$('#uType').value;
+  if(!name){$('#createMsg').textContent='Indica un nombre.';return;}
+  $('#createBtn').disabled=true;
+  const r=await api('admin/flota/units',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,type})});
+  $('#createBtn').disabled=false;
+  if(r.status===401){showAuth();return;}
+  if(!r.ok){const e=await r.json().catch(()=>({}));$('#createMsg').textContent='Error: '+(e.error||r.status);return;}
+  $('#uName').value=''; $('#createMsg').textContent='Unidad creada ✓';
+  loadUnits();
+}
+
+async function issueToken(id,name){
+  const r=await api('admin/flota/units/'+encodeURIComponent(id)+'/token',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({expiresInHours:24})});
+  if(r.status===401){showAuth();return;}
+  if(!r.ok)return;
+  const d=await r.json();
+  const url=location.origin+d.trackUrl;
+  $('#tokUnit').textContent=name||'Unidad';
+  $('#tokUrl').textContent=url;
+  const qr=$('#tokQr'); qr.innerHTML='';
+  try{ new QRCode(qr,{text:url,width:184,height:184,correctLevel:QRCode.CorrectLevel.M}); }catch(e){ qr.textContent='(QR no disponible)'; }
+  $('#tokCopy').onclick=()=>{ navigator.clipboard&&navigator.clipboard.writeText(url); $('#tokCopy').textContent='Copiado ✓'; };
+  $('#tokOvl').classList.remove('hidden');
+  loadUnits();
+}
+$('#tokClose').onclick=()=>{$('#tokOvl').classList.add('hidden');$('#tokCopy').textContent='Copiar enlace';};
+
+async function toggleTokens(btn){
+  const box=btn.closest('.uitem').querySelector('.tokbox');
+  if(!box.classList.contains('hidden')){box.classList.add('hidden');return;}
+  box.classList.remove('hidden'); box.innerHTML='<div class="text-[11px] text-on-surface-variant">Cargando…</div>';
+  const id=btn.dataset.id;
+  const r=await api('admin/flota/units/'+encodeURIComponent(id)+'/tokens');
+  if(!r.ok){box.innerHTML='<div class="text-[11px] text-red-600">Error</div>';return;}
+  const toks=((await r.json().catch(()=>({}))).results)||[];
+  box.innerHTML=toks.length?toks.map(t=>{
+    const live=!t.revoked_at&&(!t.expires_at||t.expires_at>Date.now());
+    return `<div class="flex items-center justify-between gap-2 text-[11px] py-1 border-t" style="border-color:#f0f1f5">
+      <span>${esc(t.label||'(sin etiqueta)')} · ${live?'<b style="color:#166534">activo</b>':'<span style="color:#9ca3af">'+(t.revoked_at?'revocado':'expirado')+'</span>'} · vence ${t.expires_at?hhmm(t.expires_at):'—'}</span>
+      ${live?`<button class="rev border rounded px-2 py-0.5 text-[10px]" data-uid="${esc(id)}" data-tid="${esc(t.id)}">Revocar</button>`:''}
+    </div>`;
+  }).join(''):'<div class="text-[11px] text-on-surface-variant">Sin tokens.</div>';
+  box.querySelectorAll('.rev').forEach(rb=>rb.onclick=()=>revokeToken(rb.dataset.uid,rb.dataset.tid,box,btn));
+}
+
+async function revokeToken(uid,tid,box,btn){
+  const r=await api('admin/flota/units/'+encodeURIComponent(uid)+'/revoke-token',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tokenId:tid})});
+  if(!r.ok)return;
+  box.classList.add('hidden'); await loadUnits();
+  // re-open the same unit's token list
+  const nb=document.querySelector('.toks[data-id="'+CSS.escape(uid)+'"]'); if(nb)toggleTokens(nb);
+}
+
+$('#createBtn').onclick=createUnit;
+loadUnits();
+</script>
+</body>
+</html>
