@@ -305,6 +305,9 @@ app.get('/admin/flota/live', (c) => c.env.ASSETS.fetch(new Request(new URL('/adm
 // Face-vetting review queue (gated by isAdminPage → redirects unauth to /login).
 app.get('/admin/dup-review', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-dup-review.html', c.req.url))));
 
+// Admin x402 payments reconciliation page (gated by /admin prefix → ops:console).
+app.get('/admin/x402', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-x402.html', c.req.url))));
+
 // Unit GPS WebSocket: verify token + unit active, then hand to the FleetLive DO
 // tagged as a unit. Public path (token-validated here); never log the token.
 app.get('/ws/flota/unit', async (c) => {
