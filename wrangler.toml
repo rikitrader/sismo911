@@ -54,6 +54,8 @@ run_worker_first = [
   "/",
   "/api/*",
   "/mcp",
+  "/console",
+  "/console/",
   "/flota/track",
   "/flota/track/*",
   "/ws/flota/*",

@@ -24,6 +24,9 @@ import { acopio } from './routes/acopio';
 import { logistica } from './routes/logistica';
 import { admin } from './routes/admin';
 import { adminRbac } from './routes/admin-rbac';
+import { adminSessions } from './routes/admin-sessions';
+import { adminOrg } from './routes/admin-org';
+import { adminFlags } from './routes/admin-flags';
 import { funding } from './routes/funding';
 import { dashboard } from './routes/dashboard';
 import { plan } from './routes/plan';
@@ -75,6 +78,7 @@ import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
 import { evaluateGate, LEGACY_OPS_PERM, WRITE_METHODS } from './rbac/route-policy';
 import { authorize } from './rbac/middleware';
+import { getEffectivePermissions } from './rbac/engine';
 import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
 import { audit } from './lib/audit';
 
@@ -265,6 +269,9 @@ app.route('/api/acopio', acopio);    // /api/acopio/status — live status for a
 app.route('/api/acopio', logistica); // /api/acopio/{inventory,needs,shipments,match,dashboard} — FEMA-style logistics (GET public, writes operator-gated)
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
 app.route('/api/rbac', adminRbac);   // enterprise RBAC admin API (users/roles/permissions/audit/dashboard) — each route self-gates via requirePermission
+app.route('/api/rbac', adminSessions); // Phase 2: TOTP MFA + session mgmt + emergency lock
+app.route('/api/rbac', adminOrg);      // Phase 2: organization → department → team hierarchy
+app.route('/api/rbac', adminFlags);    // Phase 2: feature flags scoped by org/role/user
 app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET public; refresh gated; apify webhook secret-gated)
 app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directory (GET public; writes operator-gated)
 app.route('/api/emergencia', emergencia); // SUPER BANNER emergency spotlight profiles (GET public; writes operator-gated; share bump public)
@@ -379,6 +386,27 @@ export const PUBLIC_COMMAND_ASSETS: Record<string, string> = {
 for (const [routePath, assetPath] of Object.entries(PUBLIC_COMMAND_ASSETS)) {
   app.get(routePath, (c) => serveAsset(c, assetPath));
 }
+// Phase 2 S1: gate the ADMINISTRATION console SHELL behind page auth (not only
+// the /api/rbac APIs). /console + /console/ are run_worker_first so this route
+// runs; an unauthenticated or non-admin visitor is redirected to /login instead
+// of seeing the admin UI. The bundle (/console/app.js|css) stays asset-served and
+// public — it carries no data (every datum is gated at /api/rbac/*). "Can enter"
+// = holds any admin-read capability.
+const CONSOLE_BASELINE = ['users:read','roles:read','permissions:read','audit:read','security:read','sessions:read','organizations:read','feature_flags:read','login_history:read'];
+async function canEnterConsole(c: any): Promise<boolean> {
+  const user = await getUserFromRequest(c.env, c).catch(() => null);
+  if (!user) return false;
+  if (user.role === 'admin') return true; // super_admin
+  const perms = await getEffectivePermissions(c.env, user.id).catch(() => new Set<string>());
+  return CONSOLE_BASELINE.some((p) => perms.has(p));
+}
+const serveConsole = async (c: any) => {
+  if (!(await canEnterConsole(c))) return c.redirect('/login?next=/console/', 302);
+  return serveAsset(c, '/console/index.html');
+};
+app.get('/console', serveConsole);
+app.get('/console/', serveConsole);
+
 // Root is host-branched (see run_worker_first '/'): the SUMINISTROS subdomain
 // serves the inventory SPA shell; every other host serves the DESAPARECIDOS
 // registry (the app's post-quake front door).
