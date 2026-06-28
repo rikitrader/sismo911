@@ -242,7 +242,11 @@ app.route('/api/contacts', contacts);
 app.route('/api/auth', auth);
 app.route('/api/x402', x402);        // x402 payment receiving: per-user wallet accepts USDC over HTTP (verify+settle via facilitator)
 // x402 service discovery (public). Agents/clients read this to learn the network + pay-URL template.
-app.get('/.well-known/x402.json', (c) => c.json(wellKnownX402(c.env)));
+// Fix 1: when payments are not LIVE, 503 instead of advertising a protocol we can't settle.
+app.get('/.well-known/x402.json', (c) => {
+  const doc = wellKnownX402(c.env);
+  return doc ? c.json(doc) : c.json({ error: 'payments_unavailable' }, 503);
+});
 app.route('/api/familia', familia);
 app.route('/api/voluntarios', voluntarios);
 app.route('/api/telemedicina', telemedicina); // doctors worldwide ↔ patient help-requests for VE (intake, claim, schedule, video, calendar/ics)
