@@ -79,7 +79,8 @@ import { getUserFromRequest } from './lib/auth';
 import { evaluateGate, LEGACY_OPS_PERM, WRITE_METHODS } from './rbac/route-policy';
 import { authorize } from './rbac/middleware';
 import { getEffectivePermissions } from './rbac/engine';
-import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
+import { allowedOrigins, isAllowedOrigin, setSecurityHeaders, rateLimit } from './lib/security';
+import { backfillBatch } from './lib/flota-ingest';
 import { audit } from './lib/audit';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -305,6 +306,24 @@ app.route('/api/admin/flota', flotaAdmin);
 // unit token from localStorage there.
 app.get('/flota/track/:token', (c) => c.env.ASSETS.fetch(new Request(new URL('/flota-track.html', c.req.url))));
 app.get('/flota/track', (c) => c.env.ASSETS.fetch(new Request(new URL('/flota-track.html', c.req.url))));
+
+// Offline GPS buffer flush: the phone uploads fixes it captured while the
+// WebSocket was down. Unit-token auth (same as the WS); ingested in 'backfill'
+// mode (24h window, no jump guard, source 'buffered', not broadcast).
+app.post('/flota/track/backfill', async (c) => {
+  const v = await verifyUnitToken(c.env, unitTokenFromRequest(c.req.raw)).catch(() => null);
+  if (!v) return c.json({ error: 'invalid_token' }, 401);
+  const unit = await c.env.DB.prepare(`SELECT status FROM flota_units WHERE id = ?`).bind(v.unitId)
+    .first() as { status: string } | null;
+  if (!unit || unit.status !== 'active') return c.json({ error: 'unit_inactive' }, 403);
+  const limited = await rateLimit(c.env, c, 'flota_backfill:' + v.unitId, 20, 60); // 20 flushes / 60s / unit
+  if (limited) return limited;
+  const body = await c.req.json().catch(() => null);
+  const fixes = Array.isArray(body?.fixes) ? body.fixes.slice(0, 200) : null; // cap 200 per flush
+  if (!fixes) return c.json({ error: 'fixes[] requerido' }, 400);
+  const res = await backfillBatch(c.env, v.unitId, fixes, Date.now());
+  return c.json({ ok: true, ...res });
+});
 
 // Admin live map page (gated by isAdminPage → redirects unauth to /login).
 app.get('/admin/flota/live', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-flota-live.html', c.req.url))));

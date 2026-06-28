@@ -599,3 +599,29 @@ operator/admin gate and yields `401` if no session is present.
 | `unidad_no_disponible` | 409 | dispatch — unit not `disponible` (`estado_op` echoed) |
 | `estado inválido` | 400 | mission transition / waypoint status |
 | `expected_websocket` | 426 | `GET /api/flota/rastreo/ws` without upgrade |
+
+---
+
+## Offline GPS buffering
+
+### `POST /flota/track/backfill`
+Field-unit endpoint (NOT under `/api/admin`) to upload GPS fixes captured while the
+live WebSocket was down. **Auth:** unit token (`Authorization: Bearer fbu_…`,
+`X-Unit-Token`, or `?token=`) — the same credential as `GET /ws/flota/unit`. Public
+path; the token is the credential.
+
+**Body:** `{ "fixes": [ { lat, lng, accuracy?, heading?, speed?, battery?, recordedAt }, … ] }`
+(max **200** per request).
+
+**Ingest:** each fix is stored in **backfill mode** — a wider **24-hour** staleness
+window (vs 5 min for live), the impossible-jump guard is **skipped** (a contiguous
+device buffer is trusted), `source = 'buffered'`, and it is **not** broadcast to the
+admin map (historical). Future-timestamp / bad-coords / accuracy / inactive-unit
+checks still apply per fix.
+
+**Responses:** `200 { ok, accepted, rejected: [{ i, error }] }` · `400 fixes[]
+requerido` · `401 invalid_token` · `403 unit_inactive` · `429` (rate-limited:
+20 flushes / 60 s / unit).
+
+The phone PWA queues fixes in IndexedDB when the socket is down (cap 1000, oldest
+dropped) and flushes here on `online` / WS reconnect.
