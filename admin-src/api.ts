@@ -50,6 +50,8 @@ export const api = {
     request<T>(p, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(p: string, body?: unknown) =>
     request<T>(p, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
+  put: <T>(p: string, body?: unknown) =>
+    request<T>(p, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
   del: <T>(p: string) => request<T>(p, { method: 'DELETE' }),
 };
 
@@ -121,4 +123,83 @@ export const rbac = {
   permissions: () => api.get<{ categories: Record<string, Permission[]> }>('/permissions'),
   audit: (limit = 100) => api.get<{ events: any[] }>(`/audit?limit=${limit}`),
   loginHistory: (limit = 100) => api.get<{ events: any[] }>(`/login-history?limit=${limit}`),
+
+  // ---- Wave 1 ----
+  // Sessions, MFA, organization, feature flags, account lock. Some endpoints may
+  // 404 until the wave-1 server deploy lands — callers handle that gracefully.
+  lock: (id: string, reason?: string) => api.post(`/users/${id}/lock`, reason ? { reason } : {}),
+  unlock: (id: string) => api.post(`/users/${id}/unlock`, {}),
+
+  sessions: () => api.get<{ sessions: SessionRow[] }>(`/sessions`),
+  userSessions: (id: string) => api.get<{ sessions: SessionRow[] }>(`/users/${id}/sessions`),
+  revokeSession: (token: string) => api.del(`/sessions/${encodeURIComponent(token)}`),
+  revokeUserSession: (id: string, token: string) => api.del(`/users/${id}/sessions/${encodeURIComponent(token)}`),
+  revokeAllUserSessions: (id: string) => api.post(`/users/${id}/sessions/revoke-all`, {}),
+
+  mfaEnroll: () => api.post<MfaEnroll>(`/mfa/enroll`, {}),
+  mfaVerify: (code: string) => api.post<MfaVerify>(`/mfa/verify`, { code }),
+  mfaDisable: (code: string) => api.post(`/mfa/disable`, { code }),
+
+  orgs: () => api.get<{ orgs: Org[] }>(`/orgs`),
+  createOrg: (o: Partial<Org>) => api.post<{ id: string }>(`/orgs`, o),
+  updateOrg: (id: string, o: Partial<Org>) => api.patch(`/orgs/${id}`, o),
+  departments: (orgId?: string) => api.get<{ departments: Department[] }>(`/departments${orgId ? `?org_id=${encodeURIComponent(orgId)}` : ''}`),
+  createDepartment: (d: Partial<Department>) => api.post<{ id: string }>(`/departments`, d),
+  updateDepartment: (id: string, d: Partial<Department>) => api.patch(`/departments/${id}`, d),
+  deleteDepartment: (id: string) => api.del(`/departments/${id}`),
+  teams: (orgId?: string) => api.get<{ teams: Team[] }>(`/teams${orgId ? `?org_id=${encodeURIComponent(orgId)}` : ''}`),
+  createTeam: (t: Partial<Team>) => api.post<{ id: string }>(`/teams`, t),
+  updateTeam: (id: string, t: Partial<Team>) => api.patch(`/teams/${id}`, t),
+  deleteTeam: (id: string) => api.del(`/teams/${id}`),
+  addTeamMember: (id: string, userId: string) => api.post(`/teams/${id}/members`, { user_id: userId }),
+  removeTeamMember: (id: string, userId: string) => api.del(`/teams/${id}/members/${userId}`),
+
+  featureFlags: () => api.get<{ flags: FeatureFlag[] }>(`/feature-flags`),
+  setFeatureFlag: (o: FeatureFlagOverride) => api.put(`/feature-flags`, o),
+  removeFeatureFlag: (moduleKey: string, scopeType: string, scopeId: string) =>
+    api.del(`/feature-flags/${encodeURIComponent(moduleKey)}/${encodeURIComponent(scopeType)}/${encodeURIComponent(scopeId)}`),
+  featureFlagsEffective: (userId: string) =>
+    api.get<{ effective: EffectiveFlag[] }>(`/feature-flags/effective?user_id=${encodeURIComponent(userId)}`),
 };
+
+// ---- Wave 1 domain types ----
+export interface SessionRow {
+  token: string;
+  device_label?: string;
+  user_agent?: string;
+  ip?: string;
+  ip_address?: string;
+  created_ms?: number | null;
+  last_seen_ms?: number | null;
+  current?: boolean;
+  is_current?: boolean;
+}
+
+export interface MfaEnroll { secret: string; otpauth_uri: string; }
+export interface MfaVerify { backup_codes?: string[]; backupCodes?: string[]; }
+
+export interface Org { id: string; key?: string; name: string; description?: string; }
+export interface Department {
+  id: string; org_id: string; parent_id?: string | null; name: string; description?: string;
+}
+export interface TeamMember { user_id: string; email?: string; name?: string; }
+export interface Team {
+  id: string; org_id: string; name: string; description?: string; members?: TeamMember[];
+}
+
+export type FlagScope = 'org' | 'role' | 'user' | 'global';
+export interface FeatureFlagOverrideRow {
+  scope_type: FlagScope; scope_id: string; scope_label?: string; enabled: boolean;
+}
+export interface FeatureFlag {
+  module_key: string;
+  label?: string;
+  description?: string;
+  module?: string;        // grouping key (module/category)
+  default_enabled?: boolean;
+  overrides?: FeatureFlagOverrideRow[];
+}
+export interface FeatureFlagOverride {
+  module_key: string; scope_type: FlagScope; scope_id: string; enabled: boolean;
+}
+export interface EffectiveFlag { module_key: string; label?: string; enabled: boolean; source?: string; }

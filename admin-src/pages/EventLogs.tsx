@@ -1,6 +1,6 @@
 import { rbac } from '../api';
 import { useResource } from '../hooks';
-import { PageHeader, EmptyState, Avatar } from '../components/ui';
+import { PageHeader, Avatar } from '../components/ui';
 import { DataTable } from '../components/DataTable';
 import type { Column } from '../components/DataTable';
 import { ForbiddenInline, ErrorInline } from '../components/StateScreens';
@@ -59,21 +59,6 @@ export function LoginHistoryPage() {
       <PageHeader title="Historial de acceso" subtitle="Inicios de sesión recientes" />
       {r.forbidden ? <ForbiddenInline /> : r.error ? <ErrorInline message={r.error} onRetry={r.reload} /> :
         <DataTable rows={rows} columns={columns} loading={r.loading} search searchKeys={['email', 'user_email', 'username', 'ip', 'ip_address']} emptyTitle="Sin historial de acceso" emptyHint="Los inicios de sesión aparecerán aquí." />}
-    </div>
-  );
-}
-
-export function SessionsPage() {
-  return (
-    <div class="animate-fade-in">
-      <PageHeader title="Sesiones" subtitle="Sesiones activas y revocación" />
-      <div class="card">
-        <EmptyState
-          title="Próximamente"
-          hint="La gestión de sesiones activas estará disponible en una próxima versión. Por ahora puedes revisar los accesos en Historial de acceso."
-          icon="sessions"
-        />
-      </div>
     </div>
   );
 }
