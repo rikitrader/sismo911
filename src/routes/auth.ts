@@ -207,7 +207,8 @@ auth.post('/login', async (c) => {
     isPrivilegedRole(row.role) ? IDLE_TTL_MS : undefined,
   );
   setSessionCookie(c, token);
-  return c.json({ ok: true, token, expires, must_change_pw: row.must_change_pw ?? 0, user: { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, must_change_pw: row.must_change_pw ?? 0 } });
+  const mfaEnroll = Number(row.mfa_required) === 1 && Number(row.mfa_enabled) !== 1 ? 1 : 0;
+  return c.json({ ok: true, token, expires, must_change_pw: row.must_change_pw ?? 0, mfa_enrollment_required: mfaEnroll, user: { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, must_change_pw: row.must_change_pw ?? 0, mfa_enrollment_required: mfaEnroll } });
 });
 
 function envTokenMatches(expected: string | undefined, got: unknown): boolean {
