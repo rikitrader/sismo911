@@ -183,7 +183,8 @@ describe('upload records the original SHA-256 + draft status', () => {
     const env: any = { DB: { prepare: (s: string) => stmt(s) }, PERSON_PHOTOS: { put: async () => {}, get: async () => null } };
     const fd = new FormData();
     fd.append('kind', 'photo');
-    fd.append('file', new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4])], 'x.png', { type: 'image/png' }));
+    // Valid 8-byte PNG signature + trailing bytes so the magic-byte check passes (audit H1).
+    fd.append('file', new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])], 'x.png', { type: 'image/png' }));
     const res = await persons.request('/abc/attachments', { method: 'POST', body: fd }, env);
     expect(res.status).toBe(201);
     const j = await res.json() as any;
@@ -194,5 +195,20 @@ describe('upload records the original SHA-256 + draft status', () => {
     expect(insert!.binds).toContain('draft');     // status seeded
     // chain of custody 'uploaded' event recorded
     expect(runs.some((r) => /INSERT INTO evidence_chain_of_custody/.test(r.sql) && r.binds.includes('uploaded'))).toBe(true);
+  });
+
+  it('POST /:id/attachments refuses a scriptable type (audit H1 stored-XSS guard)', async () => {
+    const stmt = (sql: string): any => ({
+      bind: () => stmt(sql),
+      first: async () => (/FROM persons WHERE id = \?/.test(sql) ? { id: 'abc' } : (/sessions s JOIN users u/.test(sql) ? OP : null)),
+      all: async () => ({ results: [] }),
+      run: async () => ({ meta: { changes: 1 } }),
+    });
+    const env: any = { DB: { prepare: (s: string) => stmt(s) }, PERSON_PHOTOS: { put: async () => {}, get: async () => null } };
+    const fd = new FormData();
+    fd.append('kind', 'document');
+    fd.append('file', new File([new TextEncoder().encode('<script>alert(1)</script>')], 'x.html', { type: 'text/html' }));
+    const res = await persons.request('/abc/attachments', { method: 'POST', body: fd }, env);
+    expect(res.status).toBe(415);
   });
 });
