@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="/app.css" />
 <style>body{background:#f9f9fc}</style>
 <script src="/app-shell.js" defer></script>
+  <script>/* CSP-safe image fallback: hides broken imgs marked data-hide-on-err */addEventListener("error",function(e){var t=e.target;if(t&&t.tagName==="IMG"&&t.hasAttribute("data-hide-on-err"))t.style.display="none"},true)</script>
 </head>
 <body class="font-sans text-on-surface">
 <main class="mx-auto max-w-5xl px-4 py-8">
@@ -39,7 +40,7 @@ const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>
 const grid=document.getElementById('q')&&document.getElementById('grid');
 function card(r){
   const hosp=[r.contact,r.city,r.state].filter(x=>x&&!/^\+?\d[\d\s-]{5,}$/.test(x)).slice(0,2).join(' · ');
-  const img=r.photo_url?`<img src="${esc(r.photo_url)}" loading="lazy" class="w-full h-40 object-cover rounded-t-lg" onerror="this.style.display='none'">`:'';
+  const img=r.photo_url?`<img src="${esc(r.photo_url)}" loading="lazy" class="w-full h-40 object-cover rounded-t-lg" data-hide-on-err>`:'';
   return `<div class="bg-white rounded-lg border border-outline-variant/60 overflow-hidden">${img}
     <div class="p-4">
       <div class="flex items-center gap-2 mb-1">
