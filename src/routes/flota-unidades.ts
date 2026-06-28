@@ -4,8 +4,9 @@ import { uid } from '../lib/db';
 import { issueUnitToken } from '../lib/flota-token';
 
 // FLOTA — response-units (vehicles) CRUD. Table: flota_unidades.
-// Mounted at /api/flota/unidades. Writes are gated centrally by
-// index.ts ADMIN_WRITE_PREFIXES ('/api/flota'); GET reads are public.
+// Mounted at /api/flota/unidades. The whole /api/flota surface is
+// operator/admin-only (src/index.ts isFlotaApi) — reads expose responder
+// GPS/PII — except POST /rastreo/posicion via a field-unit token.
 
 export const flotaUnidades = new Hono<{ Bindings: Env }>();
 

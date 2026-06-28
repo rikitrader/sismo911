@@ -21,7 +21,7 @@
     .chip{display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:9999px;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
     .eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7a8092}
     .card{background:#fff;border:1px solid #d7dbe4;border-radius:.7rem}
-    .row:hover{background:#eef1f8;cursor:pointer}
+    .row:hover{background:#eef1f8}
     table.dt{width:100%;font-size:.82rem;border-collapse:collapse}
     table.dt th{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;text-align:left;padding:.5rem .6rem;background:#f4f6f9;position:sticky;top:0}
     table.dt td{padding:.5rem .6rem;border-top:1px solid #eceef3;vertical-align:top}
@@ -30,8 +30,15 @@
     .leaflet-popup-content{font-family:'Public Sans',sans-serif;font-size:.8rem}
     .dot{display:inline-block;width:.7rem;height:.7rem;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px #c4c6d0;vertical-align:middle}
     .pulse{position:relative}
-    .pulse::after{content:'';position:absolute;inset:0;border-radius:9999px;background:#15803d;opacity:.6;animation:pl 1.6s ease-out infinite}
+    .pulse::after{content:'';position:absolute;inset:0;border-radius:9999px;opacity:.6;animation:pl 1.6s ease-out infinite}
     @keyframes pl{0%{transform:scale(1);opacity:.5}100%{transform:scale(2.4);opacity:0}}
+    .btn{font-size:.66rem;font-weight:800;border-radius:.4rem;padding:.25rem .5rem;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;border:1px solid transparent}
+    .btn-d{background:#13284f;color:#fff}
+    .btn-a{background:#15803d;color:#fff}
+    .btn-x{background:#fff;border-color:#bb0027;color:#bb0027}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;display:none;align-items:center;justify-content:center;padding:1rem}
+    .scrim.on{display:flex}
   </style>
 </head>
 <body class="font-sans text-on-surface">
@@ -45,7 +52,7 @@
         </div>
       </div>
       <nav class="flex items-center gap-4 text-sm font-medium text-white/85">
-        <span id="liveDot" class="flex items-center gap-1.5 text-[11px] text-white/70"><span class="dot pulse" style="background:#15803d"></span> EN VIVO</span>
+        <span id="liveDot" class="flex items-center gap-1.5 text-[11px] text-white/70"><span id="liveDotPip" class="dot" style="background:#64748b"></span> <span id="liveLabel">CONECTANDO…</span></span>
         <a href="/operaciones" class="hover:text-white">Operaciones</a>
         <a href="/admin" class="hover:text-white">← Consola</a>
       </nav>
@@ -65,21 +72,24 @@
     </div>
 
     <!-- auth / error banner -->
-    <div id="authBanner" class="hidden card p-3 text-sm" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c"></div>
+    <div id="authBanner" class="hidden card p-3 text-sm flex items-center justify-between gap-3" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c">
+      <span id="authBannerMsg"></span>
+      <a href="/login?next=/flota.html" class="bg-primary text-white font-bold rounded-md px-3 py-1.5 text-xs whitespace-nowrap">Inicia sesión como operador →</a>
+    </div>
 
     <!-- summary strip -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
       <div class="card p-3"><div id="s_disponibles" class="font-display font-black text-2xl text-safe">—</div><div class="eyebrow">Unidades disponibles</div></div>
       <div class="card p-3"><div id="s_mision" class="font-display font-black text-2xl text-warning">—</div><div class="eyebrow">En misión</div></div>
       <div class="card p-3"><div id="s_misiones" class="font-display font-black text-2xl text-primary">—</div><div class="eyebrow">Misiones activas</div></div>
-      <div class="card p-3"><div id="s_tiempo" class="font-display font-black text-2xl">—</div><div class="eyebrow">Tiempo respuesta prom.</div></div>
+      <div class="card p-3"><div id="s_tiempo" class="font-display font-black text-2xl">—</div><div class="eyebrow">Tiempo respuesta prom. (min)</div></div>
     </div>
 
     <!-- map + missions board -->
     <div class="grid lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2 card p-3">
-        <div class="flex items-center justify-between mb-2">
-          <div class="eyebrow">Mapa de despliegue · posiciones de unidades</div>
+        <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div class="eyebrow">Mapa de despliegue · posiciones en tiempo real</div>
           <div id="mapLegend" class="flex gap-3 flex-wrap text-[11px] text-on-surface-variant"></div>
         </div>
         <div id="fmap"></div>
@@ -88,7 +98,7 @@
       <div class="card overflow-hidden">
         <div class="px-4 pt-4 pb-2 eyebrow">Tablero de misiones activas</div>
         <div class="overflow-y-auto" style="max-height:480px"><table class="dt">
-          <thead><tr><th>Código</th><th>Tipo</th><th>Prio.</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Código</th><th>Tipo · Prio.</th><th>Estado</th><th class="text-right">Acción</th></tr></thead>
           <tbody id="misionRows"><tr><td colspan="4" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
         </table></div>
       </div>
@@ -99,8 +109,8 @@
       <div class="lg:col-span-2 card overflow-hidden">
         <div class="px-4 pt-4 pb-2 eyebrow">Unidades de la flota</div>
         <div class="overflow-x-auto" style="max-height:50vh"><table class="dt">
-          <thead><tr><th>Unidad</th><th>Tipo</th><th>Estado op.</th><th>Misión</th><th>Posición</th><th>Actualizado</th></tr></thead>
-          <tbody id="unidadRows"><tr><td colspan="6" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+          <thead><tr><th>Unidad</th><th>Tipo</th><th>Estado op.</th><th>Posición</th><th>Últ. fix</th></tr></thead>
+          <tbody id="unidadRows"><tr><td colspan="5" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
         </table></div>
       </div>
 
@@ -112,19 +122,24 @@
             <select name="tipo">
               <option value="rescate">Rescate</option>
               <option value="evacuacion">Evacuación</option>
-              <option value="suministros">Suministros</option>
+              <option value="suministro">Suministro</option>
+              <option value="evaluacion">Evaluación</option>
               <option value="medico">Médico</option>
-              <option value="reconocimiento">Reconocimiento</option>
-              <option value="logistica">Logística</option>
-              <option value="otro">Otro</option>
+              <option value="traslado">Traslado</option>
             </select>
             <select name="prioridad">
-              <option value="alta">Prioridad alta</option>
-              <option value="media" selected>Prioridad media</option>
-              <option value="baja">Prioridad baja</option>
+              <option value="1">P1 · Crítica</option>
+              <option value="2">P2 · Alta</option>
+              <option value="3" selected>P3 · Media</option>
+              <option value="4">P4 · Baja</option>
+              <option value="5">P5 · Mínima</option>
             </select>
+            <textarea name="descripcion" rows="2" placeholder="Descripción de la misión* (requerida)"></textarea>
             <input name="destino_dir" placeholder="Dirección de destino">
-            <textarea name="descripcion" rows="2" placeholder="Descripción de la misión…"></textarea>
+            <select name="evento_id">
+              <option value="">— Sin sismo de referencia —</option>
+            </select>
+            <input name="caso_ref" placeholder="Ref. de caso / desaparecido (ej. CASO-1234)">
             <button class="w-full bg-secondary text-white font-bold rounded-md py-2 text-sm">Crear misión</button>
             <p id="mmsg" class="text-xs text-center"></p>
           </form>
@@ -135,14 +150,14 @@
           <div class="eyebrow mb-2">Nueva unidad</div>
           <form id="uform" class="space-y-2">
             <input name="nombre" placeholder="Nombre / identificador*" required>
-            <input name="codigo" placeholder="Código (ej. AMB-01)">
+            <input name="placa" placeholder="Placa (ej. AMB-01)">
             <select name="tipo">
               <option value="ambulancia">Ambulancia</option>
-              <option value="bomberos">Bomberos</option>
               <option value="rescate">Rescate</option>
-              <option value="camion">Camión</option>
+              <option value="bomberos">Bomberos</option>
+              <option value="carga">Carga</option>
               <option value="moto">Moto</option>
-              <option value="helicoptero">Helicóptero</option>
+              <option value="dron">Dron</option>
               <option value="otro">Otro</option>
             </select>
             <select name="estado_op">
@@ -151,6 +166,7 @@
               <option value="fuera_servicio">Fuera de servicio</option>
               <option value="mantenimiento">Mantenimiento</option>
             </select>
+            <input name="estado_region" placeholder="Estado / región (ej. Sucre)">
             <div class="grid grid-cols-2 gap-2">
               <input name="lat" placeholder="Lat">
               <input name="lon" placeholder="Lon">
@@ -161,8 +177,26 @@
         </div>
       </div>
     </div>
-    <p class="text-[11px] text-on-surface-variant">Actualización automática cada 10 s · las acciones de escritura requieren sesión de operador.</p>
+    <p class="text-[11px] text-on-surface-variant">Posiciones en vivo por WebSocket; el tablero y el resumen se refrescan automáticamente. Todas las acciones requieren sesión de operador.</p>
   </main>
+
+  <!-- Dispatch modal -->
+  <div id="dispScrim" class="scrim">
+    <div class="card p-5 w-full max-w-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-display font-bold text-lg">Despachar misión</h2>
+        <button id="dispClose" class="text-xl leading-none">✕</button>
+      </div>
+      <div class="text-[12px] text-on-surface-variant mb-2">Misión <b id="dispCode" class="mono">—</b></div>
+      <label class="text-xs font-semibold">Unidad disponible</label>
+      <select id="dispUnit"></select>
+      <p id="dispMsg" class="text-xs text-center mt-2"></p>
+      <div class="flex gap-2 mt-3">
+        <button id="dispConfirm" class="flex-1 bg-secondary text-white font-bold rounded-md py-2 text-sm">Despachar</button>
+        <button id="dispCancel" class="flex-1 border border-on-surface-variant rounded-md py-2 text-sm font-semibold">Cancelar</button>
+      </div>
+    </div>
+  </div>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -172,102 +206,221 @@ const fmt=ms=>ms?new Date(Number(ms)).toLocaleString('es-VE',{day:'2-digit',mont
 const hhmm=ms=>ms?new Date(Number(ms)).toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
 const num=n=>(n==null||n==='')?null:Number(n);
 
-// estado_op → label + colors
+// estado_op (units) → label + colors. These four are the only unit op-states.
 const EST={
   disponible:{es:'Disponible',c:'#15803d',bg:'#dcfce7',m:'#16a34a'},
   en_mision:{es:'En misión',c:'#b45309',bg:'#fef3c7',m:'#ea580c'},
-  en_ruta:{es:'En ruta',c:'#1d4ed8',bg:'#dbeafe',m:'#2563eb'},
   fuera_servicio:{es:'Fuera de servicio',c:'#b91c1c',bg:'#fee2e2',m:'#dc2626'},
   mantenimiento:{es:'Mantenimiento',c:'#6d28d9',bg:'#ede9fe',m:'#7c3aed'},
   desconocido:{es:'Desconocido',c:'#475569',bg:'#e2e8f0',m:'#64748b'}
 };
-const PR={alta:{es:'Alta',c:'#b91c1c',bg:'#fee2e2'},media:{es:'Media',c:'#b45309',bg:'#fef3c7'},baja:{es:'Baja',c:'#475569',bg:'#e2e8f0'}};
-const MEST={pendiente:{es:'Pendiente',c:'#92600a',bg:'#fef9c3'},asignada:{es:'Asignada',c:'#1d4ed8',bg:'#dbeafe'},en_curso:{es:'En curso',c:'#b45309',bg:'#fef3c7'},completada:{es:'Completada',c:'#15803d',bg:'#dcfce7'},cancelada:{es:'Cancelada',c:'#475569',bg:'#e2e8f0'}};
+// Mission priority is an integer 1..5.
+const PR={
+  1:{es:'P1 · Crítica',c:'#b91c1c',bg:'#fee2e2'},
+  2:{es:'P2 · Alta',c:'#c2410c',bg:'#ffedd5'},
+  3:{es:'P3 · Media',c:'#b45309',bg:'#fef3c7'},
+  4:{es:'P4 · Baja',c:'#1d4ed8',bg:'#dbeafe'},
+  5:{es:'P5 · Mínima',c:'#475569',bg:'#e2e8f0'}
+};
+// Mission lifecycle states.
+const MEST={
+  creada:{es:'Creada',c:'#475569',bg:'#e2e8f0'},
+  despachada:{es:'Despachada',c:'#1d4ed8',bg:'#dbeafe'},
+  en_ruta:{es:'En ruta',c:'#7c3aed',bg:'#ede9fe'},
+  en_sitio:{es:'En sitio',c:'#b45309',bg:'#fef3c7'},
+  completada:{es:'Completada',c:'#15803d',bg:'#dcfce7'},
+  cancelada:{es:'Cancelada',c:'#475569',bg:'#e2e8f0'}
+};
+const MTIPO={rescate:'Rescate',evacuacion:'Evacuación',suministro:'Suministro',evaluacion:'Evaluación',medico:'Médico',traslado:'Traslado'};
+const UTIPO={ambulancia:'Ambulancia',rescate:'Rescate',bomberos:'Bomberos',carga:'Carga',moto:'Moto',dron:'Dron',otro:'Otro'};
+// Linear advance order (despachar handles creada→despachada separately).
+const ORDER=['creada','despachada','en_ruta','en_sitio','completada'];
+const nextEstado=e=>{const i=ORDER.indexOf(e);return i>=0&&i<ORDER.length-1?ORDER[i+1]:null;};
+
 const est=k=>EST[k]||EST.desconocido;
 const chip=(o,t)=>o?`<span class="chip" style="color:${o.c};background:${o.bg}">${t||o.es}</span>`:'';
 
 let fmap=null, markerLayer=null;
-function showAuth(msg){const b=$('#authBanner');b.textContent=msg;b.classList.remove('hidden');}
+const MARKERS={};   // unidad_id → leaflet circleMarker
+const META={};      // unidad_id → {estado_op, nombre, tipo}
+let UNITS=[];       // last /unidades snapshot (for dispatch picker)
+
+// ---------------- auth banner ----------------
+function showAuth(msg){$('#authBannerMsg').textContent=msg||'Sesión de operador requerida.';$('#authBanner').classList.remove('hidden');}
 function clearAuth(){$('#authBanner').classList.add('hidden');}
+
+// ---------------- live indicator ----------------
+function setLive(state){
+  const pip=$('#liveDotPip'), lbl=$('#liveLabel');
+  if(state==='live'){pip.style.background='#15803d';pip.classList.add('pulse');pip.style.setProperty('--c','#15803d');lbl.textContent='EN VIVO';}
+  else if(state==='poll'){pip.classList.remove('pulse');pip.style.background='#d97706';lbl.textContent='SONDEO 10s';}
+  else{pip.classList.remove('pulse');pip.style.background='#64748b';lbl.textContent='CONECTANDO…';}
+  // colour the pulse ring to match
+  document.documentElement.style.setProperty('--pulse-c',state==='live'?'#15803d':'#d97706');
+}
+// drive the ::after pulse colour via a style tag (keyframes can't read vars on ::after bg directly)
+(function(){const s=document.createElement('style');s.textContent='.pulse::after{background:var(--pulse-c,#15803d)}';document.head.appendChild(s);})();
 
 // ---------------- summary ----------------
 async function loadResumen(){
   const r=await api('flota/tablero/resumen');
-  if(r.status===401){showAuth('Sesión de operador requerida para el resumen. Inicia sesión en /login.');return;}
+  if(r.status===401){showAuth('Sesión de operador requerida para ver el resumen.');return;}
   if(!r.ok)return;
+  clearAuth();
   const d=await r.json().catch(()=>({}));
-  $('#s_disponibles').textContent=d.unidades_disponibles??d.disponibles??'—';
-  $('#s_mision').textContent=d.unidades_en_mision??d.en_mision??'—';
-  $('#s_misiones').textContent=d.misiones_activas??d.misiones??'—';
-  $('#s_tiempo').textContent=d.tiempo_respuesta_prom??d.tiempo_respuesta??'—';
+  const pe=(d.unidades&&d.unidades.por_estado)||{};
+  $('#s_disponibles').textContent=pe.disponible??0;
+  $('#s_mision').textContent=pe.en_mision??0;
+  $('#s_misiones').textContent=(d.misiones&&d.misiones.activas)??0;
+  $('#s_tiempo').textContent=d.tiempo_respuesta_prom_min!=null?d.tiempo_respuesta_prom_min:'—';
 }
 
-// ---------------- map + missions + units ----------------
+// ---------------- map ----------------
 function initMap(){
   fmap=L.map('fmap',{attributionControl:false}).setView([10.48,-66.9],8);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(fmap);
   markerLayer=L.layerGroup().addTo(fmap);
-  $('#mapLegend').innerHTML=Object.keys(EST).filter(k=>k!=='desconocido'&&k!=='en_ruta').map(k=>`<span class="flex items-center gap-1"><span class="dot" style="background:${EST[k].m}"></span>${EST[k].es}</span>`).join('');
+  $('#mapLegend').innerHTML=Object.keys(EST).filter(k=>k!=='desconocido').map(k=>`<span class="flex items-center gap-1"><span class="dot" style="background:${EST[k].m}"></span>${EST[k].es}</span>`).join('');
+}
+
+function popupHtml(id){
+  const m=META[id]||{}; const e=est(m.estado_op);
+  return `<b>${esc(m.nombre||id)}</b><br>${esc(UTIPO[m.tipo]||m.tipo||'')}<br><span style="color:${e.c}">${e.es}</span>`;
+}
+function upsertMarker(id,lat,lon){
+  if(lat==null||lon==null||!fmap)return;
+  const e=est((META[id]||{}).estado_op);
+  let mk=MARKERS[id];
+  if(mk){mk.setLatLng([lat,lon]);mk.setStyle({fillColor:e.m});mk.setPopupContent(popupHtml(id));}
+  else{
+    mk=L.circleMarker([lat,lon],{radius:8,color:'#fff',weight:2,fillColor:e.m,fillOpacity:.95});
+    mk.bindPopup(popupHtml(id));mk.addTo(markerLayer);MARKERS[id]=mk;
+  }
 }
 
 async function loadMapa(){
   const r=await api('flota/tablero/mapa');
-  if(r.status===401){showAuth('Sesión de operador requerida para el mapa. Inicia sesión en /login.');return;}
-  if(!r.ok){return;}
+  if(r.status===401){showAuth('Sesión de operador requerida para el mapa de flota.');return;}
+  if(!r.ok)return;
   clearAuth();
   const d=await r.json().catch(()=>({}));
-  const unidades=d.unidades||d.units||[];
-  const misiones=d.misiones_activas||d.misiones||[];
-  renderMarkers(unidades);
-  renderUnidades(unidades);
+  const unidades=d.unidades||[];
+  const misiones=d.misiones_activas||[];
+  // Authoritative reconcile of markers (positions + estado_op colour).
+  const seen=new Set();
+  let fit=[];
+  unidades.forEach(u=>{
+    META[u.id]={estado_op:u.estado_op,nombre:u.nombre,tipo:u.tipo};
+    const lat=num(u.lat),lon=num(u.lon);
+    if(lat==null||lon==null)return;
+    upsertMarker(u.id,lat,lon);seen.add(u.id);fit.push([lat,lon]);
+  });
+  // Drop markers for units no longer on the map.
+  Object.keys(MARKERS).forEach(id=>{if(!seen.has(id)){markerLayer.removeLayer(MARKERS[id]);delete MARKERS[id];}});
+  if(!fmap._fitted&&fit.length){if(fit.length===1)fmap.setView(fit[0],11);else fmap.fitBounds(fit,{padding:[40,40],maxZoom:12});fmap._fitted=true;}
   renderMisiones(misiones);
   $('#lastUpdate').textContent='Act. '+hhmm(Date.now());
 }
 
-function renderMarkers(unidades){
-  if(!markerLayer)return;
-  markerLayer.clearLayers();
-  const pts=[];
-  unidades.forEach(u=>{
-    const lat=num(u.lat??u.latitud), lon=num(u.lon??u.lng??u.longitud);
-    if(lat==null||lon==null)return;
-    const e=est(u.estado_op||u.estado);
-    const mk=L.circleMarker([lat,lon],{radius:8,color:'#fff',weight:2,fillColor:e.m,fillOpacity:.95});
-    mk.bindPopup(`<b>${esc(u.codigo||u.nombre||u.id)}</b><br>${esc(u.nombre||'')}<br><span style="color:${e.c}">${e.es}</span>${u.mision_codigo?'<br>Misión: '+esc(u.mision_codigo):''}`);
-    mk.addTo(markerLayer);
-    pts.push([lat,lon]);
-  });
-  if(pts.length===1)fmap.setView(pts[0],11);
-  else if(pts.length>1)fmap.fitBounds(pts,{padding:[40,40],maxZoom:12});
-}
-
-function renderUnidades(unidades){
+// ---------------- units list ----------------
+async function loadUnidades(){
+  const r=await api('flota/unidades');
+  if(r.status===401){showAuth('Sesión de operador requerida para la lista de unidades.');return;}
+  if(!r.ok)return;
+  clearAuth();
+  const d=await r.json().catch(()=>({}));
+  UNITS=d.results||[];
   const tb=$('#unidadRows');
-  if(!unidades.length){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin unidades registradas.</td></tr>';return;}
-  tb.innerHTML=unidades.map(u=>{
-    const e=est(u.estado_op||u.estado);
-    const lat=num(u.lat??u.latitud), lon=num(u.lon??u.lng??u.longitud);
+  if(!UNITS.length){tb.innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-8">Sin unidades registradas.</td></tr>';return;}
+  tb.innerHTML=UNITS.map(u=>{
+    const e=est(u.estado_op);
+    const lat=num(u.lat),lon=num(u.lon);
     return `<tr class="row">
-      <td><div class="font-semibold mono text-[12px]">${esc(u.codigo||u.id||'—')}</div><div class="text-[11px] text-on-surface-variant">${esc(u.nombre||'')}</div></td>
-      <td class="text-[12px]">${esc(u.tipo||'—')}</td>
+      <td><div class="font-semibold text-[12px]">${esc(u.nombre||'—')}</div><div class="text-[11px] text-on-surface-variant mono">${esc(u.placa||u.id||'')}</div></td>
+      <td class="text-[12px]">${esc(UTIPO[u.tipo]||u.tipo||'—')}</td>
       <td>${chip(e)}</td>
-      <td class="text-[12px]">${esc(u.mision_codigo||u.mision||'—')}</td>
       <td class="text-[11px] mono">${lat!=null&&lon!=null?lat.toFixed(3)+', '+lon.toFixed(3):'—'}</td>
-      <td class="text-[11px]">${fmt(u.updated_ms||u.actualizado_ms)}</td>
+      <td class="text-[11px]">${fmt(u.ult_pos_ms)}</td>
     </tr>`;
   }).join('');
 }
 
+// ---------------- missions board (from /mapa) ----------------
 function renderMisiones(misiones){
   const tb=$('#misionRows');
   if(!misiones.length){tb.innerHTML='<tr><td colspan="4" class="text-center text-on-surface-variant py-8">Sin misiones activas.</td></tr>';return;}
-  tb.innerHTML=misiones.map(m=>`<tr class="row">
-    <td class="mono text-[11px] font-bold">${esc(m.codigo||m.id||'—')}</td>
-    <td class="text-[12px]">${esc(m.tipo||'—')}</td>
-    <td>${chip(PR[m.prioridad]||PR.media)}</td>
-    <td>${chip(MEST[m.estado]||{es:m.estado||'—',c:'#475569',bg:'#e2e8f0'})}</td>
-  </tr>`).join('');
+  tb.innerHTML=misiones.map(m=>{
+    const nxt=nextEstado(m.estado);
+    let actions='';
+    if(m.estado==='creada'){
+      actions=`<button class="btn btn-d" data-act="despachar" data-id="${esc(m.id)}" data-code="${esc(m.codigo||'')}">Despachar</button>`;
+    }else if(nxt&&m.estado!=='completada'){
+      actions=`<button class="btn btn-a" data-act="avanzar" data-id="${esc(m.id)}" data-next="${nxt}">→ ${esc(MEST[nxt].es)}</button>`;
+    }
+    if(m.estado!=='completada'&&m.estado!=='cancelada'){
+      actions+=` <button class="btn btn-x" data-act="cancelar" data-id="${esc(m.id)}">Cancelar</button>`;
+    }
+    return `<tr class="row">
+      <td class="mono text-[11px] font-bold">${esc(m.codigo||m.id||'—')}${m.descripcion?`<div class="text-[10px] text-on-surface-variant" style="font-family:inherit;font-weight:400">${esc(String(m.descripcion).slice(0,42))}</div>`:''}</td>
+      <td class="text-[12px]">${esc(MTIPO[m.tipo]||m.tipo||'—')}<div class="mt-0.5">${chip(PR[m.prioridad]||PR[3])}</div></td>
+      <td>${chip(MEST[m.estado]||{es:m.estado||'—',c:'#475569',bg:'#e2e8f0'})}</td>
+      <td class="text-right whitespace-nowrap">${actions||'<span class="text-[11px] text-on-surface-variant">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  tb.querySelectorAll('button[data-act]').forEach(b=>b.onclick=()=>onMisionAction(b));
 }
+
+async function onMisionAction(btn){
+  const act=btn.dataset.act, id=btn.dataset.id;
+  if(act==='despachar'){openDispatch(id,btn.dataset.code);return;}
+  if(act==='avanzar'){
+    btn.disabled=true;
+    await postEstado(id,btn.dataset.next);
+    return;
+  }
+  if(act==='cancelar'){
+    if(!confirm('¿Cancelar esta misión? La unidad asignada quedará disponible.'))return;
+    btn.disabled=true;
+    await postEstado(id,'cancelada');
+  }
+}
+async function postEstado(id,estado){
+  const r=await api('flota/misiones/'+id+'/estado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({estado})});
+  if(r.status===401){showAuth('Sesión de operador requerida para cambiar el estado de una misión.');return;}
+  if(!r.ok){const j=await r.json().catch(()=>({}));alert('No se pudo actualizar: '+(j.error||r.status));}
+  refreshData();
+}
+
+// ---------------- dispatch modal ----------------
+let DISP_ID=null;
+function openDispatch(id,code){
+  DISP_ID=id;
+  $('#dispCode').textContent=code||id;
+  $('#dispMsg').textContent='';
+  const libres=UNITS.filter(u=>u.estado_op==='disponible');
+  const sel=$('#dispUnit');
+  if(!libres.length){
+    sel.innerHTML='<option value="">— No hay unidades disponibles —</option>';
+    $('#dispMsg').textContent='Registra o libera una unidad disponible primero.';
+    $('#dispMsg').className='text-xs text-center mt-2 text-error';
+  }else{
+    sel.innerHTML=libres.map(u=>`<option value="${esc(u.id)}">${esc(u.nombre)}${u.placa?' · '+esc(u.placa):''} (${esc(UTIPO[u.tipo]||u.tipo||'')})</option>`).join('');
+  }
+  $('#dispScrim').classList.add('on');
+}
+function closeDispatch(){$('#dispScrim').classList.remove('on');DISP_ID=null;}
+$('#dispClose').onclick=$('#dispCancel').onclick=closeDispatch;
+$('#dispScrim').addEventListener('click',e=>{if(e.target===$('#dispScrim'))closeDispatch();});
+$('#dispConfirm').onclick=async()=>{
+  const unidad_id=$('#dispUnit').value;
+  const m=$('#dispMsg');
+  if(!unidad_id){m.textContent='Selecciona una unidad.';m.className='text-xs text-center mt-2 text-error';return;}
+  m.textContent='Despachando…';m.className='text-xs text-center mt-2';
+  const r=await api('flota/misiones/'+DISP_ID+'/despachar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({unidad_id})});
+  if(r.status===401){m.textContent='Sesión de operador requerida.';m.className='text-xs text-center mt-2 text-error';return;}
+  if(!r.ok){const j=await r.json().catch(()=>({}));m.textContent='Error: '+(j.error||r.status);m.className='text-xs text-center mt-2 text-error';return;}
+  closeDispatch();refreshData();
+};
 
 // ---------------- forms (writes; 401-aware) ----------------
 async function postJSON(path,body,msgEl){
@@ -283,27 +436,84 @@ async function postJSON(path,body,msgEl){
 
 $('#mform').onsubmit=async ev=>{
   ev.preventDefault();const f=ev.target;
-  const body={tipo:f.tipo.value,prioridad:f.prioridad.value,descripcion:f.descripcion.value||null,destino_dir:f.destino_dir.value||null};
+  if(!f.descripcion.value.trim()){const m=$('#mmsg');m.textContent='La descripción es requerida.';m.className='text-xs text-center text-error';return;}
+  const body={
+    tipo:f.tipo.value,
+    prioridad:Number(f.prioridad.value),
+    descripcion:f.descripcion.value.trim(),
+    destino_dir:f.destino_dir.value||null,
+    evento_id:f.evento_id.value||null,
+    caso_ref:f.caso_ref.value||null
+  };
   const ok=await postJSON('flota/misiones',body,$('#mmsg'));
-  if(ok){f.reset();loadAll();}
+  if(ok){f.reset();f.prioridad.value='3';refreshData();}
 };
 
 $('#uform').onsubmit=async ev=>{
   ev.preventDefault();const f=ev.target;
-  const body={nombre:f.nombre.value,codigo:f.codigo.value||null,tipo:f.tipo.value,estado_op:f.estado_op.value};
+  const body={nombre:f.nombre.value,placa:f.placa.value||null,tipo:f.tipo.value,estado_op:f.estado_op.value,estado_region:f.estado_region.value||null};
   if(f.lat.value)body.lat=num(f.lat.value);
   if(f.lon.value)body.lon=num(f.lon.value);
   const ok=await postJSON('flota/unidades',body,$('#umsg'));
-  if(ok){f.reset();loadAll();}
+  if(ok){f.reset();refreshData();}
 };
 
+// ---------------- evento selector (seismic events) ----------------
+async function loadEventos(){
+  const r=await api('events?limit=40');
+  if(!r.ok)return;
+  const d=await r.json().catch(()=>({}));
+  const evs=d.events||[];
+  const sel=$('#mform').evento_id;
+  const keep=sel.querySelector('option').outerHTML;
+  sel.innerHTML=keep+evs.map(e=>`<option value="${esc(e.id)}">M${e.mag??'?'} · ${esc(e.place_es||e.place||'Sismo')}</option>`).join('');
+}
+
+// ---------------- WebSocket live tracking ----------------
+let ws=null, wsBackoff=1000, wsPing=null, pollTimer=null, dataTimer=null;
+function startPoll(ms){stopPoll();setLive('poll');pollTimer=setInterval(loadMapa,ms);}
+function stopPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
+
+function connectWS(){
+  let url;
+  try{url=(location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/api/flota/rastreo/ws';}catch(e){startPoll(10000);return;}
+  try{ws=new WebSocket(url);}catch(e){scheduleReconnect();return;}
+  ws.onopen=()=>{
+    wsBackoff=1000;setLive('live');stopPoll();           // WS healthy → stop the fallback poll
+    if(wsPing)clearInterval(wsPing);
+    wsPing=setInterval(()=>{try{ws.send('ping');}catch(e){}},25000);
+  };
+  ws.onmessage=ev=>{
+    if(ev.data==='pong')return;
+    let msg;try{msg=JSON.parse(ev.data);}catch(e){return;}
+    if(msg&&msg.type==='posicion'&&msg.unidad_id){
+      // Move the unit marker instantly. estado_op colour comes from last /mapa meta.
+      upsertMarker(msg.unidad_id,num(msg.lat),num(msg.lon));
+      $('#lastUpdate').textContent='En vivo '+hhmm(msg.ts_ms||Date.now());
+    }
+  };
+  ws.onclose=scheduleReconnect;
+  ws.onerror=()=>{try{ws.close();}catch(e){}};
+}
+function scheduleReconnect(){
+  if(wsPing){clearInterval(wsPing);wsPing=null;}
+  ws=null;
+  startPoll(10000);                                       // fallback: poll /mapa every 10s while WS is down
+  setTimeout(connectWS,wsBackoff);
+  wsBackoff=Math.min(wsBackoff*2,30000);
+}
+
 // ---------------- orchestration ----------------
-function loadAll(){loadResumen();loadMapa();}
-$('#refreshBtn').onclick=loadAll;
+function refreshData(){loadResumen();loadUnidades();loadMapa();}
+$('#refreshBtn').onclick=refreshData;
 
 initMap();
-loadAll();
-setInterval(loadAll,10000);
+loadEventos();
+refreshData();
+connectWS();
+// Non-position data (summary, mission board, unit op-states) refresh on a slow
+// timer regardless of WS — WS only carries GPS fixes.
+dataTimer=setInterval(()=>{loadResumen();loadUnidades();loadMapa();},15000);
 </script>
 </body>
 </html>
