@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { isImageBytes, rateLimit, validLatLon } from '../lib/security';
+import { rateLimit, validLatLon } from '../lib/security';
+import { scanFile } from '../security/file-scan';
 
 export const damage = new Hono<{ Bindings: Env }>();
 
@@ -61,8 +62,12 @@ damage.post('/', async (c) => {
   }
   if (!bytes || !bytes.length) return c.json({ error: 'no_image' }, 400);
   if (bytes.length > 6_000_000) return c.json({ error: 'image_too_large', maxBytes: 6_000_000 }, 413);
-  contentType = ['image/jpeg', 'image/png', 'image/webp'].includes(contentType) ? contentType : 'application/octet-stream';
-  if (!isImageBytes(bytes, contentType)) return c.json({ error: 'unsupported_image_type' }, 415);
+  // Full upload scan (magic-byte ↔ MIME agreement, no executable/SVG/polyglot) —
+  // not just the lightweight isImageBytes() check. Trust the sniffed type, not the
+  // client's claimed Content-Type.
+  const scan = await scanFile(bytes, { maxSize: 6_000_000, declaredMime: contentType, allowSvg: false });
+  if (!scan.ok) return c.json({ error: 'unsupported_image_type', reason: scan.reason }, 415);
+  contentType = `image/${scan.detectedType}`;
   if ((lat != null || lon != null) && !validLatLon(Number(lat), Number(lon))) return c.json({ error: 'bad_lat_lon' }, 400);
 
   // Run the vision model (image as array of 0-255 bytes per the model schema).
