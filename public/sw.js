@@ -124,3 +124,65 @@ self.addEventListener('notificationclick', (e) => {
     })
   );
 });
+
+// ---- FLOTA Background Sync ----
+// Flush buffered GPS even when the phone PWA is closed. The 'flota-gps' IndexedDB
+// (written by /flota/track) holds the queued fixes + the unit token; we upload to
+// /flota/track/backfill in batches and remove on success. A failed upload throws so
+// the browser retries the sync later. Token never leaves the device except as the
+// Bearer auth to its own backfill endpoint.
+const FLOTA_DB = 'flota-gps', FLOTA_QUEUE = 'queue', FLOTA_META = 'meta', FLOTA_BATCH = 200;
+function flotaIdb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(FLOTA_DB, 2);
+    r.onupgradeneeded = () => {
+      const db = r.result;
+      if (!db.objectStoreNames.contains(FLOTA_QUEUE)) db.createObjectStore(FLOTA_QUEUE, { keyPath: 'id', autoIncrement: true });
+      if (!db.objectStoreNames.contains(FLOTA_META)) db.createObjectStore(FLOTA_META, { keyPath: 'k' });
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function flotaMeta(db, k) {
+  return new Promise((res) => {
+    const rq = db.transaction(FLOTA_META, 'readonly').objectStore(FLOTA_META).get(k);
+    rq.onsuccess = () => res(rq.result ? rq.result.v : null);
+    rq.onerror = () => res(null);
+  });
+}
+function flotaTake(db, limit) {
+  return new Promise((res) => {
+    const items = []; const tx = db.transaction(FLOTA_QUEUE, 'readonly');
+    tx.objectStore(FLOTA_QUEUE).openCursor().onsuccess = (e) => {
+      const c = e.target.result; if (c && items.length < limit) { items.push({ id: c.key, fix: c.value.fix }); c.continue(); }
+    };
+    tx.oncomplete = () => res(items);
+  });
+}
+function flotaDel(db, ids) {
+  return new Promise((res) => {
+    const tx = db.transaction(FLOTA_QUEUE, 'readwrite'); const s = tx.objectStore(FLOTA_QUEUE);
+    ids.forEach((id) => s.delete(id));
+    tx.oncomplete = () => res();
+  });
+}
+async function flotaFlush() {
+  const db = await flotaIdb();
+  const token = await flotaMeta(db, 'token');
+  if (!token) return;
+  for (let pass = 0; pass < 50; pass++) {
+    const items = await flotaTake(db, FLOTA_BATCH);
+    if (!items.length) return;
+    const r = await fetch('/flota/track/backfill', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({ fixes: items.map((it) => it.fix) }),
+    });
+    if (!r.ok) throw new Error('backfill ' + r.status); // throw → the browser retries the sync later
+    await flotaDel(db, items.map((it) => it.id));
+  }
+}
+self.addEventListener('sync', (e) => {
+  if (e.tag === 'flota-flush') e.waitUntil(flotaFlush());
+});
