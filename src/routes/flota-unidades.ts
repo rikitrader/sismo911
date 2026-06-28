@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
+import { issueUnitToken } from '../lib/flota-token';
 
 // FLOTA — response-units (vehicles) CRUD. Table: flota_unidades.
 // Mounted at /api/flota/unidades. Writes are gated centrally by
@@ -102,10 +103,58 @@ flotaUnidades.patch('/:id', async (c) => {
   return c.json(row);
 });
 
-// DELETE /:id → delete; 404 if missing.
+// DELETE /:id → delete; 404 if missing; 409 if on an active mission.
 flotaUnidades.delete('/:id', async (c) => {
   const id = c.req.param('id');
-  const r = await c.env.DB.prepare(`DELETE FROM flota_unidades WHERE id = ?`).bind(id).run();
-  if (!r.meta.changes) return c.json({ error: 'no encontrado' }, 404);
+  const exists = await c.env.DB.prepare(`SELECT id FROM flota_unidades WHERE id = ?`).bind(id).first();
+  if (!exists) return c.json({ error: 'no encontrado' }, 404);
+
+  // Never delete a unit assigned to a still-active mission — it would orphan the
+  // dispatch. Caller must complete/cancel the mission first.
+  const active = await c.env.DB.prepare(
+    `SELECT id FROM flota_misiones WHERE unidad_id = ? AND estado NOT IN ('completada','cancelada') LIMIT 1`
+  ).bind(id).first();
+  if (active) return c.json({ error: 'unidad_en_mision_activa' }, 409);
+
+  // Clean up references, then delete the unit.
+  await c.env.DB.batch([
+    c.env.DB.prepare(`DELETE FROM flota_flota_unidades WHERE unidad_id = ?`).bind(id),
+    c.env.DB.prepare(`UPDATE flota_personal SET unidad_id = NULL, updated_ms = ? WHERE unidad_id = ?`).bind(Date.now(), id),
+    c.env.DB.prepare(`DELETE FROM flota_unit_tokens WHERE unidad_id = ?`).bind(id),
+    c.env.DB.prepare(`DELETE FROM flota_unidades WHERE id = ?`).bind(id),
+  ]);
   return c.json({ ok: true, id });
+});
+
+// ── Field-unit GPS tokens (operator-gated via /api/flota) ────────────────────
+
+// POST /:id/token → issue a scoped token for the unit. Plaintext returned ONCE.
+flotaUnidades.post('/:id/token', async (c) => {
+  const id = c.req.param('id');
+  const exists = await c.env.DB.prepare(`SELECT id FROM flota_unidades WHERE id = ?`).bind(id).first();
+  if (!exists) return c.json({ error: 'no encontrado' }, 404);
+  const b = await c.req.json().catch(() => ({} as any));
+  const label = b?.label == null ? null : String(b.label).trim().slice(0, 120) || null;
+  const issued = await issueUnitToken(c.env, id, label);
+  return c.json({ ok: true, id: issued.id, token: issued.token, prefix: issued.prefix, aviso: 'Guarde este token: no se mostrará de nuevo.' }, 201);
+});
+
+// GET /:id/tokens → list tokens for a unit (never returns the secret).
+flotaUnidades.get('/:id/tokens', async (c) => {
+  const id = c.req.param('id');
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, token_prefix, label, created_ms, last_used_ms, revoked_ms
+     FROM flota_unit_tokens WHERE unidad_id = ? ORDER BY created_ms DESC`
+  ).bind(id).all();
+  return c.json({ results: results ?? [] });
+});
+
+// DELETE /:id/token/:tokenId → revoke a token.
+flotaUnidades.delete('/:id/token/:tokenId', async (c) => {
+  const tokenId = c.req.param('tokenId');
+  const r = await c.env.DB.prepare(
+    `UPDATE flota_unit_tokens SET revoked_ms = ? WHERE id = ? AND revoked_ms IS NULL`
+  ).bind(Date.now(), tokenId).run();
+  if (!r.meta.changes) return c.json({ error: 'no encontrado' }, 404);
+  return c.json({ ok: true, id: tokenId, revoked: true });
 });

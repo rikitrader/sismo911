@@ -46,6 +46,8 @@ import { flotaFlotas } from './routes/flota-flotas';
 import { flotaMisiones } from './routes/flota-misiones';
 import { flotaRastreo } from './routes/flota-rastreo';
 import { flotaTablero } from './routes/flota-tablero';
+import { verifyUnitToken, unitTokenFromRequest } from './lib/flota-token';
+export { FlotaTracking } from './realtime/flota-tracking';
 import { sumUbicaciones } from './routes/suministros-ubicaciones';
 import { sumCategorias } from './routes/suministros-categorias';
 import { sumProductos } from './routes/suministros-productos';
@@ -142,6 +144,15 @@ app.use('*', async (c, next) => {
   const isAcopioReview = method === 'GET' && path === '/api/acopio/submissions';
   const isFlotaApi = path.startsWith('/api/flota'); // internal dispatch console — operator/admin only for ALL methods (reads expose responder GPS/PII)
   if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration && !isSatWrite && !isAcopioReview && !isFlotaApi) return next();
+
+  // Field-unit GPS ingest: a valid per-unit token authorizes ONLY
+  // POST /api/flota/rastreo/posicion without an operator session (and bypasses
+  // the browser same-site check, since field devices aren't browsers). Any other
+  // flota path still requires operator/admin below.
+  if (method === 'POST' && path === '/api/flota/rastreo/posicion') {
+    const unidad = await verifyUnitToken(c.env, unitTokenFromRequest(c.req.raw)).catch(() => null);
+    if (unidad) return next();
+  }
 
   const user = await getUserFromRequest(c.env, c).catch(() => null);
   // Docket submission only needs a logged-in user (any role); everything else

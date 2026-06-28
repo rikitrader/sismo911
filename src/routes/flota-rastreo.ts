@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { rateLimit, validLatLon } from '../lib/security';
+import { verifyUnitToken, unitTokenFromRequest } from '../lib/flota-token';
 
 // FLOTA — live unit tracking: GPS position ingest + map reads. Mounted at
 // /api/flota/rastreo alongside the rest of the FLOTA module.
@@ -9,12 +10,15 @@ import { rateLimit, validLatLon } from '../lib/security';
 // flota_posiciones is an append-only track; each ingest also denormalizes the
 // latest fix onto flota_unidades (lat/lon/rumbo/ult_pos_ms) for cheap map reads.
 //
-// NOTE: real-time push (WebSocket / Durable Object) is a future upgrade. This
-// MVP uses position-ingest + client polling, which is deploy-safe on the
-// existing free-tier Worker (no DO binding required).
+// Real-time: operator consoles subscribe at GET /ws (WebSocket → FlotaTracking
+// Durable Object); each ingested fix is also published to that DO for instant
+// fan-out. Polling GETs remain as a fallback.
 //
-// Gating (src/index.ts ADMIN_WRITE_PREFIXES '/api/flota'): POST is operator-only;
-// all GET reads are public.
+// Gating (src/index.ts isFlotaApi): the whole module is operator/admin-only,
+// EXCEPT POST /posicion which also accepts a scoped per-unit token (field GPS).
+
+const TRACK_SCOPE = 'global';
+const doStub = (env: Env) => env.FLOTA_TRACKING.get(env.FLOTA_TRACKING.idFromName(TRACK_SCOPE));
 
 export const flotaRastreo = new Hono<{ Bindings: Env }>();
 
@@ -36,7 +40,10 @@ flotaRastreo.post('/posicion', async (c) => {
   const limited = await rateLimit(c.env, c, 'flota_posicion', 120, 60);
   if (limited) return limited;
   const b = (await c.req.json().catch(() => null)) as PosBody | null;
-  const unidad_id = str(b?.unidad_id, 120);
+  // A field-unit token (if present) authoritatively identifies the posting unit —
+  // a unit can only report its OWN position. Operator sessions use body.unidad_id.
+  const tokenUnidad = await verifyUnitToken(c.env, unitTokenFromRequest(c.req.raw)).catch(() => null);
+  const unidad_id = tokenUnidad ?? str(b?.unidad_id, 120);
   const lat = num(b?.lat);
   const lon = num(b?.lon);
   if (!unidad_id) return c.json({ error: 'unidad_id requerido' }, 400);
@@ -54,7 +61,23 @@ flotaRastreo.post('/posicion', async (c) => {
       `UPDATE flota_unidades SET lat = ?, lon = ?, rumbo = ?, ult_pos_ms = ?, updated_ms = ? WHERE id = ?`
     ).bind(lat, lon, rumbo, now, now, unidad_id),
   ]);
+  // Fan out to live subscribers (best-effort; absent in tests / if DO unbound).
+  if (c.env.FLOTA_TRACKING) {
+    const pub = doStub(c.env)
+      .fetch('https://flota-tracking/publish', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'posicion', unidad_id, lat, lon, rumbo, mision_id, ts_ms: now }),
+      })
+      .catch(() => {});
+    try { c.executionCtx.waitUntil(pub); } catch { /* no execution ctx (tests) */ }
+  }
   return c.json({ ok: true });
+});
+
+// GET /ws — operator console subscribes to the live position stream (WebSocket).
+flotaRastreo.get('/ws', async (c) => {
+  if (c.req.header('Upgrade') !== 'websocket') return c.json({ error: 'expected_websocket' }, 426);
+  return doStub(c.env).fetch(c.req.raw);
 });
 
 // GET /unidades — latest known position of every unit that has one (map markers).

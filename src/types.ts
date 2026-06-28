@@ -4,6 +4,8 @@ export interface Env {
   CACHE: KVNamespace;
   PHOTOS: KVNamespace;
   PERSON_PHOTOS: R2Bucket;
+  // FLOTA live-tracking Durable Object (real-time unit positions on the command map).
+  FLOTA_TRACKING: DurableObjectNamespace;
   DESAP: D1Database;
   DESAP_FOTOS: R2Bucket;
   USGS_MINLAT: string;
