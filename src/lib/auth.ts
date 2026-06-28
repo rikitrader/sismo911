@@ -11,14 +11,13 @@ const SESSION_TTL_MS = 30 * 86_400_000; // 30 days (citizens — absolute)
 export const IDLE_TTL_MS = 30 * 60_000; // 30 minutes idle
 export const isPrivilegedRole = (role: string | null | undefined) =>
   role === 'operator' || role === 'admin';
-// SECURITY: bump to 600k once hash format carries iter count.
-// OWASP recommends ≥600,000 PBKDF2-SHA256 iterations, but the stored hash format
-// is only { hash, salt } — it does NOT persist the iteration count. derive() is
-// shared by hashPassword AND verifyPassword, so raising this would make every
-// EXISTING (100k) hash fail to verify. Left unchanged until the stored format
-// carries a per-hash iter count (then new hashes can use 600k while old ones
-// still verify at their recorded count).
-const PBKDF2_ITERS = 100_000;
+// SECURITY (audit L3): the versioned hash format now carries the iteration count,
+// so new hashes use the OWASP-recommended ≥600,000 PBKDF2-SHA256 iterations while
+// legacy 100k hashes still verify at their recorded cost and are transparently
+// re-hashed on the next successful login (passwordNeedsUpgrade + the login handler).
+// Format: pw_hash = "v2$<iters>$<b64hash>"; legacy = bare "<b64hash>".
+const PBKDF2_ITERS = 600_000;
+const PBKDF2_ITERS_LEGACY = 100_000;
 
 export type Role = 'citizen' | 'operator' | 'admin';
 export interface User {
@@ -35,10 +34,10 @@ const enc = new TextEncoder();
 const b64 = (b: Uint8Array) => btoa(String.fromCharCode(...b));
 const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-async function derive(password: string, salt: Uint8Array): Promise<Uint8Array> {
+async function derive(password: string, salt: Uint8Array, iters: number = PBKDF2_ITERS): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: salt as BufferSource, iterations: PBKDF2_ITERS, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: salt as BufferSource, iterations: iters, hash: 'SHA-256' },
     key, 256
   );
   return new Uint8Array(bits);
@@ -46,17 +45,31 @@ async function derive(password: string, salt: Uint8Array): Promise<Uint8Array> {
 
 export async function hashPassword(password: string): Promise<{ hash: string; salt: string }> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const hash = await derive(password, salt);
-  return { hash: b64(hash), salt: b64(salt) };
+  const hash = await derive(password, salt, PBKDF2_ITERS);
+  return { hash: `v2$${PBKDF2_ITERS}$${b64(hash)}`, salt: b64(salt) };
 }
 
 export async function verifyPassword(password: string, hashB64: string, saltB64: string): Promise<boolean> {
-  const got = await derive(password, unb64(saltB64));
-  const want = unb64(hashB64);
+  // Versioned ("v2$<iters>$<hash>") or legacy (bare b64 hash at 100k).
+  let iters = PBKDF2_ITERS_LEGACY;
+  let stored = hashB64;
+  if (hashB64.startsWith('v2$')) {
+    const parts = hashB64.split('$');
+    iters = Number(parts[1]) || PBKDF2_ITERS;
+    stored = parts[2] ?? '';
+  }
+  const got = await derive(password, unb64(saltB64), iters);
+  const want = unb64(stored);
   if (got.length !== want.length) return false;
   let diff = 0;
   for (let i = 0; i < got.length; i++) diff |= got[i] ^ want[i];
   return diff === 0;
+}
+
+/** True if a stored hash should be transparently re-hashed at the current cost. */
+export function passwordNeedsUpgrade(hashB64: string): boolean {
+  if (!hashB64.startsWith('v2$')) return true; // legacy 100k bare hash
+  return (Number(hashB64.split('$')[1]) || 0) < PBKDF2_ITERS;
 }
 
 // ---- sessions ----

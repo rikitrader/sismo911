@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { hashPassword, verifyPassword, createSession, setSessionCookie, clearSession, getUserFromRequest, getSessionToken, IDLE_TTL_MS, isPrivilegedRole } from '../lib/auth';
+import { hashPassword, verifyPassword, passwordNeedsUpgrade, createSession, setSessionCookie, clearSession, getUserFromRequest, getSessionToken, IDLE_TTL_MS, isPrivilegedRole } from '../lib/auth';
 import { rateLimit } from '../lib/security';
 import { audit } from '../lib/audit';
 import { sendEmail, randomToken, sha256hex, resetEmail, welcomeEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
 import { createWalletForEmail, isCrossmintConfigured } from '../lib/crossmint';
 import { x402Network, x402Asset } from '../lib/x402';
-import { verifyTotp, matchBackupCode } from '../lib/totp';
+import { verifyTotp, verifyTotpStep, matchBackupCode } from '../lib/totp';
 
 export const auth = new Hono<{ Bindings: Env }>();
 
@@ -184,9 +184,23 @@ auth.post('/login', async (c) => {
   // one-time backup code in the SAME request body; absent ⇒ 401 mfa_required
   // (no session), present-but-wrong ⇒ 401 mfa_invalid.
   if (Number(row.mfa_enabled) === 1) {
+    const tnow = Date.now();
+    // SECURITY (audit L2): per-account MFA lockout, independent of the per-IP limiter.
+    if (row.mfa_locked_until && Number(row.mfa_locked_until) > tnow) {
+      return c.json({ error: 'mfa_locked', retry_ms: Number(row.mfa_locked_until) - tnow }, 403);
+    }
     const code = typeof b?.code === 'string' ? b.code.trim() : '';
     if (!code) return c.json({ error: 'mfa_required' }, 401);
-    let mfaOk = row.mfa_secret ? await verifyTotp(row.mfa_secret, code) : false;
+    let mfaOk = false;
+    // SECURITY (audit L1): TOTP codes are one-time — a code whose counter step is
+    // ≤ the last consumed step is rejected (no replay within the validity window).
+    if (row.mfa_secret) {
+      const step = await verifyTotpStep(row.mfa_secret, code);
+      if (step >= 0 && step > Number(row.mfa_last_step ?? 0)) {
+        mfaOk = true;
+        await c.env.DB.prepare(`UPDATE users SET mfa_last_step = ? WHERE id = ?`).bind(step, row.id).run();
+      }
+    }
     if (!mfaOk && row.mfa_backup_codes) {
       let backups: string[] = [];
       try { backups = JSON.parse(row.mfa_backup_codes || '[]'); } catch { backups = []; }
@@ -198,7 +212,19 @@ auth.post('/login', async (c) => {
           .bind(JSON.stringify(backups), row.id).run();
       }
     }
-    if (!mfaOk) return c.json({ error: 'mfa_invalid' }, 401);
+    if (!mfaOk) {
+      // SECURITY (audit L2): escalating per-account backoff — 5 consecutive MFA
+      // failures lock the account's second factor for 15 minutes.
+      const fails = Number(row.mfa_fail_count ?? 0) + 1;
+      const lockUntil = fails >= 5 ? tnow + 15 * 60_000 : null;
+      await c.env.DB.prepare(`UPDATE users SET mfa_fail_count = ?, mfa_locked_until = ? WHERE id = ?`)
+        .bind(fails, lockUntil, row.id).run();
+      return c.json({ error: 'mfa_invalid' }, 401);
+    }
+    // success → reset the failure counter
+    if (Number(row.mfa_fail_count ?? 0) !== 0 || row.mfa_locked_until != null) {
+      await c.env.DB.prepare(`UPDATE users SET mfa_fail_count = 0, mfa_locked_until = NULL WHERE id = ?`).bind(row.id).run();
+    }
   }
   // SECURITY (audit H4/H5): only an ACTIVE account may obtain a session. A locked /
   // suspended / inactive / pending account cannot re-authenticate around the
@@ -212,6 +238,14 @@ auth.post('/login', async (c) => {
     return c.json({ error: 'account_inactive', status: row.status }, 403);
   }
   await c.env.DB.prepare(`UPDATE users SET last_login_ms = ?, last_ip = ? WHERE id = ?`).bind(Date.now(), ip, row.id).run();
+  // SECURITY (audit L3): transparently upgrade a legacy (100k) password hash to the
+  // current cost (600k) on successful login. Best-effort — never breaks login.
+  if (passwordNeedsUpgrade(row.pw_hash)) {
+    try {
+      const up = await hashPassword(b?.password || '');
+      await c.env.DB.prepare(`UPDATE users SET pw_hash = ?, pw_salt = ? WHERE id = ?`).bind(up.hash, up.salt, row.id).run();
+    } catch { /* ignore — keep the existing valid hash */ }
+  }
   // Record the successful login (login_history) — wrapped so logging never breaks login.
   try {
     await c.env.DB.prepare(

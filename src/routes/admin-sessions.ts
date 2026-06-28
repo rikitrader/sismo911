@@ -24,6 +24,7 @@ import {
   generateSecret,
   totpUri,
   verifyTotp,
+  verifyTotpStep,
   generateBackupCodes,
   hashBackupCode,
   matchBackupCode,
@@ -108,15 +109,17 @@ adminSessions.post('/mfa/verify', requireLogin, async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const code = typeof b?.code === 'string' ? b.code : '';
   const row: any = await c.env.DB.prepare(`SELECT mfa_secret FROM users WHERE id = ?`).bind(me.id).first();
-  if (!row?.mfa_secret || !(await verifyTotp(row.mfa_secret, code))) {
+  // SECURITY (audit L1): record the consumed step so the enrolment code can't be replayed.
+  const step = row?.mfa_secret ? await verifyTotpStep(row.mfa_secret, code) : -1;
+  if (step < 0) {
     return c.json({ error: 'bad_code' }, 400);
   }
   const codes = generateBackupCodes(10);
   const hashes = await Promise.all(codes.map(hashBackupCode));
   const now = Date.now();
   await c.env.DB.prepare(
-    `UPDATE users SET mfa_enabled = 1, mfa_enrolled_ms = ?, mfa_backup_codes = ? WHERE id = ?`
-  ).bind(now, JSON.stringify(hashes), me.id).run();
+    `UPDATE users SET mfa_enabled = 1, mfa_enrolled_ms = ?, mfa_backup_codes = ?, mfa_last_step = ? WHERE id = ?`
+  ).bind(now, JSON.stringify(hashes), step, me.id).run();
   await audit(c, 'mfa.enabled', { user_id: me.id });
   await logSecurity(c, 'mfa.enabled', me.id);
   return c.json({ ok: true, backup_codes: codes });
