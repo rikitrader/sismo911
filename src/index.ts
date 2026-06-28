@@ -46,6 +46,13 @@ import { flotaFlotas } from './routes/flota-flotas';
 import { flotaMisiones } from './routes/flota-misiones';
 import { flotaRastreo } from './routes/flota-rastreo';
 import { flotaTablero } from './routes/flota-tablero';
+import { sumUbicaciones } from './routes/suministros-ubicaciones';
+import { sumCategorias } from './routes/suministros-categorias';
+import { sumProductos } from './routes/suministros-productos';
+import { sumInventario } from './routes/suministros-inventario';
+import { sumMovimientos } from './routes/suministros-movimientos';
+import { sumRequisiciones } from './routes/suministros-requisiciones';
+import { sumTablero } from './routes/suministros-tablero';
 import { runCronGroup } from './cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
@@ -78,7 +85,7 @@ app.use('/mcp', cors({
 // Admin console + curation/management writes require an authenticated operator
 // or admin session. Citizen actions (SOS, check-ins, damage reports) stay open.
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
-const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales', '/api/admin', '/api/aid-orgs', '/api/emergencia', '/api/flota'];
+const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales', '/api/admin', '/api/aid-orgs', '/api/emergencia', '/api/flota', '/api/suministros'];
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   const method = c.req.method;
@@ -256,6 +263,17 @@ app.route('/api/flota/misiones', flotaMisiones);   // dispatch missions + lifecy
 app.route('/api/flota/rastreo', flotaRastreo);     // live unit GPS ingest + map reads
 app.route('/api/flota/tablero', flotaTablero);     // command dashboard aggregates (resumen + mapa)
 
+// SUMINISTROS — Inventory & supply-chain management (OpenBoxes core, re-coded
+// serverless). Served at suministros.sismo911.com + /suministros. GET public;
+// writes operator-gated (see ADMIN_WRITE_PREFIXES '/api/suministros').
+app.route('/api/suministros/ubicaciones', sumUbicaciones);     // stock-holding sites CRUD
+app.route('/api/suministros/categorias', sumCategorias);       // product categories CRUD
+app.route('/api/suministros/productos', sumProductos);         // product catalog (SKU master) CRUD
+app.route('/api/suministros/inventario', sumInventario);       // read-only stock-on-hand views + item pickers
+app.route('/api/suministros/movimientos', sumMovimientos);     // stock transactions: recepción/despacho/traslado/ajuste/conteo
+app.route('/api/suministros/requisiciones', sumRequisiciones); // stock requests + FEFO fulfillment
+app.route('/api/suministros/tablero', sumTablero);             // dashboard aggregates (resumen + alertas + recientes)
+
 // Homepage = the DESAPARECIDOS registry. The root URL serves the /personas page
 // (family-reunification is the app's front door post-quake); the old TERREMOTOS
 // dashboard moves to /terremotos. ASSETS.fetch is independent of these Hono
@@ -281,6 +299,9 @@ export const PUBLIC_COMMAND_ASSETS: Record<string, string> = {
   '/operaciones': '/operaciones',
   '/red-ayuda': '/red-ayuda',
   '/satellite': '/satellite',
+  // SUMINISTROS — inventory & supply-chain division (also bound to its own
+  // subdomain below). The SPA shell lives at public/suministros.html.
+  '/suministros': '/suministros',
 };
 for (const [routePath, assetPath] of Object.entries(PUBLIC_COMMAND_ASSETS)) {
   app.get(routePath, (c) => serveAsset(c, assetPath));
