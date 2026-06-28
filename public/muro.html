@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Muro Sísmico — Comenta los terremotos | SISMO911</title>
+<meta name="description" content="Muro comunitario sobre los terremotos en Venezuela: publica mensajes, reporta cómo se sintió en tu zona y sigue lo que comenta la gente en tiempo real, estilo chat. Información ciudadana." />
+<meta name="robots" content="index,follow" />
+<link rel="canonical" href="https://sismo911.com/muro" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="SISMO911" />
+<meta property="og:title" content="Muro Sísmico — Comenta los terremotos | SISMO911" />
+<meta property="og:description" content="Publica y sigue mensajes ciudadanos sobre los terremotos, en tiempo real." />
+<meta property="og:url" content="https://sismo911.com/muro" />
+<meta property="og:image" content="https://sismo911.com/og/og-default.png" />
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<meta name="theme-color" content="#13284f" />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/app.css" />
+<script src="/app-shell.js" defer></script>
+<style>
+  :root{--navy:#13284f;--line:#dfe3ea;--ink:#1b2433;--muted:#5b6781;--mine:#d9fdd3;--bubble:#fff}
+  body{background:#eae6df;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  main{max-width:760px;margin:0 auto;height:100dvh;display:flex;flex-direction:column}
+  .topbar{background:linear-gradient(135deg,#0c1b38,#1f3a6b);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex:0 0 auto}
+  .topbar .ttl{font:800 16px 'Public Sans'}
+  .topbar .sub{font-size:11.5px;color:#bcd0f0}
+  .av{width:40px;height:40px;border-radius:50%;background:#f5c518;color:var(--navy);display:grid;place-items:center;font-weight:900;flex:0 0 auto}
+  /* WhatsApp-style chat field */
+  #feed{flex:1 1 auto;overflow-y:auto;padding:14px 14px 6px;background-image:radial-gradient(rgba(0,0,0,.04) 1px,transparent 1px);background-size:18px 18px}
+  .day{position:sticky;top:6px;text-align:center;margin:10px 0}
+  .day span{background:rgba(255,255,255,.92);color:#54656f;font-size:11px;font-weight:700;padding:4px 12px;border-radius:9999px;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+  .msg{display:flex;margin:3px 0}
+  .msg.me{justify-content:flex-end}
+  .bub{max-width:78%;background:var(--bubble);border-radius:10px;padding:6px 9px 5px;box-shadow:0 1px .5px rgba(0,0,0,.13);position:relative}
+  .msg.me .bub{background:var(--mine)}
+  .nm{font:700 12.5px 'Public Sans';margin-bottom:1px}
+  .tx{font-size:14.5px;line-height:1.35;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
+  .tm{font-size:10.5px;color:#667781;text-align:right;margin-top:2px;user-select:none}
+  .role{display:inline-block;font:800 9px 'Public Sans';text-transform:uppercase;letter-spacing:.04em;background:var(--navy);color:#fff;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+  .empty{text-align:center;color:#54656f;font-size:14px;margin:40px auto;max-width:340px;background:rgba(255,255,255,.85);padding:16px 18px;border-radius:12px}
+  /* composer */
+  .composer{flex:0 0 auto;background:#f0f2f5;border-top:1px solid var(--line);padding:8px 10px}
+  .namebar{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+  .namebar label{font:700 11px 'Public Sans';color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .namebar input{flex:1;border:1px solid #c4c6d0;border-radius:9999px;padding:6px 12px;font-size:13px;background:#fff;max-width:240px}
+  .inrow{display:flex;gap:8px;align-items:flex-end}
+  .inrow textarea{flex:1;border:1px solid #c4c6d0;border-radius:20px;padding:10px 14px;font-size:15px;background:#fff;resize:none;max-height:120px;font-family:inherit;line-height:1.3}
+  .send{flex:0 0 auto;width:46px;height:46px;border-radius:50%;border:0;background:var(--navy);color:#fff;cursor:pointer;display:grid;place-items:center}
+  .send:disabled{opacity:.5;cursor:not-allowed}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:#bb0027;color:#fff;font-size:13px;font-weight:600;padding:8px 16px;border-radius:9999px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;z-index:50}
+  .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:5px}
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar">
+    <div class="av">🌎</div>
+    <div style="flex:1">
+      <div class="ttl">Muro Sísmico · Terremotos</div>
+      <div class="sub" id="sub">Mensajes de la comunidad · en vivo</div>
+    </div>
+    <a href="/terremotos" style="color:#bcd0f0;text-decoration:none;font-size:12px;font-weight:700">Sismos →</a>
+  </div>
+
+  <div id="feed"><div class="empty">Cargando mensajes…</div></div>
+
+  <div class="composer">
+    <div class="namebar">
+      <label for="name">Tu nombre</label>
+      <input id="name" maxlength="60" placeholder="Anónimo" autocomplete="nickname" />
+    </div>
+    <div class="inrow">
+      <textarea id="body" rows="1" maxlength="600" placeholder="Escribe sobre el terremoto: cómo se sintió, tu zona, si hay daños…"></textarea>
+      <button class="send" id="send" title="Enviar" aria-label="Enviar">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <div class="hint">Enter para enviar · Shift+Enter para salto de línea · No compartas datos personales</div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const CHANNEL = 'terremotos';
+const feed = document.getElementById('feed');
+const nameEl = document.getElementById('name');
+const bodyEl = document.getElementById('body');
+const sendBtn = document.getElementById('send');
+const subEl = document.getElementById('sub');
+let lastTs = 0, lastDay = '', count = 0, busy = false;
+
+const esc = (s) => (s || '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+nameEl.value = localStorage.getItem('muro_name') || '';
+nameEl.addEventListener('change', () => localStorage.setItem('muro_name', nameEl.value.trim().slice(0,60)));
+
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',3000); }
+function dayLabel(ms){
+  const d=new Date(ms), t=new Date(), y=new Date(Date.now()-864e5);
+  if(d.toDateString()===t.toDateString()) return 'HOY';
+  if(d.toDateString()===y.toDateString()) return 'AYER';
+  return d.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
+}
+const hhmm = (ms) => new Date(ms).toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
+
+function addMsg(m){
+  const mine = (m.name||'').trim() && (m.name||'').trim() === (nameEl.value||'').trim();
+  const day = dayLabel(m.created_ms);
+  if(day !== lastDay){ lastDay=day; const ds=document.createElement('div'); ds.className='day'; ds.innerHTML=`<span>${esc(day)}</span>`; feed.appendChild(ds); }
+  const role = (m.role && m.role!=='citizen') ? `<span class="role">${esc(m.role)}</span>` : '';
+  const wrap=document.createElement('div'); wrap.className='msg'+(mine?' me':'');
+  wrap.innerHTML = `<div class="bub">${mine?'':`<div class="nm" style="color:hsl(${(hashName(m.name)%360)} 65% 38%)">${esc(m.name||'Anónimo')}${role}</div>`}<div class="tx">${esc(m.body)}</div><div class="tm">${hhmm(m.created_ms)}</div></div>`;
+  feed.appendChild(wrap);
+  if(m.created_ms>lastTs) lastTs=m.created_ms;
+  count++;
+}
+function hashName(s){ let h=0; for(const c of (s||'')) h=(h*31+c.charCodeAt(0))>>>0; return h; }
+
+async function load(initial){
+  try{
+    const r = await fetch(`/api/chat?channel=${CHANNEL}&since=${initial?0:lastTs}`);
+    const msgs = await r.json();
+    if(initial){ feed.innerHTML=''; lastDay=''; count=0; }
+    if(initial && (!msgs || !msgs.length)){
+      feed.innerHTML = '<div class="empty">Aún no hay mensajes. Sé el primero en comentar sobre el terremoto: cómo se sintió en tu zona, si hay daños o si todos están bien. 🙏</div>';
+      return;
+    }
+    const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 120;
+    (msgs||[]).forEach(addMsg);
+    subEl.textContent = `${count} mensaje${count===1?'':'s'} · en vivo`;
+    if(initial || nearBottom) feed.scrollTop = feed.scrollHeight;
+  }catch(e){ if(initial) feed.innerHTML='<div class="empty">No se pudo cargar el muro. Revisa tu conexión.</div>'; }
+}
+
+async function send(){
+  const body=(bodyEl.value||'').trim();
+  if(!body || busy) return;
+  busy=true; sendBtn.disabled=true;
+  const name=(nameEl.value||'').trim().slice(0,60) || 'Anónimo';
+  localStorage.setItem('muro_name', name);
+  try{
+    const r = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel:CHANNEL,name,body})});
+    if(r.status===429){ toast('Vas muy rápido. Espera unos segundos.'); }
+    else if(!r.ok){ const d=await r.json().catch(()=>({})); toast(d.error||'No se pudo enviar.'); }
+    else { bodyEl.value=''; bodyEl.style.height='auto'; await load(false); feed.scrollTop=feed.scrollHeight; }
+  }catch(e){ toast('Error de red al enviar.'); }
+  busy=false; sendBtn.disabled=false; bodyEl.focus();
+}
+
+bodyEl.addEventListener('input', ()=>{ bodyEl.style.height='auto'; bodyEl.style.height=Math.min(bodyEl.scrollHeight,120)+'px'; });
+bodyEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+sendBtn.addEventListener('click', send);
+
+load(true);
+setInterval(()=>{ if(!document.hidden) load(false); }, 5000);
+</script>
+</body>
+</html>
