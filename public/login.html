@@ -24,6 +24,11 @@
         <button data-tab="register" class="tab flex-1 py-2 rounded-md font-display font-semibold text-sm text-on-surface-variant">Crear cuenta</button>
       </div>
 
+      <div id="socialBlock" class="hidden">
+        <div id="socialBtns" class="space-y-2"></div>
+        <div class="flex items-center gap-3 my-4"><span class="h-px flex-1" style="background:#dfe2ea"></span><span class="text-xs text-on-surface-variant">o continúa con tu correo</span><span class="h-px flex-1" style="background:#dfe2ea"></span></div>
+      </div>
+
       <form id="loginForm" class="space-y-3">
         <input name="email" type="email" required placeholder="Correo electrónico" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
         <input name="password" type="password" required placeholder="Contraseña" class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-sm">
@@ -59,7 +64,7 @@
   const tabs=document.querySelectorAll('.tab'), lf=document.getElementById('loginForm'), rf=document.getElementById('registerForm'), ff=document.getElementById('forgotForm'), msg=document.getElementById('msg');
   tabs.forEach(t=>t.onclick=()=>{const n=t.dataset.tab;
     tabs.forEach(x=>{const on=x.dataset.tab===n;x.classList.toggle('bg-white',on);x.classList.toggle('shadow',on);x.classList.toggle('text-primary',on);x.classList.toggle('text-on-surface-variant',!on);});
-    ff.classList.add('hidden'); lf.classList.toggle('hidden',n!=='login'); rf.classList.toggle('hidden',n!=='register'); msg.textContent='';});
+    ff.classList.add('hidden'); lf.classList.toggle('hidden',n!=='login'); rf.classList.toggle('hidden',n!=='register'); showSocial(true); msg.textContent='';});
   function dest(role){
     const isOp = role==='operator' || role==='admin';
     if (isOp) return (next.startsWith('/login') || next==='/') ? '/admin' : next;
@@ -79,12 +84,27 @@
   }
   lf.onsubmit=e=>{e.preventDefault();submit(lf,'/api/auth/login');};
   rf.onsubmit=e=>{e.preventDefault();submit(rf,'/api/auth/register');};
-  document.getElementById('forgotLink').onclick=()=>{lf.classList.add('hidden');rf.classList.add('hidden');ff.classList.remove('hidden');msg.textContent='';};
-  document.getElementById('backToLogin').onclick=()=>{ff.classList.add('hidden');lf.classList.remove('hidden');msg.textContent='';};
+  document.getElementById('forgotLink').onclick=()=>{lf.classList.add('hidden');rf.classList.add('hidden');ff.classList.remove('hidden');showSocial(false);msg.textContent='';};
+  document.getElementById('backToLogin').onclick=()=>{ff.classList.add('hidden');lf.classList.remove('hidden');showSocial(true);msg.textContent='';};
   ff.onsubmit=async e=>{e.preventDefault();msg.className='text-sm text-center mt-3 text-on-surface-variant';msg.textContent='Enviando…';
     const body=Object.fromEntries(new FormData(ff));
     await fetch('/api/auth/forgot-password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).catch(()=>{});
     msg.className='text-sm text-center mt-3 text-safe';msg.textContent='Si ese correo está registrado, te enviamos un enlace. Revisa tu bandeja y la carpeta de spam.';ff.reset();};
+  // Social login (OAuth). Buttons appear only for providers the server reports as
+  // configured. Each is a plain link to the server-side start endpoint (no SDK).
+  let socialOn=false;
+  const socialBlock=document.getElementById('socialBlock'), socialBtns=document.getElementById('socialBtns');
+  function showSocial(on){ if(socialOn) socialBlock.classList.toggle('hidden',!on); }
+  const GICON='<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+  const labels={google:'Continuar con Google'};
+  fetch('/api/auth/oauth/providers').then(r=>r.json()).then(d=>{
+    const ps=(d&&d.providers)||[]; if(!ps.length) return;
+    socialBtns.innerHTML=ps.map(p=>`<a href="/api/auth/oauth/${encodeURIComponent(p.id)}/start?next=${encodeURIComponent(next)}" class="flex items-center justify-center gap-2.5 w-full border border-outline-variant bg-white hover:opacity-90 rounded-lg py-2.5 text-sm font-display font-semibold text-on-surface transition">${p.id==='google'?GICON:''}<span>${labels[p.id]||('Continuar con '+(p.label||p.id))}</span></a>`).join('');
+    socialOn=true; showSocial(true);
+  }).catch(()=>{});
+  // Surface an OAuth callback error (e.g. user cancelled, unverified email).
+  const oerr=params.get('oauth_error');
+  if(oerr){ msg.className='text-sm text-center mt-3 text-secondary'; msg.textContent={denied:'Cancelaste el acceso con el proveedor.',unverified:'Tu correo no está verificado con el proveedor.',state:'La sesión de acceso expiró, intenta de nuevo.',token:'No se pudo completar el inicio de sesión.',missing:'Faltan datos del proveedor.',profile:'No se pudo leer tu perfil del proveedor.',config:'Ese proveedor no está configurado.'}[oerr]||'No se pudo iniciar sesión con el proveedor.'; }
   // already logged in? skip
   fetch('/api/auth/me').then(r=>r.json()).then(d=>{ if(d.authenticated) location.href=dest(d.user.role); });
 </script>
