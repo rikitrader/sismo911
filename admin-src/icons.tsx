@@ -59,6 +59,13 @@ export const Icon = {
   unlock: (p: P) => <Svg {...p}><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 7.5-2" /></Svg>,
   edit: (p: P) => <Svg {...p}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" /></Svg>,
   plug: (p: P) => <Svg {...p}><path d="M9 2v6M15 2v6" /><path d="M7 8h10v3a5 5 0 0 1-10 0V8Z" /><path d="M12 16v6" /></Svg>,
+  clock: (p: P) => <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></Svg>,
+  upload: (p: P) => <Svg {...p}><path d="M12 16V4M7 9l5-5 5 5" /><path d="M5 20h14" /></Svg>,
+  mail: (p: P) => <Svg {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></Svg>,
+  userCheck: (p: P) => <Svg {...p}><circle cx="9" cy="8" r="3.4" /><path d="M3.5 20a5.5 5.5 0 0 1 11 0" /><path d="m15.5 13 1.8 1.8 3.2-3.4" /></Svg>,
+  ban: (p: P) => <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="m5.6 5.6 12.8 12.8" /></Svg>,
+  eye: (p: P) => <Svg {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></Svg>,
+  mask: (p: P) => <Svg {...p}><path d="M3 6c0-1 1-2 3-2 3 0 4 2 6 2s3-2 6-2c2 0 3 1 3 2v4a8 8 0 0 1-16 0V6Z" /><circle cx="8.5" cy="9" r="1.2" /><circle cx="15.5" cy="9" r="1.2" /></Svg>,
 };
 
 export type IconName = keyof typeof Icon;

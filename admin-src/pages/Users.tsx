@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import { rbac } from '../api';
-import type { UserRow, Permission } from '../api';
+import type { UserRow, Permission, TempRole, EffectivePermissions } from '../api';
 import { useResource } from '../hooks';
-import { PageHeader, Avatar, StatusPill, Spinner, Field, EmptyState } from '../components/ui';
+import { PageHeader, Avatar, StatusPill, Spinner, EmptyState } from '../components/ui';
 import { DataTable } from '../components/DataTable';
 import type { Column } from '../components/DataTable';
 import { Drawer, Tabs } from '../components/Drawer';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/Confirm';
+import { InviteModal } from '../components/InviteModal';
 import { UserSessions } from './Sessions';
 import { ForbiddenInline, ErrorInline } from '../components/StateScreens';
 import { Icon } from '../icons';
@@ -94,6 +95,7 @@ function UserDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
   const [tab, setTab] = useState<'overview' | 'roles' | 'permissions' | 'sessions'>('overview');
   const [busy, setBusy] = useState(false);
   const [confirmLock, setConfirmLock] = useState(false);
+  const [impersonate, setImpersonate] = useState(false);
 
   const reloadAll = () => { r.reload(); onChanged(); };
 
@@ -116,7 +118,7 @@ function UserDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
       subtitle={u?.email}
       footer={u && (
         <div class="flex items-center justify-between gap-2">
-          <span class="text-[12px] text-faint">ID {u.id.slice(0, 10)}…</span>
+          <button class="btn btn-ghost btn-sm text-warn px-2" disabled={busy} onClick={() => setImpersonate(true)}><Icon.mask size={15} /> Suplantar</button>
           <div class="flex items-center gap-2">
             {u.status === 'locked'
               ? <button class="btn btn-outline btn-sm" disabled={busy} onClick={() => act(() => rbac.unlock(u.id), 'Cuenta desbloqueada')}>{busy ? <Spinner /> : <Icon.unlock size={15} />} Desbloquear</button>
@@ -158,7 +160,57 @@ function UserDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
           onConfirm={async () => { await rbac.lock(u.id); reloadAll(); }}
         />
       )}
+
+      {u && <ImpersonateModal open={impersonate} onClose={() => setImpersonate(false)} userId={u.id} name={name} />}
     </Drawer>
+  );
+}
+
+// ---------- Impersonation ----------
+function ImpersonateModal({ open, onClose, userId, name }: { open: boolean; onClose: () => void; userId: string; name: string }) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { if (open) setReason(''); }, [open]);
+
+  async function run() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await rbac.impersonate(userId, reason.trim());
+      // The server set the `sismo_impersonating` cookie; reload so the entire
+      // console (and the warning banner) reflects the impersonated context.
+      dispatchEvent(new CustomEvent('rbac-impersonation-changed'));
+      toast.success('Suplantación iniciada');
+      location.reload();
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo iniciar la suplantación');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={busy ? () => {} : onClose} title="Suplantar usuario"
+      footer={
+        <>
+          <button class="btn btn-ghost" disabled={busy} onClick={onClose}>Cancelar</button>
+          <button class="btn btn-danger" disabled={busy} onClick={run}>{busy ? <Spinner /> : <Icon.mask size={15} />} Suplantar</button>
+        </>
+      }>
+      <div class="space-y-4">
+        <div class="flex items-start gap-2.5 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2.5">
+          <span class="text-warn shrink-0 mt-0.5"><Icon.alert size={16} /></span>
+          <p class="text-[12.5px] text-muted leading-relaxed">
+            Vas a ver y operar el sistema <b>como {name}</b>. Cada acción quedará registrada en la auditoría.
+            Aparecerá un aviso permanente hasta que detengas la suplantación.
+          </p>
+        </div>
+        <label class="block">
+          <span class="label-caps block mb-1.5">Motivo</span>
+          <textarea class="input" rows={3} value={reason} placeholder="Por qué necesitas suplantar a este usuario…" onInput={(e) => setReason((e.target as HTMLTextAreaElement).value)} />
+        </label>
+      </div>
+    </Modal>
   );
 }
 
@@ -215,7 +267,8 @@ function RolesTab({ r, busy, act }: { r: any; busy: boolean; act: any }) {
   if (r.loading) return <div class="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} class="skeleton h-11 rounded-lg" />)}</div>;
   const assigned = r.data.roles || [];
   const assignedKeys = new Set(assigned.map((x: any) => x.key));
-  const available = (rolesRes.data?.roles || []).filter((x) => !assignedKeys.has(x.key));
+  const allRoles = rolesRes.data?.roles || [];
+  const available = allRoles.filter((x) => !assignedKeys.has(x.key));
   return (
     <div>
       <div class="label-caps mb-2">Roles asignados · {assigned.length}</div>
@@ -240,6 +293,101 @@ function RolesTab({ r, busy, act }: { r: any; busy: boolean; act: any }) {
         </select>
         <button class="btn btn-primary" disabled={!pick || busy} onClick={() => { act(() => rbac.assignRole(r.data.user.id, pick), 'Rol asignado'); setPick(''); }}>Asignar</button>
       </div>
+
+      <div class="border-t mt-6 pt-5" style={{ borderColor: 'rgb(var(--border))' }}>
+        <TempRolesSection userId={r.data.user.id} roleOptions={allRoles} onChanged={r.reload} />
+      </div>
+    </div>
+  );
+}
+
+// Relative "time remaining" until an expiry timestamp.
+function remaining(ms?: number | null): { label: string; expired: boolean } {
+  if (!ms) return { label: 'sin vencimiento', expired: false };
+  const diff = ms - Date.now();
+  if (diff <= 0) return { label: 'expirado', expired: true };
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return { label: `vence en ${m}m`, expired: false };
+  const h = Math.floor(m / 60);
+  if (h < 24) return { label: `vence en ${h}h`, expired: false };
+  const d = Math.floor(h / 24);
+  return { label: `vence en ${d}d`, expired: false };
+}
+
+const TEMP_PRESETS: { label: string; ms: number }[] = [
+  { label: '1 hora', ms: 3600_000 },
+  { label: '8 horas', ms: 8 * 3600_000 },
+  { label: '24 horas', ms: 24 * 3600_000 },
+  { label: '7 días', ms: 7 * 24 * 3600_000 },
+];
+
+function TempRolesSection({ userId, roleOptions, onChanged }: { userId: string; roleOptions: { key: string; name: string }[]; onChanged: () => void }) {
+  const tr = useResource(() => rbac.tempRoles(userId), [userId]);
+  const [roleKey, setRoleKey] = useState('');
+  const [presetMs, setPresetMs] = useState(TEMP_PRESETS[2].ms);
+  const [busy, setBusy] = useState(false);
+
+  const list: TempRole[] = (tr.data?.tempRoles || tr.data?.temp_roles || tr.data?.roles || []) as TempRole[];
+
+  async function add() {
+    if (!roleKey || busy) return;
+    setBusy(true);
+    try {
+      await rbac.addTempRole(userId, roleKey, Date.now() + presetMs);
+      toast.success('Rol temporal asignado');
+      setRoleKey('');
+      tr.reload(); onChanged();
+    } catch (e: any) { toast.error(e?.message || 'No se pudo asignar el rol temporal'); }
+    finally { setBusy(false); }
+  }
+
+  async function remove(roleId: string) {
+    setBusy(true);
+    try { await rbac.removeTempRole(userId, roleId); toast.success('Rol temporal removido'); tr.reload(); onChanged(); }
+    catch (e: any) { toast.error(e?.message || 'No se pudo remover'); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div>
+      <div class="flex items-center gap-2 mb-2">
+        <Icon.clock size={15} class="text-faint" />
+        <span class="label-caps !mb-0">Roles temporales · {list.length}</span>
+      </div>
+      {tr.forbidden ? (
+        <p class="text-faint text-[13px] mb-4">No tienes permiso para ver roles temporales.</p>
+      ) : tr.loading ? (
+        <div class="space-y-2 mb-4">{Array.from({ length: 2 }).map((_, i) => <div key={i} class="skeleton h-11 rounded-lg" />)}</div>
+      ) : list.length ? (
+        <ul class="space-y-2 mb-4">
+          {list.map((role) => {
+            const rem = remaining(role.expires_ms);
+            return (
+              <li key={role.id} class={`flex items-center gap-3 bordered rounded-lg px-3 py-2.5 ${rem.expired ? 'surface-subtle opacity-70' : 'surface-subtle'}`}>
+                <span class="w-7 h-7 rounded-md surface flex items-center justify-center text-faint shrink-0"><Icon.clock size={15} /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[13px] font-medium truncate">{role.name || role.role_key || role.roleKey || role.key}</div>
+                  <div class="text-[11.5px] font-mono truncate text-faint">{role.role_key || role.roleKey || role.key}</div>
+                </div>
+                <span class={`pill ${rem.expired ? 'bg-danger/12 text-danger' : 'bg-warn/15 text-warn'}`}>{rem.label}</span>
+                <button class="btn btn-ghost btn-sm px-2 text-faint hover:text-danger" disabled={busy} aria-label="Quitar rol temporal" onClick={() => remove(role.id)}><Icon.close size={15} /></button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : <p class="text-faint text-[13px] mb-4">Sin roles temporales.</p>}
+
+      <div class="label-caps mb-2">Asignar rol temporal</div>
+      <div class="flex flex-wrap gap-2">
+        <select class="input flex-1 min-w-[140px]" value={roleKey} onChange={(e) => setRoleKey((e.target as HTMLSelectElement).value)} aria-label="Rol temporal">
+          <option value="">Seleccionar rol…</option>
+          {roleOptions.map((x) => <option key={x.key} value={x.key}>{x.name} ({x.key})</option>)}
+        </select>
+        <select class="input w-[130px]" value={String(presetMs)} onChange={(e) => setPresetMs(Number((e.target as HTMLSelectElement).value))} aria-label="Duración">
+          {TEMP_PRESETS.map((p) => <option key={p.ms} value={String(p.ms)}>{p.label}</option>)}
+        </select>
+        <button class="btn btn-primary" disabled={!roleKey || busy} onClick={add}>{busy ? <Spinner /> : <Icon.clock size={15} />} Asignar</button>
+      </div>
     </div>
   );
 }
@@ -253,7 +401,11 @@ function PermsTab({ r, busy, act }: { r: any; busy: boolean; act: any }) {
 
   return (
     <div class="space-y-5">
-      <p class="text-[12.5px] text-faint">Las concesiones directas anulan los permisos heredados por rol.</p>
+      <EffectivePermsInspector userId={uid} />
+      <div class="border-t pt-5" style={{ borderColor: 'rgb(var(--border))' }}>
+        <div class="label-caps mb-2">Concesiones directas</div>
+        <p class="text-[12.5px] text-faint">Las concesiones directas anulan los permisos heredados por rol.</p>
+      </div>
       {Object.entries(categories).map(([cat, perms]) => (
         <div key={cat}>
           <div class="label-caps mb-2">{cat}</div>
@@ -286,57 +438,82 @@ function SegBtn({ on, tone, label, disabled, onClick }: { on: boolean; tone: 'ok
   );
 }
 
-// ---------- Invite ----------
-function InviteModal({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
-  const [email, setEmail] = useState('');
-  const [roleKey, setRoleKey] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [link, setLink] = useState<string | null>(null);
-  const rolesRes = useResource(() => rbac.roles(), [open]);
+// ---------- Effective-permissions inspector (troubleshooting view) ----------
+function EffectivePermsInspector({ userId }: { userId: string }) {
+  const res = useResource<EffectivePermissions>(() => rbac.effectivePermissions(userId), [userId]);
+  const [q, setQ] = useState('');
 
-  useEffect(() => { if (open) { setEmail(''); setRoleKey(''); setLink(null); } }, [open]);
+  // perm key → ordered list of source badges.
+  const sources = useMemo(() => {
+    const m = new Map<string, { label: string; tone: 'role' | 'direct' | 'deny' }[]>();
+    const data = res.data;
+    if (!data) return m;
+    const add = (key: string, badge: { label: string; tone: 'role' | 'direct' | 'deny' }) => {
+      const arr = m.get(key) || []; arr.push(badge); m.set(key, arr);
+    };
+    for (const r of data.bySource?.roles || [])
+      for (const p of r.perms || []) add(p, { label: r.role, tone: 'role' });
+    for (const d of data.bySource?.direct || [])
+      if (d.effect === 'allow') add(d.perm, { label: 'directo', tone: 'direct' });
+    return m;
+  }, [res.data]);
 
-  async function submit() {
-    if (!email.trim()) return;
-    setBusy(true);
-    try {
-      const res = await rbac.invite(email.trim(), roleKey || undefined);
-      const url = `${location.origin}/invite/${res.token}`;
-      setLink(url);
-      toast.success('Invitación creada');
-      onDone();
-    } catch (e: any) { toast.error(e?.message || 'No se pudo crear la invitación'); }
-    finally { setBusy(false); }
+  if (res.forbidden) {
+    return (
+      <div>
+        <div class="label-caps mb-2 flex items-center gap-2"><Icon.eye size={15} class="text-faint" /> Permisos efectivos</div>
+        <p class="text-faint text-[13px]">No tienes permiso para inspeccionar los permisos efectivos.</p>
+      </div>
+    );
+  }
+  if (res.loading) {
+    return <div class="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} class="skeleton h-8 rounded-lg" />)}</div>;
   }
 
+  const data = res.data;
+  const effective = (data?.effective || []).filter((k) => k.toLowerCase().includes(q.toLowerCase()));
+  const denied = (data?.bySource?.denied || []).filter((k) => k.toLowerCase().includes(q.toLowerCase()));
+
   return (
-    <Modal open={open} onClose={onClose} title="Invitar usuario"
-      footer={!link && <><button class="btn btn-ghost" onClick={onClose}>Cancelar</button><button class="btn btn-primary" disabled={busy || !email.trim()} onClick={submit}>{busy ? <Spinner /> : <Icon.plus size={16} />} Enviar invitación</button></>}>
-      {link ? (
-        <div class="text-center py-2">
-          <div class="w-12 h-12 rounded-xl bg-ok/12 text-ok flex items-center justify-center mx-auto mb-3"><Icon.check size={24} /></div>
-          <p class="font-medium text-[14px]">Invitación lista</p>
-          <p class="text-faint text-[12.5px] mt-1 mb-4">Comparte este enlace con {email}.</p>
-          <div class="flex items-center gap-2 surface-subtle bordered rounded-lg px-3 py-2 text-left">
-            <Icon.link size={15} class="text-faint shrink-0" />
-            <span class="text-[12px] font-mono truncate flex-1">{link}</span>
-            <button class="btn btn-ghost btn-sm px-2" aria-label="Copiar" onClick={() => { navigator.clipboard?.writeText(link); toast.success('Enlace copiado'); }}><Icon.copy size={15} /></button>
-          </div>
-          <button class="btn btn-outline w-full mt-4" onClick={onClose}>Listo</button>
-        </div>
+    <div>
+      <div class="flex items-center gap-2 mb-2">
+        <Icon.eye size={15} class="text-faint" />
+        <span class="label-caps !mb-0">Permisos efectivos · {data?.effective?.length || 0}</span>
+      </div>
+      <div class="relative mb-3">
+        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint pointer-events-none"><Icon.search size={14} /></span>
+        <input class="input h-8 pl-8 text-[13px]" placeholder="Filtrar permisos…" value={q}
+          aria-label="Filtrar permisos efectivos" onInput={(e) => setQ((e.target as HTMLInputElement).value)} />
+      </div>
+
+      {effective.length === 0 && denied.length === 0 ? (
+        <p class="text-faint text-[13px]">{q ? 'Sin coincidencias.' : 'Sin permisos efectivos.'}</p>
       ) : (
-        <div class="space-y-4">
-          <Field label="Correo electrónico">
-            <input class="input" type="email" placeholder="persona@sismo911.com" value={email} onInput={(e) => setEmail((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
-          </Field>
-          <Field label="Rol inicial (opcional)">
-            <select class="input" value={roleKey} onChange={(e) => setRoleKey((e.target as HTMLSelectElement).value)}>
-              <option value="">Sin rol</option>
-              {(rolesRes.data?.roles || []).map((x) => <option key={x.key} value={x.key}>{x.name}</option>)}
-            </select>
-          </Field>
+        <div class="surface-subtle bordered rounded-lg divide-y" style={{ borderColor: 'rgb(var(--border))' }}>
+          {effective.map((key) => {
+            const badges = sources.get(key) || [];
+            return (
+              <div key={key} class="flex items-center gap-2 px-3 py-2 surface">
+                <span class="font-mono text-[11.5px] truncate flex-1">{key}</span>
+                <div class="flex flex-wrap items-center gap-1 justify-end shrink-0 max-w-[55%]">
+                  {badges.length ? badges.map((b, i) => (
+                    <span key={i} class={`pill ${b.tone === 'direct' ? 'bg-brand-500/15 text-[rgb(var(--accent))]' : 'bg-ok/12 text-ok'}`}>
+                      {b.tone === 'direct' ? <Icon.key size={11} /> : <Icon.roles size={11} />}{b.label}
+                    </span>
+                  )) : <span class="pill surface-subtle bordered text-faint">heredado</span>}
+                </div>
+              </div>
+            );
+          })}
+          {denied.map((key) => (
+            <div key={'deny-' + key} class="flex items-center gap-2 px-3 py-2 surface">
+              <span class="font-mono text-[11.5px] truncate flex-1 line-through text-faint">{key}</span>
+              <span class="pill bg-danger/12 text-danger shrink-0"><Icon.ban size={11} />denegado</span>
+            </div>
+          ))}
         </div>
       )}
-    </Modal>
+    </div>
   );
 }
+
