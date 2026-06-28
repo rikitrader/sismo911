@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from './types';
+import { classifyIngestHealth, type IngestLogRow } from './lib/db';
 import { events } from './routes/events';
 import { persons } from './routes/persons';
 import { evidence, evidenceShare } from './routes/evidence';
@@ -233,6 +234,19 @@ app.get('/api/ready', async (c) => {
 // Ingestion status: last USGS poll, social adapters, and gated integrations.
 app.get('/api/status', async (c) => {
   const log = await c.env.DB.prepare('SELECT * FROM ingest_log').all().catch(() => ({ results: [] }));
+  // Annotate each source with a derived health (ok/stale/down) so a degraded feed
+  // — e.g. theempire after it put up a reCAPTCHA wall — is visible here instead of
+  // failing silently every hour. `ingest_health` is a prominent summary for
+  // admin/health checks; degraded sources are NOT a 503 (RAV keeps the app live).
+  const nowMs = Date.now();
+  const ingestRows = ((log.results ?? []) as IngestLogRow[]).map((r) => ({
+    ...r, health: classifyIngestHealth(r, nowMs),
+  }));
+  const ingestHealth = {
+    down: ingestRows.filter((r) => r.health === 'down').map((r) => ({ source: r.source, last_error: r.last_error, last_ok_ms: r.last_ok_ms })),
+    stale: ingestRows.filter((r) => r.health === 'stale').map((r) => ({ source: r.source, last_error: r.last_error, last_ok_ms: r.last_ok_ms })),
+    ok: ingestRows.filter((r) => r.health === 'ok').length,
+  };
   const env = c.env as unknown as Record<string, unknown>;
   // Cross-source de-dup health: how many rows are canonical vs. marked as a
   // duplicate of another source, plus any magnitude DIVERGENCES (USGS vs.
@@ -267,7 +281,8 @@ app.get('/api/status', async (c) => {
     { key: 'gov_official', label: 'Otros datos oficiales (PC/Defensa Civil)', configured: false, reason: 'Sin API pública — ingreso por consola / convenio' },
   ];
   return c.json({
-    ingest: log.results ?? [],
+    ingest: ingestRows,
+    ingest_health: ingestHealth,
     seismic_dedup: {
       total: Number(dedup?.total ?? 0),
       canonical: Number(dedup?.canonical ?? 0),

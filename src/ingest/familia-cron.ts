@@ -40,6 +40,17 @@ function mapEstado(v: any): string {
 }
 const asInt = (v: any): number | null => { if (v == null || v === '') return null; const n = Number(v); return Number.isFinite(n) ? Math.trunc(n) : null; };
 
+// Detect the upstream "now requires a CAPTCHA" wall (theempire started returning
+// 403 {"error":"ForbiddenError","message":"Verificación reCAPTCHA requerida"}).
+// Pure + exported so it's unit-tested without mocking fetch. Matches a 401/403
+// whose body mentions captcha/forbidden — the marker that a plain server-side
+// fetch can no longer pull this feed (a real-Chrome resolver is needed).
+export const RECAPTCHA_DEGRADED = 'degraded:recaptcha';
+export function isRecaptchaBlock(status: number, body: string): boolean {
+  if (status !== 403 && status !== 401) return false;
+  return /recaptcha|captcha|forbiddenerror|verificaci[oó]n requerida/i.test(String(body || ''));
+}
+
 export async function ingestFamilia(env: Env): Promise<number> {
   const base = (env as any).FAMILIA_SOURCE_URL as string | undefined;
   if (!base) { console.warn('[familia] FAMILIA_SOURCE_URL not set — skipping'); return 0; }
@@ -50,7 +61,16 @@ export async function ingestFamilia(env: Env): Promise<number> {
 
     const fetchPage = async (page: number) => {
       const res = await fetch(`${base}${sep}page=${page}&pageSize=${PAGE_SIZE}`, { headers: { accept: 'application/json' } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        // Read a bounded slice of the body to classify the failure. A reCAPTCHA
+        // wall is a known, structured degradation (not a transient blip): record
+        // it as `degraded:recaptcha` so /api/status flags theempire as DOWN and
+        // an operator knows the real-Chrome resolver is needed — RAV stays the
+        // source of truth meanwhile. Fail fast (don't grind the page loop).
+        const body = await res.text().catch(() => '');
+        if (isRecaptchaBlock(res.status, body)) throw new Error(RECAPTCHA_DEGRADED);
+        throw new Error(`HTTP ${res.status}`);
+      }
       return res.json() as Promise<any>;
     };
 
@@ -117,8 +137,16 @@ export async function ingestFamilia(env: Env): Promise<number> {
     console.log(`[familia] pages ${start}-${lastPage}/${totalPages}: upserted ${written}, rejected ${rejected}; next cursor=${next}`);
     return written;
   } catch (e: any) {
-    console.error('[familia] ingest failed:', e?.message ?? e);
-    await recordIngest(env, 'familia', false, 0, String(e?.message ?? e)).catch(() => {});
+    const msg = String(e?.message ?? e);
+    if (msg === RECAPTCHA_DEGRADED) {
+      // Known degradation, not a crash: one clear line, no alarm spam. RAV remains
+      // the live source; /api/status will report theempire as DOWN until a
+      // real-Chrome resolver (CNE pattern) restores access.
+      console.warn('[familia] source DEGRADED (reCAPTCHA wall) — theempire unreachable by server fetch; RAV remains source of truth. See /api/status.');
+    } else {
+      console.error('[familia] ingest failed:', msg);
+    }
+    await recordIngest(env, 'familia', false, 0, msg).catch(() => {});
     return 0;
   }
 }
