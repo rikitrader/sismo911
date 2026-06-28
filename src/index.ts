@@ -395,8 +395,8 @@ app.get('/muro/p/:id', async (c) => {
   const origin = new URL(c.req.url).origin;
   const dest = `${origin}/muro?m=${encodeURIComponent(id)}`;
   const who = esc((row?.name || 'Alguien').slice(0, 60));
-  const text = esc((row?.body || 'Comenta los terremotos en el Muro Sísmico de SISMO911.').slice(0, 200));
-  const title = `${who} en el Muro Sísmico — SISMO911`;
+  const text = esc((row?.body || 'Reporta el terremoto en el Muro de Emergencia de SISMO911.').slice(0, 200));
+  const title = `${who} en el Muro de Emergencia — SISMO911`;
   const img = row?.image_key ? `${origin}/api/chat/photo/${esc(id)}` : `${origin}/og/og-default.png`;
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -410,7 +410,7 @@ app.get('/muro/p/:id', async (c) => {
 <meta http-equiv="refresh" content="0; url=${esc(dest)}">
 <link rel="canonical" href="${esc(dest)}"></head>
 <body style="font-family:system-ui;background:#eae6df;color:#13284f;text-align:center;padding:40px">
-<p>Abriendo el Muro Sísmico… <a href="${esc(dest)}">toca aquí si no redirige</a>.</p></body></html>`;
+<p>Abriendo el Muro de Emergencia… <a href="${esc(dest)}">toca aquí si no redirige</a>.</p></body></html>`;
   return c.html(html, 200, { 'Cache-Control': 'public, max-age=300' });
 });
 
