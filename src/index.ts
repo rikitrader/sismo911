@@ -190,6 +190,10 @@ app.get('/api/status', async (c) => {
        AND ABS(d.mag - k.mag) >= 1.0
      ORDER BY d.time_ms DESC LIMIT 20`
   ).all().catch(() => ({ results: [] }));
+  // Self-monitoring tolerance check, refreshed hourly by the FUNVISIS cron
+  // (replaces the old local launchd job). `borderline` non-empty => the tuned
+  // dedup tolerances may be missing real duplicates; revisit dedupe-seismic.ts.
+  const sanity = await c.env.CACHE.get('dedupe:sanity', 'json').catch(() => null);
   // Gated integrations — honest health: configured only when their credential/binding exists.
   const gated = [
     { key: 'shakealert', label: 'ShakeAlert (alerta temprana)', configured: false, reason: 'Licencia requerida; cobertura EE.UU. (no Venezuela)' },
@@ -207,6 +211,9 @@ app.get('/api/status', async (c) => {
       canonical: Number(dedup?.canonical ?? 0),
       duplicates: Number(dedup?.duplicates ?? 0),
       divergences: divergences.results ?? [],
+      // Hourly self-monitoring: null until the first FUNVISIS cron after deploy.
+      // `borderline` non-empty => tuned tolerances may be missing real dups.
+      sanity: sanity ?? null,
     },
     social_adapters: adapterStatus(env),
     gated,

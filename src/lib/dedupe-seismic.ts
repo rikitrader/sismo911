@@ -124,11 +124,21 @@ export function findCrossSourceDups(events: DedupeEvent[], opts: DedupeOptions =
   return pairs;
 }
 
+// Deliberately-wide tolerances for the self-monitoring "sanity" pass. Run
+// alongside the production match to detect drift: any pair the WIDE pass catches
+// that the production tolerances MISS is a borderline candidate — a possible
+// real duplicate slipping through. If these start appearing, revisit DEFAULTS.
+export const SANITY_WIDE: DedupeOptions = { windowMs: 600_000, distKm: 150 };
+
 export interface DedupeResult {
   scanned: number;
   pairs: number;
   marked: number;
   divergences: DupPair[];
+  // Pairs matched by SANITY_WIDE but NOT by the production tolerances — the
+  // "is the tuning still right?" signal. Empty = production tolerances cover the
+  // data; non-empty = inspect and consider widening DEFAULTS.
+  borderline: DupPair[];
 }
 
 /**
@@ -153,6 +163,12 @@ export async function dedupeCrossSource(
   const events = results ?? [];
 
   const pairs = findCrossSourceDups(events, opts);
+  // Self-monitoring: a wide pass over the SAME canonical set. Borderline =
+  // matched wide but not at production tolerances → potential missed duplicate.
+  const prodIds = new Set(pairs.map((p) => p.dropId));
+  const widePairs = findCrossSourceDups(events, { ...opts, ...SANITY_WIDE });
+  const borderline = widePairs.filter((p) => !prodIds.has(p.dropId));
+
   let marked = 0;
   if (apply && pairs.length) {
     const stmt = env.DB.prepare(`UPDATE events SET dup_of = ? WHERE id = ? AND dup_of IS NULL`);
@@ -164,5 +180,6 @@ export async function dedupeCrossSource(
     pairs: pairs.length,
     marked,
     divergences: pairs.filter((p) => p.diverges),
+    borderline,
   };
 }
