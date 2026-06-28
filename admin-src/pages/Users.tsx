@@ -7,6 +7,8 @@ import { DataTable } from '../components/DataTable';
 import type { Column } from '../components/DataTable';
 import { Drawer, Tabs } from '../components/Drawer';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/Confirm';
+import { UserSessions } from './Sessions';
 import { ForbiddenInline, ErrorInline } from '../components/StateScreens';
 import { Icon } from '../icons';
 import { relTime, fullTime } from '../util';
@@ -89,8 +91,9 @@ export function UsersPage() {
 // ---------- User detail drawer ----------
 function UserDrawer({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
   const r = useResource(() => rbac.user(id), [id]);
-  const [tab, setTab] = useState<'overview' | 'roles' | 'permissions'>('overview');
+  const [tab, setTab] = useState<'overview' | 'roles' | 'permissions' | 'sessions'>('overview');
   const [busy, setBusy] = useState(false);
+  const [confirmLock, setConfirmLock] = useState(false);
 
   const reloadAll = () => { r.reload(); onChanged(); };
 
@@ -112,11 +115,16 @@ function UserDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
       title={r.loading ? <span class="skeleton inline-block h-4 w-32 align-middle" /> : name}
       subtitle={u?.email}
       footer={u && (
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-2">
           <span class="text-[12px] text-faint">ID {u.id.slice(0, 10)}…</span>
-          {u.status === 'suspended'
-            ? <button class="btn btn-outline btn-sm" disabled={busy} onClick={() => act(() => rbac.activate(u.id), 'Usuario activado')}>{busy ? <Spinner /> : <Icon.check size={15} />} Activar</button>
-            : <button class="btn btn-danger btn-sm" disabled={busy} onClick={() => act(() => rbac.suspend(u.id), 'Usuario suspendido')}>{busy ? <Spinner /> : <Icon.lock size={15} />} Suspender</button>}
+          <div class="flex items-center gap-2">
+            {u.status === 'locked'
+              ? <button class="btn btn-outline btn-sm" disabled={busy} onClick={() => act(() => rbac.unlock(u.id), 'Cuenta desbloqueada')}>{busy ? <Spinner /> : <Icon.unlock size={15} />} Desbloquear</button>
+              : <button class="btn btn-danger btn-sm" disabled={busy} onClick={() => setConfirmLock(true)}><Icon.lock size={15} /> Bloqueo de emergencia</button>}
+            {u.status === 'suspended'
+              ? <button class="btn btn-outline btn-sm" disabled={busy} onClick={() => act(() => rbac.activate(u.id), 'Usuario activado')}>{busy ? <Spinner /> : <Icon.check size={15} />} Activar</button>
+              : u.status !== 'locked' && <button class="btn btn-danger btn-sm" disabled={busy} onClick={() => act(() => rbac.suspend(u.id), 'Usuario suspendido')}>{busy ? <Spinner /> : <Icon.lock size={15} />} Suspender</button>}
+          </div>
         </div>
       )}
     >
@@ -127,14 +135,28 @@ function UserDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
           <Tabs
             active={tab}
             onChange={(t) => setTab(t as any)}
-            tabs={[{ id: 'overview', label: 'Resumen' }, { id: 'permissions', label: 'Permisos' }, { id: 'roles', label: 'Roles' }]}
+            tabs={[{ id: 'overview', label: 'Resumen' }, { id: 'permissions', label: 'Permisos' }, { id: 'roles', label: 'Roles' }, { id: 'sessions', label: 'Sesiones' }]}
           />
           <div class="p-5">
             {tab === 'overview' && <Overview r={r} />}
             {tab === 'roles' && <RolesTab r={r} busy={busy} act={act} />}
             {tab === 'permissions' && <PermsTab r={r} busy={busy} act={act} />}
+            {tab === 'sessions' && (r.loading ? <div class="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} class="skeleton h-[58px] rounded-lg" />)}</div> : <UserSessions userId={id} />)}
           </div>
         </>
+      )}
+
+      {u && (
+        <ConfirmDialog
+          open={confirmLock}
+          onClose={() => setConfirmLock(false)}
+          title="Bloqueo de emergencia"
+          danger
+          confirmLabel="Bloquear cuenta"
+          successMsg="Cuenta bloqueada"
+          body={<>Se bloqueará la cuenta de <b>{name}</b> de inmediato y se cerrarán sus sesiones. Úsalo solo ante una amenaza activa.</>}
+          onConfirm={async () => { await rbac.lock(u.id); reloadAll(); }}
+        />
       )}
     </Drawer>
   );

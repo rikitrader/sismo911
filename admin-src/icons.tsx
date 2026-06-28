@@ -47,6 +47,18 @@ export const Icon = {
   circle: (p: P) => <Svg {...p}><circle cx="12" cy="12" r="9" /></Svg>,
   collapse: (p: P) => <Svg {...p}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></Svg>,
   inbox: (p: P) => <Svg {...p}><path d="M3 13h5l1.5 2.5h5L16 13h5" /><path d="M5 4h14l2 8v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6l2-8Z" /></Svg>,
+  org: (p: P) => <Svg {...p}><path d="M3 21h18" /><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16" /><path d="M15 9h2a2 2 0 0 1 2 2v10" /><path d="M9 7h2M9 11h2M9 15h2" /></Svg>,
+  flag: (p: P) => <Svg {...p}><path d="M4 21V4" /><path d="M4 4h13l-2 4 2 4H4" /></Svg>,
+  shield: (p: P) => <Svg {...p}><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" /></Svg>,
+  key: (p: P) => <Svg {...p}><circle cx="7.5" cy="15.5" r="4" /><path d="m10.5 12.5 8-8" /><path d="m15 8 2.5 2.5M18 5l2.5 2.5" /></Svg>,
+  device: (p: P) => <Svg {...p}><rect x="2.5" y="4" width="19" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></Svg>,
+  phone: (p: P) => <Svg {...p}><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" /><path d="M11 18.5h2" /></Svg>,
+  trash: (p: P) => <Svg {...p}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></Svg>,
+  refresh: (p: P) => <Svg {...p}><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" /></Svg>,
+  download: (p: P) => <Svg {...p}><path d="M12 3v12M7 11l5 5 5-5" /><path d="M5 21h14" /></Svg>,
+  unlock: (p: P) => <Svg {...p}><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 7.5-2" /></Svg>,
+  edit: (p: P) => <Svg {...p}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" /></Svg>,
+  plug: (p: P) => <Svg {...p}><path d="M9 2v6M15 2v6" /><path d="M7 8h10v3a5 5 0 0 1-10 0V8Z" /><path d="M12 16v6" /></Svg>,
 };
 
 export type IconName = keyof typeof Icon;
