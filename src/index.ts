@@ -71,6 +71,8 @@ import { sumEtiquetas } from './routes/suministros-etiquetas';
 import { runCronGroup } from './cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
+import { evaluateGate, LEGACY_OPS_PERM, WRITE_METHODS } from './rbac/route-policy';
+import { authorize } from './rbac/middleware';
 import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -96,85 +98,44 @@ app.use('/mcp', cors({
   maxAge: 86400,
 }));
 
-// --- Role-based auth gate ---
-// Admin console + curation/management writes require an authenticated operator
-// or admin session. Citizen actions (SOS, check-ins, damage reports) stay open.
-const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
-const ADMIN_WRITE_PREFIXES = ['/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales', '/api/admin', '/api/aid-orgs', '/api/emergencia', '/api/flota', '/api/suministros'];
+// --- Role-based auth gate (RBAC, server-side) ---
+// The protected-surface matrix now lives in src/rbac/route-policy.ts (evaluateGate)
+// and the decision is resolved through the permission engine (src/rbac/engine.ts):
+// gated surfaces require `ops:console`, the capability held by exactly the legacy
+// operator + super_admin roles — so access is identical to the old coarse gate,
+// while new admin routes can demand finer permissions via requirePermission().
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   const method = c.req.method;
-  const isAdminPage = path.startsWith('/admin');
-  // Citizen submission of a centro de acopio stays public (moderation queue);
-  // everything else under /api/acopio (status overrides, submission review) is operator-only.
-  const isAcopioReport = method === 'POST' && path === '/api/acopio/report';
-  // Public, rate-limited share-counter bump on an emergency profile stays open;
-  // everything else under /api/emergencia (create/edit/upload/retire) is operator-only.
-  const isEmergenciaShare = method === 'POST' && /^\/api\/emergencia\/[^/]+\/share$/.test(path);
-  const isAdminWrite = !isAcopioReport && !isEmergenciaShare && WRITE_METHODS.has(method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
-  const isUnsafe = WRITE_METHODS.has(method);
-  const originHdr = c.req.header('origin') || c.req.header('referer')?.split('/').slice(0, 3).join('/');
-  // For state-changing methods a missing Origin/Referer is treated as NOT same-site (defense-in-depth vs CSRF).
-  const isSameSite = originHdr ? isAllowedOrigin(c.env, originHdr) : !WRITE_METHODS.has(c.req.method);
-  // Report moderation (approve/reject/delete + review queue) is operator-only.
-  // Citizen submission (POST /api/reports), reactions, comments and reads stay public.
-  const isReportModeration =
-    (path.startsWith('/api/reports') && (method === 'PATCH' || method === 'DELETE')) ||
-    path === '/api/reports/queue';
-  // Missing-persons moderation: review queues + approve/reject are operator-only.
-  // Public POST (report) stays open; status updates are operator-only. The
-  // case-docket approve/reject + pending queue are included here.
-  const isPersonModeration =
-    path === '/api/persons/queue' ||
-    path === '/api/persons/docket/queue' ||
-    (path.startsWith('/api/persons/') && method === 'PATCH') ||
-    path.endsWith('/approve') || path.endsWith('/reject') || path.endsWith('/localizar');
-  // Case docket: the GET index (/api/persons/cases) + per-person docket are
-  // PUBLIC reads (redacted server-side for non-operators). Submitting an update
-  // requires LOGIN (any role) — citizen updates land 'pending' for operator
-  // approval (handled in the route). Approve/reject + queue are operator-only
-  // via isPersonModeration above.
-  const isDocketSubmit = method === 'POST' && /^\/api\/persons\/[^/]+\/docket$/.test(path);
-  // Court-docket internal surface (evidence, tasks, messages, victims, case meta,
-  // audit) is operator/admin-only for ALL methods — this is the confidential
-  // expediente, not public data.
-  const isCaseAdmin = /^\/api\/persons\/[^/]+\/(attachments|tasks|messages|victims|case|audit)(\/|$)/.test(path);
-  const isSosTriage =
-    path === '/api/sos' && method === 'GET' ||
-    (path.startsWith('/api/sos/') && method === 'PATCH');
-  const isDamageReview = path === '/api/damage' && method === 'GET' || path.startsWith('/api/damage/photo/');
-  const isManualRefresh = path === '/api/events/refresh';
-  // Shelter-status moderation queue is operator-only; /:id/approve is covered by
-  // the generic endsWith('/approve') rule above. Public GET + crowd POST stay open.
-  const isShelterModeration = path === '/api/shelters/queue';
-  // Satellite GIS: GET config/google/maxar/damage are public reads; analyze +
-  // verification writes are operator-only.
-  const isSatWrite = WRITE_METHODS.has(method) && path.startsWith('/api/sat/') && path !== '/api/sat/pytorch-results';
-  // Acopio submission review queue (GET) is operator-only; approve/reject (PATCH)
-  // is already covered by the /api/acopio admin-write rule above.
-  const isAcopioReview = method === 'GET' && path === '/api/acopio/submissions';
-  const isFlotaApi = path.startsWith('/api/flota'); // internal dispatch console — operator/admin only for ALL methods (reads expose responder GPS/PII)
-  const isFlotaAdminApi = path.startsWith('/api/admin/flota'); // live-GPS admin surface — operator/admin only for ALL methods (incl. GET snapshot + admin WS)
-  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration && !isSatWrite && !isAcopioReview && !isFlotaApi && !isFlotaAdminApi) return next();
+  const decision = evaluateGate(path, method);
+  if (decision.kind === 'open') return next();
 
   // Field-unit GPS ingest: a valid per-unit token authorizes ONLY
   // POST /api/flota/rastreo/posicion without an operator session (and bypasses
-  // the browser same-site check, since field devices aren't browsers). Any other
-  // flota path still requires operator/admin below.
+  // the browser same-site check, since field devices aren't browsers).
   if (method === 'POST' && path === '/api/flota/rastreo/posicion') {
     const unidad = await verifyUnitToken(c.env, unitTokenFromRequest(c.req.raw)).catch(() => null);
     if (unidad) return next();
   }
 
-  const user = await getUserFromRequest(c.env, c).catch(() => null);
-  // Docket submission only needs a logged-in user (any role); everything else
-  // here is operator/admin-only.
-  const authorized = isDocketSubmit ? !!user : (user && (user.role === 'operator' || user.role === 'admin'));
-  if (authorized && isUnsafe && !isSameSite) return c.json({ error: 'bad_origin' }, 403);
-  if (authorized) { c.header('X-User-Role', user!.role); return next(); }
+  const isUnsafe = WRITE_METHODS.has(method);
+  const originHdr = c.req.header('origin') || c.req.header('referer')?.split('/').slice(0, 3).join('/');
+  // For state-changing methods a missing Origin/Referer is treated as NOT same-site (defense-in-depth vs CSRF).
+  const isSameSite = originHdr ? isAllowedOrigin(c.env, originHdr) : !isUnsafe;
 
-  // Unauthenticated/unauthorized: redirect HTML to login, JSON gets 401.
-  if (isAdminPage) {
+  const user = await getUserFromRequest(c.env, c).catch(() => null);
+  // Docket submission only needs a logged-in user (any role); admin HTML pages and
+  // every other gated surface require `ops:console` (operator/admin equivalent).
+  let authorized = false;
+  if (decision.kind === 'login') authorized = !!user;
+  else if (decision.kind === 'page') authorized = await authorize(c.env, user, LEGACY_OPS_PERM);
+  else authorized = await authorize(c.env, user, decision.perm);
+
+  if (authorized && isUnsafe && !isSameSite) return c.json({ error: 'bad_origin' }, 403);
+  if (authorized) { if (user) c.header('X-User-Role', user.role); return next(); }
+
+  // Unauthenticated/unauthorized: redirect HTML admin pages to login, JSON gets 401.
+  if (decision.kind === 'page') {
     const next_ = encodeURIComponent(path);
     return c.redirect(`/login?next=${next_}`, 302);
   }

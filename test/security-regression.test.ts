@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { isSafePublicUrl, safeFetch } from '../src/lib/sanitize';
+import { evaluateGate } from '../src/rbac/route-policy';
 
 // REGRESSION GUARDS for the 2026-06-27 security assessment (PR #312).
 // Each critical fix has a guard here so a future edit that silently removes it
@@ -48,16 +49,23 @@ describe('C2 — /familia stored-XSS defense (photo_url)', () => {
 });
 
 describe('C3 — FleetOps reads require an operator session', () => {
-  const idx = readFileSync('src/index.ts', 'utf8');
+  // The gate matrix now lives in src/rbac/route-policy.ts (evaluateGate); assert
+  // the C3 guarantee BEHAVIORALLY (all flota + flota-admin methods are gated)
+  // rather than against the old index.ts source shape.
   it('the auth gate covers ALL /api/flota methods (not just writes)', () => {
-    expect(idx).toContain("const isFlotaApi = path.startsWith('/api/flota')");
-    // the bypass (return next()) must exclude flota requests (additional gate
-    // terms like !isFlotaAdminApi may follow, but !isFlotaApi must be in the chain)
-    expect(idx).toMatch(/&& !isFlotaApi(?: && ![A-Za-z]+)*\) return next\(\)/);
+    for (const m of ['GET', 'POST', 'PATCH', 'PUT', 'DELETE']) {
+      const d = evaluateGate('/api/flota/unidades', m);
+      expect(d.kind, `${m} /api/flota must be gated`).not.toBe('open');
+    }
   });
   it('the live-GPS admin surface is also fully gated', () => {
-    expect(idx).toContain("const isFlotaAdminApi = path.startsWith('/api/admin/flota')");
-    expect(idx).toMatch(/&& !isFlotaAdminApi\) return next\(\)/);
+    for (const m of ['GET', 'POST', 'PATCH', 'PUT', 'DELETE']) {
+      const d = evaluateGate('/api/admin/flota/live', m);
+      expect(d.kind, `${m} /api/admin/flota must be gated`).not.toBe('open');
+    }
+  });
+  it('the GPS-ingest endpoint still requires a gate (per-unit token handled in index.ts)', () => {
+    expect(evaluateGate('/api/flota/rastreo/posicion', 'POST').kind).not.toBe('open');
   });
 });
 
