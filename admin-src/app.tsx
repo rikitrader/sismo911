@@ -7,8 +7,11 @@ import { ToastHost } from './toast';
 import { CommandPalette } from './components/CommandPalette';
 import type { QuickAction } from './components/CommandPalette';
 import { SignInScreen } from './components/StateScreens';
+import { ImpersonationBanner } from './components/ImpersonationBanner';
 import { DashboardPage } from './pages/Dashboard';
 import { UsersPage } from './pages/Users';
+import { InvitationsPage } from './pages/Invitations';
+import { ApprovalsPage } from './pages/Approvals';
 import { RolesPage } from './pages/Roles';
 import { PermissionsPage } from './pages/Permissions';
 import { AuditPage, LoginHistoryPage } from './pages/EventLogs';
@@ -23,6 +26,8 @@ const COLLAPSE_KEY = 'sismo-admin-nav-collapsed';
 function PageRouter({ route }: { route: string }) {
   switch (route) {
     case 'users': return <UsersPage />;
+    case 'invitations': return <InvitationsPage />;
+    case 'approvals': return <ApprovalsPage />;
     case 'roles': return <RolesPage />;
     case 'permissions': return <PermissionsPage />;
     case 'organization': return <OrganizationPage />;
@@ -81,7 +86,7 @@ export function App() {
     setTimeout(() => dispatchEvent(new CustomEvent(`rbac-action:${type}`)), 90);
   };
   const quickActions: QuickAction[] = [
-    { id: 'invite', label: 'Invitar usuario', hint: 'Crear una invitación', icon: 'plus', run: () => fireAction('invite', 'users') },
+    { id: 'invite', label: 'Invitar usuario', hint: 'Crear una invitación', icon: 'plus', run: () => fireAction('invite', 'invitations') },
     { id: 'new-role', label: 'Nuevo rol', hint: 'Crear un rol', icon: 'plus', run: () => fireAction('new-role', 'roles') },
   ];
 
@@ -90,7 +95,9 @@ export function App() {
   const active = NAV.find((n) => n.id === route)?.id || 'dashboard';
 
   return (
-    <div class="flex h-full">
+    <div class="flex flex-col h-full">
+      <ImpersonationBanner />
+      <div class="flex flex-1 min-h-0">
       {/* Mobile overlay */}
       {mobileNav && <div class="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setMobileNav(false)} />}
 
@@ -159,6 +166,7 @@ export function App() {
         </main>
       </div>
 
+      </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} actions={quickActions} />
       <ToastHost />
     </div>
