@@ -55,13 +55,17 @@
   .empty{text-align:center;color:#54656f;font-size:14px;margin:40px auto;max-width:340px;background:rgba(255,255,255,.85);padding:16px 18px;border-radius:12px}
   .composer{flex:0 0 auto;background:#f0f2f5;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
   /* identity + captcha: two equal fields that wrap cleanly on narrow screens */
-  .fields{display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap}
-  .fld{flex:1 1 180px;min-width:150px;display:flex;flex-direction:column;gap:4px}
+  .fields{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;align-items:flex-end}
+  .fld{display:flex;flex-direction:column;gap:4px}
+  .fld:not(.capfld){flex:1 1 200px;min-width:150px}        /* name grows to fill */
+  .capfld{flex:0 0 auto}                                    /* captcha hugs its content */
   .fld label{font:700 10.5px 'Public Sans';color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
   #name{width:100%;border:1px solid #c4c6d0;border-radius:10px;padding:10px 12px;font-size:16px;background:#fff}
-  .capwrap{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #c4c6d0;border-radius:10px;padding:5px 6px 5px 12px;height:42px}
-  .capq{flex:1;font-weight:800;color:var(--navy);font-size:14px;white-space:nowrap}
-  #cap{width:66px;flex:0 0 auto;text-align:center;border:1px solid #c4c6d0;border-radius:8px;padding:8px 6px;font-size:16px;background:#f7f9fc}
+  /* captcha = one compact pill: question + answer box sitting together */
+  .capwrap{display:inline-flex;align-items:center;gap:10px;background:#f7f9fc;border:1px solid #c4c6d0;border-radius:10px;padding:5px 6px 5px 12px;height:42px;width:max-content}
+  .capq{flex:0 0 auto;font-weight:800;color:var(--navy);font-size:14px;white-space:nowrap}
+  #cap{width:60px;flex:0 0 auto;text-align:center;border:1px solid #c4c6d0;border-radius:8px;padding:8px 4px;font-size:16px;background:#fff}
+  @media(max-width:520px){ .capfld{flex:1 1 100%} .capwrap{width:auto;justify-content:space-between} }
   .iconbtn{flex:0 0 auto;width:44px;height:44px;border-radius:50%;border:1px solid #c4c6d0;background:#fff;cursor:pointer;display:grid;place-items:center;color:var(--navy)}
   .inrow{display:flex;gap:8px;align-items:flex-end}
   .inrow textarea{flex:1;border:1px solid #c4c6d0;border-radius:22px;padding:12px 16px;font-size:16px;background:#fff;resize:none;min-height:50px;max-height:150px;font-family:inherit;line-height:1.4}
@@ -121,11 +125,11 @@
         <label for="name">Nombre</label>
         <input id="name" type="text" maxlength="60" placeholder="Anónimo" autocomplete="nickname" />
       </div>
-      <div class="fld">
-        <label for="cap">Verificación anti-bot</label>
+      <div class="fld capfld">
+        <label for="cap">🛡️ Verificación anti-bot</label>
         <div class="capwrap">
           <span class="capq" id="capq">…</span>
-          <input id="cap" type="number" inputmode="numeric" placeholder="?" aria-label="Respuesta de la verificación" />
+          <input id="cap" type="number" inputmode="numeric" placeholder="=" aria-label="Respuesta de la verificación" />
         </div>
       </div>
     </div>
