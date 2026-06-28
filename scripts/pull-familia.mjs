@@ -155,6 +155,18 @@ function runClean() {
     console.log(`  dup [${mode}]: ${n}${auto ? '' : '  (review-only — not auto-deleted)'}`);
     if (APPLY && auto && n) dedupeApply(mode);
   }
+  // String/byte modes above can't catch the same person re-submitted with a
+  // different name spelling / age typo / re-cropped photo — only the FACE is
+  // invariant. scripts/face-embed-local.py + face-cluster.mjs propose those into
+  // dup_cluster; an operator vets each at /admin/dup-review. Surface the backlog
+  // here so a pull never silently leaves face-duplicates unreviewed. (dup_cluster
+  // may not exist on a DB that predates migration 0050 — degrade gracefully.)
+  try {
+    const fp = d1Query(`SELECT COUNT(DISTINCT cluster_id) AS c, COUNT(*) AS n FROM dup_cluster WHERE status='pending' AND method='face'`)[0] ?? { c: 0, n: 0 };
+    const noVec = d1Query(`SELECT COUNT(*) AS n FROM personas WHERE moderation='approved' AND photo_face_vec IS NULL AND (trim(coalesce(foto,''))<>'' OR trim(coalesce(foto_r2,''))<>'')`)[0]?.n ?? 0;
+    console.log(`  face-clusters pending review: ${fp.c} (${fp.n} records)  → /admin/dup-review  (review-only — never auto-merged)`);
+    if (noVec) console.log(`  photos awaiting face-embedding: ${noVec}  → run scripts/face-embed-local.py then face-cluster.mjs`);
+  } catch { /* pre-0050 schema: face vetting not provisioned yet */ }
   if (APPLY) {
     const pk = d1Query(`SELECT COUNT(*) AS g FROM (SELECT id FROM personas GROUP BY id HAVING COUNT(*)>1)`)[0]?.g ?? 0;
     const live = d1Query(`SELECT COUNT(*) AS n FROM personas WHERE moderation='approved'`)[0]?.n ?? 0;
