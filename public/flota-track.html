@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="SISMO911 Flota" />
   <link rel="icon" type="image/svg+xml" href="/logo.svg" />
   <link rel="apple-touch-icon" href="/logo.svg" />
+  <link rel="manifest" href="/flota-track.webmanifest" />
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/app.css" />
   <style>
@@ -116,9 +117,16 @@
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
 
-  // --- token: last path segment of /flota/track/<TOKEN>. Never displayed/logged. ---
+  // --- token: last path segment of /flota/track/<TOKEN>, which must look like an
+  // fbu_ token. Never displayed/logged. Persisted to localStorage so the installed
+  // PWA — opened at the bare /flota/track start_url — resumes the last unit. ---
   var parts = location.pathname.split('/').filter(Boolean);
-  var token = parts.length ? decodeURIComponent(parts[parts.length - 1]) : '';
+  var seg = parts.length ? decodeURIComponent(parts[parts.length - 1]) : '';
+  var token = seg.indexOf('fbu_') === 0 ? seg : '';
+  try {
+    if (token) localStorage.setItem('flota_unit_token', token);
+    else token = (localStorage.getItem('flota_unit_token') || '');
+  } catch (e) { /* storage blocked → keep whatever came from the URL */ }
 
   // --- runtime state ---
   var ws = null;
@@ -339,6 +347,9 @@
 
   // initial state
   setStatus('stopped', 'Detenido');
+
+  // PWA: register the shared offline-shell service worker (best-effort).
+  if ('serviceWorker' in navigator) { try { navigator.serviceWorker.register('/sw.js'); } catch (e) {} }
 })();
 </script>
 </body>
