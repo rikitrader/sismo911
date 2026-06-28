@@ -63,6 +63,9 @@ import { sumFacturas } from './routes/suministros-facturas';
 import { sumPicklists } from './routes/suministros-picklists';
 import { sumMetodosEnvio } from './routes/suministros-metodos-envio';
 import { sumEnvios } from './routes/suministros-envios';
+import { sumConteos } from './routes/suministros-conteos';
+import { sumReportes } from './routes/suministros-reportes';
+import { sumEtiquetas } from './routes/suministros-etiquetas';
 import { runCronGroup } from './cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
@@ -308,6 +311,9 @@ app.route('/api/suministros/facturas', sumFacturas);           // supplier invoi
 app.route('/api/suministros/picklists', sumPicklists);         // pick sheets → despacho on completar
 app.route('/api/suministros/metodos-envio', sumMetodosEnvio);  // shipment methods (carriers/modes)
 app.route('/api/suministros/envios', sumEnvios);               // multi-step shipments: despachar→en_tránsito→recibir
+app.route('/api/suministros/conteos', sumConteos);             // scheduled cycle counts → reconcile via ajuste
+app.route('/api/suministros/reportes', sumReportes);           // reporting engine (valuación/rotación/caducidad/ledger/fill-rate)
+app.route('/api/suministros/etiquetas', sumEtiquetas);         // barcode/label data for printing
 
 // Homepage = the DESAPARECIDOS registry. The root URL serves the /personas page
 // (family-reunification is the app's front door post-quake); the old TERREMOTOS
