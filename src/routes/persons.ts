@@ -168,6 +168,9 @@ persons.get('/stats', async (c) => edgeCached(c, 60, async () => {
 // count of only-approved docket entries. Operators see everything + filters.
 persons.get('/cases', async (c) => {
   const op = await isOperator(c);
+  // The public case index is an expensive uncached cross-table union; throttle
+  // anonymous callers so it can't be looped for cost/DoS amplification (audit M2).
+  if (!op) { const limited = await rateLimit(c.env, c, 'cases_browse', 90, 60); if (limited) return limited; }
   const q = (c.req.query('q') ?? '').trim();
   const status = c.req.query('status') ?? '';
   const priority = c.req.query('priority') ?? '';
@@ -376,12 +379,21 @@ persons.get('/docket/queue', async (c) => {
      WHERE pe.review='pending' ORDER BY pe.created_ms ASC LIMIT 300`
   ).all<any>();
   const updates = results ?? [];
-  // Resolve names for Familia-origin pending updates (no row in persons).
-  for (const u of updates) {
-    if (!u.full_name && isFam(u.person_id)) {
-      const r: any = await c.env.DB.prepare(`SELECT nombre FROM personas WHERE id = ?`).bind(famKey(u.person_id)).first().catch(() => null);
-      u.full_name = r?.nombre || u.person_id;
+  // Resolve names for Familia-origin pending updates (no row in persons). Batched
+  // in one chunked IN-query instead of a per-row loop so a large pending queue
+  // can't exhaust the Worker subrequest budget (audit M3).
+  const needFam = updates.filter((u: any) => !u.full_name && isFam(u.person_id));
+  if (needFam.length) {
+    const keys = [...new Set(needFam.map((u: any) => famKey(u.person_id)))];
+    const nameByKey: Record<string, string> = {};
+    for (let i = 0; i < keys.length; i += 90) {
+      const slice = keys.slice(i, i + 90);
+      const { results: nrows } = await c.env.DB.prepare(
+        `SELECT id, nombre FROM personas WHERE id IN (${slice.map(() => '?').join(',')})`
+      ).bind(...slice).all<any>().catch(() => ({ results: [] as any[] }));
+      (nrows ?? []).forEach((r: any) => { nameByKey[String(r.id)] = r.nombre; });
     }
+    for (const u of needFam) u.full_name = nameByKey[famKey(u.person_id)] || u.person_id;
   }
   c.header('Cache-Control', 'no-store'); c.header('Vary', 'Cookie');
   return c.json({ updates });
@@ -645,6 +657,20 @@ persons.patch('/:id/case', async (c) => {
 
 // ---------- Evidence / attachments ----------
 const ATT_KINDS = ['photo', 'video', 'document', 'voice', 'gps', 'report'];
+// Evidence MIME allow-list (audit H1). Operator uploads are broad (photo/video/
+// voice/gps/docs) but scriptable types that render inline (HTML, SVG, XHTML) are
+// REFUSED to prevent stored XSS on the operator origin. Only image/* + PDF are
+// served inline; everything else is forced to download (see the /file route).
+const ATT_MIME = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf',
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/ogg', 'video/3gpp',
+  'audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/wav', 'audio/x-wav', 'audio/webm', 'audio/x-m4a',
+  'text/plain', 'text/csv', 'application/json',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
+const ATT_INLINE_OK = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']);
 persons.get('/:id/attachments', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT id, kind, filename, content_type, size, description, category, source, verification, uploaded_by, lat, lon, created_ms
@@ -666,6 +692,9 @@ persons.post('/:id/attachments', async (c) => {
   if (!bytes.length) return c.json({ error: 'no_file' }, 400);
   if (bytes.length > 26_214_400) return c.json({ error: 'file_too_large', maxBytes: 26_214_400 }, 413);
   const filename = file.name || null; const fileType = file.type || 'application/octet-stream';
+  // Refuse scriptable / unlisted types and verify image magic bytes (audit H1).
+  if (!ATT_MIME.has(fileType)) return c.json({ error: 'unsupported_file_type', allowed: [...ATT_MIME] }, 415);
+  if (['image/jpeg', 'image/png', 'image/webp'].includes(fileType) && !isImageBytes(bytes, fileType)) return c.json({ error: 'unsupported_image_type' }, 415);
   const kind = ATT_KINDS.includes(meta.kind) ? meta.kind : 'document';
   const attId = uid('att');
   const ext = filename && filename.includes('.') ? filename.split('.').pop().slice(0, 8) : 'bin';
@@ -698,7 +727,10 @@ persons.get('/:id/attachments/:aid/file', async (c) => {
   if (!row) return c.notFound();
   const obj = await c.env.PERSON_PHOTOS.get(row.r2_key);
   if (!obj) return c.notFound();
-  return new Response(obj.body, { headers: { 'Content-Type': row.content_type || 'application/octet-stream', 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': `inline; filename="${String(row.filename || 'archivo').replace(/"/g, '')}"` } });
+  // Serve only image/PDF inline; any other type downloads as octet-stream so a
+  // mislabeled/scriptable evidence file can never execute on the operator origin (audit H1).
+  const inlineOk = ATT_INLINE_OK.has(row.content_type);
+  return new Response(obj.body, { headers: { 'Content-Type': inlineOk ? row.content_type : 'application/octet-stream', 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': `${inlineOk ? 'inline' : 'attachment'}; filename="${String(row.filename || 'archivo').replace(/"/g, '')}"` } });
 });
 
 // ---- PUBLIC citizen contributions ("aportes": documents/pictures/files) ----
@@ -844,7 +876,10 @@ persons.delete('/:id/victims/:vid', async (c) => {
 
 // ---------- Per-case audit log ----------
 persons.get('/:id/audit', async (c) => {
-  const { results } = await c.env.DB.prepare(`SELECT id, actor, action, detail, created_ms FROM audit WHERE detail LIKE ? ORDER BY created_ms DESC LIMIT 200`).bind(`%${c.req.param('id')}%`).all();
+  // Escape LIKE wildcards in the id (audit M1): an id of "%" would otherwise dump
+  // the entire cross-division audit log, and "_"/"%" allow wildcard injection.
+  const esc = c.req.param('id').replace(/[\\%_]/g, '\\$&');
+  const { results } = await c.env.DB.prepare(`SELECT id, actor, action, detail, created_ms FROM audit WHERE detail LIKE ? ESCAPE '\\' ORDER BY created_ms DESC LIMIT 200`).bind(`%${esc}%`).all();
   c.header('Cache-Control', 'no-store');
   return c.json({ audit: results ?? [] });
 });
