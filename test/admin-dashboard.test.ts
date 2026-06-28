@@ -15,6 +15,7 @@ const MIGRATIONS = [
 async function setup() {
   const db: D1Mock = makeDb(MIGRATIONS);
   db.raw.exec('ALTER TABLE users ADD COLUMN wallet_address TEXT');
+  db.raw.exec('ALTER TABLE users ADD COLUMN must_change_pw INTEGER NOT NULL DEFAULT 0'); // getUserFromRequest selects it
   const env = makeEnv(db);
   const app = new Hono();
   app.route('/api/rbac', adminRbac);
