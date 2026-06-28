@@ -14,6 +14,9 @@
     // button below it (small chip, not a big CTA), with a paw-print icon. Sits directly above TERREMOTOS.
     { label: 'MASCOTAS', href: '/mascotas', m: ['/mascotas'], pets: true, d: 'M4.5 12a2 2 0 100-4 2 2 0 000 4zm15 0a2 2 0 100-4 2 2 0 000 4zM9 8a2 2 0 100-4 2 2 0 000 4zm6 0a2 2 0 100-4 2 2 0 000 4zm-3 3c-2.5 0-4.5 2-4.5 4.5 0 1.5 1.5 2.5 4.5 2.5s4.5-1 4.5-2.5C16.5 13 14.5 11 12 11z' },
     { label: 'TERREMOTOS', href: '/terremotos', m: ['/terremotos'], gold: true, d: 'M3 12h4l2 7 4-14 2 7h6' },
+    // Yellow "REFUGIOS" button directly under TERREMOTOS — same compact chip frame,
+    // bright yellow (#f5c518) with navy text/icon; links to the refugios/evacuation map.
+    { label: 'REFUGIOS', href: '/refugios', m: ['/refugios', '/refugios.html'], refugio: true, d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
     // Big flashing red CTA pulled out of the "Familia y Reportes" submenu so a
     // damage report is always one tap away — extra top/bottom spacing.
     { label: 'REPORTAR', href: '/reportar', m: ['/reportar'], report: true, d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
@@ -102,6 +105,14 @@
     if (it.gold) {
       // Solid Venezuela-flag gold feature button with navy text/icon (the flag's yellow+blue pairing).
       return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${GOLD};color:${NAVY};box-shadow:0 1px 3px rgba(201,162,39,.45)">
+      <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
+      ${it.label}</a>`;
+    }
+    if (it.refugio) {
+      // Yellow "REFUGIOS" chip — same compact frame/size as the TERREMOTOS (gold)
+      // button right above it, but bright yellow (#f5c518) with navy text/icon.
+      const onRef = active(it);
+      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 1px 3px rgba(245,197,24,.45)${onRef ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
       <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
