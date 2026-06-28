@@ -302,6 +302,20 @@ app.get('/.well-known/x402.json', (c) => {
   const doc = wellKnownX402(c.env);
   return doc ? c.json(doc) : c.json({ error: 'payments_unavailable' }, 503);
 });
+// RFC 9116 vulnerability-disclosure policy (security.txt). Expires is computed +1yr
+// per request so the document never goes stale. Canonical: /.well-known/security.txt.
+app.get('/.well-known/security.txt', (c) => {
+  const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+  const body = [
+    'Contact: mailto:rikitrader@gmail.com',
+    `Expires: ${expires}`,
+    'Preferred-Languages: es, en',
+    'Canonical: https://sismo911.com/.well-known/security.txt',
+    '',
+  ].join('\n');
+  return c.text(body, 200, { 'Content-Type': 'text/plain; charset=utf-8' });
+});
+app.get('/security.txt', (c) => c.redirect('/.well-known/security.txt', 301));
 app.route('/api/familia', familia);
 app.route('/api/voluntarios', voluntarios);
 app.route('/api/telemedicina', telemedicina); // doctors worldwide ↔ patient help-requests for VE (intake, claim, schedule, video, calendar/ics)
