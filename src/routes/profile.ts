@@ -109,3 +109,82 @@ profile.patch('/me', async (c) => {
   ).bind(me.id).first();
   return c.json({ ok: true, profile: u });
 });
+
+// Whitelisted boolean toggle keys (payment + visibility + security). Anything not
+// here is ignored — settings_json can never carry arbitrary/dangerous keys.
+const SETTING_KEYS = new Set([
+  // payment
+  'receive_payments', 'public_profile', 'email_receipts', 'require_note', 'auto_qr', 'accounting_sync',
+  // visibility
+  'hide_balance', 'show_wallet_card', 'show_payout_card', 'show_payout_methods', 'require_withdraw_confirm',
+  // security
+  'sec_payment_emails', 'sec_public_page', 'sec_hide_email', 'sec_require_login', 'sec_receipt_notifs', 'sec_audit_visibility',
+]);
+
+// ── PATCH /api/profile/payment-settings — merge boolean toggles into settings_json ─
+profile.patch('/payment-settings', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
+
+  const row: any = await c.env.DB.prepare(`SELECT settings_json FROM users WHERE id = ?`).bind(me.id).first();
+  const current = parseSettings(row?.settings_json);
+  let changed = 0;
+  for (const [k, v] of Object.entries(b)) {
+    if (!SETTING_KEYS.has(k)) continue;           // ignore unknown keys
+    if (typeof v !== 'boolean') return c.json({ error: `setting_${k}_must_be_boolean` }, 400);
+    current[k] = v; changed++;
+  }
+  if (!changed) return c.json({ error: 'no_valid_settings' }, 400);
+  await c.env.DB.prepare(`UPDATE users SET settings_json = ? WHERE id = ?`)
+    .bind(JSON.stringify(current), me.id).run();
+  await audit(c, 'profile.settings.update', { keys: Object.keys(b).filter((k) => SETTING_KEYS.has(k)) });
+  return c.json({ ok: true, settings: current });
+});
+
+// ── GET /api/profile/payments/summary — KPI + chart data from the x402 ledger ──
+profile.get('/payments/summary', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const id = me.id;
+  const now = Date.now();
+  const monthStart = (() => { const d = new Date(now); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1); })();
+
+  const [byStatus, settled, thisMonth, lastPay, activeLinks, monthly, topLinks] = await Promise.all([
+    c.env.DB.prepare(`SELECT status, COUNT(*) AS n, COALESCE(SUM(amount_usd),0) AS usd FROM x402_payments WHERE payee_user_id = ? GROUP BY status`).bind(id).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(amount_usd),0) AS usd FROM x402_payments WHERE payee_user_id = ? AND status = 'settled'`).bind(id).first<any>(),
+    c.env.DB.prepare(`SELECT COALESCE(SUM(amount_usd),0) AS usd FROM x402_payments WHERE payee_user_id = ? AND status = 'settled' AND COALESCE(settled_ms, created_ms) >= ?`).bind(id, monthStart).first<any>(),
+    c.env.DB.prepare(`SELECT MAX(COALESCE(settled_ms, created_ms)) AS ms FROM x402_payments WHERE payee_user_id = ? AND status = 'settled'`).bind(id).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM x402_resources WHERE user_id = ? AND active = 1`).bind(id).first<any>(),
+    c.env.DB.prepare(`SELECT strftime('%Y-%m', COALESCE(settled_ms, created_ms)/1000, 'unixepoch') AS ym, COUNT(*) AS n, COALESCE(SUM(amount_usd),0) AS usd FROM x402_payments WHERE payee_user_id = ? AND status = 'settled' GROUP BY ym ORDER BY ym DESC LIMIT 12`).bind(id).all(),
+    c.env.DB.prepare(`SELECT r.title AS title, COUNT(*) AS n, COALESCE(SUM(p.amount_usd),0) AS usd FROM x402_payments p JOIN x402_resources r ON r.id = p.resource_id WHERE p.payee_user_id = ? AND p.status = 'settled' GROUP BY p.resource_id ORDER BY usd DESC LIMIT 5`).bind(id).all(),
+  ]);
+
+  const by_status: Record<string, { n: number; usd: number }> = {};
+  let failed = 0;
+  for (const r of (byStatus.results ?? []) as any[]) {
+    by_status[r.status] = { n: Number(r.n) || 0, usd: Number(r.usd) || 0 };
+    if (r.status === 'failed') failed = Number(r.n) || 0;
+  }
+  const count = Number(settled?.n) || 0;
+  const total = Number(settled?.usd) || 0;
+
+  return c.json({
+    ok: true,
+    summary: {
+      total_received_usd: total,
+      count,
+      this_month_usd: Number(thisMonth?.usd) || 0,
+      avg_usd: count ? Math.round((total / count) * 100) / 100 : 0,
+      failed_count: failed,
+      active_links: Number(activeLinks?.n) || 0,
+      pending_invoices: 0, // invoices land in W3/W4
+      last_payment_ms: lastPay?.ms ?? null,
+    },
+    by_status,
+    by_provider: { x402: { n: count, usd: total } }, // only x402 settles today
+    monthly: ((monthly.results ?? []) as any[]).reverse().map((r) => ({ ym: r.ym, n: Number(r.n) || 0, usd: Number(r.usd) || 0 })),
+    top_links: ((topLinks.results ?? []) as any[]).map((r) => ({ title: r.title, n: Number(r.n) || 0, usd: Number(r.usd) || 0 })),
+  });
+});
