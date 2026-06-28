@@ -287,3 +287,24 @@ flotaMisiones.patch('/:id/waypoints/:wpId', async (c) => {
   if (!r.meta.changes) return c.json({ error: 'no encontrado' }, 404);
   return c.json({ ok: true, id: wpId, estado });
 });
+
+// ── Delete a mission → cascade waypoints + activity, free the assigned unit ──
+flotaMisiones.delete('/:id', async (c) => {
+  const id = c.req.param('id');
+  const mision = await c.env.DB.prepare(`SELECT unidad_id, estado FROM flota_misiones WHERE id = ?`).bind(id)
+    .first() as { unidad_id: string | null; estado: string } | null;
+  if (!mision) return c.json({ error: 'no encontrado' }, 404);
+
+  const now = Date.now();
+  const writes = [
+    c.env.DB.prepare(`DELETE FROM flota_mision_waypoints WHERE mision_id = ?`).bind(id),
+    c.env.DB.prepare(`DELETE FROM flota_mision_actividad WHERE mision_id = ?`).bind(id),
+    c.env.DB.prepare(`DELETE FROM flota_misiones WHERE id = ?`).bind(id),
+  ];
+  // If the mission was still active, free its unit back to disponible.
+  if (mision.unidad_id && mision.estado !== 'completada' && mision.estado !== 'cancelada') {
+    writes.push(c.env.DB.prepare(`UPDATE flota_unidades SET estado_op='disponible', updated_ms=? WHERE id=?`).bind(now, mision.unidad_id));
+  }
+  await c.env.DB.batch(writes);
+  return c.json({ ok: true, id });
+});
