@@ -81,6 +81,14 @@ run_worker_first = [
   "/admin-casos",
   "/admin-emergencia",
   "/admin-evidencias",
+  # These admin shells were served by the edge (bypassing the Worker auth gate)
+  # because they weren't worker-first — found in a security QA sweep. Worker-first
+  # so evaluateGate() redirects unauthenticated visitors to /login (server-gated,
+  # matching their siblings above) instead of serving the shell client-gated.
+  "/admin-dup-review",
+  "/admin-flota-live",
+  "/admin-flota-unidades",
+  "/admin-x402",
   "/e/*",
 ]
 
