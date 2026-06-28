@@ -191,6 +191,26 @@ app.use('*', async (c, next) => {
 
 // Liveness / readiness for smoke tests + uptime checks.
 app.get('/api/health', (c) => c.json({ ok: true, service: 'sismo911', ts: Date.now() }));
+
+// Browser CSP violation reports for the Report-Only strict policy. Public (the
+// browser posts these without a session), bounded + sampled; we only log the
+// directive + blocked/document URI so we can refactor the offending inline scripts.
+app.post('/api/csp-report', async (c) => {
+  const limited = await rateLimit(c.env, c, 'csp_report', 120, 60);
+  if (limited) return new Response(null, { status: 429 });
+  try {
+    const body: any = await c.req.json().catch(() => null);
+    const r = body?.['csp-report'] || body?.body || body;
+    if (r && (r['violated-directive'] || r.violatedDirective || r.effectiveDirective)) {
+      console.log('[csp]', JSON.stringify({
+        d: r['violated-directive'] || r.violatedDirective || r.effectiveDirective,
+        blocked: String(r['blocked-uri'] || r.blockedURL || '').slice(0, 200),
+        doc: String(r['document-uri'] || r.documentURL || '').slice(0, 200),
+      }));
+    }
+  } catch { /* ignore malformed report */ }
+  return new Response(null, { status: 204 });
+});
 app.get('/api/ready', async (c) => {
   try {
     await c.env.DB.prepare('SELECT 1').first();
