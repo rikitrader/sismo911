@@ -26,6 +26,8 @@ export interface User {
   rank: string | null; unit: string | null; phone: string | null;
   wallet_address?: string | null;
   must_change_pw?: number;
+  mfa_enabled?: number;
+  mfa_required?: number;
 }
 
 // ---- crypto helpers ----
@@ -72,7 +74,7 @@ export async function getUserFromRequest(env: Env, c: Context): Promise<User | n
   const token = getSessionToken(c);
   if (token) {
     const row: any = await env.DB.prepare(
-      `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,u.wallet_address,u.must_change_pw,s.expires_ms
+      `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,u.wallet_address,u.must_change_pw,u.mfa_enabled,u.mfa_required,s.expires_ms
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.revoked_ms IS NULL`
     ).bind(token).first();
     if (row && row.expires_ms >= Date.now()) {
@@ -86,7 +88,7 @@ export async function getUserFromRequest(env: Env, c: Context): Promise<User | n
           await env.DB.prepare(`UPDATE sessions SET expires_ms = ? WHERE token = ?`).bind(newExpires, token).run();
         }
       }
-      return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone, wallet_address: row.wallet_address, must_change_pw: row.must_change_pw ?? 0 };
+      return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone, wallet_address: row.wallet_address, must_change_pw: row.must_change_pw ?? 0, mfa_enabled: row.mfa_enabled ?? 0, mfa_required: row.mfa_required ?? 0 };
     }
   }
 
