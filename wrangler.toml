@@ -181,4 +181,8 @@ VAPID_PUBLIC_KEY = "BLWuQ5I87NCxY_PJf9vplu423M7hDMbXgp98_no9mSZ54G5h4v_hYPcynxaN
 # x402 payments master flag (non-secret). Receiving goes LIVE only when this is
 # "true" AND the X402_FACILITATOR_URL secret is set (see scripts/secrets.manifest).
 # X402_NETWORK/X402_ASSET default from CROSSMINT_CHAIN + USDC; override here if needed.
-X402_PAYMENTS_ENABLED = "false"
+# Currently on TESTNET: Base Sepolia (eip155:84532) via the public x402.org
+# facilitator (no creds needed). Switch X402_NETWORK to "eip155:8453" + a
+# mainnet facilitator (CDP) to take real USDC.
+X402_PAYMENTS_ENABLED = "true"
+X402_NETWORK = "eip155:84532"
