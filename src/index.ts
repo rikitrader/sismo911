@@ -13,6 +13,7 @@ import { damage } from './routes/damage';
 import { satellite } from './routes/satellite';
 import { auth } from './routes/auth';
 import { x402, wellKnownX402 } from './routes/x402';
+import { profile } from './routes/profile';
 import { familia } from './routes/familia';
 import { voluntarios } from './routes/voluntarios';
 import { telemedicina } from './routes/telemedicina';
@@ -285,6 +286,7 @@ app.route('/api/persons', persons);
 app.route('/api/contacts', contacts);
 app.route('/api/auth', auth);
 app.route('/api/x402', x402);        // x402 payment receiving: per-user wallet accepts USDC over HTTP (verify+settle via facilitator)
+app.route('/api/profile', profile);  // Profile Command Center: self-scoped profile/wallet/payments/accounting/withdrawals
 // x402 service discovery (public). Agents/clients read this to learn the network + pay-URL template.
 // Fix 1: when payments are not LIVE, 503 instead of advertising a protocol we can't settle.
 app.get('/.well-known/x402.json', (c) => {
