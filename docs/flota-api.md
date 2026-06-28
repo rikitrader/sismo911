@@ -611,7 +611,13 @@ live WebSocket was down. **Auth:** unit token (`Authorization: Bearer fbu_…`,
 path; the token is the credential.
 
 **Body:** `{ "fixes": [ { lat, lng, accuracy?, heading?, speed?, battery?, recordedAt }, … ] }`
-(max **200** per request).
+
+**Backfill cap: ≤ 200 GPS fixes per request, rate-limited to 20 flushes / 60 s / unit.**
+This gives offline-recovery headroom (≈4,000 buffered fixes/min/unit) without weakening
+security: token auth, per-fix validation (coords / accuracy / timestamp window /
+malformed-payload), the per-unit rate limit, the 200-item payload cap, and trusted
+`source='buffered'` handling all still apply. No need to lower to 20/request unless
+production shows abuse, latency, or payload-size issues.
 
 **Ingest:** each fix is stored in **backfill mode** — a wider **24-hour** staleness
 window (vs 5 min for live), the impossible-jump guard is **skipped** (a contiguous
