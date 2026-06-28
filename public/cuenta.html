@@ -661,6 +661,135 @@ select,input { font-family:var(--font); }
     background:#fff !important;
   }
 }
+
+/* ── Contabilidad / Accounting ───────────────────────────────────────────── */
+.acct-toolbar {
+  display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center;
+}
+.acct-table-wrap {
+  overflow-x:auto; -webkit-overflow-scrolling:touch;
+  border-radius:var(--radius-md); border:1px solid var(--border);
+}
+.acct-table {
+  width:100%; border-collapse:collapse; font-size:.8rem;
+}
+.acct-table thead th {
+  background:var(--surface-2);
+  font-size:.69rem; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.05em;
+  padding:10px 12px; text-align:left;
+  border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.acct-table tbody td {
+  padding:9px 12px; border-bottom:1px solid var(--border);
+  vertical-align:middle; color:var(--text);
+}
+.acct-table tbody tr:last-child td { border-bottom:none; }
+.acct-table tbody tr:hover td { background:var(--surface-2); }
+.acct-row-reconciled > td { background:rgba(46,125,50,.04) !important; }
+.acct-row-reconciled:hover > td { background:rgba(46,125,50,.08) !important; }
+@media (prefers-color-scheme:dark) {
+  .acct-row-reconciled > td { background:rgba(63,185,80,.06) !important; }
+  .acct-row-reconciled:hover > td { background:rgba(63,185,80,.10) !important; }
+}
+.ledger-status-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:2px 8px; border-radius:100px;
+  font-size:.69rem; font-weight:700; letter-spacing:.01em; white-space:nowrap;
+}
+.ledger-status-settled { background:rgba(46,125,50,.12); color:var(--success); }
+.ledger-status-failed  { background:rgba(220,38,38,.10); color:var(--danger);  }
+.ledger-status-other   { background:var(--border);       color:var(--muted);   }
+.ledger-prov-badge {
+  display:inline-flex; align-items:center;
+  padding:2px 8px; border-radius:100px;
+  font-size:.69rem; font-weight:700;
+}
+.ledger-prov-x402     { background:rgba(46,125,50,.12); color:var(--success); }
+.ledger-prov-donation { background:rgba(11,95,255,.10); color:var(--brand-2); }
+.ledger-prov-other    { background:var(--border);       color:var(--muted);   }
+.acct-cat-select {
+  background:var(--surface-2); border:1px solid var(--border);
+  border-radius:6px; padding:4px 6px;
+  font-size:.75rem; color:var(--text); font-family:var(--font);
+  cursor:pointer; min-width:88px; appearance:none;
+}
+.acct-cat-select:focus { outline:none; border-color:var(--brand-2); box-shadow:0 0 0 2px rgba(11,95,255,.12); }
+.acct-note-btn {
+  background:none; border:none; cursor:pointer;
+  padding:3px 6px; border-radius:6px; font-size:.85rem;
+  color:var(--muted); transition:color .15s, background .15s; line-height:1;
+}
+.acct-note-btn:hover { color:var(--brand-2); background:rgba(11,95,255,.07); }
+.acct-hash-wrap { display:inline-flex; align-items:center; gap:4px; }
+.acct-hash-code {
+  font-family:'SFMono-Regular',Consolas,'Courier New',monospace;
+  font-size:.69rem; color:var(--muted);
+  background:var(--surface-2); border:1px solid var(--border);
+  border-radius:5px; padding:2px 5px; white-space:nowrap;
+}
+.acct-hash-copy {
+  background:none; border:none; cursor:pointer;
+  padding:2px 5px; border-radius:5px; font-size:.73rem;
+  color:var(--muted); transition:color .15s; line-height:1;
+}
+.acct-hash-copy:hover { color:var(--brand-2); }
+.acct-note-input {
+  width:100%; min-width:100px; padding:4px 8px;
+  border:1px solid var(--brand-2); border-radius:6px;
+  background:var(--surface-2); color:var(--text);
+  font-size:.78rem; font-family:var(--font);
+}
+.acct-note-input:focus { outline:none; box-shadow:0 0 0 2px rgba(11,95,255,.12); }
+.acct-monthly-section {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-md); padding:18px 20px;
+  box-shadow:var(--shadow-sm); margin-bottom:14px;
+}
+.acct-monthly-title {
+  font-family:var(--font-display); font-weight:700;
+  font-size:.88rem; color:var(--text); margin-bottom:12px;
+}
+.acct-monthly-row {
+  display:flex; align-items:center; gap:10px;
+  padding:5px 0; border-bottom:1px solid var(--border);
+}
+.acct-monthly-row:last-child { border-bottom:none; }
+.acct-monthly-ym {
+  font-size:.75rem; color:var(--muted); font-weight:600;
+  width:62px; flex-shrink:0;
+}
+.acct-monthly-bar-track {
+  flex:1; height:8px; background:var(--border); border-radius:100px; overflow:hidden;
+}
+.acct-monthly-bar-fill {
+  height:8px; background:var(--brand-2); border-radius:100px;
+  transition:width .5s ease;
+}
+.acct-monthly-usd {
+  font-size:.77rem; font-weight:700; color:var(--text);
+  min-width:64px; text-align:right; flex-shrink:0;
+}
+@media (max-width:680px) {
+  .acct-table thead { display:none; }
+  .acct-table, .acct-table tbody, .acct-table tr, .acct-table td { display:block; width:100%; }
+  .acct-table tbody tr {
+    margin-bottom:12px; border:1px solid var(--border);
+    border-radius:var(--radius-md); overflow:hidden; background:var(--surface);
+  }
+  .acct-table tbody td {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 14px; border-bottom:1px solid var(--border); font-size:.82rem;
+    gap:8px;
+  }
+  .acct-table tbody td:last-child { border-bottom:none; }
+  .acct-table tbody td::before {
+    content:attr(data-label); font-size:.68rem; font-weight:700;
+    color:var(--muted); text-transform:uppercase; letter-spacing:.05em;
+    flex-shrink:0; min-width:82px;
+  }
+  .acct-table-wrap { border:none; border-radius:0; }
+}
 </style>
 </head>
 <body>
@@ -1004,13 +1133,40 @@ select,input { font-family:var(--font); }
 
     <!-- ── Contabilidad ─────────────────────────────────────────────── -->
     <div class="panel" data-panel="contabilidad" role="tabpanel">
-      <div class="card">
-        <div class="empty-state">
-          <span class="empty-icon" aria-hidden="true">📒</span>
-          <div class="empty-title">Contabilidad</div>
-          <div class="empty-text">Disponible en esta sección próximamente</div>
+
+      <!-- KPI skeleton (shown while loading) -->
+      <div id="acct-kpi-skeleton" class="kpi-grid" style="margin-bottom:16px;">
+        <div class="skeleton" style="height:92px;border-radius:var(--radius-md);"></div>
+        <div class="skeleton" style="height:92px;border-radius:var(--radius-md);"></div>
+        <div class="skeleton" style="height:92px;border-radius:var(--radius-md);"></div>
+        <div class="skeleton" style="height:92px;border-radius:var(--radius-md);"></div>
+        <div class="skeleton" style="height:92px;border-radius:var(--radius-md);"></div>
+        <div class="skeleton" style="height:92px;border-radius:var(--radius-md);"></div>
+      </div>
+
+      <!-- KPI cards (shown after load) -->
+      <div id="acct-kpi-grid" class="kpi-grid" style="display:none;margin-bottom:16px;"></div>
+
+      <!-- Main body (monthly + toolbar + table) -->
+      <div id="acct-body" style="display:none;">
+        <div class="acct-monthly-section" id="acct-monthly-section"></div>
+        <div class="acct-toolbar">
+          <button class="btn btn-secondary btn-sm" id="acct-csv-btn">⬇ Exportar CSV</button>
+          <button class="btn btn-secondary btn-sm" id="acct-pdf-btn" disabled title="Próximamente">📄 Exportar PDF</button>
+        </div>
+        <div id="acct-table-section"></div>
+      </div>
+
+      <!-- Error state -->
+      <div id="acct-error" style="display:none;">
+        <div class="error-card">
+          <span class="error-card-icon">⚠️</span>
+          <div class="error-card-title">No se pudo cargar el libro contable</div>
+          <div class="error-card-text" id="acct-err-msg">Verifica tu conexión e intenta de nuevo.</div>
+          <button class="btn btn-secondary" onclick="loadLedger()" style="margin-top:16px;">Reintentar</button>
         </div>
       </div>
+
     </div>
 
     <!-- ── Retiros ──────────────────────────────────────────────────── -->
@@ -2189,6 +2345,442 @@ async function copyQRImage() {
   } catch(e) { toast('Copia no soportada en este navegador.', 'error'); }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONTABILIDAD MODULE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+let _ledger       = { rows:[], kpis:{}, monthly:[] };
+let _ledgerLoaded = false;
+
+const TAX_CATS = [
+  { v:'',          l:'— Sin categoría' },
+  { v:'ingreso',   l:'Ingreso'         },
+  { v:'donacion',  l:'Donación'        },
+  { v:'servicio',  l:'Servicio'        },
+  { v:'venta',     l:'Venta'           },
+  { v:'reembolso', l:'Reembolso'       },
+  { v:'otro',      l:'Otro'            },
+];
+
+function truncHash(h) {
+  if (!h) return '—';
+  const s = String(h);
+  if (s.length <= 16) return s;
+  return s.slice(0, 8) + '…' + s.slice(-6);
+}
+
+/* ── Recompute KPIs from current rows (preserve fees_usd from API) ─────── */
+function recomputeKPIs() {
+  const rows  = _ledger.rows;
+  let gross = 0, recon = 0, unrecon = 0, count = 0;
+  rows.forEach(r => {
+    if (r.status === 'settled') { gross += parseFloat(r.amount_usd) || 0; count++; }
+    if (r.reconciled) recon   += parseFloat(r.amount_usd) || 0;
+    else              unrecon += parseFloat(r.amount_usd) || 0;
+  });
+  const fees = parseFloat(_ledger.kpis.fees_usd) || 0;
+  _ledger.kpis = {
+    ..._ledger.kpis,
+    gross_usd:        gross,
+    net_usd:          gross - fees,
+    reconciled_usd:   recon,
+    unreconciled_usd: unrecon,
+    count,
+  };
+}
+
+/* ── Render KPI cards ───────────────────────────────────────────────────── */
+function renderAcctKPIs() {
+  const k = _ledger.kpis;
+  const svgDollar = `<svg class="kpi-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
+  const svgSlash  = `<svg class="kpi-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
+  const svgArrow  = `<svg class="kpi-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
+  const svgCheck  = `<svg class="kpi-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`;
+  const svgAlert  = `<svg class="kpi-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+  const svgGrid   = `<svg class="kpi-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`;
+
+  const unrecWarn = (k.unreconciled_usd || 0) > 0;
+  const cards = [
+    { icon:svgDollar, value:fmtUSD(k.gross_usd||0),        label:'Bruto recibido',  cls:'',                      note:'' },
+    { icon:svgSlash,  value:fmtUSD(k.fees_usd||0),         label:'Comisiones',      cls:'',                      note:'x402 sin comisión' },
+    { icon:svgArrow,  value:fmtUSD(k.net_usd||0),          label:'Neto',            cls:'',                      note:'= bruto, sin comisiones x402' },
+    { icon:svgCheck,  value:fmtUSD(k.reconciled_usd||0),   label:'Conciliado',      cls:'',                      note:'' },
+    { icon:svgAlert,  value:fmtUSD(k.unreconciled_usd||0), label:'Sin conciliar',   cls:unrecWarn?'kpi-warn':'', note:'' },
+    { icon:svgGrid,   value:String(k.count||0),             label:'Transacciones',   cls:'',                      note:'' },
+  ];
+
+  document.getElementById('acct-kpi-skeleton').style.display = 'none';
+  const grid = document.getElementById('acct-kpi-grid');
+  grid.style.display = '';
+  grid.innerHTML = cards.map(c => `
+    <div class="kpi-card${c.cls ? ' '+c.cls : ''}">
+      ${c.icon}
+      <div class="kpi-value">${esc(c.value)}</div>
+      <div class="kpi-label">${esc(c.label)}</div>
+      ${c.note ? `<div class="kpi-note">${esc(c.note)}</div>` : ''}
+    </div>`).join('');
+}
+
+/* ── Render monthly summary ─────────────────────────────────────────────── */
+function renderMonthlySummary() {
+  const el = document.getElementById('acct-monthly-section');
+  if (!el) return;
+  const months = _ledger.monthly || [];
+  if (!months.length) {
+    el.innerHTML = `
+      <div class="acct-monthly-title">Resumen mensual</div>
+      <p style="font-size:.82rem;color:var(--muted);text-align:center;padding:12px 0 4px;">Sin ingresos mensuales registrados aún.</p>`;
+    return;
+  }
+  const sorted = [...months].sort((a, b) => (a.ym||'').localeCompare(b.ym||''));
+  const maxU   = Math.max(...sorted.map(m => m.usd || 0), 1);
+  let html = '<div class="acct-monthly-title">Resumen mensual</div>';
+  sorted.forEach(m => {
+    let lbl = m.ym || '';
+    try { lbl = new Date(m.ym + '-15').toLocaleDateString('es', {month:'short',year:'2-digit'}).replace('.',''); } catch(e) {}
+    const pct = Math.round((m.usd || 0) / maxU * 100);
+    html += `<div class="acct-monthly-row">
+      <span class="acct-monthly-ym">${esc(lbl)}</span>
+      <div class="acct-monthly-bar-track"><div class="acct-monthly-bar-fill" style="width:${pct}%;"></div></div>
+      <span class="acct-monthly-usd">${fmtUSD(m.usd)}</span>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+/* ── Badge helpers ──────────────────────────────────────────────────────── */
+function provBadgeHtml(p) {
+  if (!p) return '—';
+  const lc = String(p).toLowerCase();
+  if (lc === 'x402')     return `<span class="ledger-prov-badge ledger-prov-x402">x402</span>`;
+  if (lc === 'donation') return `<span class="ledger-prov-badge ledger-prov-donation">Donación</span>`;
+  return `<span class="ledger-prov-badge ledger-prov-other">${esc(p)}</span>`;
+}
+
+function statusBadgeHtml(s) {
+  if (!s) return `<span class="ledger-status-badge ledger-status-other">—</span>`;
+  const lc = String(s).toLowerCase();
+  if (lc === 'settled') return `<span class="ledger-status-badge ledger-status-settled">✓ Liquidado</span>`;
+  if (lc === 'failed')  return `<span class="ledger-status-badge ledger-status-failed">✕ Fallido</span>`;
+  return `<span class="ledger-status-badge ledger-status-other">${esc(s)}</span>`;
+}
+
+function catSelectHtml(rowId, cur) {
+  const opts = TAX_CATS.map(c =>
+    `<option value="${esc(c.v)}"${c.v === (cur||'') ? ' selected' : ''}>${esc(c.l)}</option>`
+  ).join('');
+  return `<select class="acct-cat-select" data-acct-cat="${esc(rowId)}" aria-label="Categoría fiscal">${opts}</select>`;
+}
+
+function refCellHtml(row) {
+  const val = row.tx_hash || row.ref || '';
+  if (!val) return '—';
+  return `<span class="acct-hash-wrap">
+    <code class="acct-hash-code" title="${esc(val)}">${esc(truncHash(val))}</code>
+    <button class="acct-hash-copy" data-acct-copy="${esc(val)}" aria-label="Copiar referencia" title="Copiar">📋</button>
+  </span>`;
+}
+
+function noteCellHtml(rowId, note) {
+  const has = !!(note && String(note).trim());
+  return `<button class="acct-note-btn" data-acct-note="${esc(rowId)}"
+    title="${has ? esc(note) : 'Agregar nota'}"
+    aria-label="${has ? 'Editar nota' : 'Agregar nota'}">${has ? '📝' : '✎'}</button>`;
+}
+
+function reconCellHtml(rowId, reconciled) {
+  return `<label class="switch" style="width:40px;height:22px;" aria-label="Conciliado">
+    <input type="checkbox" ${reconciled ? 'checked' : ''} data-acct-recon="${esc(rowId)}"
+      role="switch" aria-checked="${reconciled ? 'true' : 'false'}" style="position:absolute;opacity:0;width:0;height:0;">
+    <span class="switch-slider" style="border-radius:100px;"></span>
+  </label>`;
+}
+
+/* ── Inline note editor ─────────────────────────────────────────────────── */
+function openNoteEditor(btn, id, row) {
+  const td = btn.closest('td');
+  if (!td || td.querySelector('.acct-note-input')) return;
+
+  let done = false;
+  const inp = document.createElement('input');
+  inp.type = 'text'; inp.className = 'acct-note-input';
+  inp.value = row.notes || ''; inp.placeholder = 'Escribe una nota…'; inp.maxLength = 240;
+
+  const rewire = () => {
+    td.innerHTML = noteCellHtml(id, row.notes);
+    const nb = td.querySelector('[data-acct-note]');
+    if (nb) nb.addEventListener('click', () => openNoteEditor(nb, id, row));
+  };
+
+  td.innerHTML = '';
+  td.appendChild(inp);
+  inp.focus();
+
+  const doSave = async () => {
+    if (done) return; done = true;
+    const newNote = inp.value.trim();
+    if (newNote === (row.notes || '').trim()) { rewire(); return; }
+    const prev = row.notes;
+    row.notes = newNote || null;
+    rewire();
+    try {
+      const r = await fetch(`/api/profile/accounting/ledger/${encodeURIComponent(id)}`, {
+        method:'PATCH', credentials:'same-origin',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify({notes: newNote || null}),
+      });
+      if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.ok) { toast('Nota guardada ✓'); }
+      else {
+        row.notes = prev;
+        td.innerHTML = noteCellHtml(id, prev);
+        const nb = td.querySelector('[data-acct-note]');
+        if (nb) nb.addEventListener('click', () => openNoteEditor(nb, id, row));
+        toast(d.error || 'No se pudo guardar la nota.', 'error');
+      }
+    } catch(e) {
+      row.notes = prev;
+      td.innerHTML = noteCellHtml(id, prev);
+      const nb = td.querySelector('[data-acct-note]');
+      if (nb) nb.addEventListener('click', () => openNoteEditor(nb, id, row));
+      toast('Error de red.', 'error');
+    }
+  };
+
+  const doCancel = () => { if (done) return; done = true; rewire(); };
+
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); doSave(); }
+    if (e.key === 'Escape') { doCancel(); }
+  });
+  inp.addEventListener('blur', doSave);
+}
+
+/* ── Render ledger table ────────────────────────────────────────────────── */
+function renderLedgerTable() {
+  const el = document.getElementById('acct-table-section');
+  if (!el) return;
+  const rows = _ledger.rows;
+
+  if (!rows || !rows.length) {
+    el.innerHTML = `<div class="empty-state">
+      <span class="empty-icon" aria-hidden="true">📒</span>
+      <div class="empty-title">Sin transacciones</div>
+      <div class="empty-text">Aún no tienes transacciones — los pagos recibidos aparecerán aquí.</div>
+    </div>`;
+    return;
+  }
+
+  const thead = `<thead><tr>
+    <th>Fecha</th><th>Pagador</th><th>Proveedor</th><th>Enlace</th>
+    <th>Monto</th><th>Estado</th><th>Referencia</th>
+    <th>Categoría</th><th>Conciliado</th><th>Nota</th>
+  </tr></thead>`;
+
+  const tbody = '<tbody>' + rows.map(r => {
+    const isRecon   = !!r.reconciled;
+    const payerDisp = r.payer
+      ? (r.payer.length > 16 ? r.payer.slice(0,8)+'…'+r.payer.slice(-6) : r.payer)
+      : '—';
+    const linkDisp = r.link_title
+      ? `<span title="${esc(r.link_title)}" style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle;">${esc(r.link_title)}</span>`
+      : '—';
+    return `<tr class="${isRecon ? 'acct-row-reconciled' : ''}" data-acct-row="${esc(r.id)}">
+      <td data-label="Fecha" style="white-space:nowrap;">${esc(fmtDate(r.date_ms))}</td>
+      <td data-label="Pagador"><span title="${esc(r.payer||'')}" style="font-family:monospace;font-size:.73rem;">${esc(payerDisp)}</span></td>
+      <td data-label="Proveedor">${provBadgeHtml(r.provider)}</td>
+      <td data-label="Enlace">${linkDisp}</td>
+      <td data-label="Monto" style="white-space:nowrap;">
+        <strong>${esc(fmtUSD(r.amount_usd))}</strong>
+        <span style="font-size:.68rem;color:var(--muted);margin-left:3px;">${esc(r.currency||'')}</span>
+      </td>
+      <td data-label="Estado">${statusBadgeHtml(r.status)}</td>
+      <td data-label="Referencia">${refCellHtml(r)}</td>
+      <td data-label="Categoría">${catSelectHtml(r.id, r.tax_category)}</td>
+      <td data-label="Conciliado" style="text-align:center;">${reconCellHtml(r.id, r.reconciled)}</td>
+      <td data-label="Nota" style="text-align:center;">${noteCellHtml(r.id, r.notes)}</td>
+    </tr>`;
+  }).join('') + '</tbody>';
+
+  el.innerHTML = `<div class="acct-table-wrap"><table class="acct-table">${thead}${tbody}</table></div>`;
+  wireLedgerEvents(el);
+}
+
+/* ── Wire all table events ──────────────────────────────────────────────── */
+function wireLedgerEvents(el) {
+  /* Copy ref/hash */
+  el.querySelectorAll('[data-acct-copy]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const ok = await copyToClipboard(btn.dataset.acctCopy);
+      if (ok) toast('Referencia copiada ✓');
+    });
+  });
+
+  /* Category select */
+  el.querySelectorAll('[data-acct-cat]').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const id     = sel.dataset.acctCat;
+      const newCat = sel.value;
+      const row    = _ledger.rows.find(r => r.id === id);
+      if (!row) return;
+      const prev   = row.tax_category;
+      row.tax_category = newCat;
+      try {
+        const r = await fetch(`/api/profile/accounting/ledger/${encodeURIComponent(id)}`, {
+          method:'PATCH', credentials:'same-origin',
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify({tax_category: newCat || null}),
+        });
+        if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) { toast('Categoría guardada ✓'); }
+        else {
+          row.tax_category = prev;
+          sel.value = prev || '';
+          toast(d.error || 'No se pudo guardar la categoría.', 'error');
+        }
+      } catch(e) {
+        row.tax_category = prev;
+        sel.value = prev || '';
+        toast('Error de red.', 'error');
+      }
+    });
+  });
+
+  /* Reconcile switch */
+  el.querySelectorAll('[data-acct-recon]').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      const id       = inp.dataset.acctRecon;
+      const newRecon = inp.checked;
+      const row      = _ledger.rows.find(r => r.id === id);
+      if (!row) return;
+      const prev     = row.reconciled;
+      row.reconciled = newRecon;
+      inp.setAttribute('aria-checked', newRecon ? 'true' : 'false');
+      const tr = inp.closest('tr');
+      if (tr) tr.className = newRecon ? 'acct-row-reconciled' : '';
+      recomputeKPIs();
+      renderAcctKPIs();
+      try {
+        const r = await fetch(`/api/profile/accounting/ledger/${encodeURIComponent(id)}`, {
+          method:'PATCH', credentials:'same-origin',
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify({reconciled: newRecon}),
+        });
+        if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) {
+          toast(newRecon ? 'Marcado como conciliado ✓' : 'Desmarcado ✓');
+        } else {
+          row.reconciled = prev;
+          inp.checked    = prev;
+          inp.setAttribute('aria-checked', prev ? 'true' : 'false');
+          if (tr) tr.className = prev ? 'acct-row-reconciled' : '';
+          recomputeKPIs(); renderAcctKPIs();
+          toast(d.error || 'No se pudo actualizar.', 'error');
+        }
+      } catch(e) {
+        row.reconciled = prev;
+        inp.checked    = prev;
+        inp.setAttribute('aria-checked', prev ? 'true' : 'false');
+        if (tr) tr.className = prev ? 'acct-row-reconciled' : '';
+        recomputeKPIs(); renderAcctKPIs();
+        toast('Error de red.', 'error');
+      }
+    });
+  });
+
+  /* Note button */
+  el.querySelectorAll('[data-acct-note]').forEach(btn => {
+    const id  = btn.dataset.acctNote;
+    const row = _ledger.rows.find(r => r.id === id);
+    if (!row) return;
+    btn.addEventListener('click', () => openNoteEditor(btn, id, row));
+  });
+}
+
+/* ── CSV export ─────────────────────────────────────────────────────────── */
+function exportLedgerCSV() {
+  const rows = _ledger.rows;
+  if (!rows || !rows.length) { toast('Sin datos para exportar.', 'error'); return; }
+
+  const csvEsc = v => {
+    const s = (v == null) ? '' : String(v);
+    return (s.includes(',') || s.includes('"') || s.includes('\n'))
+      ? '"' + s.replace(/"/g, '""') + '"'
+      : s;
+  };
+
+  const headers = ['Fecha','Pagador','Proveedor','Enlace','Monto','Moneda','Estado','Referencia','Categoria','Conciliado','Nota'];
+  const lines   = [headers.map(csvEsc).join(',')];
+  rows.forEach(r => {
+    lines.push([
+      fmtDate(r.date_ms),
+      r.payer      || '',
+      r.provider   || '',
+      r.link_title || '',
+      r.amount_usd != null ? r.amount_usd : '',
+      r.currency   || '',
+      r.status     || '',
+      r.tx_hash || r.ref || '',
+      r.tax_category || '',
+      r.reconciled ? 'Sí' : 'No',
+      r.notes || '',
+    ].map(csvEsc).join(','));
+  });
+
+  const blob  = new Blob([lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  a.href      = url;
+  a.download  = `contabilidad-sismo911-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('CSV exportado ✓');
+}
+
+/* ── Load ledger ────────────────────────────────────────────────────────── */
+async function loadLedger() {
+  document.getElementById('acct-kpi-skeleton').style.display = '';
+  document.getElementById('acct-kpi-grid').style.display     = 'none';
+  document.getElementById('acct-body').style.display         = 'none';
+  document.getElementById('acct-error').style.display        = 'none';
+
+  try {
+    const r = await fetch('/api/profile/accounting/ledger', {credentials:'same-origin'});
+    if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || 'Error al cargar el libro contable');
+
+    _ledger = { rows: d.rows || [], kpis: d.kpis || {}, monthly: d.monthly || [] };
+    _ledgerLoaded = true;
+
+    renderAcctKPIs();
+    renderMonthlySummary();
+    renderLedgerTable();
+    document.getElementById('acct-body').style.display = 'block';
+
+    const csvBtn = document.getElementById('acct-csv-btn');
+    if (csvBtn && !csvBtn._wired) {
+      csvBtn._wired = true;
+      csvBtn.addEventListener('click', exportLedgerCSV);
+    }
+    const pdfBtn = document.getElementById('acct-pdf-btn');
+    if (pdfBtn && !pdfBtn._wired) {
+      pdfBtn._wired = true;
+      pdfBtn.addEventListener('click', () => toast('Exportación PDF — próximamente'));
+    }
+  } catch(e) {
+    document.getElementById('acct-kpi-skeleton').style.display = 'none';
+    document.getElementById('acct-error').style.display        = 'block';
+    const errEl = document.getElementById('acct-err-msg');
+    if (errEl) errEl.textContent = e.message || 'Verifica tu conexión e intenta de nuevo.';
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Main boot ──────────────────────────────────────────────────────────── */
@@ -2269,6 +2861,11 @@ async function fetchPaymentSummary() {
   fetchPaymentSummary();                 /* async: fills KPIs + charts */
   wirePagosForm();
   loadPaymentLinks();                    /* async: populates Pagos + QR tabs */
+
+  /* Lazy-load accounting tab on first click */
+  document.querySelector('[data-tab="contabilidad"]').addEventListener('click', () => {
+    if (!_ledgerLoaded) loadLedger();
+  });
 
   /* 5. Wire quick actions */
   document.getElementById('qa-edit').addEventListener('click', () => openModal(_profile));

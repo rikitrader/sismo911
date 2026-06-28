@@ -294,3 +294,81 @@ profile.delete('/payment-links/:id', async (c) => {
   await audit(c, 'profile.link.archive', { id });
   return c.json({ ok: true, archived: true });
 });
+
+// ── Accounting ledger (over the x402 payments) ────────────────────────────────
+const TAX_CATEGORIES = ['ingreso', 'donacion', 'servicio', 'venta', 'reembolso', 'otro'];
+
+// GET /api/profile/accounting/ledger — the caller's received-payment ledger +
+// accounting KPIs. x402 settles the full amount on-chain, so fees = 0 (gross=net).
+profile.get('/accounting/ledger', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const { results } = await c.env.DB.prepare(
+    `SELECT p.id, p.created_ms, p.settled_ms, p.payer, p.amount_usd, p.asset, p.status,
+            p.tx_hash, p.authorization_hash, p.tax_category, p.notes, p.reconciled, p.reconciled_ms,
+            r.title AS link_title, r.kind AS provider
+       FROM x402_payments p
+       LEFT JOIN x402_resources r ON r.id = p.resource_id
+      WHERE p.payee_user_id = ? ORDER BY p.created_ms DESC LIMIT 500`
+  ).bind(me.id).all();
+
+  const rows = ((results ?? []) as any[]).map((p) => ({
+    id: p.id, date_ms: p.settled_ms || p.created_ms, payer: p.payer ?? null,
+    provider: p.provider || 'x402', amount_usd: Number(p.amount_usd) || 0, currency: p.asset || 'USDC',
+    status: p.status, link_title: p.link_title ?? null,
+    tx_hash: p.tx_hash ?? null, ref: p.tx_hash || p.authorization_hash || null,
+    tax_category: p.tax_category ?? null, notes: p.notes ?? null,
+    reconciled: Boolean(p.reconciled), reconciled_ms: p.reconciled_ms ?? null,
+  }));
+
+  // KPIs over SETTLED rows only (real money). Fees are 0 for x402 → net = gross.
+  const settled = rows.filter((r) => r.status === 'settled');
+  const gross = settled.reduce((s, r) => s + r.amount_usd, 0);
+  const reconciledAmt = settled.filter((r) => r.reconciled).reduce((s, r) => s + r.amount_usd, 0);
+  const byMonth: Record<string, number> = {};
+  for (const r of settled) {
+    const ym = new Date(r.date_ms || 0).toISOString().slice(0, 7);
+    byMonth[ym] = (byMonth[ym] || 0) + r.amount_usd;
+  }
+  return c.json({
+    ok: true,
+    rows,
+    kpis: {
+      gross_usd: Math.round(gross * 100) / 100,
+      fees_usd: 0,                       // x402 settles full amount on-chain
+      net_usd: Math.round(gross * 100) / 100,
+      reconciled_usd: Math.round(reconciledAmt * 100) / 100,
+      unreconciled_usd: Math.round((gross - reconciledAmt) * 100) / 100,
+      count: settled.length,
+    },
+    monthly: Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b)).map(([ym, usd]) => ({ ym, usd: Math.round(usd * 100) / 100 })),
+  });
+});
+
+// PATCH /api/profile/accounting/ledger/:id — set tax_category / notes / reconciled.
+profile.patch('/accounting/ledger/:id', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const id = c.req.param('id');
+  const owns: any = await c.env.DB.prepare(`SELECT id FROM x402_payments WHERE id=? AND payee_user_id=?`).bind(id, me.id).first();
+  if (!owns) return c.json({ error: 'not_found' }, 404);
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
+  const sets: string[] = []; const vals: unknown[] = [];
+  if (b.tax_category !== undefined) {
+    const tc = str(b.tax_category, 40);
+    if (tc && !TAX_CATEGORIES.includes(tc)) return c.json({ error: 'tax_category_invalid' }, 400);
+    sets.push('tax_category=?'); vals.push(tc);
+  }
+  if (b.notes !== undefined) { sets.push('notes=?'); vals.push(str(b.notes, 1000)); }
+  if (b.reconciled !== undefined) {
+    if (typeof b.reconciled !== 'boolean') return c.json({ error: 'reconciled_must_be_boolean' }, 400);
+    sets.push('reconciled=?'); vals.push(b.reconciled ? 1 : 0);
+    sets.push('reconciled_ms=?'); vals.push(b.reconciled ? Date.now() : null);
+  }
+  if (!sets.length) return c.json({ error: 'nothing_to_update' }, 400);
+  vals.push(id);
+  await c.env.DB.prepare(`UPDATE x402_payments SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
+  await audit(c, 'profile.accounting.update', { id, fields: sets.map((s) => s.split('=')[0]) });
+  return c.json({ ok: true });
+});
