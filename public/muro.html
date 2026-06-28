@@ -204,7 +204,7 @@ function addMsg(m){
     ${m.body?`<div class="tx">${esc(m.body)}</div>`:''}
     ${photo}
     <div class="meta">${m.edited_ms?'editado · ':''}${hhmm(m.created_ms)}</div>
-    <div class="acts"><button data-act="share">↗ Compartir</button>${editable?'<button data-act="edit">✎ Editar</button>':''}</div>
+    <div class="acts">${m.body?'<button data-act="report">📋 Reportar</button>':''}<button data-act="share">↗ Compartir</button>${editable?'<button data-act="edit">✎ Editar</button>':''}</div>
   </div>`;
   feed.appendChild(wrap);
   if(m.created_ms>lastTs)lastTs=m.created_ms;
@@ -308,12 +308,40 @@ document.getElementById('sheetClose').onclick=()=>document.getElementById('sheet
 document.getElementById('sheet').addEventListener('click',(e)=>{if(e.target.id==='sheet')e.currentTarget.style.display='none';});
 document.getElementById('sheetLinks').addEventListener('click',(e)=>{const b=e.target.closest('[data-copy]');if(b){navigator.clipboard.writeText(b.dataset.copy).then(()=>toast('Enlace copiado.'));document.getElementById('sheet').style.display='none';}});
 
+// ---- convert a message into an official report (AI triage → DB) ----
+const MOD_LABEL={desaparecido:'Desaparecidos',mascota:'Mascotas',dano:'Daños'};
+const MOD_PATH={desaparecido:'/personas',mascota:'/mascotas',dano:'/reportar'};
+async function reportMsg(wrap,btn){
+  const tx=wrap.querySelector('.tx');const text=tx?tx.textContent.trim():'';
+  if(!text)return;
+  const old=btn.textContent;btn.disabled=true;btn.textContent='Analizando…';
+  try{
+    const r=await fetch('/api/triage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});
+    if(r.status===429){toast('Vas muy rápido. Espera unos segundos.');}
+    else if(!r.ok){const d=await r.json().catch(()=>({}));toast(d.message||'No se pudo crear el reporte.');}
+    else{
+      const d=await r.json();
+      if(d.category==='ninguno'){toast('Este mensaje no parece un reporte de persona, mascota o daño.');}
+      else{
+        const label=MOD_LABEL[d.category]||d.category;
+        btn.textContent='✓ Reportado';btn.dataset.done='1';
+        toast(`✅ Reporte creado en ${label} (pendiente de revisión).`);
+        const meta=wrap.querySelector('.meta');
+        if(meta){const tag=document.createElement('span');tag.textContent=` · 📋 ${label}`;tag.style.color='#15803d';tag.style.fontWeight='700';meta.appendChild(tag);}
+        setTimeout(()=>{if(confirm(`Reporte creado en ${label}. ¿Abrir el módulo para verlo?`))location.href=MOD_PATH[d.category]||'/';},400);
+      }
+    }
+  }catch(e){toast('Error de red al crear el reporte.');}
+  if(!btn.dataset.done){btn.disabled=false;btn.textContent=old;}
+}
+
 feed.addEventListener('click',(e)=>{
   const img=e.target.closest('.ph');if(img){document.getElementById('lbImg').src=img.dataset.full;document.getElementById('lb').style.display='flex';return;}
   const btn=e.target.closest('button[data-act]');if(!btn)return;
   const wrap=e.target.closest('.msg');if(!wrap)return;
   if(btn.dataset.act==='share')shareMsg(wrap);
   else if(btn.dataset.act==='edit')startEdit(wrap);
+  else if(btn.dataset.act==='report')reportMsg(wrap,btn);
 });
 document.getElementById('lb').onclick=()=>document.getElementById('lb').style.display='none';
 
