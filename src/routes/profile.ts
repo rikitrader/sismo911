@@ -4,6 +4,10 @@ import { getUserFromRequest } from '../lib/auth';
 import { audit } from '../lib/audit';
 import { uid } from '../lib/db';
 import { x402Network, x402Asset } from '../lib/x402';
+import {
+  WITHDRAWAL_METHODS, type WithdrawalMethod, computeBalance, withdrawnLast24h,
+  maskDestination, riskScore, PER_TX_MAX_USD, DAILY_MAX_USD, MIN_WITHDRAWAL_USD,
+} from '../lib/withdrawals';
 
 // Profile Command Center API. Every endpoint self-authenticates and is scoped to
 // the caller's own user id — never returns secrets (no private keys, no raw
@@ -370,5 +374,138 @@ profile.patch('/accounting/ledger/:id', async (c) => {
   vals.push(id);
   await c.env.DB.prepare(`UPDATE x402_payments SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
   await audit(c, 'profile.accounting.update', { id, fields: sets.map((s) => s.split('=')[0]) });
+  return c.json({ ok: true });
+});
+
+// ── Withdrawals / payouts ─────────────────────────────────────────────────────
+function publicRequest(r: any) {
+  // Only ever expose the masked summary + redacted details — never raw destination.
+  return {
+    id: r.id, method_type: r.method_type, amount_source: Number(r.amount_source) || 0,
+    source_currency: r.source_currency, payout_currency: r.payout_currency,
+    exchange_rate: r.exchange_rate ?? null, fee_amount: Number(r.fee_amount) || 0,
+    net_amount: Number(r.net_amount) || 0, destination_summary: r.destination_summary ?? null,
+    destination: (() => { try { return r.destination_details_json ? JSON.parse(r.destination_details_json) : null; } catch { return null; } })(),
+    status: r.status, provider: r.provider ?? null, risk_score: Number(r.risk_score) || 0,
+    review_note: r.review_note ?? null, created_ms: r.created_ms, updated_ms: r.updated_ms, completed_ms: r.completed_ms ?? null,
+  };
+}
+
+// GET /api/profile/withdrawals — balance + saved methods + request history (masked).
+profile.get('/withdrawals', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const [balance, methods, requests] = await Promise.all([
+    computeBalance(c.env, me.id),
+    c.env.DB.prepare(`SELECT id, type, label, details_json, is_default, created_ms FROM withdrawal_methods WHERE user_id = ? ORDER BY created_ms DESC`).bind(me.id).all(),
+    c.env.DB.prepare(`SELECT * FROM withdrawal_requests WHERE user_id = ? ORDER BY created_ms DESC LIMIT 200`).bind(me.id).all(),
+  ]);
+  return c.json({
+    ok: true,
+    balance,
+    limits: { per_tx_usd: PER_TX_MAX_USD, daily_usd: DAILY_MAX_USD, min_usd: MIN_WITHDRAWAL_USD },
+    methods: ((methods.results ?? []) as any[]).map((m) => ({
+      id: m.id, type: m.type, label: m.label, is_default: Boolean(m.is_default), created_ms: m.created_ms,
+      details: (() => { try { return m.details_json ? JSON.parse(m.details_json) : null; } catch { return null; } })(),
+    })),
+    requests: ((requests.results ?? []) as any[]).map(publicRequest),
+  });
+});
+
+// POST /api/profile/withdrawals — request a payout. Idempotent, balance-checked,
+// limit-checked, audit-logged. Manual rails default to pending_review (never
+// auto-completed). Destination details are masked before storage.
+profile.post('/withdrawals', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
+
+  const method = String(b.method_type || '') as WithdrawalMethod;
+  if (!WITHDRAWAL_METHODS.includes(method)) return c.json({ error: 'method_invalid' }, 400);
+  if (method === 'stripe') return c.json({ error: 'method_unavailable', detail: 'Stripe payouts no están disponibles aún.' }, 400);
+  const amount = Number(b.amount_source ?? b.amount);
+  if (!(amount >= MIN_WITHDRAWAL_USD) || !isFinite(amount)) return c.json({ error: 'amount_invalid' }, 400);
+  if (amount > PER_TX_MAX_USD) return c.json({ error: 'over_per_tx_limit', limit: PER_TX_MAX_USD }, 400);
+
+  const idem = str(b.idempotency_key, 80);
+  // Idempotency: a repeat with the same key returns the existing request (no double-spend).
+  if (idem) {
+    const dupe: any = await c.env.DB.prepare(`SELECT * FROM withdrawal_requests WHERE user_id=? AND idempotency_key=?`).bind(me.id, idem).first();
+    if (dupe) return c.json({ ok: true, idempotent: true, request: publicRequest(dupe) }, 200);
+  }
+
+  const now = Date.now();
+  const fee = 0; // no platform payout fee today
+  const net = Math.round((amount - fee) * 100) / 100;
+
+  const balance = await computeBalance(c.env, me.id);
+  if (net > balance.available_usd) return c.json({ error: 'insufficient_balance', available: balance.available_usd }, 400);
+  const today = await withdrawnLast24h(c.env, me.id, now);
+  if (today + net > DAILY_MAX_USD) return c.json({ error: 'over_daily_limit', limit: DAILY_MAX_USD, already: today }, 400);
+
+  const { summary, redacted } = maskDestination(method, (b.destination && typeof b.destination === 'object') ? b.destination : {});
+  const risk = riskScore(method, amount);
+  // No licensed payout provider → ALWAYS pending_review (manual operator action).
+  const status = 'pending_review';
+  const id = uid('wr');
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO withdrawal_requests (id,user_id,method_type,amount_source,source_currency,payout_currency,exchange_rate,fee_amount,net_amount,destination_summary,destination_details_json,status,idempotency_key,risk_score,created_ms,updated_ms)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    ).bind(id, me.id, method, amount, str(b.source_currency, 8) || 'USDC', str(b.payout_currency, 8) || 'USD',
+      b.exchange_rate != null ? Number(b.exchange_rate) : null, fee, net, summary, JSON.stringify(redacted), status, idem, risk, now, now).run();
+  } catch (e: any) {
+    if (String(e?.message || '').includes('UNIQUE')) { // idem race
+      const dupe: any = await c.env.DB.prepare(`SELECT * FROM withdrawal_requests WHERE user_id=? AND idempotency_key=?`).bind(me.id, idem).first();
+      if (dupe) return c.json({ ok: true, idempotent: true, request: publicRequest(dupe) }, 200);
+    }
+    throw e;
+  }
+  await audit(c, 'withdrawal.create', { id, method, amount, risk, status });
+  const row: any = await c.env.DB.prepare(`SELECT * FROM withdrawal_requests WHERE id=?`).bind(id).first();
+  return c.json({ ok: true, request: publicRequest(row) }, 201);
+});
+
+// PATCH /api/profile/withdrawals/:id/cancel — user cancels a not-yet-processed request.
+profile.patch('/withdrawals/:id/cancel', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const id = c.req.param('id');
+  const row: any = await c.env.DB.prepare(`SELECT id, status FROM withdrawal_requests WHERE id=? AND user_id=?`).bind(id, me.id).first();
+  if (!row) return c.json({ error: 'not_found' }, 404);
+  if (!['draft', 'pending_review'].includes(row.status)) return c.json({ error: 'not_cancellable', status: row.status }, 409);
+  await c.env.DB.prepare(`UPDATE withdrawal_requests SET status='cancelled', updated_ms=? WHERE id=?`).bind(Date.now(), id).run();
+  await audit(c, 'withdrawal.cancel', { id });
+  return c.json({ ok: true, status: 'cancelled' });
+});
+
+// ── Withdrawal methods (saved payout destinations) ────────────────────────────
+profile.post('/withdrawal-methods', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
+  const type = String(b.type || '') as WithdrawalMethod;
+  if (!WITHDRAWAL_METHODS.includes(type)) return c.json({ error: 'type_invalid' }, 400);
+  const { summary, redacted } = maskDestination(type, (b.details && typeof b.details === 'object') ? b.details : {});
+  const label = str(b.label, 80) || summary;
+  const now = Date.now();
+  const id = uid('wm');
+  await c.env.DB.prepare(
+    `INSERT INTO withdrawal_methods (id,user_id,type,label,details_json,is_default,created_ms,updated_ms) VALUES (?,?,?,?,?,?,?,?)`
+  ).bind(id, me.id, type, label, JSON.stringify(redacted), b.is_default ? 1 : 0, now, now).run();
+  await audit(c, 'withdrawal.method.add', { id, type });
+  return c.json({ ok: true, method: { id, type, label, is_default: Boolean(b.is_default), details: redacted } }, 201);
+});
+
+profile.delete('/withdrawal-methods/:id', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const id = c.req.param('id');
+  const owns: any = await c.env.DB.prepare(`SELECT id FROM withdrawal_methods WHERE id=? AND user_id=?`).bind(id, me.id).first();
+  if (!owns) return c.json({ error: 'not_found' }, 404);
+  await c.env.DB.prepare(`DELETE FROM withdrawal_methods WHERE id=?`).bind(id).run();
+  await audit(c, 'withdrawal.method.delete', { id });
   return c.json({ ok: true });
 });
