@@ -5,6 +5,13 @@ import { verifyAccessJwt } from './access';
 
 export const COOKIE = 'sismo_session';
 const SESSION_TTL_MS = 30 * 86_400_000; // 30 days
+// SECURITY: bump to 600k once hash format carries iter count.
+// OWASP recommends ≥600,000 PBKDF2-SHA256 iterations, but the stored hash format
+// is only { hash, salt } — it does NOT persist the iteration count. derive() is
+// shared by hashPassword AND verifyPassword, so raising this would make every
+// EXISTING (100k) hash fail to verify. Left unchanged until the stored format
+// carries a per-hash iter count (then new hashes can use 600k while old ones
+// still verify at their recorded count).
 const PBKDF2_ITERS = 100_000;
 
 export type Role = 'citizen' | 'operator' | 'admin';

@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { fetchBlogSources } from '../ingest/blog-sources';
 import { ingestBlog, writeArticle, deriveHeadline } from '../ingest/blog-cron';
-import { sanitizeHtml } from '../lib/sanitize';
+import { sanitizeHtml, isSafePublicUrl } from '../lib/sanitize';
 
 // Dynamic /blog ("Noticias") — a magazine of AI-written field reports, each
 // derived from a REAL scraped citizen post about the 24-J terremoto. Rendered
@@ -202,6 +202,9 @@ blog.get('/blog/:slug', async (c) => {
   const img = p.image_url || `${BASE}/og/og-default.png`;
   const embed = videoEmbed(p.platform, p.video_url);
   const cl = caseLink(p.place, canon);
+  // M2: esc() entity-encodes but does NOT strip dangerous schemes, so a stored
+  // javascript:-scheme source_url would be a clickable XSS. Only link when http(s).
+  const safeSourceUrl = isSafePublicUrl(p.source_url) ? p.source_url : '';
   const eng = [p.views && `${Number(p.views).toLocaleString('es')} vistas`, p.likes && `${Number(p.likes).toLocaleString('es')} me gusta`].filter(Boolean).join(' · ');
 
   const ld = {
@@ -236,7 +239,7 @@ ${HEADER}
     ${heroBlock}
     <a href="${esc(cl)}" class="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-lg p-3 mb-6 hover:bg-secondary/15 no-underline"><span class="text-xl shrink-0">🔎</span><span class="text-sm text-on-surface"><b class="text-secondary">¿Reconoces a alguien o el lugar?</b> Abre un <b>caso de búsqueda</b> en Familia con esta ubicación →</span></a>
     ${sanitizeHtml(p.body_html)}
-    ${p.source_url ? `<p class="mt-5 text-sm"><a href="${esc(p.source_url)}" target="_blank" rel="noopener nofollow" class="text-primary font-semibold hover:underline">↗ Ver publicación original en ${esc(platIcon(p.platform))}</a></p>` : ''}
+    ${safeSourceUrl ? `<p class="mt-5 text-sm"><a href="${esc(safeSourceUrl)}" target="_blank" rel="noopener nofollow" class="text-primary font-semibold hover:underline">↗ Ver publicación original en ${esc(platIcon(p.platform))}</a></p>` : ''}
     ${shareBar(p.headline, canon)}
     <div class="mt-8 bg-primary/5 border border-primary/20 rounded-lg p-4 text-xs text-on-surface-variant">
       <b>Aviso:</b> noticia generada a partir de una <b>publicación ciudadana en redes sociales</b> sobre el terremoto del 24-J. Es un <b>testimonio sin verificación independiente</b>; los detalles pueden cambiar. Para información oficial siga a Protección Civil, FUNVISIS y a las autoridades.

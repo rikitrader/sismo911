@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { validLatLon } from '../lib/security';
+import { rateLimit, validLatLon } from '../lib/security';
 
 // FLOTA — live unit tracking: GPS position ingest + map reads. Mounted at
 // /api/flota/rastreo alongside the rest of the FLOTA module.
@@ -33,6 +33,8 @@ interface PosBody {
 
 // POST /posicion — ingest one GPS fix for a unit.
 flotaRastreo.post('/posicion', async (c) => {
+  const limited = await rateLimit(c.env, c, 'flota_posicion', 120, 60);
+  if (limited) return limited;
   const b = (await c.req.json().catch(() => null)) as PosBody | null;
   const unidad_id = str(b?.unidad_id, 120);
   const lat = num(b?.lat);
@@ -57,15 +59,19 @@ flotaRastreo.post('/posicion', async (c) => {
 
 // GET /unidades — latest known position of every unit that has one (map markers).
 flotaRastreo.get('/unidades', async (c) => {
+  const limited = await rateLimit(c.env, c, 'flota_read', 120, 60);
+  if (limited) return limited;
   const { results } = await c.env.DB.prepare(
     `SELECT id, nombre, tipo, estado_op, lat, lon, rumbo, ult_pos_ms
-     FROM flota_unidades WHERE lat IS NOT NULL ORDER BY ult_pos_ms DESC`
+     FROM flota_unidades WHERE lat IS NOT NULL ORDER BY ult_pos_ms DESC LIMIT 1000`
   ).all();
   return c.json({ results: results ?? [] });
 });
 
 // GET /unidad/:id/track — recent track points for one unit (polyline trail).
 flotaRastreo.get('/unidad/:id/track', async (c) => {
+  const limited = await rateLimit(c.env, c, 'flota_read', 120, 60);
+  if (limited) return limited;
   const id = c.req.param('id');
   const lim = num(c.req.query('limit'));
   const limit = lim != null && lim > 0 ? Math.min(Math.floor(lim), 1000) : 200;

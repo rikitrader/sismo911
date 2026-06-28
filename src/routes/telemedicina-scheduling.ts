@@ -43,7 +43,7 @@ const whenText = (ms: number): string =>
 async function verifyDoctor(env: Env, doctorId: string, token: string): Promise<any | null> {
   if (!doctorId || !token) return null;
   return env.DB.prepare(
-    `SELECT * FROM telemed_doctors WHERE id=? AND panel_token=? AND status='activo' AND moderation='approved' LIMIT 1`,
+    `SELECT * FROM telemed_doctors WHERE id=? AND panel_token=? AND status='activo' AND moderation='approved' AND verified = 1 LIMIT 1`,
   ).bind(doctorId, token).first<any>().catch(() => null);
 }
 // A doctor's effective prefs (defaults applied when no prefs row exists).

@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 import { recordIngest } from '../lib/db';
 import { gatePersona } from './gate-config';
+import { isSafePublicUrl, safeFetch } from '../lib/sanitize';
 
 // Hourly re-ingest of the missing-persons (Familia) registry from the public
 // API into the DESAP `personas` DB. Source URL is FAMILIA_SOURCE_URL; without
@@ -77,6 +78,11 @@ export async function ingestFamilia(env: Env): Promise<number> {
       const desc = String(pick(o, ['descripcion', 'notes', 'detalle', 'description', 'senas']) ?? '');
       if (!gatePersona({ nombre: String(nombre), ubicacion: ubic, descripcion: desc }).ok) { rejected++; continue; }
       const id = rawId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
+      // SSRF/scheme guard: the upstream feed is unmoderated, so reject any foto
+      // that isn't a public http(s) URL before it's stored (later server-side
+      // fetched + rendered). Bad/empty values store as '' (no foto).
+      const fotoRaw = String(pick(o, ['foto', 'photo', 'image', 'imagen', 'photo_url']) ?? '').slice(0, 500);
+      const foto = isSafePublicUrl(fotoRaw) ? fotoRaw : '';
       stmts.push(env.DB.prepare(
         `INSERT INTO personas (id, nombre, edad, ubicacion, fecha, descripcion, contacto, foto, estado,
             localizado_por, localizado_contacto, localizado_relacion, localizado_nota,
@@ -93,7 +99,7 @@ export async function ingestFamilia(env: Env): Promise<number> {
         pick(o, ['fecha', 'date']),
         String(pick(o, ['descripcion', 'notes', 'detalle', 'description', 'senas']) ?? '').slice(0, 2000),
         String(pick(o, ['contacto', 'phone', 'telefono', 'celular']) ?? '').slice(0, 80),
-        String(pick(o, ['foto', 'photo', 'image', 'imagen', 'photo_url']) ?? '').slice(0, 500),
+        foto,
         mapEstado(pick(o, ['estado', 'status', 'situacion'])),
         pick(o, ['localizadoPor', 'localizado_por']), pick(o, ['localizadoContacto', 'localizado_contacto']),
         pick(o, ['localizadoRelacion', 'localizado_relacion']), pick(o, ['localizadoNota', 'localizado_nota']),
@@ -125,14 +131,6 @@ export async function ingestFamilia(env: Env): Promise<number> {
 const MIRROR_BATCH = 50;
 const MIRROR_CONCURRENCY = 6;
 
-async function fetchRetry(u: string, n = 2): Promise<Response> {
-  for (let a = 0; ; a++) {
-    try { const r = await fetch(u); if (r.ok || a >= n) return r; }
-    catch (e) { if (a >= n) throw e; }
-    await new Promise((res) => setTimeout(res, 200 * (a + 1)));
-  }
-}
-
 export async function mirrorFamiliaPhotos(env: Env, batchSize = MIRROR_BATCH): Promise<number> {
   if (!env.DESAP_FOTOS) { console.warn('[familia] DESAP_FOTOS R2 not bound — skip photo mirror'); return 0; }
   const { results } = await env.DB.prepare(
@@ -146,8 +144,10 @@ export async function mirrorFamiliaPhotos(env: Env, batchSize = MIRROR_BATCH): P
     while (i < results.length) {
       const row = results[i++];
       try {
-        const res = await fetchRetry(row.foto);
-        if (!res.ok || !res.body) { failed++; continue; }
+        // SSRF-safe: validates the URL + re-checks every redirect hop. A null
+        // return means the URL/hop was unsafe → skip and count as failed.
+        const res = await safeFetch(row.foto);
+        if (!res || !res.ok || !res.body) { failed++; continue; }
         const key = `fotos/${row.id}.jpg`;
         await env.DESAP_FOTOS.put(key, res.body, {
           httpMetadata: { contentType: res.headers.get('content-type') || 'image/jpeg' },
