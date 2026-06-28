@@ -13,6 +13,7 @@ const MIGRATIONS = [
   'migrations/0002_ops.sql',            // audit
   'migrations/0046_rbac_workforce.sql', // rbac tables + ALTER users/sessions (mfa_*, status, revoked_ms)
   'migrations/0047_rbac_seed.sql',      // permission catalog + system roles
+  'migrations/0052_rbac_finegrained.sql', // fine-grained perms + user_roles.expires_ms
   'migrations/0050_mfa_sessions.sql',   // mfa_backup_codes, session device cols, trusted_devices
 ];
 

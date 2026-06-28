@@ -24,6 +24,9 @@ import { acopio } from './routes/acopio';
 import { logistica } from './routes/logistica';
 import { admin } from './routes/admin';
 import { adminRbac } from './routes/admin-rbac';
+import { adminSessions } from './routes/admin-sessions';
+import { adminOrg } from './routes/admin-org';
+import { adminFlags } from './routes/admin-flags';
 import { funding } from './routes/funding';
 import { dashboard } from './routes/dashboard';
 import { plan } from './routes/plan';
@@ -266,6 +269,9 @@ app.route('/api/acopio', acopio);    // /api/acopio/status — live status for a
 app.route('/api/acopio', logistica); // /api/acopio/{inventory,needs,shipments,match,dashboard} — FEMA-style logistics (GET public, writes operator-gated)
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
 app.route('/api/rbac', adminRbac);   // enterprise RBAC admin API (users/roles/permissions/audit/dashboard) — each route self-gates via requirePermission
+app.route('/api/rbac', adminSessions); // Phase 2: TOTP MFA + session mgmt + emergency lock
+app.route('/api/rbac', adminOrg);      // Phase 2: organization → department → team hierarchy
+app.route('/api/rbac', adminFlags);    // Phase 2: feature flags scoped by org/role/user
 app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET public; refresh gated; apify webhook secret-gated)
 app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directory (GET public; writes operator-gated)
 app.route('/api/emergencia', emergencia); // SUPER BANNER emergency spotlight profiles (GET public; writes operator-gated; share bump public)

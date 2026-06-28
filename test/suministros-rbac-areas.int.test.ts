@@ -14,6 +14,7 @@ const MIGRATIONS = [
   'migrations/0009_password_resets.sql',
   'migrations/0046_rbac_workforce.sql',
   'migrations/0047_rbac_seed.sql',
+  'migrations/0052_rbac_finegrained.sql', // fine-grained perms + user_roles.expires_ms
   'migrations/0050_suministros_areas.sql',
 ];
 
