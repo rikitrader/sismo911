@@ -253,7 +253,7 @@
       // One cacheable call feeds the three load-once overlays (stats + heatmap +
       // danos). Live quakes stay on /api/events (own 90s refresh). Shared promise so
       // the later map script reuses this single request instead of re-fetching.
-      window.__geoData = window.__geoData || fetch('/api/dashboard/geoseismic').then(r => r.json()).catch(() => null);
+      window.__geoData = window.__geoData || fetch('/api/dashboard/geoseismic?t=' + Math.floor(Date.now() / 300000)).then(r => r.json()).catch(() => null); // 5-min freshness bucket (bypasses 4h CDN pin)
       (async () => {
         try {
           const agg = await window.__geoData; const s = agg && agg.stats && agg.stats.stats;
@@ -628,7 +628,14 @@
 
   // ---- Live feed via SISMO911 API (Cloudflare Worker mirrors USGS into D1/KV) ----
   async function fetchUSGS() {
-    const res = await fetch('/api/events?limit=300');
+    // 60-second freshness bucket on the URL. A Cloudflare cache rule pins
+    // /api/events at the CDN for up to 4h (max-age=14400), which would otherwise
+    // serve this "live" seismic feed — and the threat score — hours-stale per
+    // colo after a deploy/new quake. Bucketing the query string to the minute
+    // forces a fresh edge fetch ~every 60s while still sharing one cache key
+    // across all visitors that minute; the Worker's own 30s Cache API still
+    // collapses D1 load.
+    const res = await fetch('/api/events?limit=300&t=' + Math.floor(Date.now() / 60000));
     if (!res.ok) throw new Error('API ' + res.status);
     const json = await res.json();
     // Drive the "Estado Actual" badge + score chip from the server-scored
