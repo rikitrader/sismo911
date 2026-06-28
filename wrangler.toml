@@ -176,3 +176,7 @@ ACCESS_AUD = ""
 ALLOWED_ORIGINS = ""
 # Web Push public key (safe to expose). Private key is a Worker secret (VAPID_PRIVATE_KEY).
 VAPID_PUBLIC_KEY = "BLWuQ5I87NCxY_PJf9vplu423M7hDMbXgp98_no9mSZ54G5h4v_hYPcynxaNFWo0-HNyGTaMtQK1l-_g5g2qtL8"
+# x402 payments master flag (non-secret). Receiving goes LIVE only when this is
+# "true" AND the X402_FACILITATOR_URL secret is set (see scripts/secrets.manifest).
+# X402_NETWORK/X402_ASSET default from CROSSMINT_CHAIN + USDC; override here if needed.
+X402_PAYMENTS_ENABLED = "false"
