@@ -41,7 +41,7 @@ import cv2
 import numpy as np
 
 DB = "sismo911"
-R2_BUCKET = "desaparecidos-fotos"
+PHOTO_BASE = os.environ.get("PHOTO_BASE", "https://sismo911.com/api/familia/photo/")
 BATCH = 200
 MAX = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 10**9
 ONLY_IDS = [s for s in os.environ.get("IDS", "").split(",") if s.strip()]
@@ -73,24 +73,6 @@ def d1_file(sql_text: str):
         os.unlink(path)
 
 
-def r2_bytes(key: str):
-    with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as f:
-        path = f.name
-    try:
-        r = subprocess.run(
-            ["npx", "wrangler", "r2", "object", "get", f"{R2_BUCKET}/{key}", "--remote", "--file", path],
-            capture_output=True, text=True, env=ENV,
-        )
-        if r.returncode != 0:
-            return None
-        with open(path, "rb") as fh:
-            b = fh.read()
-        return b or None
-    finally:
-        if os.path.exists(path):
-            os.unlink(path)
-
-
 def url_bytes(url: str):
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 SISMO911-face/1.0"})
@@ -98,6 +80,16 @@ def url_bytes(url: str):
             return resp.read() or None
     except Exception:
         return None
+
+
+def photo_bytes(pid: str, foto):
+    # Prefer the DEPLOYED photo endpoint, which serves the R2 mirror (foto_r2) and
+    # falls back to the source URL server-side — one HTTP GET, no per-photo
+    # `wrangler r2 object get` node cold-start. ~10-50x faster across a 55k backfill.
+    b = url_bytes(PHOTO_BASE + str(pid))
+    if b is None and foto and str(foto).strip():
+        b = url_bytes(str(foto).strip())   # last-resort direct fetch
+    return b
 
 
 def q(s: str) -> str:
@@ -142,12 +134,8 @@ def main():
 
         updates, hashed, noface, dead = [], 0, 0, 0
         for r in rows:
-            pid, foto, foto_r2 = r["id"], r.get("foto"), r.get("foto_r2")
-            b = None
-            if foto_r2 and str(foto_r2).strip():
-                b = r2_bytes(str(foto_r2).strip())
-            if b is None and foto and str(foto).strip():
-                b = url_bytes(str(foto).strip())
+            pid, foto = r["id"], r.get("foto")
+            b = photo_bytes(pid, foto)
             if b is None:
                 updates.append((pid, f"dead:{pid}", 0, None)); dead += 1; continue
             img = decode(b)
