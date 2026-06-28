@@ -44,6 +44,7 @@
       .no-print{display:none !important}
     }
   </style>
+  <script>/* CSP-safe image fallback: hides broken imgs marked data-hide-on-err */addEventListener("error",function(e){var t=e.target;if(t&&t.tagName==="IMG"&&t.hasAttribute("data-hide-on-err"))t.style.display="none"},true)</script>
 </head>
 <body class="font-sans text-on-surface">
   <header class="eoc-bar text-white">
@@ -353,7 +354,7 @@ function renderTab(t){
 function renderOverview(){
   const {person:p,event:e,docket=[]}=CURRENT||{};
   if(!p)return;
-  const photo=p.photo_url?`<img src="${esc(p.photo_url)}" class="w-28 h-28 rounded-lg object-cover border" onerror="this.style.display='none'">`:`<div class="w-28 h-28 rounded-lg bg-surface-variant grid place-items-center text-4xl">👤</div>`;
+  const photo=p.photo_url?`<img src="${esc(p.photo_url)}" class="w-28 h-28 rounded-lg object-cover border" data-hide-on-err>`:`<div class="w-28 h-28 rounded-lg bg-surface-variant grid place-items-center text-4xl">👤</div>`;
   const fact=(l,v)=>`<div class="card p-3"><div class="eyebrow">${l}</div><div class="text-sm mt-0.5">${v||'—'}</div></div>`;
   const sismoCard=e?`<div class="card p-4" style="background:#fff5f5;border-color:#fecaca"><div class="eyebrow" style="color:#b91c1c">Sismo de referencia</div><div class="font-semibold mt-1">${esc(e.place_es||e.place||'Sismo')} · M${e.mag||'?'}</div><div class="text-sm text-on-surface-variant">${fmt(e.time_ms)}${e.depth_km?` · ${e.depth_km} km`:''}${e.alert?` · PAGER ${esc(e.alert)}`:''}</div>${e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener" class="text-sm text-primary underline">Ver evento USGS ↗</a>`:''}</div>`:'';
   $('#tab-overview').innerHTML=`
