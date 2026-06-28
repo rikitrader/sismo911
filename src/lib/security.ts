@@ -17,8 +17,26 @@ export function allowedOrigins(env: Env): string[] {
 
 export function isAllowedOrigin(env: Env, origin: string | undefined): boolean {
   if (!origin) return true;
+  // Localhost dev origins stay trusted for the local `wrangler dev` workflow.
+  // NOTE (security follow-up): this implicit always-on localhost trust is a low-risk
+  // defense-in-depth gap in prod (mitigated by SameSite=Lax+Secure cookies and
+  // credentials:false CORS). Replace with a dev-only flag rather than removing it
+  // outright, so local dev keeps working. Tracked in the security follow-ups.
   if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
   return allowedOrigins(env).includes(origin);
+}
+
+/**
+ * Constant-time string comparison for secret/token checks (avoids leaking a
+ * high-entropy token byte-by-byte via response timing). Length-checked, then
+ * XOR-accumulated over the chars. Use for any request-supplied secret/token
+ * compare instead of `===`/`!==`.
+ */
+export function timingSafeEqualStr(a: string | undefined, b: string | undefined): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 export function setSecurityHeaders(c: Context) {

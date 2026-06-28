@@ -6,7 +6,7 @@ import { backfillUsgsHistory } from '../ingest/usgs-history';
 import { estimatePager } from '../lib/pager';
 import { scoreThreat } from '../lib/threat';
 import { edgeCached } from '../lib/edge-cache';
-import { rateLimit } from '../lib/security';
+import { rateLimit, timingSafeEqualStr } from '../lib/security';
 
 export const events = new Hono<{ Bindings: Env }>();
 
@@ -93,7 +93,7 @@ events.post('/refresh', async (c) => {
 // Body: { years?: number (≤60), minMag?: number }.
 events.post('/backfill-run', async (c) => {
   const tok = (c.req.header('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (!c.env.BLOG_INGEST_TOKEN || tok !== c.env.BLOG_INGEST_TOKEN) return c.json({ error: 'unauthorized' }, 401);
+  if (!c.env.BLOG_INGEST_TOKEN || !timingSafeEqualStr(tok, c.env.BLOG_INGEST_TOKEN)) return c.json({ error: 'unauthorized' }, 401);
   const b: any = await c.req.json().catch(() => ({}));
   // KV runtime self-test: write a key from the Worker and read it back
   // immediately, then again so the caller can tell a genuine write failure from

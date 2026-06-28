@@ -53,3 +53,24 @@ export function isSafePublicUrl(raw: unknown): boolean {
   if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(h)) return false;
   return true;
 }
+
+/**
+ * SSRF-safe fetch: validates the URL, disables auto-redirect, and re-validates
+ * each hop's Location with isSafePublicUrl. Returns the final Response or null
+ * if any URL/hop is unsafe or the hop cap is exceeded.
+ */
+export async function safeFetch(url: string, init?: RequestInit, maxHops = 3): Promise<Response | null> {
+  let target = url;
+  for (let i = 0; i <= maxHops; i++) {
+    if (!isSafePublicUrl(target)) return null;
+    const res = await fetch(target, { ...init, redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location');
+      if (!loc) return res;
+      try { target = new URL(loc, target).toString(); } catch { return null; }
+      continue;
+    }
+    return res;
+  }
+  return null;
+}

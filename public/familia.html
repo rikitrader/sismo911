@@ -150,7 +150,7 @@ document.getElementById('checkinForm').addEventListener('submit',async e=>{e.pre
 const personGrid=document.getElementById('personGrid');
 let pCursor=null;
 function card(p){const[l,cl]=ST[p.status]||ST.unknown;
-  const img=p.photo_url?`<img src="${p.photo_url}" loading="lazy" class="w-full h-44 object-cover bg-surface-container">`:`<div class="w-full h-44 grid place-items-center bg-surface-container text-on-surface-variant text-4xl">👤</div>`;
+  const img=p.photo_url?`<img src="${esc(p.photo_url)}" loading="lazy" class="w-full h-44 object-cover bg-surface-container">`:`<div class="w-full h-44 grid place-items-center bg-surface-container text-on-surface-variant text-4xl">👤</div>`;
   return `<div onclick="openPerson('${p.id}')" class="bg-white border border-outline-variant/60 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
     <div class="relative">${img}<span class="absolute top-2 left-2 ${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${l}</span>${p.kind==='case'?`<span class="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Expediente</span>`:''}</div>
     <div class="p-3"><div class="font-display font-bold">${esc(p.full_name)} ${p.age?`<span class="text-on-surface-variant font-normal text-sm">· ${p.age}</span>`:''}</div>
@@ -213,7 +213,7 @@ async function loadGallery(reset){
   const d=await fetch(`/api/familia/gallery?limit=30${gCursor?'&cursor='+encodeURIComponent(gCursor):''}`).then(r=>r.json());
   galleryGrid.insertAdjacentHTML('beforeend',(d.photos||[]).map(p=>{const[l,cl]=ST[p.status]||ST.unknown;
     return `<a href="/familia?persona=${p.id}" onclick="event.preventDefault();openPerson('${p.id}')" class="block relative rounded-lg overflow-hidden border border-outline-variant/60 cursor-pointer">
-      <img src="${p.photo_url}" loading="lazy" class="w-full aspect-square object-cover bg-surface-container">
+      <img src="${esc(p.photo_url)}" loading="lazy" class="w-full aspect-square object-cover bg-surface-container">
       <span class="absolute top-1 left-1 ${cl} text-white text-[9px] font-bold px-1.5 py-0.5 rounded">${l}</span>
       <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1 truncate">${esc(p.full_name)}</div></a>`;}).join(''));
   if(!galleryGrid.children.length)galleryGrid.innerHTML='<p class="text-on-surface-variant text-sm col-span-full py-8 text-center">Aún no hay fotos aprobadas.</p>';
@@ -242,7 +242,7 @@ window.openPerson=async function(id){
   let p;try{p=await fetch('/api/familia/person/'+encodeURIComponent(id)).then(r=>r.json());}catch{p=null;}
   if(!p||p.error){pBody.innerHTML='<div class="p-12 text-center text-on-surface-variant">No se encontró el registro.</div>';return;}
   const[lbl,col,bg]=PSTAT[p.estado]||PSTAT['sin-contacto'];
-  const hero=p.photo_url?`<img src="${p.photo_url}" alt="${esc(p.full_name)}" class="w-full max-h-[380px] object-cover">`:`<div class="w-full grid place-items-center" style="background:${bg};aspect-ratio:16/11"><span class="font-display font-extrabold text-7xl" style="color:${col}">${esc(initials(p.full_name))}</span></div>`;
+  const hero=p.photo_url?`<img src="${esc(p.photo_url)}" alt="${esc(p.full_name)}" class="w-full max-h-[380px] object-cover">`:`<div class="w-full grid place-items-center" style="background:${bg};aspect-ratio:16/11"><span class="font-display font-extrabold text-7xl" style="color:${col}">${esc(initials(p.full_name))}</span></div>`;
   const url=p.share_url||('https://sismo911.com/familia?persona='+id);
   // /casos federates the citizen registry under a "fam-" id; native operator cases (kind:'case') keep their raw id.
   const docketId=p.kind==='case'?id:'fam-'+id;

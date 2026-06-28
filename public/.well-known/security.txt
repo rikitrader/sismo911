@@ -1,0 +1,6 @@
+Contact: mailto:seguridad@sismo911.com
+Contact: https://sismo911.com/contacto
+Preferred-Languages: es, en
+Canonical: https://sismo911.com/.well-known/security.txt
+Policy: https://sismo911.com/seguridad
+Expires: 2027-06-27T00:00:00.000Z

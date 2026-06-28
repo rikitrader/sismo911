@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { rateLimit, burstLimit } from '../lib/security';
+import { getUserFromRequest } from '../lib/auth';
 import { audit } from '../lib/audit';
 import { sendEmail, reportReceivedEmail } from '../lib/email';
 import { runGate, clientMessage, recordClean } from '../security/ingestion-gate';
@@ -53,6 +54,22 @@ const SEVERITIES = new Set(['rojo', 'naranja', 'amarillo']);
 // Round published coords to ~100 m so exact home/location is never exposed.
 const blur = (n: any) => (n == null ? null : Math.round(Number(n) * 1000) / 1000);
 
+// Is the caller an operator/admin? Operators get the unmodified rows; the public
+// gets a PII-minimized projection (coarser coords + truncated free-text).
+async function isOperatorReq(c: any): Promise<boolean> {
+  const me = await getUserFromRequest(c.env, c).catch(() => null);
+  return !!(me && (me.role === 'operator' || me.role === 'admin'));
+}
+
+// Public projection of a report row: round lat/lon to ~1.1 km and truncate the
+// free-text description (which may carry names/ages/medical notes).
+const publicReport = (row: any) => ({
+  ...row,
+  lat: row.lat == null ? null : Math.round(Number(row.lat) * 100) / 100,
+  lon: row.lon == null ? null : Math.round(Number(row.lon) * 100) / 100,
+  description: row.description ? String(row.description).slice(0, 120) : row.description,
+});
+
 // GET /api/reports?status=approved&category=&severity=&since=&limit=
 reports.get('/', async (c) => {
   const status = 'approved';
@@ -70,7 +87,9 @@ reports.get('/', async (c) => {
             source, source_url, image_key, reactions_up, created_ms
      FROM map_reports WHERE ${where.join(' AND ')} ORDER BY created_ms DESC LIMIT ?`
   ).bind(...args, limit).all();
-  return c.json(results ?? []);
+  const rows = results ?? [];
+  if (await isOperatorReq(c)) return c.json(rows);
+  return c.json(rows.map(publicReport));
 });
 
 // GET /api/reports/stats — live counters for the dashboard/movement banner.
@@ -102,7 +121,8 @@ reports.get('/:id', async (c) => {
      FROM map_reports WHERE id = ? AND status='approved'`
   ).bind(c.req.param('id')).first();
   if (!row) return c.json({ error: 'no encontrado' }, 404);
-  return c.json(row);
+  if (await isOperatorReq(c)) return c.json(row);
+  return c.json(publicReport(row));
 });
 
 // POST /api/reports — citizen submission → moderation queue. Accepts JSON or

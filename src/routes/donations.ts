@@ -353,6 +353,11 @@ donations.post('/campaigns', async (c) => {
 donations.patch('/campaigns/:slug', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
+  // Same-site guard (defense-in-depth vs CSRF) for this state-changing call.
+  const originHdr = c.req.header('origin') || c.req.header('referer');
+  if (originHdr && !isAllowedOrigin(c.env, originHdr.split('/').slice(0, 3).join('/'))) {
+    return c.json({ error: 'bad_origin' }, 403);
+  }
   const slug = c.req.param('slug');
   const camp: any = await c.env.DB.prepare(`SELECT id, organizer_user_id FROM campaigns WHERE slug = ?`).bind(slug).first();
   if (!camp) return c.json({ error: 'not_found' }, 404);

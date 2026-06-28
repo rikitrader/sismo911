@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { validLatLon } from '../lib/security';
+import { validLatLon, timingSafeEqualStr } from '../lib/security';
 import { getUserFromRequest } from '../lib/auth';
 
 // Satellite / GIS damage analysis. Imagery is layered from Google (when a key is
@@ -101,7 +101,7 @@ satellite.get('/maxar', async (c) => c.json({ maxar: await maxarInfo(c.env) }));
 satellite.post('/pytorch-results', async (c) => {
   const token = (c.env as any).SATELLITE_INGEST_TOKEN;
   if (!token) return c.json({ error: 'ingest_token_not_configured' }, 503);
-  if (readBearer(c) !== token) return c.json({ error: 'unauthorized' }, 401);
+  if (!timingSafeEqualStr(readBearer(c), token)) return c.json({ error: 'unauthorized' }, 401);
 
   const b = await c.req.json().catch(() => ({} as any));
   const lat = Number(b.lat), lon = Number(b.lon);
