@@ -46,7 +46,7 @@
   @media(max-width:520px){.filtgrid{grid-template-columns:1fr}}
   .fld{display:flex;flex-direction:column;gap:5px}
   .fld label{font:800 10px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-  .fld input,.fld select{width:100%;border:1px solid var(--line);border-radius:10px;padding:.6rem .7rem;font:500 14px Inter;background:#fff;color:var(--ink)}
+  .fld input,.fld select{width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:.6rem .7rem;font:500 14px Inter;background:#fff;color:var(--ink)}
   .fld input:focus,.fld select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(19,40,79,.14)}
   .fld.search{position:relative}
   .fld.search input{padding-left:38px}
@@ -56,7 +56,7 @@
   .filtfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap}
   .reslabel{font:700 13px Inter;color:var(--navy)}
   .reslabel b{font-weight:800}
-  .clearbtn{font:700 12.5px Inter;color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:7px 12px;background:#fff}
+  .clearbtn{min-height:44px;font:700 12.5px Inter;color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:7px 14px;background:#fff}
   .clearbtn:hover{border-color:var(--navy);color:var(--navy)}
 
   /* ---- vCard wall ---- */
@@ -71,7 +71,7 @@
   .vcard .badge{position:absolute;top:9px;left:9px;display:inline-flex;align-items:center;gap:5px;font:800 9.5px Inter;letter-spacing:.04em;text-transform:uppercase;color:#fff;padding:4px 8px;border-radius:7px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .vcard .badge .d{width:6px;height:6px;border-radius:50%;background:#fff}
   .vcard .body{padding:11px 12px 12px;display:flex;flex-direction:column;gap:3px;flex:1}
-  .vcard .nm{font:800 14.5px/1.2 'Public Sans';color:var(--navy);letter-spacing:-.01em}
+  .vcard .nm{margin:0;font:800 14.5px/1.2 'Public Sans';color:var(--navy);letter-spacing:-.01em}
   .vcard .nm .age{color:var(--muted);font-weight:600;font-size:12.5px}
   .vcard .meta{font:500 11.5px/1.35 Inter;color:var(--muted);display:flex;gap:5px;align-items:flex-start}
   .vcard .meta .mi{flex:0 0 auto;opacity:.8}
@@ -227,7 +227,7 @@ function vcard(p){
   return `<a href="${link}" class="vcard" title="Abrir expediente de ${esc(p.full_name||'')}">
     <div class="ph">${img}<span class="badge" style="background:${col}"><span class="d"></span>${lbl}</span></div>
     <div class="body">
-      <div class="nm">${esc(p.full_name||'Sin nombre')}${p.age?` <span class="age">· ${Number(p.age)} años</span>`:''}</div>
+      <h3 class="nm">${esc(p.full_name||'Sin nombre')}${p.age?` <span class="age">· ${Number(p.age)} años</span>`:''}</h3>
       <div class="meta"><span class="mi">📍</span><span>${loc}</span></div>
       ${fch?`<div class="meta"><span class="mi">🗓</span><span>${fch}</span></div>`:''}
       <span class="cta">🗂 Ver expediente →</span>
