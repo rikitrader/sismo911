@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
-import { hashPassword, verifyPassword, createSession, setSessionCookie, clearSession, getUserFromRequest, getSessionToken } from '../lib/auth';
+import { hashPassword, verifyPassword, createSession, setSessionCookie, clearSession, getUserFromRequest, getSessionToken, IDLE_TTL_MS, isPrivilegedRole } from '../lib/auth';
 import { rateLimit } from '../lib/security';
 import { audit } from '../lib/audit';
 import { sendEmail, randomToken, sha256hex, resetEmail, welcomeEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
@@ -200,7 +200,12 @@ auth.post('/login', async (c) => {
       `INSERT INTO login_history (id, user_id, email, ip, ua, ok, reason, created_ms) VALUES (?,?,?,?,?,?,?,?)`
     ).bind(uid('lh'), row.id, email, ip, ua, 1, null, Date.now()).run();
   } catch { /* ignore */ }
-  const { token, expires } = await createSession(c.env, row.id, c.req.header('user-agent'));
+  // Privileged (operator/admin) sessions get the short sliding idle window;
+  // citizens keep the long absolute TTL.
+  const { token, expires } = await createSession(
+    c.env, row.id, c.req.header('user-agent'),
+    isPrivilegedRole(row.role) ? IDLE_TTL_MS : undefined,
+  );
   setSessionCookie(c, token);
   return c.json({ ok: true, token, expires, must_change_pw: row.must_change_pw ?? 0, user: { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, must_change_pw: row.must_change_pw ?? 0 } });
 });
