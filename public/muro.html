@@ -4,13 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Muro Sísmico — Comenta los terremotos | SISMO911</title>
-<meta name="description" content="Muro comunitario sobre los terremotos en Venezuela: publica mensajes, reporta cómo se sintió en tu zona y sigue lo que comenta la gente en tiempo real, estilo chat. Información ciudadana." />
+<meta name="description" content="Muro comunitario sobre los terremotos en Venezuela: publica mensajes y fotos, reporta cómo se sintió en tu zona y sigue lo que comenta la gente en tiempo real, estilo chat." />
 <meta name="robots" content="index,follow" />
 <link rel="canonical" href="https://sismo911.com/muro" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="SISMO911" />
 <meta property="og:title" content="Muro Sísmico — Comenta los terremotos | SISMO911" />
-<meta property="og:description" content="Publica y sigue mensajes ciudadanos sobre los terremotos, en tiempo real." />
+<meta property="og:description" content="Publica y sigue mensajes y fotos ciudadanas sobre los terremotos, en tiempo real." />
 <meta property="og:url" content="https://sismo911.com/muro" />
 <meta property="og:image" content="https://sismo911.com/og/og-default.png" />
 <link rel="icon" type="image/svg+xml" href="/logo.svg" />
@@ -26,30 +26,48 @@
   .topbar .ttl{font:800 16px 'Public Sans'}
   .topbar .sub{font-size:11.5px;color:#bcd0f0}
   .av{width:40px;height:40px;border-radius:50%;background:#f5c518;color:var(--navy);display:grid;place-items:center;font-weight:900;flex:0 0 auto}
-  /* WhatsApp-style chat field */
   #feed{flex:1 1 auto;overflow-y:auto;padding:14px 14px 6px;background-image:radial-gradient(rgba(0,0,0,.04) 1px,transparent 1px);background-size:18px 18px}
   .day{position:sticky;top:6px;text-align:center;margin:10px 0}
   .day span{background:rgba(255,255,255,.92);color:#54656f;font-size:11px;font-weight:700;padding:4px 12px;border-radius:9999px;box-shadow:0 1px 1px rgba(0,0,0,.08)}
   .msg{display:flex;margin:3px 0}
   .msg.me{justify-content:flex-end}
-  .bub{max-width:78%;background:var(--bubble);border-radius:10px;padding:6px 9px 5px;box-shadow:0 1px .5px rgba(0,0,0,.13);position:relative}
+  .bub{max-width:80%;background:var(--bubble);border-radius:10px;padding:6px 9px 5px;box-shadow:0 1px .5px rgba(0,0,0,.13);position:relative}
   .msg.me .bub{background:var(--mine)}
+  .msg.flash .bub{animation:fl 2s ease}
+  @keyframes fl{0%,40%{background:#fff5c2}100%{}}
   .nm{font:700 12.5px 'Public Sans';margin-bottom:1px}
   .tx{font-size:14.5px;line-height:1.35;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
-  .tm{font-size:10.5px;color:#667781;text-align:right;margin-top:2px;user-select:none}
+  .ph{max-width:240px;max-height:260px;border-radius:8px;margin-top:5px;display:block;cursor:pointer;background:#eee}
+  .meta{font-size:10.5px;color:#667781;text-align:right;margin-top:2px;user-select:none}
   .role{display:inline-block;font:800 9px 'Public Sans';text-transform:uppercase;letter-spacing:.04em;background:var(--navy);color:#fff;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+  .acts{display:flex;gap:10px;margin-top:3px;justify-content:flex-end}
+  .acts button{background:none;border:0;color:#667781;font-size:11px;font-weight:700;cursor:pointer;padding:1px 3px}
+  .acts button:hover{color:var(--navy)}
   .empty{text-align:center;color:#54656f;font-size:14px;margin:40px auto;max-width:340px;background:rgba(255,255,255,.85);padding:16px 18px;border-radius:12px}
-  /* composer */
   .composer{flex:0 0 auto;background:#f0f2f5;border-top:1px solid var(--line);padding:8px 10px}
-  .namebar{display:flex;gap:8px;align-items:center;margin-bottom:6px}
-  .namebar label{font:700 11px 'Public Sans';color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-  .namebar input{flex:1;border:1px solid #c4c6d0;border-radius:9999px;padding:6px 12px;font-size:13px;background:#fff;max-width:240px}
+  .row{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+  .row label{font:700 11px 'Public Sans';color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .row input[type=text],.row input[type=number]{border:1px solid #c4c6d0;border-radius:9999px;padding:6px 12px;font-size:13px;background:#fff}
+  #name{flex:1;max-width:230px}
+  #cap{width:80px;text-align:center}
+  .capq{font-weight:700;color:var(--navy);font-size:13px}
+  .iconbtn{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:1px solid #c4c6d0;background:#fff;cursor:pointer;display:grid;place-items:center;color:var(--navy)}
   .inrow{display:flex;gap:8px;align-items:flex-end}
   .inrow textarea{flex:1;border:1px solid #c4c6d0;border-radius:20px;padding:10px 14px;font-size:15px;background:#fff;resize:none;max-height:120px;font-family:inherit;line-height:1.3}
   .send{flex:0 0 auto;width:46px;height:46px;border-radius:50%;border:0;background:var(--navy);color:#fff;cursor:pointer;display:grid;place-items:center}
   .send:disabled{opacity:.5;cursor:not-allowed}
-  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:#bb0027;color:#fff;font-size:13px;font-weight:600;padding:8px 16px;border-radius:9999px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;z-index:50}
+  #preview{position:relative;display:none;margin-bottom:6px;width:max-content}
+  #preview img{max-height:90px;border-radius:8px;border:1px solid var(--line);display:block}
+  #preview .rm{position:absolute;top:-8px;right:-8px;background:#bb0027;color:#fff;border:0;border-radius:50%;width:22px;height:22px;cursor:pointer;font-weight:900;line-height:1}
+  .hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:120px;background:#13284f;color:#fff;font-size:13px;font-weight:600;padding:8px 16px;border-radius:9999px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;z-index:60;max-width:90%}
   .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:5px}
+  #sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-end;justify-content:center;z-index:70}
+  #sheet .card{background:#fff;width:100%;max-width:480px;border-radius:16px 16px 0 0;padding:14px}
+  #sheet h3{font:800 15px 'Public Sans';color:var(--navy);margin:2px 0 10px}
+  #sheet a,#sheet button.sh{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px;border-radius:10px;text-decoration:none;color:var(--ink);font-weight:600;font-size:14px;border:0;background:#f5f7fa;margin-bottom:8px;cursor:pointer}
+  #lb{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:80}
+  #lb img{max-width:96vw;max-height:92vh;border-radius:8px}
 </style>
 </head>
 <body>
@@ -66,93 +84,185 @@
   <div id="feed"><div class="empty">Cargando mensajes…</div></div>
 
   <div class="composer">
-    <div class="namebar">
-      <label for="name">Tu nombre</label>
-      <input id="name" maxlength="60" placeholder="Anónimo" autocomplete="nickname" />
+    <div id="preview"><img id="previewImg" alt="" /><button class="rm" id="rmPhoto" type="button" aria-label="Quitar foto">×</button></div>
+    <div class="row">
+      <label for="name">Nombre</label>
+      <input id="name" type="text" maxlength="60" placeholder="Anónimo" autocomplete="nickname" />
+      <span class="capq" id="capq">…</span>
+      <input id="cap" type="number" inputmode="numeric" placeholder="?" aria-label="Respuesta del captcha" />
     </div>
+    <input class="hp" id="website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
     <div class="inrow">
+      <button class="iconbtn" id="btnGallery" type="button" title="Subir foto" aria-label="Subir foto">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5L5 21"/></svg>
+      </button>
+      <button class="iconbtn" id="btnCamera" type="button" title="Tomar foto" aria-label="Tomar foto">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
       <textarea id="body" rows="1" maxlength="600" placeholder="Escribe sobre el terremoto: cómo se sintió, tu zona, si hay daños…"></textarea>
       <button class="send" id="send" title="Enviar" aria-label="Enviar">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
       </button>
     </div>
-    <div class="hint">Enter para enviar · Shift+Enter para salto de línea · No compartas datos personales</div>
+    <input id="fileGallery" type="file" accept="image/*" style="display:none" />
+    <input id="fileCamera" type="file" accept="image/*" capture="environment" style="display:none" />
+    <div class="hint">Enter para enviar · 📷 toma una foto o 📎 sube una · Responde la suma para evitar bots · No compartas datos personales</div>
   </div>
 </main>
+
 <div class="toast" id="toast"></div>
+<div id="sheet"><div class="card"><h3>Compartir mensaje</h3><div id="sheetLinks"></div><button class="sh" id="sheetClose" style="justify-content:center;background:#fff;color:#bb0027">Cerrar</button></div></div>
+<div id="lb"><img id="lbImg" alt="" /></div>
 
 <script>
-const CHANNEL = 'terremotos';
-const feed = document.getElementById('feed');
-const nameEl = document.getElementById('name');
-const bodyEl = document.getElementById('body');
-const sendBtn = document.getElementById('send');
-const subEl = document.getElementById('sub');
-let lastTs = 0, lastDay = '', count = 0, busy = false;
+const CHANNEL='terremotos';
+const feed=document.getElementById('feed'), nameEl=document.getElementById('name'), bodyEl=document.getElementById('body');
+const capEl=document.getElementById('cap'), capqEl=document.getElementById('capq'), sendBtn=document.getElementById('send'), subEl=document.getElementById('sub');
+let lastTs=0,lastDay='',count=0,busy=false,capNonce='',myId=null,photoFile=null;
+const focusId=new URLSearchParams(location.search).get('m');
 
-const esc = (s) => (s || '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-nameEl.value = localStorage.getItem('muro_name') || '';
-nameEl.addEventListener('change', () => localStorage.setItem('muro_name', nameEl.value.trim().slice(0,60)));
+const esc=(s)=>(s||'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hashName=(s)=>{let h=0;for(const c of (s||'')) h=(h*31+c.charCodeAt(0))>>>0;return h;};
+const hhmm=(ms)=>new Date(ms).toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',3200);}
+function dayLabel(ms){const d=new Date(ms),t=new Date(),y=new Date(Date.now()-864e5);
+  if(d.toDateString()===t.toDateString())return 'HOY';
+  if(d.toDateString()===y.toDateString())return 'AYER';
+  return d.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});}
 
-function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',3000); }
-function dayLabel(ms){
-  const d=new Date(ms), t=new Date(), y=new Date(Date.now()-864e5);
-  if(d.toDateString()===t.toDateString()) return 'HOY';
-  if(d.toDateString()===y.toDateString()) return 'AYER';
-  return d.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
-}
-const hhmm = (ms) => new Date(ms).toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
+nameEl.value=localStorage.getItem('muro_name')||'';
+nameEl.addEventListener('change',()=>localStorage.setItem('muro_name',nameEl.value.trim().slice(0,60)));
+
+async function whoami(){try{const d=await fetch('/api/auth/me').then(r=>r.json());if(d&&d.authenticated&&d.user){myId=d.user.id;if(!nameEl.value)nameEl.value=d.user.name||'';}}catch(e){}}
+async function newCaptcha(){try{const d=await fetch('/api/chat/captcha').then(r=>r.json());capNonce=d.nonce;capqEl.textContent=d.question;capEl.value='';}catch(e){capqEl.textContent='captcha no disponible';}}
 
 function addMsg(m){
-  const mine = (m.name||'').trim() && (m.name||'').trim() === (nameEl.value||'').trim();
-  const day = dayLabel(m.created_ms);
-  if(day !== lastDay){ lastDay=day; const ds=document.createElement('div'); ds.className='day'; ds.innerHTML=`<span>${esc(day)}</span>`; feed.appendChild(ds); }
-  const role = (m.role && m.role!=='citizen') ? `<span class="role">${esc(m.role)}</span>` : '';
-  const wrap=document.createElement('div'); wrap.className='msg'+(mine?' me':'');
-  wrap.innerHTML = `<div class="bub">${mine?'':`<div class="nm" style="color:hsl(${(hashName(m.name)%360)} 65% 38%)">${esc(m.name||'Anónimo')}${role}</div>`}<div class="tx">${esc(m.body)}</div><div class="tm">${hhmm(m.created_ms)}</div></div>`;
+  const mine=myId?(m.user_id===myId):((m.name||'').trim()&&(m.name||'').trim()===(nameEl.value||'').trim());
+  const day=dayLabel(m.created_ms);
+  if(day!==lastDay){lastDay=day;const ds=document.createElement('div');ds.className='day';ds.innerHTML=`<span>${esc(day)}</span>`;feed.appendChild(ds);}
+  const role=(m.role&&m.role!=='citizen')?`<span class="role">${esc(m.role)}</span>`:'';
+  const photo=m.has_photo?`<img class="ph" data-full="/api/chat/photo/${esc(m.id)}" src="/api/chat/photo/${esc(m.id)}" loading="lazy" alt="foto del reporte">`:'';
+  const editable=mine&&myId&&m.user_id===myId;
+  const wrap=document.createElement('div');wrap.className='msg'+(mine?' me':'');wrap.id='m-'+m.id;wrap.dataset.id=m.id;
+  wrap.innerHTML=`<div class="bub">
+    ${mine?'':`<div class="nm" style="color:hsl(${hashName(m.name)%360} 65% 38%)">${esc(m.name||'Anónimo')}${role}</div>`}
+    ${m.body?`<div class="tx">${esc(m.body)}</div>`:''}
+    ${photo}
+    <div class="meta">${m.edited_ms?'editado · ':''}${hhmm(m.created_ms)}</div>
+    <div class="acts"><button data-act="share">↗ Compartir</button>${editable?'<button data-act="edit">✎ Editar</button>':''}</div>
+  </div>`;
   feed.appendChild(wrap);
-  if(m.created_ms>lastTs) lastTs=m.created_ms;
+  if(m.created_ms>lastTs)lastTs=m.created_ms;
   count++;
 }
-function hashName(s){ let h=0; for(const c of (s||'')) h=(h*31+c.charCodeAt(0))>>>0; return h; }
 
 async function load(initial){
   try{
-    const r = await fetch(`/api/chat?channel=${CHANNEL}&since=${initial?0:lastTs}`);
-    const msgs = await r.json();
-    if(initial){ feed.innerHTML=''; lastDay=''; count=0; }
-    if(initial && (!msgs || !msgs.length)){
-      feed.innerHTML = '<div class="empty">Aún no hay mensajes. Sé el primero en comentar sobre el terremoto: cómo se sintió en tu zona, si hay daños o si todos están bien. 🙏</div>';
-      return;
-    }
-    const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 120;
+    const r=await fetch(`/api/chat?channel=${CHANNEL}&since=${initial?0:lastTs}`);
+    const msgs=await r.json();
+    if(initial){feed.innerHTML='';lastDay='';count=0;}
+    if(initial&&(!msgs||!msgs.length)){feed.innerHTML='<div class="empty">Aún no hay mensajes. Sé el primero en comentar sobre el terremoto: cómo se sintió en tu zona, si hay daños o si todos están bien. 🙏</div>';return;}
+    const nearBottom=feed.scrollHeight-feed.scrollTop-feed.clientHeight<120;
     (msgs||[]).forEach(addMsg);
-    subEl.textContent = `${count} mensaje${count===1?'':'s'} · en vivo`;
-    if(initial || nearBottom) feed.scrollTop = feed.scrollHeight;
-  }catch(e){ if(initial) feed.innerHTML='<div class="empty">No se pudo cargar el muro. Revisa tu conexión.</div>'; }
+    subEl.textContent=`${count} mensaje${count===1?'':'s'} · en vivo`;
+    if(initial&&focusId){const el=document.getElementById('m-'+focusId);if(el){el.classList.add('flash');el.scrollIntoView({block:'center'});return;}}
+    if(initial||nearBottom)feed.scrollTop=feed.scrollHeight;
+  }catch(e){if(initial)feed.innerHTML='<div class="empty">No se pudo cargar el muro. Revisa tu conexión.</div>';}
 }
+
+function setPhoto(file){
+  photoFile=file||null;
+  const pv=document.getElementById('preview');
+  if(!file){pv.style.display='none';document.getElementById('previewImg').removeAttribute('src');return;}
+  document.getElementById('previewImg').src=URL.createObjectURL(file);
+  pv.style.display='block';
+}
+document.getElementById('btnGallery').onclick=()=>document.getElementById('fileGallery').click();
+document.getElementById('btnCamera').onclick=()=>document.getElementById('fileCamera').click();
+document.getElementById('fileGallery').onchange=(e)=>setPhoto(e.target.files[0]);
+document.getElementById('fileCamera').onchange=(e)=>setPhoto(e.target.files[0]);
+document.getElementById('rmPhoto').onclick=()=>{setPhoto(null);document.getElementById('fileGallery').value='';document.getElementById('fileCamera').value='';};
 
 async function send(){
   const body=(bodyEl.value||'').trim();
-  if(!body || busy) return;
-  busy=true; sendBtn.disabled=true;
-  const name=(nameEl.value||'').trim().slice(0,60) || 'Anónimo';
-  localStorage.setItem('muro_name', name);
+  if((!body&&!photoFile)||busy)return;
+  if(!capEl.value.trim()){toast('Responde la suma para confirmar que no eres un bot.');capEl.focus();return;}
+  busy=true;sendBtn.disabled=true;
+  const name=(nameEl.value||'').trim().slice(0,60)||'Anónimo';
+  localStorage.setItem('muro_name',name);
+  const fd=new FormData();
+  fd.append('channel',CHANNEL);fd.append('name',name);fd.append('body',body);
+  fd.append('captcha_nonce',capNonce);fd.append('captcha_answer',capEl.value.trim());
+  fd.append('website',document.getElementById('website').value);
+  if(photoFile)fd.append('photo',photoFile);
   try{
-    const r = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel:CHANNEL,name,body})});
-    if(r.status===429){ toast('Vas muy rápido. Espera unos segundos.'); }
-    else if(!r.ok){ const d=await r.json().catch(()=>({})); toast(d.error||'No se pudo enviar.'); }
-    else { bodyEl.value=''; bodyEl.style.height='auto'; await load(false); feed.scrollTop=feed.scrollHeight; }
-  }catch(e){ toast('Error de red al enviar.'); }
-  busy=false; sendBtn.disabled=false; bodyEl.focus();
+    const r=await fetch('/api/chat',{method:'POST',body:fd});
+    if(r.status===429){toast('Vas muy rápido. Espera unos segundos.');}
+    else if(r.status===400){const d=await r.json().catch(()=>({}));toast(d.message||d.error||'No se pudo enviar.');await newCaptcha();}
+    else if(r.status===415){toast('Esa foto no es válida (usa JPG/PNG/WebP, máx 6 MB).');}
+    else if(!r.ok){const d=await r.json().catch(()=>({}));toast(d.error||'No se pudo enviar.');}
+    else{bodyEl.value='';bodyEl.style.height='auto';setPhoto(null);document.getElementById('fileGallery').value='';document.getElementById('fileCamera').value='';await newCaptcha();await load(false);feed.scrollTop=feed.scrollHeight;}
+  }catch(e){toast('Error de red al enviar.');}
+  busy=false;sendBtn.disabled=false;bodyEl.focus();
+}
+bodyEl.addEventListener('input',()=>{bodyEl.style.height='auto';bodyEl.style.height=Math.min(bodyEl.scrollHeight,120)+'px';});
+bodyEl.addEventListener('keydown',(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+sendBtn.addEventListener('click',send);
+
+function startEdit(wrap){
+  const id=wrap.dataset.id,bub=wrap.querySelector('.bub'),txEl=bub.querySelector('.tx');
+  const current=txEl?txEl.textContent:'';
+  if(bub.querySelector('.editbox'))return;
+  const box=document.createElement('div');box.className='editbox';
+  const ta=document.createElement('textarea');ta.maxLength=600;ta.value=current;
+  ta.style.cssText='width:100%;border:1px solid #c4c6d0;border-radius:8px;padding:8px;font:inherit;font-size:14px;resize:vertical';
+  const bar=document.createElement('div');bar.style.cssText='display:flex;gap:8px;justify-content:flex-end;margin-top:5px';
+  const cancel=document.createElement('button');cancel.textContent='Cancelar';cancel.style.cssText='border:0;background:#eee;border-radius:6px;padding:5px 12px;font-weight:700;cursor:pointer';
+  const save=document.createElement('button');save.textContent='Guardar';save.style.cssText='border:0;background:#13284f;color:#fff;border-radius:6px;padding:5px 12px;font-weight:700;cursor:pointer';
+  bar.append(cancel,save);box.append(ta,bar);
+  bub.insertBefore(box,bub.querySelector('.acts'));ta.focus();
+  cancel.onclick=()=>box.remove();
+  save.onclick=async()=>{
+    const nb=ta.value.trim();if(!nb){toast('El mensaje no puede quedar vacío.');return;}
+    const r=await fetch('/api/chat/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:nb})});
+    if(r.status===401){toast('Inicia sesión para editar.');return;}
+    if(!r.ok){const d=await r.json().catch(()=>({}));toast(d.error||'No se pudo editar.');return;}
+    if(txEl){txEl.textContent=nb;}else{const nt=document.createElement('div');nt.className='tx';nt.textContent=nb;bub.insertBefore(nt,box);}
+    const meta=bub.querySelector('.meta');if(meta&&!/editado/.test(meta.textContent))meta.textContent='editado · '+meta.textContent;
+    box.remove();toast('Mensaje actualizado.');
+  };
 }
 
-bodyEl.addEventListener('input', ()=>{ bodyEl.style.height='auto'; bodyEl.style.height=Math.min(bodyEl.scrollHeight,120)+'px'; });
-bodyEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
-sendBtn.addEventListener('click', send);
+function shareMsg(wrap){
+  const id=wrap.dataset.id;
+  const name=(wrap.querySelector('.nm')?wrap.querySelector('.nm').textContent:'Alguien').trim();
+  const tx=wrap.querySelector('.tx')?wrap.querySelector('.tx').textContent:'una foto del terremoto';
+  const url=location.origin+'/muro/p/'+id;
+  const text=`${name} en el Muro Sísmico de SISMO911: "${tx.slice(0,140)}"`;
+  if(navigator.share){navigator.share({title:'Muro Sísmico — SISMO911',text,url}).catch(()=>{});return;}
+  const u=encodeURIComponent(url),t=encodeURIComponent(text);
+  document.getElementById('sheetLinks').innerHTML=`
+    <a href="https://wa.me/?text=${t}%20${u}" target="_blank" rel="noopener">🟢 WhatsApp</a>
+    <a href="https://t.me/share/url?url=${u}&text=${t}" target="_blank" rel="noopener">🔵 Telegram</a>
+    <a href="https://twitter.com/intent/tweet?text=${t}&url=${u}" target="_blank" rel="noopener">✖ X (Twitter)</a>
+    <a href="https://www.facebook.com/sharer/sharer.php?u=${u}" target="_blank" rel="noopener">🔵 Facebook</a>
+    <button class="sh" data-copy="${esc(url)}">🔗 Copiar enlace</button>`;
+  document.getElementById('sheet').style.display='flex';
+}
+document.getElementById('sheetClose').onclick=()=>document.getElementById('sheet').style.display='none';
+document.getElementById('sheet').addEventListener('click',(e)=>{if(e.target.id==='sheet')e.currentTarget.style.display='none';});
+document.getElementById('sheetLinks').addEventListener('click',(e)=>{const b=e.target.closest('[data-copy]');if(b){navigator.clipboard.writeText(b.dataset.copy).then(()=>toast('Enlace copiado.'));document.getElementById('sheet').style.display='none';}});
 
-load(true);
-setInterval(()=>{ if(!document.hidden) load(false); }, 5000);
+feed.addEventListener('click',(e)=>{
+  const img=e.target.closest('.ph');if(img){document.getElementById('lbImg').src=img.dataset.full;document.getElementById('lb').style.display='flex';return;}
+  const btn=e.target.closest('button[data-act]');if(!btn)return;
+  const wrap=e.target.closest('.msg');if(!wrap)return;
+  if(btn.dataset.act==='share')shareMsg(wrap);
+  else if(btn.dataset.act==='edit')startEdit(wrap);
+});
+document.getElementById('lb').onclick=()=>document.getElementById('lb').style.display='none';
+
+(async function init(){await whoami();await newCaptcha();await load(true);setInterval(()=>{if(!document.hidden)load(false);},5000);})();
 </script>
 </body>
 </html>

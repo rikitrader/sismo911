@@ -383,6 +383,37 @@ app.get('/refugios', (c) => c.env.ASSETS.fetch(new Request(new URL('/refugios.ht
 // (reuses the /api/chat backend on the 'terremotos' channel).
 app.get('/muro', (c) => c.env.ASSETS.fetch(new Request(new URL('/muro.html', c.req.url))));
 
+// Per-message SHARE page (viral): rich Open Graph/Twitter unfurl built from a
+// single wall message, then meta-refresh to the wall highlighting it. No inline
+// JS (CSP-safe) — the redirect is a <meta http-equiv="refresh">.
+app.get('/muro/p/:id', async (c) => {
+  const id = c.req.param('id');
+  const row = await c.env.DB.prepare(
+    `SELECT id, name, body, image_key FROM chat_messages WHERE id = ? AND channel = 'terremotos' AND flagged = 0`,
+  ).bind(id).first<{ id: string; name: string; body: string; image_key: string | null }>().catch(() => null);
+  const esc = (s: string) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
+  const origin = new URL(c.req.url).origin;
+  const dest = `${origin}/muro?m=${encodeURIComponent(id)}`;
+  const who = esc((row?.name || 'Alguien').slice(0, 60));
+  const text = esc((row?.body || 'Comenta los terremotos en el Muro Sísmico de SISMO911.').slice(0, 200));
+  const title = `${who} en el Muro Sísmico — SISMO911`;
+  const img = row?.image_key ? `${origin}/api/chat/photo/${esc(id)}` : `${origin}/og/og-default.png`;
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<meta name="description" content="${text}">
+<meta property="og:type" content="article"><meta property="og:site_name" content="SISMO911">
+<meta property="og:title" content="${title}"><meta property="og:description" content="${text}">
+<meta property="og:url" content="${esc(dest)}"><meta property="og:image" content="${esc(img)}">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${text}"><meta name="twitter:image" content="${esc(img)}">
+<meta http-equiv="refresh" content="0; url=${esc(dest)}">
+<link rel="canonical" href="${esc(dest)}"></head>
+<body style="font-family:system-ui;background:#eae6df;color:#13284f;text-align:center;padding:40px">
+<p>Abriendo el Muro Sísmico… <a href="${esc(dest)}">toca aquí si no redirige</a>.</p></body></html>`;
+  return c.html(html, 200, { 'Cache-Control': 'public, max-age=300' });
+});
+
 // Offline GPS buffer flush: the phone uploads fixes it captured while the
 // WebSocket was down. Unit-token auth (same as the WS); ingested in 'backfill'
 // mode (24h window, no jump guard, source 'buffered', not broadcast).
