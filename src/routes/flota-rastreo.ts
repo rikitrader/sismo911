@@ -42,7 +42,7 @@ flotaRastreo.post('/posicion', async (c) => {
   const b = (await c.req.json().catch(() => null)) as PosBody | null;
   // A field-unit token (if present) authoritatively identifies the posting unit —
   // a unit can only report its OWN position. Operator sessions use body.unidad_id.
-  const tokenUnidad = await verifyUnitToken(c.env, unitTokenFromRequest(c.req.raw)).catch(() => null);
+  const tokenUnidad = (await verifyUnitToken(c.env, unitTokenFromRequest(c.req.raw)).catch(() => null))?.unitId ?? null;
   const unidad_id = tokenUnidad ?? str(b?.unidad_id, 120);
   const lat = num(b?.lat);
   const lon = num(b?.lon);

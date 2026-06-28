@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMO911 — Mapa de Unidades en Vivo</title>
+  <meta name="description" content="Mapa de comando — posiciones GPS de unidades en tiempo real. Acceso restringido." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://sismo911.com/admin/flota/live" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#0b1830" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/app.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/quake-clock.js"></script>
+  <style>
+    body{background:#eef0f4}
+    .eoc-bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%)}
+    .eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7a8092}
+    .card{background:#fff;border:1px solid #d7dbe4;border-radius:.7rem}
+    .row:hover{background:#eef1f8;cursor:pointer}
+    #fmap{height:72vh;min-height:520px;border-radius:.5rem;z-index:0}
+    .mono{font-family:'JetBrains Mono',monospace}
+    .leaflet-popup-content{font-family:'Public Sans',sans-serif;font-size:.8rem;line-height:1.45}
+    .dot{display:inline-block;width:.7rem;height:.7rem;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px #c4c6d0;vertical-align:middle}
+    .pulse{position:relative}
+    .pulse::after{content:'';position:absolute;inset:0;border-radius:9999px;opacity:.6;animation:pl 1.6s ease-out infinite;background:var(--pulse-c,#15803d)}
+    @keyframes pl{0%{transform:scale(1);opacity:.5}100%{transform:scale(2.4);opacity:0}}
+    .ulist{max-height:calc(72vh - 46px);min-height:474px;overflow-y:auto}
+    .uitem{display:flex;align-items:center;gap:.6rem;padding:.55rem .8rem;border-top:1px solid #eceef3}
+  </style>
+</head>
+<body class="font-sans text-on-surface">
+  <header class="eoc-bar text-white">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-3">
+        <img src="/logo.svg" alt="SISMO911" class="h-10 w-10" />
+        <div>
+          <div class="font-display font-extrabold text-lg leading-none">SISMO911</div>
+          <div class="text-[10px] tracking-[0.18em] text-white/60 mt-0.5">MAPA DE UNIDADES EN VIVO</div>
+        </div>
+      </div>
+      <nav class="flex items-center gap-4 text-sm font-medium text-white/85">
+        <span id="liveDot" class="flex items-center gap-1.5 text-[11px] text-white/70"><span id="liveDotPip" class="dot" style="background:#64748b"></span> <span id="liveLabel">CONECTANDO…</span></span>
+        <a href="/flota" class="hover:text-white">Despacho</a>
+        <a href="/admin" class="hover:text-white">← Consola</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-6 space-y-5">
+    <div class="flex items-end justify-between flex-wrap gap-3">
+      <div>
+        <div class="eyebrow">Comando y control</div>
+        <h1 class="font-display font-extrabold text-2xl leading-tight">Posiciones de flota en tiempo real</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="lastUpdate" class="text-[11px] text-on-surface-variant mono">—</span>
+        <button id="refreshBtn" class="bg-primary text-white font-semibold rounded-md px-3 py-2 text-xs">↻ Actualizar</button>
+      </div>
+    </div>
+
+    <!-- auth / error banner -->
+    <div id="authBanner" class="hidden card p-3 text-sm flex items-center justify-between gap-3" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c">
+      <span id="authBannerMsg"></span>
+      <a href="/login?next=/admin/flota/live" class="bg-primary text-white font-bold rounded-md px-3 py-1.5 text-xs whitespace-nowrap">Inicia sesión como operador →</a>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-4">
+      <!-- map -->
+      <div class="lg:col-span-2 card p-3">
+        <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div class="eyebrow">Mapa de despliegue · GPS en vivo</div>
+          <div id="mapLegend" class="flex gap-3 flex-wrap text-[11px] text-on-surface-variant"></div>
+        </div>
+        <div id="fmap"></div>
+      </div>
+
+      <!-- unit list -->
+      <div class="card overflow-hidden">
+        <div class="px-4 pt-4 pb-2 flex items-center justify-between">
+          <span class="eyebrow">Unidades</span>
+          <span id="unitCount" class="text-[11px] text-on-surface-variant mono">—</span>
+        </div>
+        <div id="unitList" class="ulist">
+          <div class="px-4 py-8 text-center text-on-surface-variant text-sm">Cargando…</div>
+        </div>
+      </div>
+    </div>
+    <p class="text-[11px] text-on-surface-variant">Posiciones GPS en vivo por WebSocket. Un punto solo aparece cuando la unidad ha reportado una posición; las unidades sin señal por más de 2 minutos se muestran en gris. Acceso de operador requerido.</p>
+  </main>
+
+<script>
+const $=s=>document.querySelector(s);
+const api=(p,o)=>fetch('/api/'+p,Object.assign({credentials:'same-origin'},o));
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const hhmm=ms=>ms?new Date(Number(ms)).toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
+const num=n=>(n==null||n==='')?null:Number(n);
+
+const STALE_MS=120000; // > 2 min with no fix → "sin señal" (gray)
+const UTIPO={ambulancia:'Ambulancia',rescate:'Rescate',bomberos:'Bomberos',carga:'Carga',moto:'Moto',dron:'Dron',otro:'Otro'};
+
+// Three operator colours.
+const C_GRAY='#64748b', C_GREEN='#16a34a', C_RED='#dc2626';
+// status of the unit row (estado operativo del despliegue)
+function unitColor(u){
+  const fix=num(u.recorded_at);
+  if(fix==null||Date.now()-fix>STALE_MS) return C_GRAY;                 // sin señal / obsoleta
+  if(u.dispatch_status && u.dispatch_status!=='cleared') return C_RED;  // en emergencia / asignada
+  return C_GREEN;                                                        // en vivo, libre
+}
+function relSeen(u){
+  const fix=num(u.recorded_at);
+  if(fix==null) return 'sin señal';
+  const s=Math.max(0,Math.round((Date.now()-fix)/1000));
+  if(s<60) return 'visto hace '+s+'s';
+  const m=Math.round(s/60);
+  if(m<60) return 'visto hace '+m+' min';
+  const h=Math.round(m/60);
+  return 'visto hace '+h+' h';
+}
+const kmh=mps=>mps==null?null:Math.round(Number(mps)*3.6);
+
+// ---------------- auth banner ----------------
+function showAuth(msg){$('#authBannerMsg').textContent=msg||'Sesión de operador requerida.';$('#authBanner').classList.remove('hidden');}
+function clearAuth(){$('#authBanner').classList.add('hidden');}
+
+// ---------------- live indicator ----------------
+function setLive(state){
+  const pip=$('#liveDotPip'), lbl=$('#liveLabel');
+  if(state==='live'){pip.style.background=C_GREEN;pip.classList.add('pulse');lbl.textContent='EN VIVO';document.documentElement.style.setProperty('--pulse-c',C_GREEN);}
+  else if(state==='poll'){pip.classList.remove('pulse');pip.style.background='#d97706';lbl.textContent='RECONECTANDO…';}
+  else{pip.classList.remove('pulse');pip.style.background='#64748b';lbl.textContent='CONECTANDO…';}
+}
+
+// ---------------- state ----------------
+const STATE={};        // unit_id → unit record (snapshot fields + latest live fix)
+const MARKERS={};      // unit_id → leaflet circleMarker
+const ANIM={};         // unit_id → animation frame id
+let fmap=null, markerLayer=null, fitted=false;
+
+// ---------------- map ----------------
+function initMap(){
+  fmap=L.map('fmap',{attributionControl:false}).setView([10.48,-66.9],8);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(fmap);
+  markerLayer=L.layerGroup().addTo(fmap);
+  $('#mapLegend').innerHTML=[
+    [C_GREEN,'En vivo (libre)'],
+    [C_RED,'En emergencia / asignada'],
+    [C_GRAY,'Sin señal (>2 min)']
+  ].map(([c,t])=>`<span class="flex items-center gap-1"><span class="dot" style="background:${c}"></span>${t}</span>`).join('');
+}
+
+function popupHtml(u){
+  const sp=kmh(u.speed_mps), ac=num(u.accuracy_m), caso=u.dispatch_case_id;
+  return `<b>${esc(u.name||u.id)}</b><br>`
+    +`${esc(UTIPO[u.type]||u.type||'')} · ${esc(u.status||'—')}<br>`
+    +`Velocidad: ${sp==null?'—':sp+' km/h'}<br>`
+    +`Precisión: ${ac==null?'—':Math.round(ac)+' m'}<br>`
+    +`<span style="color:#475569">${relSeen(u)}</span>`
+    +(caso?`<br>Caso: <b class="mono">${esc(caso)}</b>`:'');
+}
+
+// Smoothly interpolate a circleMarker from its current latlng to a new one.
+function moveMarker(id,lat,lng){
+  const mk=MARKERS[id]; if(!mk)return;
+  if(ANIM[id])cancelAnimationFrame(ANIM[id]);
+  const from=mk.getLatLng(), t0=performance.now(), dur=600;
+  const dLat=lat-from.lat, dLng=lng-from.lng;
+  if(Math.abs(dLat)<1e-7&&Math.abs(dLng)<1e-7){mk.setLatLng([lat,lng]);return;}
+  (function step(t){
+    const k=Math.min(1,(t-t0)/dur), e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+    mk.setLatLng([from.lat+dLat*e,from.lng+dLng*e]);
+    if(k<1)ANIM[id]=requestAnimationFrame(step);
+  })(t0);
+}
+
+// Create or update a unit's marker from its STATE record.
+function syncMarker(id){
+  const u=STATE[id]; if(!u||!fmap)return;
+  const lat=num(u.lat), lng=num(u.lng);
+  if(lat==null||lng==null)return; // NEVER place a marker for a unit without a location
+  const col=unitColor(u);
+  let mk=MARKERS[id];
+  if(mk){
+    moveMarker(id,lat,lng);
+    mk.setStyle({fillColor:col});
+    mk.setPopupContent(popupHtml(u));
+  }else{
+    mk=L.circleMarker([lat,lng],{radius:8,color:'#fff',weight:2,fillColor:col,fillOpacity:.95});
+    mk.bindPopup(popupHtml(u));
+    mk.on('click',()=>highlightRow(id));
+    mk.addTo(markerLayer);
+    MARKERS[id]=mk;
+  }
+}
+
+function fitOnce(){
+  if(fitted)return;
+  const pts=Object.values(STATE).filter(u=>num(u.lat)!=null&&num(u.lng)!=null).map(u=>[num(u.lat),num(u.lng)]);
+  if(!pts.length)return;
+  if(pts.length===1)fmap.setView(pts[0],12);else fmap.fitBounds(pts,{padding:[40,40],maxZoom:13});
+  fitted=true;
+}
+
+// ---------------- unit side list ----------------
+function renderList(){
+  const units=Object.values(STATE).sort((a,b)=>String(a.name||a.id).localeCompare(String(b.name||b.id)));
+  $('#unitCount').textContent=units.length+(units.length===1?' unidad':' unidades');
+  const el=$('#unitList');
+  if(!units.length){el.innerHTML='<div class="px-4 py-8 text-center text-on-surface-variant text-sm">Sin unidades activas.</div>';return;}
+  el.innerHTML=units.map(u=>{
+    const col=unitColor(u), has=num(u.lat)!=null&&num(u.lng)!=null;
+    return `<div class="uitem row" data-id="${esc(u.id)}">
+      <span class="dot" style="background:${col}"></span>
+      <div class="min-w-0 flex-1">
+        <div class="font-semibold text-[12px] truncate">${esc(u.name||u.id)}</div>
+        <div class="text-[11px] text-on-surface-variant">${esc(UTIPO[u.type]||u.type||'—')} · ${relSeen(u)}</div>
+      </div>
+      ${has?'':'<span class="text-[10px] text-on-surface-variant">sin posición</span>'}
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.uitem').forEach(d=>d.onclick=()=>panTo(d.dataset.id));
+}
+function panTo(id){
+  const mk=MARKERS[id]; if(!mk)return;
+  fmap.setView(mk.getLatLng(),Math.max(fmap.getZoom(),13),{animate:true});
+  mk.openPopup();
+}
+function highlightRow(id){
+  const r=document.querySelector('.uitem[data-id="'+CSS.escape(id)+'"]');
+  if(r){r.scrollIntoView({block:'nearest'});r.style.background='#dbeafe';setTimeout(()=>{r.style.background='';},900);}
+}
+
+// ---------------- initial snapshot ----------------
+async function loadSnapshot(){
+  const r=await api('admin/flota/live');
+  if(r.status===401){showAuth('Sesión de operador requerida para ver el mapa de unidades.');setLive('idle');return false;}
+  if(!r.ok)return false;
+  clearAuth();
+  const d=await r.json().catch(()=>({}));
+  const units=d.units||[];
+  const seen=new Set();
+  units.forEach(u=>{ if(!u||!u.id)return; STATE[u.id]=u; seen.add(u.id); syncMarker(u.id); });
+  // drop units that vanished from the snapshot
+  Object.keys(STATE).forEach(id=>{
+    if(!seen.has(id)){
+      if(MARKERS[id]){markerLayer.removeLayer(MARKERS[id]);delete MARKERS[id];}
+      delete STATE[id];
+    }
+  });
+  fitOnce();
+  renderList();
+  $('#lastUpdate').textContent='Act. '+hhmm(d.now||Date.now());
+  return true;
+}
+
+// ---------------- WebSocket live tracking ----------------
+let ws=null, wsBackoff=1000, wsPing=null, reconn=null;
+function connectWS(){
+  let url;
+  try{url=(location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/api/admin/flota/live';}catch(e){return;}
+  try{ws=new WebSocket(url);}catch(e){scheduleReconnect();return;}
+  ws.onopen=()=>{
+    wsBackoff=1000;setLive('live');
+    if(wsPing)clearInterval(wsPing);
+    wsPing=setInterval(()=>{try{ws.send('ping');}catch(e){}},25000);
+  };
+  ws.onmessage=ev=>{
+    if(ev.data==='pong')return;
+    let msg;try{msg=JSON.parse(ev.data);}catch(e){return;}
+    if(!msg)return;
+    if(msg.type==='pong')return;
+    if(msg.type==='unit_location'&&msg.unitId){
+      const id=msg.unitId;
+      const prev=STATE[id]||{id};
+      // Live fix carries position/telemetry; dispatch + identity come from the snapshot.
+      STATE[id]=Object.assign(prev,{
+        id,
+        lat:msg.lat, lng:msg.lng,
+        accuracy_m:msg.accuracy_m, heading:msg.heading,
+        speed_mps:msg.speed_mps, battery_pct:msg.battery_pct,
+        recorded_at:msg.recorded_at, received_at:msg.received_at
+      });
+      syncMarker(id);
+      renderList();
+      $('#lastUpdate').textContent='En vivo '+hhmm(num(msg.received_at)||Date.now());
+    }
+  };
+  ws.onclose=scheduleReconnect;
+  ws.onerror=()=>{try{ws.close();}catch(e){}};
+}
+function scheduleReconnect(){
+  if(wsPing){clearInterval(wsPing);wsPing=null;}
+  ws=null;setLive('poll');
+  if(reconn)clearTimeout(reconn);
+  reconn=setTimeout(()=>{loadSnapshot();connectWS();},wsBackoff);
+  wsBackoff=Math.min(wsBackoff*2,30000);
+}
+
+// ---------------- staleness sweep ----------------
+// Re-evaluate every 30s so live markers fade to gray if a unit stops reporting.
+setInterval(()=>{
+  Object.keys(STATE).forEach(id=>{ if(MARKERS[id])MARKERS[id].setStyle({fillColor:unitColor(STATE[id])}); });
+  renderList();
+},30000);
+
+$('#refreshBtn').onclick=loadSnapshot;
+
+// ---------------- boot ----------------
+initMap();
+(async()=>{ const ok=await loadSnapshot(); if(ok)connectWS(); })();
+</script>
+</body>
+</html>

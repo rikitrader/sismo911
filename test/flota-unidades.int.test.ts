@@ -207,25 +207,5 @@ describe('DELETE /api/flota/unidades/:id', () => {
   });
 });
 
-describe('POST /api/flota/unidades/:id/token — issue (smoke)', () => {
-  it('issues a token once and persists only its hash', async () => {
-    const id = (await createUnit()).json.id;
-    const r = await call(app, 'POST', `/api/flota/unidades/${id}/token`, env, { label: 'campo-1' });
-    expect(r.status).toBe(201);
-    expect(r.json.ok).toBe(true);
-    expect(r.json.token).toMatch(/^fbu_[0-9a-f]+_[0-9a-f]+$/);
-    expect(r.json.prefix).toBeTruthy();
-    expect(r.json.aviso).toContain('no se mostrará de nuevo');
-
-    const row = db.raw.prepare('SELECT * FROM flota_unit_tokens WHERE id = ?').get(r.json.id) as any;
-    expect(row.unidad_id).toBe(id);
-    expect(row.label).toBe('campo-1');
-    expect(row.token_hash).not.toBe(r.json.token); // hashed, not plaintext
-  });
-
-  it('returns 404 when issuing a token for an unknown unit', async () => {
-    const r = await call(app, 'POST', '/api/flota/unidades/uni_missing/token', env, {});
-    expect(r.status).toBe(404);
-    expect(r.json.error).toBe('no encontrado');
-  });
-});
+// NB: field-unit GPS tokens moved to the new live-GPS system (flota_units +
+// /api/admin/flota) — covered by test/flota-live-gps.int.test.ts.

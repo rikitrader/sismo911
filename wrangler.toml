@@ -54,6 +54,8 @@ run_worker_first = [
   "/",
   "/api/*",
   "/mcp",
+  "/flota/track/*",
+  "/ws/flota/*",
   "/familia",
   "/emergencia/*",
   "/estados",
@@ -122,9 +124,18 @@ bucket_name = "desaparecidos-fotos"
 name = "FLOTA_TRACKING"
 class_name = "FlotaTracking"
 
+# Live-GPS hub: phone units stream GPS; operator consoles subscribe.
+[[durable_objects.bindings]]
+name = "FLEET_LIVE"
+class_name = "FleetLive"
+
 [[migrations]]
 tag = "v1-flota-tracking"
 new_sqlite_classes = ["FlotaTracking"]
+
+[[migrations]]
+tag = "v2-fleet-live"
+new_sqlite_classes = ["FleetLive"]
 
 [observability]
 enabled = true

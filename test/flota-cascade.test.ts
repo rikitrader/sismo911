@@ -17,7 +17,7 @@ const app = mount([
 ]);
 
 beforeEach(() => {
-  db = makeDb(['migrations/0037_flota.sql', 'migrations/0038_flota_unit_tokens.sql']);
+  db = makeDb();
   env = makeEnv(db);
 });
 
