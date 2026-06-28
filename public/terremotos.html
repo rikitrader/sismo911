@@ -110,12 +110,17 @@
     .tick {
       display: inline-flex; align-items: baseline; gap: 10px;
       font-family: 'JetBrains Mono', monospace; white-space: nowrap; max-width: 100%;
+      color: inherit; cursor: pointer;
     }
+    a.tick:hover .place { text-decoration: underline; }
+    a.tick:hover .tick-go { opacity: 1; }
     .tick .mag { font-weight: 700; font-size: 16px; }
     .tick .arrow { font-size: 12px; opacity: .9; }
     .tick .place { color: #d7dde8; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tick .ago { color: #7a8699; font-size: 12px; flex: 0 0 auto; }
+    .tick .tick-go { color: #9fb0c4; font-size: 11px; font-weight: 600; flex: 0 0 auto; opacity: .55; transition: opacity .2s ease; }
+    @media (max-width: 640px) { .tick .tick-go { display: none; } }
     .tick-crit .mag, .tick-crit .arrow { color: #ff5a6e; }
     .tick-warn .mag, .tick-warn .arrow { color: #ffa23d; }
     .tick-safe .mag, .tick-safe .arrow { color: #5fd17a; }
@@ -516,18 +521,34 @@
   const TICKER_MS = 5000;     // swap cadence
   const TICKER_MAX = 10;      // how many recent quakes to cycle through
 
+  // Extract a clean locality from a place string ("9 km al suroeste de Naiguatá"
+  // → "Naiguatá") so the banner can deep-link into the historical archive filtered
+  // to that location. Falls back to the first comma-segment.
+  function quakeLocality(q) {
+    const p = esPlace(q.place);
+    const m = p.match(/\b(?:de|of)\b\s+(.+)$/i);
+    return (m ? m[1] : p).split(',')[0].trim();
+  }
+  // Deep-link a banner sismo to the SAME dataset's historical archive (/archivo,
+  // backed by /api/events/history) filtered to its locality — links the live
+  // banner to the history data set.
+  function tickerHref(q) {
+    const loc = quakeLocality(q);
+    return '/archivo?q=' + encodeURIComponent(loc) + '&from=quake';
+  }
   function tickerCell(q, avg) {
     const s = sev(q.mag);
     const cls = s === 'critical' ? 'tick-crit' : s === 'warning' ? 'tick-warn' : 'tick-safe';
     const arrow = q.mag >= avg ? '▲' : '▼';
     const place = esPlace(q.place).split(',')[0];
     return { cls, major: q.mag >= 6,
-      html: `<span class="tick ${cls}">
+      html: `<a class="tick ${cls}" href="${tickerHref(q)}" title="Ver el historial sísmico de esta zona en el Archivo Histórico" style="text-decoration:none">
         <span class="mag">M ${q.mag.toFixed(1)}</span>
         <span class="arrow">${arrow}</span>
         <span class="place">${esc(place)}</span>
         <span class="ago">${timeAgo(q.time)}</span>
-      </span>` };
+        <span class="tick-go" aria-hidden="true">↗ historial</span>
+      </a>` };
   }
 
   function paintTicker(animate) {
