@@ -51,16 +51,31 @@ export function isRecaptchaBlock(status: number, body: string): boolean {
   return /recaptcha|captcha|forbiddenerror|verificaci[oó]n requerida/i.test(String(body || ''));
 }
 
+// Phase 2: when a real-Chrome resolver is configured we pull pages THROUGH it
+// (it holds the reCAPTCHA-passed browser session) instead of hitting theempire
+// directly. The resolver speaks the SAME ?page=&pageSize= contract and returns the
+// SAME JSON, so only the endpoint + auth header change. Pure + tested.
+export function chooseFamiliaEndpoint(
+  base: string, resolverUrl?: string | null,
+): { endpoint: string; viaResolver: boolean } {
+  const r = (resolverUrl || '').trim();
+  return r ? { endpoint: r, viaResolver: true } : { endpoint: base, viaResolver: false };
+}
+
 export async function ingestFamilia(env: Env): Promise<number> {
   const base = (env as any).FAMILIA_SOURCE_URL as string | undefined;
   if (!base) { console.warn('[familia] FAMILIA_SOURCE_URL not set — skipping'); return 0; }
-  const sep = base.includes('?') ? '&' : '?';
+  const resolverTok = (env as any).FAMILIA_RESOLVER_TOKEN as string | undefined;
+  const { endpoint, viaResolver } = chooseFamiliaEndpoint(base, (env as any).FAMILIA_RESOLVER_URL);
+  const sep = endpoint.includes('?') ? '&' : '?';
   try {
     let start = 1;
     try { start = Math.max(1, parseInt((await env.CACHE.get(CURSOR_KEY)) || '1', 10) || 1); } catch { /* default 1 */ }
 
     const fetchPage = async (page: number) => {
-      const res = await fetch(`${base}${sep}page=${page}&pageSize=${PAGE_SIZE}`, { headers: { accept: 'application/json' } });
+      const headers: Record<string, string> = { accept: 'application/json' };
+      if (viaResolver && resolverTok) headers.authorization = `Bearer ${resolverTok}`;
+      const res = await fetch(`${endpoint}${sep}page=${page}&pageSize=${PAGE_SIZE}`, { headers });
       if (!res.ok) {
         // Read a bounded slice of the body to classify the failure. A reCAPTCHA
         // wall is a known, structured degradation (not a transient blip): record
@@ -68,6 +83,10 @@ export async function ingestFamilia(env: Env): Promise<number> {
         // an operator knows the real-Chrome resolver is needed — RAV stays the
         // source of truth meanwhile. Fail fast (don't grind the page loop).
         const body = await res.text().catch(() => '');
+        // Via the resolver, our own service is the origin: a failure means the
+        // resolver/browser session itself is down (record distinctly), not that
+        // *we* hit the wall. Direct, classify the reCAPTCHA wall as before.
+        if (viaResolver) throw new Error(`degraded:resolver_http_${res.status}`);
         if (isRecaptchaBlock(res.status, body)) throw new Error(RECAPTCHA_DEGRADED);
         throw new Error(`HTTP ${res.status}`);
       }
@@ -138,11 +157,12 @@ export async function ingestFamilia(env: Env): Promise<number> {
     return written;
   } catch (e: any) {
     const msg = String(e?.message ?? e);
-    if (msg === RECAPTCHA_DEGRADED) {
+    if (msg.startsWith('degraded:')) {
       // Known degradation, not a crash: one clear line, no alarm spam. RAV remains
-      // the live source; /api/status will report theempire as DOWN until a
-      // real-Chrome resolver (CNE pattern) restores access.
-      console.warn('[familia] source DEGRADED (reCAPTCHA wall) — theempire unreachable by server fetch; RAV remains source of truth. See /api/status.');
+      // the live source; /api/status reports theempire DOWN. `degraded:recaptcha`
+      // = direct fetch hit the wall (need the resolver); `degraded:resolver_http_*`
+      // = the resolver service/browser session itself is down (restart it).
+      console.warn(`[familia] source DEGRADED (${msg}) — RAV remains source of truth. See /api/status.`);
     } else {
       console.error('[familia] ingest failed:', msg);
     }

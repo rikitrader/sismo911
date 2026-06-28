@@ -53,6 +53,12 @@ export interface Env {
   // The Worker can't drive a browser; when set, cédula verification POSTs here.
   CNE_RESOLVER_URL?: string;
   CNE_RESOLVER_TOKEN?: string; // bearer token for the resolver service
+  // Familia registry resolver (external real-Chrome service for the theempire feed,
+  // which now sits behind a reCAPTCHA wall a server-side fetch can't pass). When set,
+  // the hourly familia ingest pulls pages THROUGH this service instead of hitting
+  // theempire directly; unset ⇒ direct fetch (which currently degrades to reCAPTCHA).
+  FAMILIA_RESOLVER_URL?: string;
+  FAMILIA_RESOLVER_TOKEN?: string; // bearer token for the resolver service
   // Social/web disaster monitor (all optional — features gate on their presence).
   PUBLIC_BASE_URL?: string;
   TELEGRAM_CHANNELS?: string;      // comma-separated public channel handles

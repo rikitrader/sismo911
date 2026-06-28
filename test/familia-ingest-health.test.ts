@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { classifyIngestHealth, type IngestLogRow } from '../src/lib/db';
-import { isRecaptchaBlock, RECAPTCHA_DEGRADED } from '../src/ingest/familia-cron';
+import { isRecaptchaBlock, RECAPTCHA_DEGRADED, chooseFamiliaEndpoint } from '../src/ingest/familia-cron';
 
 // Bug 2 / Phase 1: a feed that started failing (e.g. theempire put up a reCAPTCHA
 // wall) must surface as DOWN in /api/status, not fail silently every hour. These
@@ -48,5 +48,18 @@ describe('isRecaptchaBlock', () => {
   });
   it('does not misfire on an unrelated 403', () => {
     expect(isRecaptchaBlock(403, '{"error":"rate_limited"}')).toBe(false);
+  });
+});
+
+describe('chooseFamiliaEndpoint (Phase 2 resolver routing)', () => {
+  const BASE = 'https://desaparecidos-terremoto-api.theempire.tech/api/personas';
+  it('uses the direct base when no resolver is configured', () => {
+    expect(chooseFamiliaEndpoint(BASE)).toEqual({ endpoint: BASE, viaResolver: false });
+    expect(chooseFamiliaEndpoint(BASE, '')).toEqual({ endpoint: BASE, viaResolver: false });
+    expect(chooseFamiliaEndpoint(BASE, '   ')).toEqual({ endpoint: BASE, viaResolver: false });
+  });
+  it('routes through the resolver when FAMILIA_RESOLVER_URL is set', () => {
+    const R = 'https://abc.trycloudflare.com/familia';
+    expect(chooseFamiliaEndpoint(BASE, R)).toEqual({ endpoint: R, viaResolver: true });
   });
 });
