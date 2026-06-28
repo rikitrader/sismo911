@@ -67,7 +67,7 @@
     { label: 'Información', d: 'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13', items: [
       { label: 'Noticias', href: '/blog', m: ['/blog'], d: 'M4 4h16v16H4z M8 8h8M8 12h8M8 16h5' },
       { label: 'Información Verificada', href: '/informacion-verificada', m: ['/informacion-verificada'], d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-      { label: 'Muro Sísmico', href: '/muro', m: ['/muro', '/muro.html'], d: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z' },
+      { label: 'Muro de Emergencia', href: '/muro', m: ['/muro', '/muro.html'], d: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z' },
       { label: 'Radio', href: '/comms', m: ['/comms'], d: 'M4 11a16 16 0 0116 0M7 14a10 10 0 0110 0M10 17a5 5 0 014 0M12 20h.01' },
       { label: 'Guía', href: '/guia', m: ['/guia'], d: 'M12 6.25C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 1.75M12 6.25C13.5 5 15.5 4.5 20 4.5v13c-4.5 0-6.5.5-8 1.75M12 6.25v13' },
       { label: 'API / MCP', href: '/developers', m: ['/developers'], d: 'M16 18l6-6-6-6M8 6l-6 6 6 6' },
