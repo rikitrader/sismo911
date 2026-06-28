@@ -137,6 +137,7 @@ const CITIES = [
   {n:"Yumare (epicentro)", c:[-68.47,10.43]}, {n:"Puerto Cabello", c:[-68.01,10.47]},
   {n:"Maracay", c:[-67.60,10.25]}, {n:"Valencia", c:[-68.00,10.16]}
 ];
+let cityMarkers = [];
 const $ = id => document.getElementById(id);
 const fmt = d => new Date(d).toLocaleString("es-VE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
 const pct = x => (x==null?"—":(x*100).toFixed(x*100<10?1:0)+"%");
@@ -154,10 +155,13 @@ async function jget(u){ const r=await fetch(u); if(!r.ok) throw new Error("HTTP 
 function setErr(el,msg){ el.innerHTML='<div class="empty err">⚠ '+msg+'</div>'; }
 
 map.on("load", async () => {
-  // ---- cities ----
-  map.addSource("cities",{type:"geojson",data:{type:"FeatureCollection",features:CITIES.map(c=>({type:"Feature",geometry:{type:"Point",coordinates:c.c},properties:{n:c.n}}))}});
-  map.addLayer({id:"cities",type:"circle",source:"cities",paint:{"circle-radius":5,"circle-color":"#7a1fa2","circle-stroke-width":2,"circle-stroke-color":"#fff"}});
-  map.addLayer({id:"cities-lbl",type:"symbol",source:"cities",layout:{"text-field":["get","n"],"text-size":11,"text-offset":[0,1.2],"text-anchor":"top"},paint:{"text-color":"#33405a","text-halo-color":"#fff","text-halo-width":1.4}});
+  // ---- cities (HTML markers — no glyphs dependency) ----
+  cityMarkers = CITIES.map(c=>{
+    const el=document.createElement("div");
+    el.style.cssText="display:flex;align-items:center;gap:5px;font:800 11px Inter,sans-serif;color:#33405a;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;pointer-events:none";
+    el.innerHTML='<span style="width:9px;height:9px;border-radius:50%;background:#7a1fa2;border:2px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.4)"></span>'+c.n;
+    return new maplibregl.Marker({element:el,anchor:"left"}).setLngLat(c.c).addTo(map);
+  });
 
   loadEverything();
   setInterval(loadEverything, 120000); // refresco cada 2 min (tiempo real)
@@ -261,7 +265,7 @@ async function loadDetail(){
           map.addSource("shake",{type:"geojson",data:cont});
           map.addLayer({id:"shake",type:"line",source:"shake",paint:{
             "line-color":["interpolate",["linear"],["coalesce",["to-number",["get","value"]],0],3,"#9ecae1",5,"#fdae61",7,"#d7301f",9,"#7f0000"],
-            "line-width":2,"line-opacity":0.75}}, "after");
+            "line-width":2,"line-opacity":0.75}});
         }
       }catch(e){/* contours optional */}
     }
@@ -277,7 +281,8 @@ async function loadDetail(){
 
   // layer toggles
   const bind=(id,layers)=>{const el=$(id); if(!el)return; el.onchange=()=>layers.forEach(L=>{if(map.getLayer(L))map.setLayoutProperty(L,"visibility",el.checked?"visible":"none");});};
-  bind("t-after",["after"]); bind("t-shake",["shake"]); bind("t-cities",["cities","cities-lbl"]);
+  bind("t-after",["after"]); bind("t-shake",["shake"]);
+  const tc=$("t-cities"); if(tc) tc.onchange=()=>cityMarkers.forEach(m=>m.getElement().style.display=tc.checked?"flex":"none");
 }
 </script>
 </body>
