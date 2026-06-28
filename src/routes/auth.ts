@@ -92,9 +92,16 @@ auth.post('/wallet', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
   if (me.wallet_address) return c.json({ ok: true, wallet: { address: me.wallet_address, chain: c.env.CROSSMINT_CHAIN || 'base' } });
-  if (!isCrossmintConfigured(c.env)) return c.json({ error: 'wallet_not_configured' }, 503);
+  // Wallet creation only needs the server key — it does NOT use the donation
+  // Collection. Gate on the key alone so missing CROSSMINT_COLLECTION_ID (donations)
+  // doesn't block custodial-wallet provisioning.
+  if (!c.env.CROSSMINT_SERVER_KEY) return c.json({ error: 'wallet_not_configured' }, 503);
   const w = await createWalletForEmail(c.env, me.email);
-  if (!w) return c.json({ error: 'wallet_create_failed' }, 502);
+  // null = Crossmint rejected provisioning (e.g. api-key smart-wallet signer not
+  // yet enabled on the project, or a transient error). Surface the friendly
+  // "billeteras habilitándose" state rather than a hard error; reason is logged
+  // server-side in createWalletForEmail.
+  if (!w) return c.json({ error: 'wallet_not_configured' }, 503);
   await c.env.DB.prepare(
     `UPDATE users SET wallet_address = ?, wallet_locator = ?, wallet_chain = ?, wallet_created_ms = ?,
             x402_enabled = 1, x402_pay_to = ?, x402_network = ?, x402_asset = ?, x402_enabled_ms = ?
