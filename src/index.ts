@@ -23,6 +23,7 @@ import { chat } from './routes/chat';
 import { acopio } from './routes/acopio';
 import { logistica } from './routes/logistica';
 import { admin } from './routes/admin';
+import { adminRbac } from './routes/admin-rbac';
 import { funding } from './routes/funding';
 import { dashboard } from './routes/dashboard';
 import { plan } from './routes/plan';
@@ -254,6 +255,7 @@ app.route('/api/sitrep', sitrep);    // public non-PII operational sitrep / ESF 
 app.route('/api/acopio', acopio);    // /api/acopio/status — live status for acopio/hospitales/PC
 app.route('/api/acopio', logistica); // /api/acopio/{inventory,needs,shipments,match,dashboard} — FEMA-style logistics (GET public, writes operator-gated)
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
+app.route('/api/rbac', adminRbac);   // enterprise RBAC admin API (users/roles/permissions/audit/dashboard) — each route self-gates via requirePermission
 app.route('/api/monitor', monitor);  // social/web disaster-signal monitor (GET public; refresh gated; apify webhook secret-gated)
 app.route('/api/aid-orgs', aidOrgs); // curatable global disaster-relief directory (GET public; writes operator-gated)
 app.route('/api/emergencia', emergencia); // SUPER BANNER emergency spotlight profiles (GET public; writes operator-gated; share bump public)
