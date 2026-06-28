@@ -16,6 +16,7 @@ const MIGRATIONS = [
   'migrations/0050_x402_hardening.sql', // x402_resources.price_version + price history
   'migrations/0056_profile_fields.sql', // country, city, settings_json
   'migrations/0057_payment_links.sql',  // x402_resources kind/currency/archived_ms
+  'migrations/0058_accounting.sql',     // x402_payments tax_category/notes/reconciled
 ];
 
 async function setup() {
@@ -215,5 +216,66 @@ describe('profile API — payment links CRUD + access control (W3)', () => {
     const { app, env } = await setup();
     expect((await app.request('/api/profile/payment-links', {}, env)).status).toBe(401);
     expect((await app.request('/api/profile/payment-links', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://sismo911.com' }, body: '{"title":"x","amount":1}' }, env)).status).toBe(401);
+  });
+});
+
+describe('profile API — accounting ledger (W4)', () => {
+  function seedPayments(db: any, userId: string) {
+    const now = Date.now();
+    const ins = db.raw.prepare(`INSERT INTO x402_payments (id,payee_user_id,resource_url,network,asset,amount,amount_usd,pay_to,payer,status,tx_hash,created_ms,settled_ms) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    ins.run('pa', userId, '/x', 'eip155:8453', 'usdc', '6000000', 6, '0xto', '0xpayer1', 'settled', '0xhash1', now, now);
+    ins.run('pb', userId, '/x', 'eip155:8453', 'usdc', '4000000', 4, '0xto', '0xpayer2', 'settled', '0xhash2', now, now);
+    ins.run('pc', userId, '/x', 'eip155:8453', 'usdc', '2000000', 2, '0xto', '0xpayer3', 'failed', null, now, null);
+    return 'pa';
+  }
+
+  it('GET ledger returns rows + KPIs (gross/net/reconciled); 401 unauth', async () => {
+    const { app, env, db } = await setup();
+    seedPayments(db, 'usr_a');
+    expect((await app.request('/api/profile/accounting/ledger', {}, env)).status).toBe(401);
+    const r = await app.request('/api/profile/accounting/ledger', { headers: { Cookie: 'sismo_session=tok_a' } }, env);
+    expect(r.status).toBe(200);
+    const d: any = await r.json();
+    expect(d.rows.length).toBe(3);                 // includes the failed one
+    expect(d.kpis.count).toBe(2);                  // settled only
+    expect(d.kpis.gross_usd).toBe(10);
+    expect(d.kpis.fees_usd).toBe(0);
+    expect(d.kpis.net_usd).toBe(10);
+    expect(d.kpis.unreconciled_usd).toBe(10);      // nothing reconciled yet
+    expect(JSON.stringify(d)).not.toMatch(/pw_hash|pw_salt|private/i);
+  });
+
+  it('PATCH sets tax_category + notes + reconciled; updates KPIs', async () => {
+    const { app, env, db } = await setup();
+    seedPayments(db, 'usr_a');
+    const p = await app.request('/api/profile/accounting/ledger/pa', { method: 'PATCH', headers: AUTH, body: JSON.stringify({ tax_category: 'servicio', notes: 'cliente X', reconciled: true }) }, env);
+    expect(p.status).toBe(200);
+    const row: any = db.raw.prepare('SELECT tax_category,notes,reconciled,reconciled_ms FROM x402_payments WHERE id=?').get('pa');
+    expect(row.tax_category).toBe('servicio');
+    expect(row.notes).toBe('cliente X');
+    expect(row.reconciled).toBe(1);
+    expect(row.reconciled_ms).toBeTruthy();
+    const d: any = await (await app.request('/api/profile/accounting/ledger', { headers: { Cookie: 'sismo_session=tok_a' } }, env)).json();
+    expect(d.kpis.reconciled_usd).toBe(6);
+    expect(d.kpis.unreconciled_usd).toBe(4);
+  });
+
+  it('PATCH rejects bad tax_category / non-boolean reconciled', async () => {
+    const { app, env, db } = await setup();
+    seedPayments(db, 'usr_a');
+    expect((await app.request('/api/profile/accounting/ledger/pa', { method: 'PATCH', headers: AUTH, body: '{"tax_category":"nope"}' }, env)).status).toBe(400);
+    expect((await app.request('/api/profile/accounting/ledger/pa', { method: 'PATCH', headers: AUTH, body: '{"reconciled":"yes"}' }, env)).status).toBe(400);
+  });
+
+  it('access control: cannot PATCH another user payment (404); unauth 401', async () => {
+    const { app, env, db } = await setup();
+    seedPayments(db, 'usr_a');
+    const now = Date.now();
+    const pw = await hashPassword('pw');
+    db.raw.prepare(`INSERT INTO users (id,email,name,role,language,pw_hash,pw_salt,status,created_ms) VALUES (?,?,?,?,?,?,?,?,?)`).run('usr_c', 'c@s.com', 'Caro', 'citizen', 'es', pw.hash, pw.salt, 'active', now);
+    db.raw.prepare(`INSERT INTO sessions (token,user_id,expires_ms,created_ms) VALUES (?,?,?,?)`).run('tok_c', 'usr_c', now + 86_400_000, now);
+    const AUTH_C = { 'content-type': 'application/json', origin: 'https://sismo911.com', Cookie: 'sismo_session=tok_c' };
+    expect((await app.request('/api/profile/accounting/ledger/pa', { method: 'PATCH', headers: AUTH_C, body: '{"reconciled":true}' }, env)).status).toBe(404);
+    expect((await app.request('/api/profile/accounting/ledger/pa', { method: 'PATCH', headers: { 'content-type': 'application/json', origin: 'https://sismo911.com' }, body: '{"reconciled":true}' }, env)).status).toBe(401);
   });
 });
