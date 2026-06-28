@@ -27,7 +27,7 @@ export type GateDecision =
   | { kind: 'open' }                       // no auth required
   | { kind: 'login' }                      // any authenticated user
   | { kind: 'perm'; perm: string }         // requires this permission
-  | { kind: 'page' };                      // admin HTML page (login redirect on fail)
+  | { kind: 'page'; perm?: string };       // HTML page (login redirect on fail); perm defaults to ops:console
 
 /**
  * Decide what a request needs. Pure (path, method) — no env, no side effects.
@@ -68,13 +68,20 @@ export function evaluateGate(path: string, method: string): GateDecision {
   const isAcopioReview = method === 'GET' && path === '/api/acopio/submissions';
   const isFlotaApi = path.startsWith('/api/flota');
   const isFlotaAdminApi = path.startsWith('/api/admin/flota');
+  // SUMINISTROS division is gated end-to-end (staff-only, not publicly open): the
+  // SPA page AND its read APIs require suministros:read, not just writes.
+  const isSuministrosPage = path === '/suministros' || path.startsWith('/suministros/');
+  const isSuministrosRead = method === 'GET' && path.startsWith('/api/suministros/');
 
   const gated = isAdminPage || isAdminWrite || isReportModeration || isPersonModeration ||
     isDocketSubmit || isCaseAdmin || isSosTriage || isDamageReview || isManualRefresh ||
-    isShelterModeration || isSatWrite || isAcopioReview || isFlotaApi || isFlotaAdminApi;
+    isShelterModeration || isSatWrite || isAcopioReview || isFlotaApi || isFlotaAdminApi ||
+    isSuministrosPage || isSuministrosRead;
 
   if (!gated) return { kind: 'open' };
   if (isAdminPage) return { kind: 'page' };          // gated, but HTML → login redirect on fail
+  if (isSuministrosPage) return { kind: 'page', perm: 'suministros:read' }; // SPA shell → login redirect
+  if (isSuministrosRead) return { kind: 'perm', perm: 'suministros:read' }; // read APIs
   if (isDocketSubmit) return { kind: 'login' };       // any logged-in user (citizen updates land 'pending')
 
   // Phase 2 R1: map each surface to its FINE-GRAINED permission (replaces the coarse
