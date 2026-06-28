@@ -135,6 +135,7 @@
         <div class="flex items-center gap-2">
           <span id="d_status" class="chip">—</span>
           <span id="d_priority" class="chip">—</span>
+          <button id="d_gallery" class="no-print bg-secondary border border-white/20 text-white font-semibold rounded-md px-3 py-1.5 text-xs hover:bg-secondary/90 inline-flex items-center gap-1" title="Galería de Evidencias">🖼️ Galería de Evidencias</button>
           <button id="d_export" class="no-print bg-white/10 border border-white/20 text-white font-semibold rounded-md px-3 py-1.5 text-xs hover:bg-white/20">⤓ Exportar PDF</button>
         </div>
       </div>
@@ -597,6 +598,8 @@ async function loadAudit(){
   $('#tab-audit').innerHTML=`<div class="card overflow-hidden"><table class="dt"><thead><tr><th>Fecha</th><th>Acción</th><th>Actor</th><th>Detalle</th></tr></thead><tbody>${audit.length?audit.map(a=>`<tr><td class="text-[12px] mono">${fmt(a.created_ms)}</td><td class="text-[12px]">${esc(a.action)}</td><td class="text-[12px]">${esc(a.actor||'—')}</td><td class="text-[11px] text-on-surface-variant">${esc(a.detail||'')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-on-surface-variant py-6">Sin registros de auditoría.</td></tr>'}</tbody></table></div>`;
 }
 
+// ---- Evidence Photo Gallery (new workspace, scoped to this case) ----
+$('#d_gallery').onclick=()=>{ if(CURRENT&&CURRENT.id) window.open('/admin-evidencias?case='+encodeURIComponent(CURRENT.id)+'&name='+encodeURIComponent(CURRENT.person?.full_name||''),'_blank'); };
 // ---- Export PDF (print packet) ----
 $('#d_export').onclick=async()=>{
   const p=CURRENT.person, e=CURRENT.event;

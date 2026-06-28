@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import type { Env } from './types';
 import { events } from './routes/events';
 import { persons } from './routes/persons';
+import { evidence, evidenceShare } from './routes/evidence';
 import { contacts } from './routes/contacts';
 import { alerts } from './routes/alerts';
 import { facilities } from './routes/facilities';
@@ -283,6 +284,8 @@ app.route('/mcp', mcp);
 
 app.route('/api/events', events);
 app.route('/api/persons', persons);
+app.route('/api/persons', evidence);   // Evidence Photo Gallery (operator) — gated as persons:moderate via route-policy isCaseAdmin
+app.route('/api/e', evidenceShare);    // public signed-link share view (serves pre-baked redacted composites only)
 app.route('/api/contacts', contacts);
 app.route('/api/auth', auth);
 app.route('/api/x402', x402);        // x402 payment receiving: per-user wallet accepts USDC over HTTP (verify+settle via facilitator)
@@ -379,6 +382,14 @@ app.get('/admin/dup-review', (c) => c.env.ASSETS.fetch(new Request(new URL('/adm
 
 // Admin x402 payments reconciliation page (gated by /admin prefix → ops:console).
 app.get('/admin/x402', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-x402.html', c.req.url))));
+
+// Evidence Photo Gallery workspace (gated by isAdminPage → /login redirect; data
+// APIs are persons:moderate-gated). Reached from the case docket's submenu button.
+app.get('/admin-evidencias', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-evidencias.html', c.req.url))));
+
+// PUBLIC signed-share viewer: /e/:token renders the share-safe (redacted+
+// watermarked) composite via /api/e/:token. No PII, no original file.
+app.get('/e/:token', (c) => c.env.ASSETS.fetch(new Request(new URL('/compartir.html', c.req.url))));
 
 // Unit GPS WebSocket: verify token + unit active, then hand to the FleetLive DO
 // tagged as a unit. Public path (token-validated here); never log the token.

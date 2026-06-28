@@ -80,6 +80,8 @@ run_worker_first = [
   "/admin/*",
   "/admin-casos",
   "/admin-emergencia",
+  "/admin-evidencias",
+  "/e/*",
 ]
 
 # Run every ingest/sync job once per hour (one parse per hour).
