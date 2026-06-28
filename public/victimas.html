@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Víctimas y Fallecidos — Terremoto Venezuela | SISMO911</title>
+<meta name="description" content="Tablero de víctimas del terremoto de Venezuela (24 jun 2026): fallecidos, heridos y desaparecidos por FUENTE — oficial, hospitales, ONU/OCHA, USGS PAGER, medios y plataformas ciudadanas — con rango calculado, nivel de confianza y citas verificables. Las cifras difieren por fuente; mostramos el rango, no un único número." />
+<link rel="canonical" href="https://sismo911.com/victimas" />
+<meta property="og:title" content="🔴 Víctimas del terremoto de Venezuela — SISMO911" />
+<meta property="og:description" content="Fallecidos, heridos y desaparecidos por fuente verificable, con rango y confianza. Alerta ROJA." />
+<meta property="og:url" content="https://sismo911.com/victimas" />
+<meta property="og:image" content="https://sismo911.com/og/og-default.png" />
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<meta name="theme-color" content="#b91c1c" />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/app.css" />
+<style>
+  :root{--navy:#13284f;--line:#dfe3ea;--ink:#1b2433;--muted:#5b6781;--red:#dc2626;--red-d:#991b1b;--amber:#d97706}
+  body{background:#eef0f4;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  main{max-width:1180px;margin:0 auto;padding:18px 16px 70px}
+  .eyebrow{font:800 11px 'Public Sans';letter-spacing:.12em;text-transform:uppercase;color:#7a8092}
+  h1{font:900 30px/1.05 'Public Sans';letter-spacing:-.02em;margin:4px 0 6px;color:var(--navy)}
+  h2{font:800 18px 'Public Sans';color:var(--navy);margin:0 0 4px}
+  .lede{color:var(--muted);font-size:14px;max-width:820px;line-height:1.5}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(16,24,40,.04)}
+  .pad{padding:18px}
+  .grid{display:grid;gap:14px}
+  .mono{font-family:'JetBrains Mono',monospace}
+  /* RED ALERT banner */
+  .alert{position:relative;overflow:hidden;border-radius:16px;color:#fff;
+    background:linear-gradient(135deg,var(--red-d),var(--red));border:1px solid #7f1d1d;
+    box-shadow:0 10px 30px rgba(185,28,28,.35)}
+  .alert .pad{padding:22px 22px 20px}
+  .alert .lvl{display:inline-flex;align-items:center;gap:9px;font:900 12px 'Public Sans';
+    letter-spacing:.14em;text-transform:uppercase;background:rgba(255,255,255,.16);
+    padding:6px 12px;border-radius:9999px}
+  .blip{width:11px;height:11px;border-radius:9999px;background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.6)}70%{box-shadow:0 0 0 12px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+  .alert h1{color:#fff;margin:12px 0 4px;font-size:26px}
+  .alert .sub{color:#fee2e2;font-size:13.5px;max-width:840px;line-height:1.5}
+  .alert .meta{margin-top:10px;font:700 11px 'JetBrains Mono';color:#fecaca;letter-spacing:.02em}
+  /* metric cards */
+  .metrics{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  .metric{padding:16px 16px 14px}
+  .metric .l{font:800 11px 'Public Sans';text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+  .metric .range{font:900 30px/1 'Public Sans';color:var(--navy);margin:8px 0 2px;letter-spacing:-.02em}
+  .metric .best{font-size:12px;color:var(--muted)}
+  .metric.dead{border-top:4px solid var(--red)}
+  .metric.injured{border-top:4px solid var(--amber)}
+  .metric.missing{border-top:4px solid #2563eb}
+  .metric.buildings{border-top:4px solid #6b7280}
+  .metric .n{font-size:11px;color:#94a0b4;margin-top:6px}
+  /* table */
+  table.dt{width:100%;font-size:13px;border-collapse:collapse}
+  table.dt th{font:800 10px 'Public Sans';text-transform:uppercase;letter-spacing:.05em;color:#6b7280;text-align:left;padding:9px 10px;background:#f4f6f9}
+  table.dt td{padding:9px 10px;border-top:1px solid #eceef3;vertical-align:middle}
+  table.dt tr:hover{background:#f7f9fc}
+  .tier{display:inline-block;font:800 10px 'Public Sans';padding:2px 7px;border-radius:6px;letter-spacing:.03em}
+  .t1{background:#dcfce7;color:#166534}.t2{background:#fef3c7;color:#92400e}.t3{background:#fee2e2;color:#991b1b}
+  .figure{font:800 14px 'JetBrains Mono';color:var(--navy)}
+  .conf{display:inline-block;width:74px;height:7px;border-radius:9999px;background:#e7eaf0;overflow:hidden;vertical-align:middle}
+  .conf>span{display:block;height:100%;background:linear-gradient(90deg,#16a34a,#65a30d)}
+  a.cite{color:#2563eb;text-decoration:none;font-weight:600}
+  a.cite:hover{text-decoration:underline}
+  .subnav{position:sticky;top:0;z-index:20;background:#eef0f4;display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;margin-bottom:6px}
+  .subnav a{font:800 12px 'Public Sans';text-transform:uppercase;letter-spacing:.04em;color:var(--navy);background:#fff;border:1px solid var(--line);border-radius:9999px;padding:7px 14px;text-decoration:none;cursor:pointer}
+  .subnav a:hover,.subnav a.on{background:var(--navy);color:#fff}
+  .muted{color:var(--muted)}
+  .pill{display:inline-block;font:800 10px 'Public Sans';text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:9999px;background:#eef2f7;color:#475569}
+  .fresh{font:700 11px 'JetBrains Mono';color:#16a34a}.stale{color:#b45309}
+  .disc{font-size:12px;color:#7a4a00;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:11px 13px;line-height:1.5}
+</style>
+</head>
+<body>
+<header style="background:linear-gradient(135deg,#7f1d1d,#b91c1c);color:#fff">
+  <div style="max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px">
+    <a href="/" style="display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font:800 15px 'Public Sans'"><img src="/logo.svg" alt="" style="width:28px;height:28px"> SISMO911</a>
+  </div>
+</header>
+
+<main>
+  <div class="subnav">
+    <a href="#resumen" class="on">Resumen</a>
+    <a href="#fuentes">Por fuente</a>
+    <a href="#registro">Registro de fuentes</a>
+    <a href="/terremotos">Sismos</a>
+    <a href="/personas">Desaparecidos</a>
+  </div>
+
+  <!-- RED ALERT -->
+  <section class="alert" id="resumen">
+    <div class="pad">
+      <span class="lvl"><span class="blip"></span> <span id="lvlText">Alerta Roja</span></span>
+      <h1 id="title">Víctimas del terremoto de Venezuela</h1>
+      <div class="sub" id="subtitle">Cargando cifras verificadas por fuente…</div>
+      <div class="meta" id="updated"></div>
+    </div>
+  </section>
+
+  <div style="height:14px"></div>
+  <div class="disc" id="disclaimer">Las cifras DIFIEREN por fuente y cambian con el tiempo. Mostramos el rango por fuente, no un único número.</div>
+
+  <div style="height:16px"></div>
+  <div class="grid metrics" id="metricCards"></div>
+
+  <div style="height:22px"></div>
+  <section class="card" id="fuentes">
+    <div class="pad" style="padding-bottom:6px"><div class="eyebrow">Detalle</div><h2>Cifras por fuente</h2>
+      <p class="lede">Cada fila es la última cifra reportada por una fuente. Confianza ponderada por nivel de fuente (autoridad / verificación). Las citas abren la fuente original.</p></div>
+    <div style="overflow:auto">
+      <table class="dt">
+        <thead><tr><th>Fuente</th><th>Nivel</th><th>Métrica</th><th>Cifra</th><th>Confianza</th><th>Fecha</th><th>Cita</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="7" class="muted" style="padding:18px">Cargando…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div style="height:22px"></div>
+  <section class="card" id="registro">
+    <div class="pad" style="padding-bottom:6px"><div class="eyebrow">Procedencia</div><h2>Registro de fuentes y frescura</h2>
+      <p class="lede">Fuentes que alimentan el tablero. El sondeo automático (USGS PAGER + ReliefWeb/OCHA) corre cada 3 horas y pasa por el filtro de ingesta antes de escribir en la base de datos.</p></div>
+    <div style="overflow:auto">
+      <table class="dt">
+        <thead><tr><th>Fuente</th><th>Nivel</th><th>Tipo</th><th>Confianza base</th><th>Última cifra</th><th>Registros</th></tr></thead>
+        <tbody id="srcRows"><tr><td colspan="6" class="muted" style="padding:18px">Cargando…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="muted" style="font-size:11px;margin-top:18px">SISMO911 · Datos de USGS, ReliefWeb/OCHA, ONU, Gobierno de Venezuela, Ministerio de Salud, medios internacionales y plataformas ciudadanas. Las cifras oficiales pueden estar subestimadas; los reportes ciudadanos no están verificados.</p>
+</main>
+
+<script src="/app-shell.js" defer></script>
+<script>
+(function () {
+  const METRIC_LABEL = { dead: 'Fallecidos', injured: 'Heridos', missing: 'Desaparecidos', displaced: 'Desplazados', rescued: 'Rescatados', buildings: 'Edificios dañados' };
+  const ORDER = ['dead', 'injured', 'missing', 'buildings', 'displaced', 'rescued'];
+  const LVL = { red: 'Alerta Roja', orange: 'Alerta Naranja', yellow: 'Alerta Amarilla', green: 'Alerta Verde' };
+  const nf = new Intl.NumberFormat('es-VE');
+  const fmt = (lo, hi) => hi == null ? nf.format(lo) + '+' : (lo === hi ? nf.format(lo) : nf.format(lo) + '–' + nf.format(hi));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const ago = (ms) => { if (!ms) return '—'; const d = Math.floor((Date.now() - ms) / 86400000); return d <= 0 ? 'hoy' : (d === 1 ? 'hace 1 día' : 'hace ' + d + ' días'); };
+  const dateStr = (ms) => ms ? new Date(ms).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  async function load() {
+    let s;
+    try { s = await (await fetch('/api/casualties/latest')).json(); }
+    catch (e) { document.getElementById('subtitle').textContent = 'No se pudieron cargar las cifras.'; return; }
+
+    document.getElementById('lvlText').textContent = LVL[s.alert] || 'Alerta';
+    document.getElementById('title').textContent = s.title || 'Víctimas del terremoto de Venezuela';
+    const dead = (s.metrics || []).find(m => m.metric === 'dead');
+    document.getElementById('subtitle').innerHTML = dead
+      ? 'Fallecidos confirmados: <b>' + fmt(dead.low, dead.high) + '</b> según ' + dead.sources.length + ' fuente(s). Las cifras varían según la fuente y la hora.'
+      : 'Cifras por fuente verificable.';
+    document.getElementById('updated').textContent = 'Actualizado ' + ago(s.updated_ms) + ' · ' + (s.source_count || 0) + ' fuentes · evento ' + (s.event || '');
+    if (s.disclaimer) document.getElementById('disclaimer').textContent = s.disclaimer;
+
+    // metric cards
+    const cards = (s.metrics || []).slice().sort((a, b) => ORDER.indexOf(a.metric) - ORDER.indexOf(b.metric)).map(m => {
+      const cls = ['dead', 'injured', 'missing', 'buildings'].includes(m.metric) ? m.metric : '';
+      return '<div class="card metric ' + cls + '">' +
+        '<div class="l">' + esc(METRIC_LABEL[m.metric] || m.metric) + '</div>' +
+        '<div class="range">' + fmt(m.low, m.high) + '</div>' +
+        '<div class="best">mejor estimación: <b>' + nf.format(m.best) + '</b></div>' +
+        '<div class="n">' + m.sources.length + ' fuente(s)</div></div>';
+    }).join('');
+    document.getElementById('metricCards').innerHTML = cards || '<div class="muted pad">Sin datos.</div>';
+
+    // per-source rows (flatten metric → sources)
+    const rows = [];
+    (s.metrics || []).forEach(m => m.sources.forEach(src => rows.push({ m: m.metric, ...src })));
+    rows.sort((a, b) => (a.tier - b.tier) || (b.confidence - a.confidence));
+    document.getElementById('rows').innerHTML = rows.map(r =>
+      '<tr><td><b>' + esc(r.name) + '</b>' + (r.note ? '<div class="muted" style="font-size:11px;max-width:320px">' + esc(r.note) + '</div>' : '') + '</td>' +
+      '<td><span class="tier t' + (r.tier || 3) + '">N' + (r.tier || 3) + '</span></td>' +
+      '<td>' + esc(METRIC_LABEL[r.m] || r.m) + '</td>' +
+      '<td class="figure">' + fmt(r.value_min, r.value_max) + '</td>' +
+      '<td><span class="conf"><span style="width:' + Math.round((r.confidence || 0) * 100) + '%"></span></span> <span class="muted mono" style="font-size:11px">' + Math.round((r.confidence || 0) * 100) + '%</span></td>' +
+      '<td class="muted mono" style="font-size:11px">' + dateStr(r.as_of_ms) + '</td>' +
+      '<td>' + (r.citation_url ? '<a class="cite" href="' + esc(r.citation_url) + '" target="_blank" rel="noopener">ver ↗</a>' : '—') + '</td></tr>'
+    ).join('') || '<tr><td colspan="7" class="muted" style="padding:18px">Sin datos.</td></tr>';
+
+    // sources registry + freshness
+    try {
+      const sr = await (await fetch('/api/casualties/latest/sources')).json();
+      const KIND = { api: 'API', model: 'Modelo', official: 'Oficial', media: 'Medios', social: 'Ciudadano' };
+      document.getElementById('srcRows').innerHTML = (sr.sources || []).map(x =>
+        '<tr><td><b>' + esc(x.name) + '</b>' + (x.homepage ? ' <a class="cite" href="' + esc(x.homepage) + '" target="_blank" rel="noopener">↗</a>' : '') + '</td>' +
+        '<td><span class="tier t' + x.tier + '">N' + x.tier + '</span></td>' +
+        '<td><span class="pill">' + esc(KIND[x.kind] || x.kind) + '</span></td>' +
+        '<td class="mono muted" style="font-size:11px">' + Math.round((x.default_confidence || 0) * 100) + '%</td>' +
+        '<td class="mono" style="font-size:11px">' + (x.last_as_of_ms ? '<span class="fresh ' + ((Date.now() - x.last_as_of_ms) > 4 * 86400000 ? 'stale' : '') + '">' + ago(x.last_as_of_ms) + '</span>' : '<span class="muted">—</span>') + '</td>' +
+        '<td class="mono muted" style="font-size:11px">' + (x.rows || 0) + '</td></tr>'
+      ).join('') || '<tr><td colspan="6" class="muted" style="padding:18px">Sin fuentes.</td></tr>';
+    } catch (e) { /* sources panel optional */ }
+  }
+
+  // smooth subnav highlight
+  document.querySelectorAll('.subnav a[href^="#"]').forEach(a => a.addEventListener('click', () => {
+    document.querySelectorAll('.subnav a').forEach(x => x.classList.remove('on')); a.classList.add('on');
+  }));
+
+  load();
+})();
+</script>
+</body>
+</html>
