@@ -163,6 +163,19 @@ persons.get('/stats', async (c) => edgeCached(c, 60, async () => {
   };
 }));
 
+// GET /api/persons/agent-activity — CRM tracking feed: the automated pollers'
+// heartbeat (what was polled, new data, name-matches, cases still unresolved).
+// PUBLIC read (aggregate counts + agent summaries only — no PII).
+persons.get('/agent-activity', async (c) => edgeCached(c, 30, async () => {
+  const limit = Math.min(Math.max(Number(c.req.query('limit')) || 30, 1), 100);
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, source, action, fetched, created, updated, matched, still_missing AS stillMissing, summary, ok, created_ms
+     FROM agent_activity ORDER BY created_ms DESC LIMIT ?`,
+  ).bind(limit).all().catch(() => ({ results: [] as any[] }));
+  const items = results ?? [];
+  return { ok: true, items, latestMissing: items.length ? Number(items[0].stillMissing ?? 0) : null, total: items.length };
+}));
+
 // GET /api/persons/cases — case index. PUBLIC (read-only): non-operators see only
 // approved cases with PII redacted (no phone / reporter / coordinates) and a
 // count of only-approved docket entries. Operators see everything + filters.
