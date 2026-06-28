@@ -138,7 +138,8 @@ app.use('*', async (c, next) => {
   // Acopio submission review queue (GET) is operator-only; approve/reject (PATCH)
   // is already covered by the /api/acopio admin-write rule above.
   const isAcopioReview = method === 'GET' && path === '/api/acopio/submissions';
-  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration && !isSatWrite && !isAcopioReview) return next();
+  const isFlotaApi = path.startsWith('/api/flota'); // internal dispatch console — operator/admin only for ALL methods (reads expose responder GPS/PII)
+  if (!isAdminPage && !isAdminWrite && !isReportModeration && !isPersonModeration && !isDocketSubmit && !isCaseAdmin && !isSosTriage && !isDamageReview && !isManualRefresh && !isShelterModeration && !isSatWrite && !isAcopioReview && !isFlotaApi) return next();
 
   const user = await getUserFromRequest(c.env, c).catch(() => null);
   // Docket submission only needs a logged-in user (any role); everything else
@@ -429,6 +430,19 @@ app.all('*', async (c) => {
     res.headers.set('Cache-Control', 'no-cache, must-revalidate');
   }
   return res;
+});
+
+// Global handlers: guarantee security headers + a sanitized body on errors and
+// unmatched routes. (notFound rarely fires given the app.all('*') asset fallback
+// above, but both are wired for defense-in-depth.)
+app.onError((err, c) => {
+  console.error('[onError]', err);
+  try { setSecurityHeaders(c); } catch {}
+  return c.json({ error: 'internal' }, 500);
+});
+app.notFound((c) => {
+  try { setSecurityHeaders(c); } catch {}
+  return c.json({ error: 'not_found' }, 404);
 });
 
 export default {

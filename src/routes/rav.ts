@@ -4,7 +4,7 @@ import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestR
 import { analyzeRavPhotos, backfillPhashes } from '../ingest/rav-photos';
 import { cleanPersonas } from '../lib/clean';
 import { dedupePersonas } from '../lib/dedupe';
-import { maskContact } from '../lib/security';
+import { maskContact, timingSafeEqualStr } from '../lib/security';
 import { backfillHospitalMatches } from '../ingest/hospital-match';
 
 // redayudavenezuela.com (RAV) surface:
@@ -21,7 +21,7 @@ export const rav = new Hono<{ Bindings: Env }>();
 function authed(c: any): boolean {
   const tok = (c.req.header('authorization') || '').replace(/^Bearer\s+/i, '');
   const expected = c.env.RAV_INGEST_TOKEN || c.env.BLOG_INGEST_TOKEN; // reuse blog token if RAV-specific not set
-  return !!expected && tok === expected;
+  return !!expected && timingSafeEqualStr(tok, expected);
 }
 
 // POST /api/rav/run?kind=persons|stats|verified|all&pages=N

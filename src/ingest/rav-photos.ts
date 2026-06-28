@@ -1,6 +1,6 @@
 import type { Env } from '../types';
 import { chunk } from '../lib/sql';
-import { isSafePublicUrl } from '../lib/sanitize';
+import { safeFetch } from '../lib/sanitize';
 
 // Photo-analysis enrichment pass for `personas` (RAV + any photo-bearing row).
 //
@@ -98,8 +98,8 @@ export async function backfillPhashes(
       if (row.foto_r2 && env.DESAP_FOTOS) {
         try { const o = await env.DESAP_FOTOS.get(row.foto_r2); if (o) { const b = new Uint8Array(await o.arrayBuffer()); if (b.length) buf = b; } } catch { /* fall through to URL */ }
       }
-      if (!buf && row.foto && isSafePublicUrl(row.foto)) {
-        try { const r = await fetch(row.foto); if (r.ok) { const b = new Uint8Array(await r.arrayBuffer()); if (b.length) buf = b; } } catch { /* unreachable */ }
+      if (!buf && row.foto) {
+        try { const r = await safeFetch(row.foto); if (r && r.ok) { const b = new Uint8Array(await r.arrayBuffer()); if (b.length) buf = b; } } catch { /* unreachable */ }
       }
       if (!buf) {
         failed++;
@@ -140,9 +140,7 @@ export async function analyzeRavPhotos(env: Env, batch = BATCH): Promise<RavPhot
     if (row.foto_r2 && env.DESAP_FOTOS) {
       try { const o = await env.DESAP_FOTOS.get(row.foto_r2); if (o) { const b = new Uint8Array(await o.arrayBuffer()); if (b.length) return b; } } catch { /* fall through to URL */ }
     }
-    if (isSafePublicUrl(row.foto)) {
-      try { const r = await fetch(row.foto); if (r.ok) { const b = new Uint8Array(await r.arrayBuffer()); if (b.length) return b; } } catch { /* unreachable */ }
-    }
+    try { const r = await safeFetch(row.foto); if (r && r.ok) { const b = new Uint8Array(await r.arrayBuffer()); if (b.length) return b; } } catch { /* unreachable */ }
     return null;
   };
 

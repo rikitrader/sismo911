@@ -11,6 +11,7 @@ import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from '../lib/cl
 import { dedupePersonas } from '../lib/dedupe';
 import { queryByIds, deleteByIds, deletePhotos } from '../lib/sql';
 import { edgeCached } from '../lib/edge-cache';
+import { isSafePublicUrl } from '../lib/sanitize';
 
 // Missing-persons registry (/familia). Reads the `personas` dataset in the main
 // (sismo911) D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
@@ -50,7 +51,7 @@ function mapPerson(p: any, op: boolean) {
   return {
     id: p.id, full_name: p.nombre, age: p.edad, sex: null,
     last_seen: p.ubicacion, status: estadoToStatus(p.estado),
-    photo_url: p.foto_r2 ? `/api/familia/photo/${p.id}` : (p.foto || null),
+    photo_url: p.foto_r2 ? `/api/familia/photo/${p.id}` : (isSafePublicUrl(p.foto) ? p.foto : null),
     contact_phone: op ? (p.contacto || null) : (p.contacto ? '•••••• (solo operadores)' : null),
     notes: p.descripcion, updated_ms: p.updated_at,
   };

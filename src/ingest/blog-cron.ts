@@ -174,7 +174,8 @@ export async function ingestBlog(env: Env, opts: { force?: boolean } = {}): Prom
       slug: slugify(headline) + '-' + rec.platform[0] + String(rec.id).replace(/\W+/g, '').slice(-5),
       headline, meta_desc: art.meta_desc, body_html: art.body_html,
       place: rec.place, lat: rec.lat, lon: rec.lon, platform: rec.platform, author: rec.author,
-      source_url: rec.url, image_url: rec.image || '', video_url: rec.video || '',
+      source_url: /^https?:\/\//i.test(String(rec.url || '')) ? rec.url : null,
+      image_url: rec.image || '', video_url: rec.video || '',
       featured: i === 0 ? 1 : 0,
       published_at: (rec.ts ? new Date(rec.ts) : new Date(now)).toISOString(),
     });

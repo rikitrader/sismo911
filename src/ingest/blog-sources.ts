@@ -1,4 +1,5 @@
 import type { Env } from '../types';
+import { safeFetch } from '../lib/sanitize';
 
 // Free social/news source fetchers for the every-3h blog pipeline. These run
 // INSIDE the Worker (Cloudflare's clean network) because this project's host
@@ -51,8 +52,8 @@ const attr = (s: string, a: string) => (s.match(new RegExp(`${a}\\s*=\\s*["']([^
 
 async function ogImage(link: string): Promise<string> {
   try {
-    const r = await fetch(link, { headers: { 'user-agent': UA }, cf: { cacheTtl: 0 } });
-    if (!r.ok) return '';
+    const r = await safeFetch(link, { headers: { 'user-agent': UA }, cf: { cacheTtl: 0 } });
+    if (!r || !r.ok) return '';
     const html = (await r.text()).slice(0, 60_000);
     const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
       || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);

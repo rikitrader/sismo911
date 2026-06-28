@@ -51,11 +51,21 @@ function secretOk(want: string | undefined, got: string | undefined): boolean {
   return diff === 0;
 }
 
+// Accept the webhook secret either as the ?secret= query param (back-compat with
+// existing schedulers/Apify configs) or as an Authorization: Bearer <secret>
+// header, so callers can avoid putting the secret in a logged URL.
+function presentedSecret(c: any): string | undefined {
+  const q = c.req.query('secret');
+  if (q) return q;
+  const m = (c.req.header('authorization') || '').match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : undefined;
+}
+
 // POST /api/monitor/refresh?secret=… — manual immediate ingest + sheet sync.
 // Secret-gated (same token as the Apify webhook) so it can be triggered by an
 // operator or an external scheduler without an interactive session.
 monitor.post('/refresh', async (c) => {
-  if (!secretOk(c.env.MONITOR_WEBHOOK_SECRET, c.req.query('secret'))) return c.json({ error: 'forbidden' }, 403);
+  if (!secretOk(c.env.MONITOR_WEBHOOK_SECRET, presentedSecret(c))) return c.json({ error: 'forbidden' }, 403);
   const n = await ingestSocialMonitor(c.env);
   const synced = await syncMonitorSheet(c.env).catch(() => 0);
   return c.json({ ok: true, ingested: n, synced });
@@ -63,7 +73,7 @@ monitor.post('/refresh', async (c) => {
 
 // POST /api/monitor/apify?secret=…&platform=tiktok — Apify run-finished webhook.
 monitor.post('/apify', async (c) => {
-  if (!secretOk(c.env.MONITOR_WEBHOOK_SECRET, c.req.query('secret'))) return c.json({ error: 'forbidden' }, 403);
+  if (!secretOk(c.env.MONITOR_WEBHOOK_SECRET, presentedSecret(c))) return c.json({ error: 'forbidden' }, 403);
   const platform = c.req.query('platform') === 'instagram' ? 'instagram' : 'tiktok';
   const body = await c.req.json().catch(() => null);
   const datasetId = body?.resource?.defaultDatasetId;

@@ -3,6 +3,7 @@ import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { rateLimit, nameHasSpam, textHasLink, requestIp } from '../lib/security';
 import { audit } from '../lib/audit';
+import { getUserFromRequest } from '../lib/auth';
 import {
   sendEmail, randomToken,
   telemedDoctorWelcomeEmail, telemedRequestReceivedEmail, telemedClaimedEmail, telemedScheduledEmail,
@@ -32,7 +33,7 @@ function jitsiUrl(token: string): string {
 async function verifyDoctor(env: Env, doctorId: string, token: string): Promise<any | null> {
   if (!doctorId || !token) return null;
   const r = await env.DB.prepare(
-    `SELECT * FROM telemed_doctors WHERE id = ? AND panel_token = ? AND status='activo' AND moderation='approved' LIMIT 1`,
+    `SELECT * FROM telemed_doctors WHERE id = ? AND panel_token = ? AND status='activo' AND moderation='approved' AND verified = 1 LIMIT 1`,
   ).bind(doctorId, token).first<any>().catch(() => null);
   return r || null;
 }
@@ -85,13 +86,13 @@ telemedicina.post('/doctors/register', async (c) => {
     id, name.slice(0, 120), email.slice(0, 160), b.phone ? String(b.phone).slice(0, 60) : null,
     b.country ? String(b.country).slice(0, 80) : null, specialty,
     b.license_no ? String(b.license_no).slice(0, 80) : null, JSON.stringify(languages),
-    b.bio ? String(b.bio).slice(0, 800) : null, token, 0, 'approved', 'activo',
+    b.bio ? String(b.bio).slice(0, 800) : null, token, 0, 'pending', 'activo',
     requestIp(c), new Date(now).toISOString(), now,
   ).run();
   const panelUrl = `${baseUrl(c)}/telemedicina-panel?doc=${id}&t=${token}`;
   c.executionCtx?.waitUntil?.(sendEmail(c.env, email, telemedDoctorWelcomeEmail(name, panelUrl)).then(() => {}));
   await audit(c, 'telemed.doctor_register', { id, specialty }).catch(() => {});
-  return c.json({ ok: true, id, panel_token: token, panel_url: panelUrl, status: 'approved' }, 201);
+  return c.json({ ok: true, id, panel_token: token, panel_url: panelUrl, status: 'pending', hint: 'Tu registro está en revisión; un operador lo aprobará pronto.' }, 201);
 });
 
 // GET /api/telemedicina/doctors — public directory (no PII beyond name/specialty/country).
@@ -120,6 +121,41 @@ telemedicina.get('/doctors/me', async (c) => {
     doctor: { id: doc.id, full_name: doc.full_name, email: doc.email, specialty: doc.specialty, country: doc.country, languages, verified: !!doc.verified },
     cases: results ?? [],
   }, 200, { 'Cache-Control': 'no-store' });
+});
+
+// GET /api/telemedicina/doctors/pending — operator/admin: doctors awaiting approval.
+// Registered before any /doctors/:id-style route so the literal path is not shadowed.
+// NOT auto-gated (path doesn't end in /approve), so it self-gates on operator/admin.
+telemedicina.get('/doctors/pending', async (c) => {
+  const me = await getUserFromRequest(c.env, c).catch(() => null);
+  if (!me || (me.role !== 'operator' && me.role !== 'admin')) return c.json({ error: 'unauthorized' }, 401);
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, full_name, email, specialty, country, license_no, bio, created_ms
+       FROM telemed_doctors WHERE moderation='pending' ORDER BY created_ms DESC LIMIT 200`,
+  ).all();
+  return c.json({ ok: true, items: results ?? [], total: results?.length ?? 0 }, 200, { 'Cache-Control': 'no-store' });
+});
+
+// POST /api/telemedicina/doctors/:id/approve — operator/admin marks a doctor verified.
+// Auth: central gate (src/index.ts) requires operator/admin + same-origin for any path ending /approve.
+telemedicina.post('/doctors/:id/approve', async (c) => {
+  const id = String(c.req.param('id') || '').trim().slice(0, 64);
+  const res = await c.env.DB.prepare(
+    `UPDATE telemed_doctors SET moderation='approved', verified=1, status='activo' WHERE id=?`,
+  ).bind(id).run();
+  if (!res.meta || res.meta.changes === 0) return c.json({ error: 'not_found' }, 404);
+  await audit(c, 'telemed.doctor_approve', { id }).catch(() => {});
+  return c.json({ ok: true, id, moderation: 'approved', verified: 1 }, 200);
+});
+// POST /api/telemedicina/doctors/:id/reject — operator/admin rejects a doctor (same gate via /reject).
+telemedicina.post('/doctors/:id/reject', async (c) => {
+  const id = String(c.req.param('id') || '').trim().slice(0, 64);
+  const res = await c.env.DB.prepare(
+    `UPDATE telemed_doctors SET moderation='rejected', verified=0, status='inactivo' WHERE id=?`,
+  ).bind(id).run();
+  if (!res.meta || res.meta.changes === 0) return c.json({ error: 'not_found' }, 404);
+  await audit(c, 'telemed.doctor_reject', { id }).catch(() => {});
+  return c.json({ ok: true, id, moderation: 'rejected' }, 200);
 });
 
 // ---------------------------------------------------------------------------
@@ -200,6 +236,8 @@ telemedicina.get('/request/:token', async (c) => {
 
 // POST /api/telemedicina/requests/:id/claim — doctor accepts an open request.
 telemedicina.post('/requests/:id/claim', async (c) => {
+  const limited = await rateLimit(c.env, c, 'telemed_claim', 30, 600);
+  if (limited) return limited;
   const b: any = (await c.req.json().catch(() => ({}))) || {};
   const doc = await verifyDoctor(c.env, String(b.doctor_id || ''), String(b.token || ''));
   if (!doc) return c.json({ error: 'unauthorized' }, 401);

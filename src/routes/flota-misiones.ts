@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
+import { rateLimit, validLatLon } from '../lib/security';
 
 // FLOTA — the "order" in FleetOps: mission dispatch for the national fleet.
 // Tables: flota_misiones + flota_mision_waypoints + flota_mision_actividad;
@@ -62,11 +63,24 @@ flotaMisiones.get('/', async (c) => {
 
 // ── Create ────────────────────────────────────────────────────────────────
 flotaMisiones.post('/', async (c) => {
+  const limited = await rateLimit(c.env, c, 'flota_mision', 60, 60);
+  if (limited) return limited;
   const b = await c.req.json().catch(() => null);
   const tipo = str(b?.tipo, 20) ?? 'rescate';
   const descripcion = str(b?.descripcion, 2000);
   if (!TIPOS.includes(tipo)) return c.json({ error: 'tipo inválido' }, 400);
   if (!descripcion) return c.json({ error: 'descripcion requerida' }, 400);
+
+  // Coordinates are optional, but a present-but-out-of-range pair is rejected
+  // (mirrors flota-rastreo.ts validLatLon gating on /posicion).
+  const origen_lat = num(b?.origen_lat), origen_lon = num(b?.origen_lon);
+  const destino_lat = num(b?.destino_lat), destino_lon = num(b?.destino_lon);
+  if ((origen_lat != null || origen_lon != null) && !validLatLon(origen_lat, origen_lon)) {
+    return c.json({ error: 'bad_origen_lat_lon' }, 400);
+  }
+  if ((destino_lat != null || destino_lon != null) && !validLatLon(destino_lat, destino_lon)) {
+    return c.json({ error: 'bad_destino_lat_lon' }, 400);
+  }
 
   let prioridad = Number(b?.prioridad);
   if (!Number.isInteger(prioridad) || prioridad < 1 || prioridad > 5) prioridad = 3;
@@ -85,8 +99,8 @@ flotaMisiones.post('/', async (c) => {
     ).bind(
       id, codigo, tipo, prioridad, 'creada',
       str(b?.unidad_id, 64), str(b?.personal_id, 64), str(b?.evento_id, 64), str(b?.caso_ref, 200),
-      num(b?.origen_lat), num(b?.origen_lon), str(b?.origen_dir, 400),
-      num(b?.destino_lat), num(b?.destino_lon), str(b?.destino_dir, 400),
+      origen_lat, origen_lon, str(b?.origen_dir, 400),
+      destino_lat, destino_lon, str(b?.destino_dir, 400),
       descripcion, null, null, b?.meta != null ? JSON.stringify(b.meta) : null, now, now
     ),
     c.env.DB.prepare(
@@ -147,11 +161,21 @@ flotaMisiones.patch('/:id', async (c) => {
   }
   if (b?.descripcion != null) { sets.push('descripcion = ?'); vals.push(str(b.descripcion, 2000)); }
   if (b?.caso_ref != null) { sets.push('caso_ref = ?'); vals.push(str(b.caso_ref, 200)); }
-  if (b?.origen_lat != null) { sets.push('origen_lat = ?'); vals.push(num(b.origen_lat)); }
-  if (b?.origen_lon != null) { sets.push('origen_lon = ?'); vals.push(num(b.origen_lon)); }
+  // Coordinates update as a pair; a present-but-out-of-range pair is rejected
+  // (mirrors validLatLon gating on create and flota-rastreo.ts /posicion).
+  if (b?.origen_lat != null || b?.origen_lon != null) {
+    const lat = num(b?.origen_lat), lon = num(b?.origen_lon);
+    if (!validLatLon(lat, lon)) return c.json({ error: 'bad_origen_lat_lon' }, 400);
+    sets.push('origen_lat = ?'); vals.push(lat);
+    sets.push('origen_lon = ?'); vals.push(lon);
+  }
   if (b?.origen_dir != null) { sets.push('origen_dir = ?'); vals.push(str(b.origen_dir, 400)); }
-  if (b?.destino_lat != null) { sets.push('destino_lat = ?'); vals.push(num(b.destino_lat)); }
-  if (b?.destino_lon != null) { sets.push('destino_lon = ?'); vals.push(num(b.destino_lon)); }
+  if (b?.destino_lat != null || b?.destino_lon != null) {
+    const lat = num(b?.destino_lat), lon = num(b?.destino_lon);
+    if (!validLatLon(lat, lon)) return c.json({ error: 'bad_destino_lat_lon' }, 400);
+    sets.push('destino_lat = ?'); vals.push(lat);
+    sets.push('destino_lon = ?'); vals.push(lon);
+  }
   if (b?.destino_dir != null) { sets.push('destino_dir = ?'); vals.push(str(b.destino_dir, 400)); }
   if (b?.meta != null) { sets.push('meta = ?'); vals.push(JSON.stringify(b.meta)); }
 
