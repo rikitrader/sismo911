@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { BOTIQUIN, type MedItem } from '../data/botiquin';
+import { cspNonce } from '../lib/security';
 
 // Individual page per medical item (142) + an index, server-rendered so each
 // item has its own shareable, SEO-friendly URL: /botiquin/<slug>.
@@ -70,6 +71,7 @@ botiquin.get('/botiquin', (c) => {
         </a>`).join('')}
       </div>
     </section>`).join('');
+  const nonce = cspNonce(c);
   const body = `<main class="mx-auto max-w-6xl px-4 py-8">
     <h1 class="font-display font-extrabold text-3xl mb-1">Botiquín de Emergencia — Catálogo</h1>
     <p class="text-on-surface-variant mb-1">${BOTIQUIN.length} insumos y medicamentos, dimensionados para <b>100.000 damnificados / 90 días</b>. Cada ítem tiene su ficha: nombre genérico (DCI), nombre en Venezuela, nombre en EE.UU. (importación), uso y dosis.</p>
@@ -81,7 +83,7 @@ botiquin.get('/botiquin', (c) => {
     <div id="list">${sections}</div>
     <p class="text-xs text-on-surface-variant mt-8">${e(DISCLAIMER)}</p>
   </main>
-  <script>
+  <script nonce="${nonce}">
   const q=document.getElementById('q');
   q.addEventListener('input',()=>{const v=q.value.trim().toLowerCase();
     document.querySelectorAll('section[data-cat]').forEach(sec=>{let any=false;
@@ -107,6 +109,7 @@ botiquin.get('/botiquin/:slug', (c) => {
     it.ctrl ? '<span class="chip" style="background:#fee2e2;color:#dc2626">🔒 Controlado</span>' : '',
   ].filter(Boolean).join(' ');
   const field = (label: string, val: string) => `<div class="card p-4"><dt class="text-xs uppercase tracking-wide text-on-surface-variant font-display font-bold mb-1">${label}</dt><dd class="text-[15px] font-medium">${e(val) || '—'}</dd></div>`;
+  const nonce = cspNonce(c);
   const body = `<main class="mx-auto max-w-3xl px-4 py-8">
     <nav class="text-sm text-on-surface-variant mb-3"><a href="/botiquin" class="text-primary hover:underline">Botiquín</a> · <span>${e(it.cat)}</span></nav>
     <div class="flex items-start gap-3 flex-wrap mb-1">
@@ -130,10 +133,17 @@ botiquin.get('/botiquin/:slug', (c) => {
       <a href="/botiquin" class="text-primary hover:underline">← Catálogo</a>
       <a href="/suministros-medicos" class="text-primary hover:underline">📊 Tablero</a>
       <a href="${SHEET}" target="_blank" rel="noopener" class="text-primary hover:underline">🧾 Hoja de cálculo</a>
-      <button onclick="window.print()" class="text-primary hover:underline">🖨️ Imprimir ficha</button>
+      <button data-act="__print" class="text-primary hover:underline">🖨️ Imprimir ficha</button>
     </div>
     <p class="text-xs text-on-surface-variant border-t border-outline-variant/50 pt-3">${e(DISCLAIMER)}</p>
-  </main>`;
+  </main>
+  <script nonce="${nonce}">
+  var ACTIONS={__print:function(){window.print();}};
+  function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+  ["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+    var el=e.target.closest("[data-act]");if(!el)return;var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+    var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
+  </script>`;
   const desc = `${it.dci} (Venezuela: ${it.marca}; EE.UU.: ${it.us}). ${it.uso}`.slice(0, 180);
   return c.html(layout(`${it.dci} — Botiquín SISMO911`, desc, body, '/botiquin/' + it.slug),
     200, { 'Cache-Control': 'public, max-age=3600' });

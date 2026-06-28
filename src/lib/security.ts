@@ -44,7 +44,31 @@ export function timingSafeEqualStr(a: string | undefined, b: string | undefined)
   return diff === 0;
 }
 
+// Per-request CSP nonce for the Worker-RENDERED dynamic pages (agencias, botiquin,
+// blog, estados, desaparecidos, plan) whose inline <script> blocks carry interpolated
+// content and so can't be statically hashed. setSecurityHeaders generates+stores it
+// on the context and adds 'nonce-…' to the Report-Only script-src; those route
+// handlers stamp the SAME nonce onto their inline <script> tags. Static pages keep
+// using hashes. Defensive: the special fake-context callers (no .get/.set) get ''.
+function randomNonce(): string {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  let s = '';
+  for (const x of b) s += String.fromCharCode(x);
+  return btoa(s);
+}
+export function cspNonce(c: any): string {
+  if (!c || typeof c.get !== 'function' || typeof c.set !== 'function') return '';
+  let n = c.get('cspNonce');
+  if (!n) {
+    n = randomNonce();
+    c.set('cspNonce', n);
+  }
+  return n;
+}
+
 export function setSecurityHeaders(c: Context) {
+  const nonce = cspNonce(c);
   c.header('X-Content-Type-Options', 'nosniff');
   c.header('X-Frame-Options', 'DENY');
   c.header('X-DNS-Prefetch-Control', 'off');
@@ -89,7 +113,11 @@ export function setSecurityHeaders(c: Context) {
       // warn) — keep it only in the enforcing header above, drop it here.
       ...directives
         .filter((d) => d !== 'upgrade-insecure-requests')
-        .map((d) => (d.startsWith('script-src') ? `script-src ${STRICT_SCRIPT_SRC}` : d)),
+        .map((d) =>
+          d.startsWith('script-src')
+            ? `script-src ${STRICT_SCRIPT_SRC}${nonce ? ` 'nonce-${nonce}'` : ''}`
+            : d,
+        ),
       'report-uri /api/csp-report',
     ].join('; '),
   );
