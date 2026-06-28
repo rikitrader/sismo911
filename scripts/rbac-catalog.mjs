@@ -62,11 +62,25 @@ const RESOURCES = {
   database:      { cat: 'System',         actions: ['read','manage'] },
   ai:            { cat: 'System',         actions: ['use','manage'] },
   monitoring:    { cat: 'System',         actions: ['read'] },
-  // Coarse legacy capability: "operational staff may use the ops/admin console
-  // surfaces." Replaces the old binary role==='operator'||'admin' gate 1:1 so the
-  // route→permission migration preserves access exactly. Phase 1+ splits specific
-  // surfaces into finer permissions as the granular admin is built out.
+  // DEPRECATED (Phase 2 R1): the coarse "operational console" capability. No route
+  // maps to it anymore — evaluateGate() now uses the fine-grained per-surface
+  // permissions below. Kept as a catalog row for back-compat; do not map new
+  // surfaces to it.
   ops:           { cat: 'Administration', actions: ['console'] },
+  // Fine-grained per-surface permissions (Phase 2 R1) that REPLACE ops:console in
+  // the global gate. Each legacy operational surface maps to exactly one of these,
+  // and all are granted to the legacy `operator` role below so access is preserved
+  // 1:1 (super_admin holds everything via god-mode).
+  admin:         { cat: 'Operations', actions: ['maintenance'] },   // /api/admin data-maintenance jobs
+  contacts:      { cat: 'Operations', actions: ['manage'] },        // /api/contacts
+  acopio:        { cat: 'Logistics',  actions: ['manage'] },        // /api/acopio
+  aid_orgs:      { cat: 'Operations', actions: ['manage'] },        // /api/aid-orgs
+  emergencia:    { cat: 'Operations', actions: ['manage'] },        // /api/emergencia
+  damage:        { cat: 'Operations', actions: ['moderate'] },      // /api/danos-estructurales, /api/damage
+  persons:       { cat: 'Operations', actions: ['moderate'] },      // /api/persons moderation + case docket
+  sos:           { cat: 'Operations', actions: ['triage'] },        // /api/sos triage
+  events:        { cat: 'Operations', actions: ['refresh'] },       // /api/events/refresh + backfill
+  sat:           { cat: 'Operations', actions: ['analyze'] },       // /api/sat analyze/verify
 };
 
 const titleCase = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
@@ -151,8 +165,9 @@ export const ROLES = [
   // ── Legacy mapping (do not delete — preserves live behavior) ──
   { key: 'operator',     name: 'Operator (legacy)',
     inherits: ['emergency_manager','case_manager'],
-    perms: ['audit:read','monitoring:read','reports:moderate','familia:moderate','suministros:manage','telemedicina:manage','ops:console'],
-    desc: 'Back-compat role mapped from legacy users.role=operator. Holds ops:console (the coarse operational gate) so the route→permission migration is access-preserving.' },
+    perms: ['audit:read','monitoring:read','reports:moderate','familia:moderate','suministros:manage','telemedicina:manage','ops:console',
+            'admin:maintenance','contacts:manage','acopio:manage','aid_orgs:manage','emergencia:manage','damage:moderate','persons:moderate','sos:triage','events:refresh','sat:analyze'],
+    desc: 'Back-compat role mapped from legacy users.role=operator. Holds the fine-grained per-surface ops permissions (Phase 2 R1) so the gate migration off ops:console is access-preserving.' },
   { key: 'citizen',      name: 'Citizen (legacy)', perms: [], desc: 'Public user mapped from legacy users.role=citizen.' },
 ];
 

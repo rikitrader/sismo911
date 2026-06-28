@@ -5,11 +5,12 @@
  * `role==='operator'||role==='admin'` decision in index.ts with a single,
  * centralized, pure mapping from (path, method) → required capability.
  *
- * Backward-compatibility contract (verified by test/route-policy.test.ts): the
- * surfaces gated here and the capability they require (`ops:console`, held by
- * exactly the legacy operator + super_admin roles) reproduce the previous gate
- * 1:1 — no existing user gains or loses access. Phase 1+ upgrades individual
- * surfaces to finer permissions (e.g. flota:dispatch) without touching index.ts.
+ * Phase 2 R1: each surface maps to a FINE-GRAINED permission (flota:read,
+ * persons:moderate, admin:maintenance, …) instead of the coarse ops:console.
+ * Backward-compatibility contract (verified by test/route-policy.test.ts): every
+ * mapped permission is held by the legacy operator role (and super_admin), and by
+ * no other existing role — so no current user gains or loses access, while new
+ * granular roles can be scoped to exactly one surface.
  */
 
 export const LEGACY_OPS_PERM = 'ops:console';
@@ -76,15 +77,42 @@ export function evaluateGate(path: string, method: string): GateDecision {
   if (isAdminPage) return { kind: 'page' };          // gated, but HTML → login redirect on fail
   if (isDocketSubmit) return { kind: 'login' };       // any logged-in user (citizen updates land 'pending')
 
-  // SUMINISTROS per-area least-privilege: each inventory write requires the
-  // permission for its function area (warehouse/dispatch/inventory/purchasing),
-  // not the coarse ops:console. Catalog/config writes (ubicaciones/categorías/
-  // productos) require suministros:manage (managers/admins). Reads are open.
-  if (isAdminWrite && path.startsWith('/api/suministros/')) {
-    return { kind: 'perm', perm: suministrosAreaPerm(path) };
-  }
+  // Phase 2 R1: map each surface to its FINE-GRAINED permission (replaces the coarse
+  // ops:console). Order matters — most specific prefix first. Every perm here is held
+  // by the legacy operator role (and super_admin), so access is preserved 1:1; new
+  // granular roles can now be granted exactly one surface.
+  let perm: string;
+  if (isFlotaAdminApi) perm = 'flota:track';
+  else if (isFlotaApi) perm = 'flota:read';
+  else if (isCaseAdmin || isPersonModeration) perm = 'persons:moderate';
+  else if (isReportModeration) perm = 'reports:moderate';
+  else if (isSosTriage) perm = 'sos:triage';
+  else if (isDamageReview) perm = 'damage:moderate';
+  else if (isManualRefresh) perm = 'events:refresh';
+  else if (isShelterModeration) perm = 'shelters:manage';
+  else if (isSatWrite) perm = 'sat:analyze';
+  else if (isAcopioReview) perm = 'acopio:manage';
+  // SUMINISTROS per-area least-privilege (kept from main): each inventory write
+  // requires its function-area permission (warehouse/dispatch/inventory/purchasing),
+  // finer than the coarse suministros:manage.
+  else if (isAdminWrite && path.startsWith('/api/suministros/')) perm = suministrosAreaPerm(path);
+  else perm = adminWritePermFor(path);  // other isAdminWrite → per-prefix permission
+  return { kind: 'perm', perm };
+}
 
-  return { kind: 'perm', perm: LEGACY_OPS_PERM };
+/** Fine-grained permission for a write under one of the ADMIN_WRITE_PREFIXES. */
+function adminWritePermFor(path: string): string {
+  if (path.startsWith('/api/admin/flota')) return 'flota:track';
+  if (path.startsWith('/api/admin')) return 'admin:maintenance';
+  if (path.startsWith('/api/contacts')) return 'contacts:manage';
+  if (path.startsWith('/api/resources')) return 'resources:manage';
+  if (path.startsWith('/api/acopio')) return 'acopio:manage';
+  if (path.startsWith('/api/danos-estructurales')) return 'damage:moderate';
+  if (path.startsWith('/api/aid-orgs')) return 'aid_orgs:manage';
+  if (path.startsWith('/api/emergencia')) return 'emergencia:manage';
+  if (path.startsWith('/api/suministros')) return 'suministros:manage';
+  if (path.startsWith('/api/flota')) return 'flota:read';
+  return 'admin:maintenance'; // safe default (operator + super_admin hold it)
 }
 
 /** Map a /api/suministros write path to the area permission it requires. */
