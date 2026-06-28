@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMO911 — Vetar Duplicados por Rostro</title>
+  <meta name="description" content="Cola de revisión: posibles registros duplicados agrupados por reconocimiento facial. Acceso restringido." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#0b1830" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#eef0f4;color:#10182a;font-family:'Public Sans',system-ui,sans-serif}
+    .bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%);color:#fff}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 1.2rem}
+    .eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7a8092}
+    .mono{font-family:'JetBrains Mono',monospace}
+    .cluster{background:#fff;border:1px solid #d7dbe4;border-radius:.75rem;margin:1.1rem 0;overflow:hidden}
+    .cluster h2{margin:0;padding:.7rem 1rem;font-size:.82rem;border-bottom:1px solid #e7eaf1;display:flex;justify-content:space-between;align-items:center;gap:.5rem;background:#f7f8fb}
+    .members{display:flex;gap:.9rem;flex-wrap:wrap;padding:1rem}
+    .m{width:200px;border:2px solid #e2e5ee;border-radius:.6rem;overflow:hidden;cursor:pointer;transition:border-color .12s,box-shadow .12s;background:#fff}
+    .m.keep{border-color:#15803d;box-shadow:0 0 0 3px rgba(21,128,61,.15)}
+    .m img{width:100%;height:200px;object-fit:cover;background:#dde1ea;display:block}
+    .m .meta{padding:.5rem .6rem;font-size:.78rem;line-height:1.35}
+    .m .nm{font-weight:800}
+    .m .sub{color:#5c6478;font-size:.72rem}
+    .badge{display:inline-block;font-size:.6rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:.12rem .4rem;border-radius:.3rem}
+    .badge.anchor{background:#dcfce7;color:#166534}
+    .badge.cos{background:#e0e7ff;color:#3730a3}
+    .actions{display:flex;gap:.5rem;padding:0 1rem 1rem}
+    button{font-family:inherit;font-weight:800;font-size:.8rem;border:0;border-radius:.5rem;padding:.55rem 1rem;cursor:pointer}
+    .merge{background:#15803d;color:#fff}
+    .dismiss{background:#fff;color:#334;border:1px solid #cbd2de}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .hint{font-size:.74rem;color:#5c6478;padding:0 1rem .8rem}
+    #status{padding:2rem 0;text-align:center;color:#5c6478}
+    .pill{font-size:.7rem;font-weight:700;background:#fee2e2;color:#991b1b;padding:.15rem .5rem;border-radius:9999px}
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="wrap" style="display:flex;align-items:center;gap:.8rem;padding-top:.8rem;padding-bottom:.8rem">
+      <img src="/logo.svg" alt="SISMO911" style="height:38px;width:38px" />
+      <div style="flex:1">
+        <div class="eyebrow" style="color:#9fb0d0">SISMO911 · Centro de Operaciones</div>
+        <div style="font-weight:900;font-size:1.05rem;line-height:1.1">Vetar duplicados por rostro</div>
+      </div>
+      <span class="pill" id="count">…</span>
+    </div>
+  </header>
+
+  <main class="wrap" style="padding-top:1rem;padding-bottom:3rem">
+    <p style="font-size:.84rem;color:#445;max-width:62ch">
+      Cada grupo reúne registros cuyo <strong>rostro coincide</strong> (mismo desaparecido subido
+      varias veces con distinto nombre, edad o foto). Elige el registro a <strong>conservar</strong>
+      (★ = sugerido, el más completo) y pulsa <strong>Fusionar</strong> — los demás se ocultan del
+      público pero se conservan (reversible). Si son <strong>personas distintas</strong>
+      (homónimos, hermanos), pulsa <strong>Descartar</strong>.
+    </p>
+    <div id="list"></div>
+    <div id="status">Cargando cola de revisión…</div>
+  </main>
+
+  <script>
+    const $ = (s, r = document) => r.querySelector(s);
+    const fmt = (m) => m.full_name + (m.age != null ? ' · ' + m.age + ' años' : '');
+
+    async function load() {
+      const list = $('#list'); const status = $('#status');
+      list.innerHTML = ''; status.textContent = 'Cargando…'; status.style.display = '';
+      let data;
+      try {
+        const res = await fetch('/api/admin/dup/clusters', { credentials: 'same-origin' });
+        if (res.status === 403) { status.innerHTML = 'Acceso restringido. <a href="/login">Iniciar sesión</a>.'; return; }
+        data = await res.json();
+      } catch (e) { status.textContent = 'Error al cargar: ' + e.message; return; }
+
+      const clusters = data.clusters || [];
+      $('#count').textContent = clusters.length + ' grupo' + (clusters.length === 1 ? '' : 's');
+      if (!clusters.length) { status.innerHTML = '✓ No hay duplicados pendientes de revisión.'; return; }
+      status.style.display = 'none';
+
+      for (const cl of clusters) {
+        const anchor = (cl.members.find((m) => m.anchor) || cl.members[0]);
+        const el = document.createElement('section');
+        el.className = 'cluster'; el.dataset.cluster = cl.cluster_id; el.dataset.keep = anchor.id;
+        el.innerHTML =
+          '<h2><span class="mono">' + cl.cluster_id + '</span>' +
+          '<span class="eyebrow">' + cl.members.length + ' registros · misma cara</span></h2>' +
+          '<div class="members">' + cl.members.map((m) => memberCard(m, m.id === anchor.id)).join('') + '</div>' +
+          '<div class="hint">Conservar: <span class="keepname mono">' + anchor.full_name + '</span></div>' +
+          '<div class="actions">' +
+            '<button class="merge">Fusionar — conservar el seleccionado</button>' +
+            '<button class="dismiss">Descartar (personas distintas)</button>' +
+          '</div>';
+        list.appendChild(el);
+
+        el.querySelectorAll('.m').forEach((card) => card.onclick = () => {
+          el.querySelectorAll('.m').forEach((x) => x.classList.remove('keep'));
+          card.classList.add('keep'); el.dataset.keep = card.dataset.id;
+          $('.keepname', el).textContent = card.dataset.name;
+        });
+        $('.merge', el).onclick = () => act(el, 'merge');
+        $('.dismiss', el).onclick = () => act(el, 'dismiss');
+      }
+    }
+
+    function memberCard(m, isKeep) {
+      const img = m.photo_url
+        ? '<img src="' + m.photo_url + '" alt="" loading="lazy" onerror="this.style.opacity=.3" />'
+        : '<div style="height:200px;display:flex;align-items:center;justify-content:center;color:#9aa">sin foto</div>';
+      const cos = m.anchor ? '<span class="badge anchor">★ sugerido</span>'
+        : '<span class="badge cos">cos ' + (m.score ?? '?') + '</span>';
+      return '<div class="m' + (isKeep ? ' keep' : '') + '" data-id="' + m.id + '" data-name="' +
+        m.full_name.replace(/"/g, '&quot;') + '">' + img +
+        '<div class="meta"><div class="nm">' + esc(fmt(m)) + '</div>' +
+        '<div class="sub">' + esc(m.last_seen || '—') + '</div>' +
+        '<div style="margin-top:.3rem">' + cos + ' <span class="sub mono">' + m.id + '</span></div></div></div>';
+    }
+    const esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+    async function act(el, kind) {
+      const cluster_id = el.dataset.cluster;
+      const body = kind === 'merge' ? { cluster_id, keep_id: el.dataset.keep } : { cluster_id };
+      if (kind === 'merge' && !confirm('Fusionar este grupo conservando ' +
+        $('.keepname', el).textContent + '? Los demás se ocultarán del público (reversible).')) return;
+      el.querySelectorAll('button').forEach((b) => b.disabled = true);
+      try {
+        const res = await fetch('/api/admin/dup/' + kind, {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+        });
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || res.status);
+        el.style.transition = 'opacity .25s'; el.style.opacity = '.35';
+        el.querySelector('h2').insertAdjacentHTML('beforeend',
+          '<span class="eyebrow" style="color:#15803d">' + (kind === 'merge' ? '✓ fusionado' : '✓ descartado') + '</span>');
+        const left = ([...document.querySelectorAll('.cluster')].filter((x) => x.style.opacity !== '0.35')).length;
+        $('#count').textContent = left + ' grupo' + (left === 1 ? '' : 's');
+      } catch (e) {
+        alert('Error: ' + e.message);
+        el.querySelectorAll('button').forEach((b) => b.disabled = false);
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

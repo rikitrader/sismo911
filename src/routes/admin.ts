@@ -82,6 +82,93 @@ admin.post('/clean-markup', async (c) => {
   return c.json(r);
 });
 
+// --- Face-vetting review queue --------------------------------------------
+// String/byte dedupe can't catch the same missing person re-submitted with a
+// different name spelling, age typo, re-cropped photo and free-text location.
+// scripts/face-embed-local.py (ArcFace) + scripts/face-cluster.mjs propose
+// same-face clusters into dup_cluster (status='pending'); an OPERATOR vets each
+// here and merges or dismisses. Nothing is ever auto-deleted — a wrong merge of
+// a missing-person record is irreversible harm, so a human is always in the loop.
+
+// GET /api/admin/dup/clusters — pending face clusters with member details for review.
+admin.get('/dup/clusters', async (c) => {
+  if (!(await requireOperator(c))) return c.json({ error: 'forbidden' }, 403);
+  const { results } = await c.env.DB.prepare(
+    `SELECT d.cluster_id, d.persona_id, d.score, d.anchor,
+            p.nombre, p.edad, p.ubicacion, p.descripcion, p.contacto, p.estado,
+            p.foto_r2, p.foto, p.face_det_score, p.created_at
+       FROM dup_cluster d JOIN personas p ON p.id = d.persona_id
+      WHERE d.status = 'pending' AND d.method = 'face'
+      ORDER BY d.cluster_id, d.anchor DESC, d.score DESC`).all<any>();
+  const byCluster = new Map<string, any>();
+  for (const r of results ?? []) {
+    if (!byCluster.has(r.cluster_id)) byCluster.set(r.cluster_id, { cluster_id: r.cluster_id, members: [] });
+    byCluster.get(r.cluster_id).members.push({
+      id: r.persona_id, full_name: r.nombre, age: r.edad, last_seen: r.ubicacion,
+      notes: r.descripcion, contact: r.contacto, status: r.estado, score: r.score,
+      anchor: !!r.anchor, face_score: r.face_det_score,
+      // /api/familia/photo/:id serves the R2 mirror or falls back to the source URL.
+      photo_url: (r.foto_r2 || r.foto) ? `/api/familia/photo/${r.persona_id}` : null,
+    });
+  }
+  const clusters = [...byCluster.values()];
+  return c.json({ clusters, count: clusters.length });
+});
+
+// POST /api/admin/dup/merge — { cluster_id, keep_id }. Keep one record, retire the
+// rest: losers get merged_into=keep_id and moderation flipped off 'approved', so
+// every public query (which filters moderation='approved') hides them. Reversible
+// (merged_into + the row + its photo are preserved) and audited.
+admin.post('/dup/merge', async (c) => {
+  const me = await requireOperator(c);
+  if (!me) return c.json({ error: 'forbidden' }, 403);
+  const b: any = await c.req.json().catch(() => ({}));
+  const clusterId = String(b?.cluster_id ?? '').trim();
+  const keepId = String(b?.keep_id ?? '').trim();
+  if (!clusterId || !keepId) return c.json({ error: 'cluster_id and keep_id required' }, 400);
+
+  const { results } = await c.env.DB.prepare(
+    `SELECT persona_id FROM dup_cluster WHERE cluster_id = ? AND status = 'pending'`).bind(clusterId).all<any>();
+  const ids = (results ?? []).map((r) => r.persona_id);
+  if (!ids.length) return c.json({ error: 'cluster not found or already reviewed' }, 404);
+  if (!ids.includes(keepId)) return c.json({ error: 'keep_id is not a member of this cluster' }, 400);
+
+  const losers = ids.filter((id) => id !== keepId);
+  const now = Date.now();
+  const by = (me as any).email ?? (me as any).id ?? 'operator';
+  const stmts = [
+    c.env.DB.prepare(
+      `UPDATE dup_cluster SET status='merged', reviewed_at=?, reviewed_by=? WHERE cluster_id=?`)
+      .bind(now, by, clusterId),
+  ];
+  for (const id of losers) {
+    stmts.push(c.env.DB.prepare(
+      `UPDATE personas SET merged_into=?, moderation='rejected', updated_at=? WHERE id=?`)
+      .bind(keepId, now, id));
+  }
+  await c.env.DB.batch(stmts);
+  await audit(c, 'personas.faceMerge', { cluster_id: clusterId, keep_id: keepId, merged: losers });
+  return c.json({ ok: true, cluster_id: clusterId, keep_id: keepId, merged: losers });
+});
+
+// POST /api/admin/dup/dismiss — { cluster_id }. Confirmed DIFFERENT people
+// (namesakes / siblings / look-alikes). Mark the cluster resolved so the
+// clusterer never re-proposes these members. No persona row is touched.
+admin.post('/dup/dismiss', async (c) => {
+  const me = await requireOperator(c);
+  if (!me) return c.json({ error: 'forbidden' }, 403);
+  const b: any = await c.req.json().catch(() => ({}));
+  const clusterId = String(b?.cluster_id ?? '').trim();
+  if (!clusterId) return c.json({ error: 'cluster_id required' }, 400);
+  const by = (me as any).email ?? (me as any).id ?? 'operator';
+  const r = await c.env.DB.prepare(
+    `UPDATE dup_cluster SET status='dismissed', reviewed_at=?, reviewed_by=? WHERE cluster_id=? AND status='pending'`)
+    .bind(Date.now(), by, clusterId).run();
+  if (!r.meta.changes) return c.json({ error: 'cluster not found or already reviewed' }, 404);
+  await audit(c, 'personas.faceDismiss', { cluster_id: clusterId });
+  return c.json({ ok: true, cluster_id: clusterId, dismissed: r.meta.changes });
+});
+
 // Manual trigger: pull one bounded window of pages from FAMILIA_SOURCE_URL now
 // (the hourly cron does this automatically + cleans). Returns rows upserted.
 admin.post('/pull-familia', async (c) => {
