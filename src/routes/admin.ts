@@ -18,6 +18,14 @@ async function requireOperator(c: any) {
   return me;
 }
 
+// Privileged actions (API-token management) are ADMIN-ONLY. Operators must never
+// be able to approve/revoke API keys or otherwise alter access control.
+async function requireAdmin(c: any) {
+  const me = await getUserFromRequest(c.env, c).catch(() => null);
+  if (!me || me.role !== 'admin') return null;
+  return me;
+}
+
 // Manual trigger for the autonomous case re-scoring sweep (the hourly cron runs
 // it automatically). Body: { famLimit?: number } — size of the familia batch this
 // tick. Returns { native, familia, changed }.
@@ -126,7 +134,7 @@ admin.get('/spam-stats', async (c) => {
 
 // GET /api/admin/api-clients?status=pending|approved|revoked — list registrations.
 admin.get('/api-clients', async (c) => {
-  if (!(await requireOperator(c))) return c.json({ error: 'unauthorized' }, 401);
+  if (!(await requireAdmin(c))) return c.json({ error: 'forbidden' }, 403);
   const status = c.req.query('status');
   const valid = ['pending', 'approved', 'revoked'];
   const where = status && valid.includes(status) ? 'WHERE status = ?' : '';
@@ -152,7 +160,8 @@ admin.get('/api-clients', async (c) => {
 // scopes omitted → keep the client's requested (default) scopes. To grant the
 // sensitive registry, include 'read:missing-persons'.
 admin.post('/api-clients/:id/approve', async (c) => {
-  const me = await getUserFromRequest(c.env, c).catch(() => null);
+  const me = await requireAdmin(c);
+  if (!me) return c.json({ error: 'forbidden' }, 403);
   const id = c.req.param('id');
   const b: any = await c.req.json().catch(() => ({}));
   const row = await c.env.DB.prepare(`SELECT scopes FROM api_clients WHERE id = ?`).bind(id).first<any>();
@@ -178,6 +187,7 @@ admin.post('/api-clients/:id/approve', async (c) => {
 
 // POST /api/admin/api-clients/:id/revoke — disable a key (auth fails afterward).
 admin.post('/api-clients/:id/revoke', async (c) => {
+  if (!(await requireAdmin(c))) return c.json({ error: 'forbidden' }, 403);
   const id = c.req.param('id');
   const r = await c.env.DB.prepare(
     `UPDATE api_clients SET status='revoked', revoked_ms=? WHERE id=?`

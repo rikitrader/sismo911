@@ -75,6 +75,7 @@ import { getUserFromRequest } from './lib/auth';
 import { evaluateGate, LEGACY_OPS_PERM, WRITE_METHODS } from './rbac/route-policy';
 import { authorize } from './rbac/middleware';
 import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
+import { audit } from './lib/audit';
 
 const app = new Hono<{ Bindings: Env }>();
 app.use('*', async (c, next) => {
@@ -141,6 +142,21 @@ app.use('*', async (c, next) => {
     return c.redirect(`/login?next=${next_}`, 302);
   }
   return c.json({ error: 'unauthorized', hint: 'Inicia sesión como operador o admin' }, 401);
+});
+
+// --- Inventory mutation audit trail ---
+// Record every SUCCESSFUL operator write under /api/suministros to the audit log
+// (who + action + path + IP + when), so the division has a complete who-did-what
+// trail for inventory mutations. Runs after the route; only logs 2xx/3xx (blocked
+// 4xx writes are not "operations"). Audit failures never break the request.
+app.use('*', async (c, next) => {
+  await next();
+  const method = c.req.method;
+  if (!WRITE_METHODS.has(method)) return;
+  const path = new URL(c.req.url).pathname;
+  if (path.startsWith('/api/suministros') && c.res.status >= 200 && c.res.status < 400) {
+    await audit(c, `suministros.${method.toLowerCase()}`, { path, status: c.res.status }).catch(() => {});
+  }
 });
 
 // Liveness / readiness for smoke tests + uptime checks.
