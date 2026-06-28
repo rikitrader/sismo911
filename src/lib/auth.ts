@@ -74,14 +74,19 @@ export async function getUserFromRequest(env: Env, c: Context): Promise<User | n
   const token = getSessionToken(c);
   if (token) {
     const row: any = await env.DB.prepare(
-      `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,u.wallet_address,u.must_change_pw,u.mfa_enabled,u.mfa_required,s.expires_ms
+      `SELECT u.id,u.email,u.name,u.role,u.rank,u.unit,u.phone,u.wallet_address,u.must_change_pw,u.mfa_enabled,u.mfa_required,u.status,s.expires_ms,s.impersonator_id
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.revoked_ms IS NULL`
     ).bind(token).first();
+    // SECURITY (audit H4/H5): a locked/suspended/inactive/pending account's sessions
+    // are rejected — the emergency-lock + approval kill-switches are real, not cosmetic.
+    if (row && row.status && row.status !== 'active') return null;
     if (row && row.expires_ms >= Date.now()) {
       // Privileged sessions: slide the idle window on activity, and cap any
       // over-long session (e.g. created before idle timeout existed) down to it.
       // Throttled to ~once/minute so it's one write per active minute, not per request.
-      if (isPrivilegedRole(row.role)) {
+      // SECURITY (audit H7): NEVER slide an impersonation session — it must expire at
+      // its absolute minted deadline so the 30-min cap can't be heartbeat-extended.
+      if (isPrivilegedRole(row.role) && !row.impersonator_id) {
         const now = Date.now();
         const newExpires = now + IDLE_TTL_MS;
         if (Math.abs(newExpires - row.expires_ms) > 60_000) {
@@ -97,9 +102,10 @@ export async function getUserFromRequest(env: Env, c: Context): Promise<User | n
   const identity = await verifyAccessJwt(accessJwt, env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD);
   if (!identity?.email) return null;
   const row: any = await env.DB.prepare(
-    `SELECT id,email,name,role,rank,unit,phone,wallet_address FROM users WHERE email = ?`
+    `SELECT id,email,name,role,rank,unit,phone,wallet_address,status FROM users WHERE email = ?`
   ).bind(identity.email.trim().toLowerCase()).first();
   if (!row) return null;
+  if (row.status && row.status !== 'active') return null; // audit H4: enforce status here too
   return { id: row.id, email: row.email, name: row.name, role: row.role, rank: row.rank, unit: row.unit, phone: row.phone, wallet_address: row.wallet_address };
 }
 

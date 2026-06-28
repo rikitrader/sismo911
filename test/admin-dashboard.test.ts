@@ -1,17 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
-import { makeDb, makeEnv, type D1Mock } from './helpers/d1';
+import { makeDb, makeEnv, type D1Mock, RBAC_MIGRATIONS } from './helpers/d1';
 import { hashPassword } from '../src/lib/auth';
 import { adminRbac } from '../src/routes/admin-rbac';
 
-const MIGRATIONS = [
-  'migrations/0004_auth.sql',
-  'migrations/0002_ops.sql',
-  'migrations/0009_password_resets.sql',
-  'migrations/0046_rbac_workforce.sql',
-  'migrations/0047_rbac_seed.sql',
-  'migrations/0052_rbac_finegrained.sql',
-];
+const MIGRATIONS = RBAC_MIGRATIONS;
 
 async function setup() {
   const db: D1Mock = makeDb(MIGRATIONS);
@@ -56,10 +49,12 @@ describe('admin RBAC dashboard', () => {
     expect(j.recentInvitations).toBe(1);
   });
 
-  it('citizen GET /dashboard → 403', async () => {
+  it('suspended citizen GET /dashboard → 401 (session rejected by status enforcement, audit H4)', async () => {
     const { app, env } = await setup();
+    // usr_cit is seeded status='suspended'; getUserFromRequest now rejects a
+    // non-active account's session entirely — a stronger denial than the old 403.
     const r = await app.request('/api/rbac/dashboard', { headers: { Authorization: 'Bearer tok_cit' } }, env);
-    expect(r.status).toBe(403);
+    expect(r.status).toBe(401);
   });
 
   it('unauthenticated GET /dashboard → 401', async () => {
