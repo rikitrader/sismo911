@@ -12,6 +12,7 @@ import { misc } from './routes/misc';
 import { damage } from './routes/damage';
 import { satellite } from './routes/satellite';
 import { auth } from './routes/auth';
+import { x402, wellKnownX402 } from './routes/x402';
 import { familia } from './routes/familia';
 import { voluntarios } from './routes/voluntarios';
 import { telemedicina } from './routes/telemedicina';
@@ -217,6 +218,9 @@ app.route('/api/events', events);
 app.route('/api/persons', persons);
 app.route('/api/contacts', contacts);
 app.route('/api/auth', auth);
+app.route('/api/x402', x402);        // x402 payment receiving: per-user wallet accepts USDC over HTTP (verify+settle via facilitator)
+// x402 service discovery (public). Agents/clients read this to learn the network + pay-URL template.
+app.get('/.well-known/x402.json', (c) => c.json(wellKnownX402(c.env)));
 app.route('/api/familia', familia);
 app.route('/api/voluntarios', voluntarios);
 app.route('/api/telemedicina', telemedicina); // doctors worldwide ↔ patient help-requests for VE (intake, claim, schedule, video, calendar/ics)

@@ -92,6 +92,15 @@ export interface Env {
   CROSSMINT_ENV?: string;            // 'production' (default) | 'staging'
   CROSSMINT_CHAIN?: string;          // 'base' (default)
 
+  // --- x402 payment receiving (https://github.com/xpaysh/awesome-x402) -------
+  // Each user's Crossmint wallet (above) doubles as an x402 `payTo` receiver.
+  // All optional: the schema + ledger work without them, but the live
+  // verify/settle step is gated on a reachable facilitator.
+  X402_FACILITATOR_URL?: string;     // facilitator base URL (verify+settle). Public testnet: https://x402.org/facilitator
+  X402_NETWORK?: string;             // CAIP-2 override, e.g. 'eip155:8453' (Base). Default derives from CROSSMINT_CHAIN.
+  X402_ASSET?: string;               // token contract override; default = USDC for the network
+  X402_FACILITATOR_API_KEY?: string; // optional bearer for facilitators that require auth (e.g. CDP mainnet)
+
   // --- DB Ingestion Gatekeeper (src/security/*) -----------------------------
   // All optional: the gate has safe built-in defaults and degrades gracefully.
   // Cloudflare Turnstile server secret (verify the public widget token). When
