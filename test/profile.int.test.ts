@@ -103,3 +103,50 @@ describe('profile API — auth + scope + validation', () => {
     expect(r.status).toBe(401);
   });
 });
+
+describe('profile API — payment-settings + payments summary (W2)', () => {
+  it('PATCH /payment-settings merges only whitelisted booleans; persists', async () => {
+    const { app, env, db } = await setup();
+    const r = await app.request('/api/profile/payment-settings', {
+      method: 'PATCH', headers: AUTH,
+      body: JSON.stringify({ receive_payments: true, hide_balance: true, NOT_A_KEY: true }),
+    }, env);
+    expect(r.status).toBe(200);
+    const d: any = await r.json();
+    expect(d.settings.receive_payments).toBe(true);
+    expect(d.settings.hide_balance).toBe(true);
+    expect(d.settings.NOT_A_KEY).toBeUndefined();
+    const row: any = db.raw.prepare('SELECT settings_json FROM users WHERE id=?').get('usr_a');
+    expect(JSON.parse(row.settings_json).receive_payments).toBe(true);
+  });
+  it('PATCH /payment-settings rejects non-boolean + unauth', async () => {
+    const { app, env } = await setup();
+    const r1 = await app.request('/api/profile/payment-settings', { method: 'PATCH', headers: AUTH, body: JSON.stringify({ receive_payments: 'yes' }) }, env);
+    expect(r1.status).toBe(400);
+    const r2 = await app.request('/api/profile/payment-settings', { method: 'PATCH', headers: { 'content-type': 'application/json', origin: 'https://sismo911.com' }, body: '{"receive_payments":true}' }, env);
+    expect(r2.status).toBe(401);
+  });
+  it('GET /payments/summary aggregates the x402 ledger; 401 unauth', async () => {
+    const { app, env, db } = await setup();
+    const now = Date.now();
+    db.raw.prepare(`INSERT INTO x402_resources (id,user_id,slug,title,price_usd,mime_type,active,created_ms,updated_ms) VALUES (?,?,?,?,?,?,?,?,?)`)
+      .run('res_1', 'usr_a', 'svc', 'Servicio', 5, 'application/json', 1, now, now);
+    const ins = db.raw.prepare(`INSERT INTO x402_payments (id,payee_user_id,resource_id,resource_url,network,asset,amount,amount_usd,pay_to,status,created_ms,settled_ms) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
+    ins.run('p1', 'usr_a', 'res_1', '/x', 'eip155:8453', 'usdc', '5000000', 5, '0xabc', 'settled', now, now);
+    ins.run('p2', 'usr_a', 'res_1', '/x', 'eip155:8453', 'usdc', '3000000', 3, '0xabc', 'settled', now, now);
+    ins.run('p3', 'usr_a', 'res_1', '/x', 'eip155:8453', 'usdc', '1000000', 1, '0xabc', 'failed', now, null);
+
+    const r = await app.request('/api/profile/payments/summary', { headers: { Cookie: 'sismo_session=tok_a' } }, env);
+    expect(r.status).toBe(200);
+    const d: any = await r.json();
+    expect(d.summary.count).toBe(2);
+    expect(d.summary.total_received_usd).toBe(8);
+    expect(d.summary.avg_usd).toBe(4);
+    expect(d.summary.failed_count).toBe(1);
+    expect(d.summary.active_links).toBe(1);
+    expect(d.by_status.settled.n).toBe(2);
+    expect(d.top_links[0].title).toBe('Servicio');
+    const un = await app.request('/api/profile/payments/summary', {}, env);
+    expect(un.status).toBe(401);
+  });
+});
