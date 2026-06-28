@@ -51,7 +51,7 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   '/api/donations', '/api/e', '/api/emergencia', '/api/facilities', '/api/familia',
   '/api/funding', '/api/humanitarian', '/api/mascotas', '/api/monitor',
   '/api/persons', '/api/push', '/api/rav', '/api/rbac', '/api/refugios', '/api/reports',
-  '/api/resources', '/api/sat', '/api/shelters', '/api/sos', '/api/suministros',
+  '/api/resources', '/api/sat', '/api/shelters', '/api/sos', '/api/suministros', '/api/triage',
   '/api/telemedicina', '/api/v1', '/api/voluntarios', '/api/x402', '/api/admin',
   // Profile Command Center — every endpoint self-authenticates via
   // getUserFromRequest and is scoped to the caller's own user id (like /api/x402).
