@@ -52,6 +52,7 @@ import { donations } from './routes/donations';
 import { botiquin } from './routes/botiquin';
 import { agencias } from './routes/agencias';
 import { estados } from './routes/estados';
+import { informeDanos } from './routes/informe-danos';
 import { layers } from './routes/layers';
 import { sitrep } from './routes/sitrep';
 import { dataApi } from './routes/data-api';
@@ -353,6 +354,7 @@ app.route('/api', donations); // crowdfunding: /api/campaigns* + /api/donations*
 app.route('/', botiquin);     // /botiquin index + /botiquin/:slug per-item pages + /api/botiquin
 app.route('/', agencias);     // FEMA-VE: /agencias mapa + ESF-15 + /agencias/:slug + /api/agencias
 app.route('/', estados);      // /estados (índice nacional) + /estado/:slug (mapa por estado: GIS + sismos + daños)
+app.route('/', informeDanos); // /informe-danos (informe de evaluación de daños — costa de La Guaira, terremoto 24-jun-2026)
 app.get('/la-guaira', (c) => c.redirect('/estado/la-guaira', 301)); // antigua URL → plantilla generalizada
 app.route('/api', ops);    // /api/checkins, /api/resources, /api/sos
 app.route('/api', misc);   // /api/heatmap, /api/comms, /api/push/*, /api/sitrep/*
