@@ -6,6 +6,7 @@ import { cleanPersonas } from '../lib/clean';
 import { dedupePersonas } from '../lib/dedupe';
 import { maskContact, timingSafeEqualStr } from '../lib/security';
 import { backfillHospitalMatches } from '../ingest/hospital-match';
+import { ingestPacientesRvz } from '../ingest/pacientes-rvz-cron';
 
 // redayudavenezuela.com (RAV) surface:
 //   POST /api/rav/run     — Bearer-gated backfill/ingest driver (used by scripts/pull-rav.mjs)
@@ -45,6 +46,8 @@ rav.post('/api/rav/run', async (c) => {
     // collapse the same photo re-hosted at different URLs across sources (e.g. the
     // theempire↔RAV duplicates). Drive this to clear the hash backlog fast.
     if (kind === 'phash') out.phash = await backfillPhashes(c.env, Math.min(Math.max(Number(c.req.query('batch')) || 400, 1), 400));
+    // reportesvenezuela.com /pacientes.json hospital intakes (ingresados) → rav_reports kind='hospital'.
+    if (kind === 'pacientes' || kind === 'all') out.pacientes = await ingestPacientesRvz(c.env);
     // Cross-match desaparecidos ↔ hospital intakes (persisted matches + pending docket notes).
     if (kind === 'hospmatch') out.hospmatch = await backfillHospitalMatches(c.env, { pages: Math.min(Math.max(Number(c.req.query('pages')) || 30, 1), 40) });
     if (c.req.query('clean')) out.cleaned = await cleanPersonas(c.env, { apply: true });
