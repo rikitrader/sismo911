@@ -10,6 +10,7 @@
   <meta name="theme-color" content="#0b1830" />
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/app.css" />
+  <script src="https://unpkg.com/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <style>
     body{background:#eef0f4}
     .eoc-bar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%)}
@@ -46,6 +47,12 @@
     .fin-subtab{font:700 11px 'Inter',sans-serif;padding:5px 10px;border-radius:7px;cursor:pointer;color:#44474f;white-space:nowrap;border:none;background:none}
     .fin-subtab.on{background:#13284f;color:#fff}
     .fin-subtab:hover:not(.on){background:#e0e4ef}
+    .rep-tab{font:700 11px 'Inter',sans-serif;padding:5px 10px;border-radius:7px;cursor:pointer;color:#44474f;white-space:nowrap;border:none;background:none}
+    .rep-tab.on{background:#13284f;color:#fff}
+    .rep-tab:hover:not(.on){background:#e0e4ef}
+    .etq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:1rem}
+    .etq-label{border:1px solid #d7dbe4;border-radius:.5rem;padding:.75rem;background:#fff;text-align:center}
+    @media print{body *{visibility:hidden}#etq-print,#etq-print *{visibility:visible}#etq-print{position:absolute;top:0;left:0;width:100%}.etq-grid{display:grid!important;grid-template-columns:repeat(3,1fr);gap:8mm;padding:8mm}.etq-label{break-inside:avoid}}
   </style>
 </head>
 <body class="font-sans text-on-surface">
@@ -96,6 +103,9 @@
     <button class="seg" data-tab="finanzas">Finanzas</button>
     <button class="seg" data-tab="picklists">Picklists</button>
     <button class="seg" data-tab="envios">Envíos</button>
+    <button class="seg" data-tab="conteos">Conteos</button>
+    <button class="seg" data-tab="reportes">Reportes</button>
+    <button class="seg" data-tab="etiquetas">Etiquetas</button>
   </div>
 
   <!-- ═══ TABLERO ═══ -->
@@ -893,6 +903,106 @@
     </div>
   </section>
 
+  <!-- ═══ CONTEOS ═══ -->
+  <section data-panel="conteos" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="eyebrow">Conteos físicos</div>
+          <select id="cnt_estado" class="inp-sm">
+            <option value="">Todos los estados</option>
+            <option value="programado">Programado</option>
+            <option value="en_proceso">En proceso</option>
+            <option value="conciliado">Conciliado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <button id="cnt_buscar" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto" style="max-height:50vh">
+            <table class="dt">
+              <thead><tr><th>Código</th><th>Ubicación</th><th>Estado</th><th>Asignado</th><th>#líneas</th><th>Fecha</th></tr></thead>
+              <tbody id="cntRows"><tr><td colspan="6" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="cntDetail" class="hidden card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="eyebrow">Detalle de conteo</div>
+            <button id="cntDetailClose" class="text-xs font-semibold text-on-surface-variant">✕ Cerrar</button>
+          </div>
+          <div id="cntDetailMeta" class="text-sm"></div>
+          <div class="overflow-x-auto">
+            <table class="dt"><thead><tr><th>Producto</th><th>Lote</th><th>Cant. sistema</th><th>Cant. contada</th><th>Varianza</th><th>Disponible</th></tr></thead>
+            <tbody id="cntDetailLines"></tbody></table>
+          </div>
+          <div id="cntActions" class="flex flex-wrap gap-2 items-center"></div>
+          <p id="cntActMsg" class="text-xs text-center"></p>
+        </div>
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Programar conteo</div>
+        <form id="fCnt" class="space-y-2">
+          <div><label class="lbl">Ubicación</label><select id="cntUbicSel" name="ubicacion_id" required onchange="loadCntItems(this.value)"><option value="">-- Seleccionar --</option></select></div>
+          <input name="asignado_a" placeholder="Asignado a" />
+          <div><label class="lbl">Fecha programada</label><input name="programado" type="date" /></div>
+          <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer"><input id="cntSnapshotChk" type="checkbox" onchange="toggleCntLineas()"> Snapshot de todo el stock</label>
+          <div id="cntLineasBox">
+            <div class="flex items-center justify-between mb-1">
+              <div class="eyebrow">Líneas a contar</div>
+              <button type="button" class="btn-add" onclick="addCntRow()">+ Añadir</button>
+            </div>
+            <div id="rows_cnt" class="space-y-1.5"></div>
+          </div>
+          <button class="w-full bg-secondary text-white font-bold rounded py-2 text-sm">Programar conteo</button>
+          <p id="cntMsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ REPORTES ═══ -->
+  <section data-panel="reportes" class="hidden space-y-4">
+    <div class="flex gap-2 bg-white border border-gray-200 rounded-xl p-1.5 w-fit flex-wrap">
+      <button class="rep-tab on" data-rep="valuacion" onclick="switchRep('valuacion')">Valuación</button>
+      <button class="rep-tab" data-rep="rotacion" onclick="switchRep('rotacion')">Rotación</button>
+      <button class="rep-tab" data-rep="caducidad" onclick="switchRep('caducidad')">Caducidad</button>
+      <button class="rep-tab" data-rep="ledger" onclick="switchRep('ledger')">Ledger</button>
+      <button class="rep-tab" data-rep="fill-rate" onclick="switchRep('fill-rate')">Fill-rate</button>
+    </div>
+    <div id="repFilters" class="card p-3 flex flex-wrap items-center gap-3">
+      <span class="eyebrow">Valuación de inventario</span>
+    </div>
+    <div id="repResults">
+      <div class="text-sm text-on-surface-variant py-8 text-center">Selecciona un reporte.</div>
+    </div>
+  </section>
+
+  <!-- ═══ ETIQUETAS ═══ -->
+  <section data-panel="etiquetas" class="hidden">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="card overflow-hidden h-fit">
+        <div class="px-4 pt-3 pb-2 eyebrow">Buscar producto</div>
+        <div class="px-3 pb-2"><input id="etqSearch" placeholder="Filtrar por nombre o código…" class="inp-sm" /></div>
+        <div id="etqCatList" style="max-height:60vh;overflow-y:auto">
+          <div class="text-sm text-on-surface-variant py-8 text-center">Cargando…</div>
+        </div>
+      </div>
+      <div class="lg:col-span-2 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="eyebrow">Etiquetas</div>
+          <label class="flex items-center gap-1.5 text-xs font-semibold">Copias: <input id="etqCopias" type="number" min="1" max="20" value="1" class="inp-sm" style="width:60px"></label>
+          <button id="etqPrintBtn" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">⊞ Imprimir</button>
+        </div>
+        <div id="etq-print">
+          <div id="etqPrintArea" class="etq-grid">
+            <div class="text-sm text-on-surface-variant py-8 text-center lg:col-span-3">Selecciona un producto para ver sus etiquetas.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <p class="text-[11px] text-on-surface-variant">Actualización manual · las acciones de escritura requieren sesión de operador.</p>
 </main>
 
@@ -921,6 +1031,8 @@ const PICKEST={pendiente:{l:'Pendiente',c:'#475569',bg:'#e2e8f0'},en_proceso:{l:
 const ENVEST={pendiente:{l:'Pendiente',c:'#475569',bg:'#e2e8f0'},despachado:{l:'Despachado',c:'#1d4ed8',bg:'#dbeafe'},en_transito:{l:'En tránsito',c:'#b45309',bg:'#fef3c7'},recibido:{l:'Recibido',c:'#15803d',bg:'#dcfce7'},cancelado:{l:'Cancelado',c:'#b91c1c',bg:'#fee2e2'}};
 const MODOENV={terrestre:{l:'Terrestre',c:'#475569',bg:'#e2e8f0'},aereo:{l:'Aéreo',c:'#1d4ed8',bg:'#dbeafe'},maritimo:{l:'Marítimo',c:'#0891b2',bg:'#cffafe'},fluvial:{l:'Fluvial',c:'#15803d',bg:'#dcfce7'},otro:{l:'Otro',c:'#7c3aed',bg:'#ede9fe'}};
 const CONTTIPO={caja:{l:'Caja',c:'#475569',bg:'#e2e8f0'},pallet:{l:'Pallet',c:'#1d4ed8',bg:'#dbeafe'},saco:{l:'Saco',c:'#b45309',bg:'#fef3c7'},nevera:{l:'Nevera',c:'#0891b2',bg:'#cffafe'},bidon:{l:'Bidón',c:'#7c3aed',bg:'#ede9fe'}};
+const CNTEST={programado:{l:'Programado',c:'#475569',bg:'#e2e8f0'},en_proceso:{l:'En proceso',c:'#b45309',bg:'#fef3c7'},conciliado:{l:'Conciliado',c:'#15803d',bg:'#dcfce7'},cancelado:{l:'Cancelado',c:'#b91c1c',bg:'#fee2e2'}};
+const TXTIPO={recepcion:{l:'Recepción',c:'#15803d',bg:'#dcfce7'},despacho:{l:'Despacho',c:'#1d4ed8',bg:'#dbeafe'},traslado:{l:'Traslado',c:'#b45309',bg:'#fef3c7'},ajuste:{l:'Ajuste',c:'#7c3aed',bg:'#ede9fe'},conteo:{l:'Conteo',c:'#0891b2',bg:'#cffafe'}};
 function chipOf(k,map){const m=map[k]||{l:k||'—',c:'#475569',bg:'#e2e8f0'};return`<span class="chip" style="color:${m.c};background:${m.bg}">${esc(m.l)}</span>`;}
 
 // ── Toast / messages ──
@@ -962,6 +1074,9 @@ function onTab(t){
   else if(t==='finanzas'){ensureProvs();loadCuentas();}
   else if(t==='picklists'){ensureUbic();loadPicklists();}
   else if(t==='envios'){ensureUbic();loadEnvios();loadMetodosEnvio();}
+  else if(t==='conteos'){ensureUbic();ensureProds();loadConteos();}
+  else if(t==='reportes'){ensureUbic();ensureProds();renderRepFilters('valuacion');loadReporte('valuacion');}
+  else if(t==='etiquetas'){loadEtqCatalogo();}
 }
 
 // ── Ubicaciones ──
@@ -2012,6 +2127,281 @@ $('#fEnv').onsubmit=async e=>{e.preventDefault();const f=e.target;
   const ok=await post('envios',{origen_id:f.origen_id.value,destino_id:f.destino_id.value,metodo_id:f.metodo_id.value||null,num_referencia:f.num_referencia.value||null,transportista:f.transportista.value||null,contenedores,lineas},'#envMsg');
   if(ok){f.reset();$('#rows_env_cont').innerHTML='';$('#rows_env').innerHTML='';_envContCount=0;loadEnvios();toast('Envío creado');}
 };
+
+// ── Conteos ──
+let CNT_ITEMS=[];
+async function loadConteos(){
+  const estado=$('#cnt_estado')?.value||'';
+  const p=estado?'?estado='+encodeURIComponent(estado):'';
+  const r=await api('conteos'+p).catch(()=>null);
+  const tb=$('#cntRows');if(!tb)return;
+  if(!r){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Error de red.</td></tr>';return;}
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin autorización.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));renderConteos(d.results||[]);
+}
+function renderConteos(list){
+  const tb=$('#cntRows');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin conteos todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(c=>`<tr class="row" onclick="openConteo('${esc(c.id)}')">
+    <td class="mono text-[11px] font-bold">${esc(c.codigo||c.id||'—')}</td>
+    <td class="text-[12px]">${esc(c.ubicacion_nombre||'—')}</td>
+    <td>${chipOf(c.estado,CNTEST)}</td>
+    <td class="text-[12px]">${esc(c.asignado_a||'—')}</td>
+    <td class="mono text-[12px]">${c.n_lineas??'—'}</td>
+    <td class="text-[11px]">${fdate(c.programado_ms)}</td>
+  </tr>`).join('');
+}
+async function openConteo(id){
+  const r=await api('conteos/'+id).catch(()=>null);if(!r||!r.ok)return;
+  const d=await j(r).catch(()=>({}));
+  const ct=d.conteo||d;const lines=d.lineas||[];
+  $('#cntDetailMeta').innerHTML=`<b class="mono">${esc(ct.codigo||ct.id)}</b> ${chipOf(ct.estado,CNTEST)} · Ubicación: <b>${esc(ct.ubicacion_nombre||'—')}</b> · Asignado: <b>${esc(ct.asignado_a||'—')}</b>`;
+  const editable=ct.estado!=='conciliado'&&ct.estado!=='cancelado';
+  $('#cntDetailLines').innerHTML=lines.length?lines.map(l=>{
+    const vara=l.cantidad_contada!=null&&l.cantidad_sistema!=null?l.cantidad_contada-l.cantidad_sistema:null;
+    const varStyle=vara==null?'':`color:${vara<0?'#b91c1c':vara>0?'#15803d':'#475569'};font-weight:700`;
+    return`<tr class="row" data-linea-id="${esc(l.id)}">
+      <td class="font-semibold text-[12px]">${esc(l.producto_nombre||'—')}</td>
+      <td class="mono text-[11px]">${esc(l.lote||'—')}</td>
+      <td class="mono text-[12px]">${l.cantidad_sistema??'—'}</td>
+      <td>${editable?`<input type="number" class="inp-sm cnt-contada" style="width:70px" value="${l.cantidad_contada??''}" placeholder="0">`:String(l.cantidad_contada??'—')}</td>
+      <td class="mono text-[12px]" style="${varStyle}">${vara!=null?(vara>=0?'+':'')+vara:'—'}</td>
+      <td class="mono text-[12px]">${l.disponible??'—'}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="6" class="py-4 text-center text-on-surface-variant">Sin líneas.</td></tr>';
+  buildCntActions(ct);
+  setMsg('#cntActMsg','',true);
+  $('#cntDetail').dataset.cntId=id;
+  $('#cntDetail').classList.remove('hidden');
+}
+$('#cntDetailClose').onclick=()=>$('#cntDetail').classList.add('hidden');
+$('#cnt_buscar').onclick=loadConteos;
+function buildCntActions(ct){
+  const el=$('#cntActions');const est=ct.estado||'programado';let acts=[];
+  if(est!=='conciliado'&&est!=='cancelado'){
+    acts.push(`<button onclick="guardarConteo('${esc(ct.id)}')" class="bg-primary text-white text-xs font-bold rounded px-3 py-1.5">✎ Guardar conteo</button>`);
+    acts.push(`<button onclick="conciliarConteo('${esc(ct.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#15803d">✓ Conciliar (ajustar stock)</button>`);
+    acts.push(`<button onclick="cancelarConteo('${esc(ct.id)}')" class="text-white text-xs font-bold rounded px-3 py-1.5" style="background:#b91c1c">✕ Cancelar</button>`);
+  }
+  el.innerHTML=acts.join('');
+}
+async function guardarConteo(id){
+  const lineas=[...$('#cntDetailLines').querySelectorAll('tr[data-linea-id]')].map(row=>{
+    const inp=row.querySelector('.cnt-contada');
+    return{linea_id:row.dataset.lineaId,cantidad_contada:inp?num(inp.value):null};
+  }).filter(l=>l.linea_id&&l.cantidad_contada!=null);
+  if(!lineas.length){setMsg('#cntActMsg','Ingresa al menos una cantidad contada.',false);return;}
+  const r=await api('conteos/'+id+'/contar',{method:'POST',body:JSON.stringify({lineas})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Conteo guardado');loadConteos();openConteo(id);}
+  else setMsg('#cntActMsg',d.error||'Error al guardar',false);
+}
+async function conciliarConteo(id){
+  if(!confirm('¿Conciliar? Esto generará ajustes de inventario según las varianzas.'))return;
+  const r=await api('conteos/'+id+'/conciliar',{method:'POST',body:JSON.stringify({})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Conteo conciliado — ajustes generados');loadConteos();openConteo(id);}
+  else setMsg('#cntActMsg',d.error||'Error al conciliar',false);
+}
+async function cancelarConteo(id){
+  if(!confirm('¿Cancelar este conteo?'))return;
+  const r=await api('conteos/'+id,{method:'PATCH',body:JSON.stringify({estado:'cancelada'})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');return;}
+  if(r.ok){toast('Conteo cancelado');loadConteos();$('#cntDetail').classList.add('hidden');}
+  else setMsg('#cntActMsg',d.error||'Error al cancelar',false);
+}
+async function loadCntItems(ubicId){
+  CNT_ITEMS=[];
+  if(!ubicId)return;
+  const r=await api('inventario/items?ubicacion_id='+encodeURIComponent(ubicId)).catch(()=>null);
+  if(!r||!r.ok)return;
+  const d=await j(r).catch(()=>({}));CNT_ITEMS=d.results||[];
+  const opts=CNT_ITEMS.map(i=>`<option value="${esc(i.item_id)}">${esc(i.producto_nombre)} – ${esc(i.lote||'s/lote')} (${i.disponible})</option>`).join('');
+  $$('#rows_cnt .row-item-sel').forEach(s=>{const cv=s.value;s.innerHTML='<option value="">-- Ítem --</option>'+opts;if(cv)s.value=cv;});
+}
+function toggleCntLineas(){
+  const box=$('#cntLineasBox');if(box)box.classList.toggle('hidden',$('#cntSnapshotChk').checked);
+}
+function addCntRow(){
+  const div=document.createElement('div');div.className='lrow';
+  div.style.gridTemplateColumns='1fr auto';
+  div.innerHTML=`<select class="inp-sm row-item-sel"><option value="">-- Ítem --</option>${CNT_ITEMS.map(i=>`<option value="${esc(i.item_id)}">${esc(i.producto_nombre)} – ${esc(i.lote||'s/lote')} (${i.disponible})</option>`).join('')}</select>
+    <button type="button" class="btn-del" onclick="this.closest('.lrow').remove()">✕</button>`;
+  $('#rows_cnt').appendChild(div);
+}
+$('#fCnt').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const ubicId=f.ubicacion_id.value;
+  if(!ubicId){setMsg('#cntMsg','Selecciona una ubicación.',false);return;}
+  const snapshot=$('#cntSnapshotChk').checked;
+  const programadoMs=toMs(f.programado.value);
+  if(snapshot){
+    const ok=await post('conteos/generar',{ubicacion_id:ubicId,asignado_a:f.asignado_a.value||null,programado_ms:programadoMs},'#cntMsg');
+    if(ok){f.reset();$('#rows_cnt').innerHTML='';$('#cntSnapshotChk').checked=false;$('#cntLineasBox').classList.remove('hidden');CNT_ITEMS=[];loadConteos();toast('Conteo generado con snapshot del stock');}
+  }else{
+    const lineas=[...$('#rows_cnt').querySelectorAll('.lrow')].map(r=>({item_id:r.querySelector('.row-item-sel').value})).filter(l=>l.item_id);
+    if(!lineas.length){setMsg('#cntMsg','Añade al menos una línea o activa el snapshot.',false);return;}
+    const ok=await post('conteos',{ubicacion_id:ubicId,asignado_a:f.asignado_a.value||null,programado_ms:programadoMs,lineas},'#cntMsg');
+    if(ok){f.reset();$('#rows_cnt').innerHTML='';CNT_ITEMS=[];loadConteos();toast('Conteo programado');}
+  }
+};
+
+// ── Reportes ──
+let _ledgerRows=[];
+function switchRep(rep){
+  $$('.rep-tab').forEach(b=>b.classList.toggle('on',b.dataset.rep===rep));
+  renderRepFilters(rep);
+  loadReporte(rep);
+}
+function renderRepFilters(rep){
+  const el=$('#repFilters');if(!el)return;
+  if(rep==='valuacion'){el.innerHTML='<span class="eyebrow">Valuación de inventario</span>';}
+  else if(rep==='rotacion'){
+    el.innerHTML=`<span class="eyebrow">Rotación</span>
+      <label class="flex items-center gap-1.5 text-xs font-semibold">Días: <select id="rot_dias" class="inp-sm" style="width:auto"><option value="30">30d</option><option value="90" selected>90d</option><option value="180">180d</option></select></label>
+      <button onclick="loadReporte('rotacion')" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Calcular</button>`;
+  }
+  else if(rep==='caducidad'){el.innerHTML='<span class="eyebrow">Caducidad por bucket</span>';}
+  else if(rep==='ledger'){
+    const pOpts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+    const uOpts=UBICACIONES.map(u=>`<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('');
+    el.innerHTML=`<span class="eyebrow">Ledger</span>
+      <select id="led_prod" class="inp-sm"><option value="">Todos los productos</option>${pOpts}</select>
+      <select id="led_ubic" class="inp-sm"><option value="">Todas las ubicaciones</option>${uOpts}</select>
+      <select id="led_tipo" class="inp-sm" style="width:auto"><option value="">Todos los tipos</option><option value="recepcion">Recepción</option><option value="despacho">Despacho</option><option value="traslado">Traslado</option><option value="ajuste">Ajuste</option></select>
+      <input id="led_from" type="date" class="inp-sm" style="width:130px">
+      <input id="led_to" type="date" class="inp-sm" style="width:130px">
+      <button onclick="loadReporte('ledger')" class="bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs">Buscar</button>
+      <button id="ledExportBtn" class="btn-add hidden" onclick="exportLedgerCSV()">↓ CSV</button>`;
+  }
+  else if(rep==='fill-rate'){el.innerHTML='<span class="eyebrow">Fill-rate de requisiciones</span>';}
+}
+async function loadReporte(rep){
+  const el=$('#repResults');if(!el)return;
+  el.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Cargando…</div>';
+  if(rep==='valuacion'){
+    const r=await api('reportes/valuacion').catch(()=>null);
+    if(!r||!r.ok){el.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Sin datos.</div>';return;}
+    renderValuacion(await j(r).catch(()=>({})),el);
+  }else if(rep==='rotacion'){
+    const dias=$('#rot_dias')?.value||'90';
+    const r=await api('reportes/rotacion?dias='+dias).catch(()=>null);
+    if(!r||!r.ok){el.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Sin datos.</div>';return;}
+    renderRotacion(await j(r).catch(()=>({})),el);
+  }else if(rep==='caducidad'){
+    const r=await api('reportes/caducidad').catch(()=>null);
+    if(!r||!r.ok){el.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Sin datos.</div>';return;}
+    renderCaducidad(await j(r).catch(()=>({})),el);
+  }else if(rep==='ledger'){
+    const p=new URLSearchParams();
+    const prod=$('#led_prod')?.value,ubic=$('#led_ubic')?.value,tipo=$('#led_tipo')?.value,from=$('#led_from')?.value,to=$('#led_to')?.value;
+    if(prod)p.set('producto_id',prod);if(ubic)p.set('ubicacion_id',ubic);if(tipo)p.set('tipo',tipo);
+    if(from)p.set('from',new Date(from).getTime());if(to)p.set('to',new Date(to).getTime());
+    const r=await api('reportes/ledger?'+p).catch(()=>null);
+    if(!r||!r.ok){el.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Sin datos.</div>';return;}
+    renderLedger(await j(r).catch(()=>({})),el);
+  }else if(rep==='fill-rate'){
+    const r=await api('reportes/fill-rate').catch(()=>null);
+    if(!r||!r.ok){el.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Sin datos.</div>';return;}
+    renderFillRate(await j(r).catch(()=>({})),el);
+  }
+}
+function renderValuacion(d,el){
+  const total=d.total_usd!=null?'$'+Number(d.total_usd).toLocaleString('es-VE',{minimumFractionDigits:2})+' USD':'—';
+  const cats=d.por_categoria||[];const ubics=d.por_ubicacion||[];const items=d.top_items||[];
+  el.innerHTML=`<div class="card p-4"><div class="eyebrow">Valor total del inventario</div><div class="font-display font-black text-3xl text-primary">${esc(total)}</div></div>
+  <div class="grid lg:grid-cols-2 gap-4">
+    <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Por categoría</div><table class="dt"><thead><tr><th>Categoría</th><th>Valor USD</th></tr></thead><tbody>${cats.length?cats.map(c=>`<tr class="row"><td class="text-[12px]">${esc(c.categoria||'—')}</td><td class="mono text-[12px]">$${Number(c.valor_usd||0).toLocaleString('es-VE',{minimumFractionDigits:2})}</td></tr>`).join(''):'<tr><td colspan="2" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div>
+    <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Por ubicación</div><table class="dt"><thead><tr><th>Ubicación</th><th>Valor USD</th></tr></thead><tbody>${ubics.length?ubics.map(u=>`<tr class="row"><td class="text-[12px]">${esc(u.ubicacion||'—')}</td><td class="mono text-[12px]">$${Number(u.valor_usd||0).toLocaleString('es-VE',{minimumFractionDigits:2})}</td></tr>`).join(''):'<tr><td colspan="2" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div>
+  </div>
+  <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Top ítems por valor</div><div class="overflow-x-auto"><table class="dt"><thead><tr><th>Producto</th><th>Cantidad</th><th>Costo unit.</th><th>Valor</th></tr></thead><tbody>${items.length?items.map(i=>`<tr class="row"><td class="font-semibold text-[12px]">${esc(i.producto||'—')}</td><td class="mono text-[12px]">${i.cantidad??'—'}</td><td class="mono text-[12px]">${i.costo_unit!=null?'$'+Number(i.costo_unit).toLocaleString('es-VE',{minimumFractionDigits:2}):'—'}</td><td class="mono text-[12px] font-semibold">$${Number(i.valor_usd||0).toLocaleString('es-VE',{minimumFractionDigits:2})}</td></tr>`).join(''):'<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">Sin ítems.</td></tr>'}</tbody></table></div></div>`;
+}
+function renderRotacion(d,el){
+  const rows=d.results||[];
+  el.innerHTML=`<div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Rotación de inventario</div><div class="overflow-x-auto"><table class="dt"><thead><tr><th>Producto</th><th>Consumo</th><th>Existencia</th><th>Rotación</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr class="row"><td class="font-semibold text-[12px]">${esc(r.producto||'—')}</td><td class="mono text-[12px]">${r.consumo??'—'}</td><td class="mono text-[12px]">${r.existencia??'—'}</td><td class="mono text-[12px]">${r.rotacion!=null?Number(r.rotacion).toFixed(2):'—'}</td></tr>`).join(''):'<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div></div>`;
+}
+function renderCaducidad(d,el){
+  const bk=k=>d[k]||{items:0,cantidad:0};
+  const detalles=d.detalles||[];
+  el.innerHTML=`<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="card p-3"><div class="eyebrow mb-1" style="color:#b91c1c">Vencido</div><div class="font-display font-black text-xl" style="color:#b91c1c">${bk('vencido').items}</div><div class="text-xs text-on-surface-variant">${bk('vencido').cantidad} unid.</div></div>
+    <div class="card p-3"><div class="eyebrow mb-1" style="color:#b45309">0–30 días</div><div class="font-display font-black text-xl" style="color:#b45309">${bk('0_30').items}</div><div class="text-xs text-on-surface-variant">${bk('0_30').cantidad} unid.</div></div>
+    <div class="card p-3"><div class="eyebrow mb-1" style="color:#d97706">31–90 días</div><div class="font-display font-black text-xl" style="color:#d97706">${bk('31_90').items}</div><div class="text-xs text-on-surface-variant">${bk('31_90').cantidad} unid.</div></div>
+    <div class="card p-3"><div class="eyebrow mb-1" style="color:#475569">91+ días</div><div class="font-display font-black text-xl" style="color:#475569">${bk('91_plus').items}</div><div class="text-xs text-on-surface-variant">${bk('91_plus').cantidad} unid.</div></div>
+  </div>
+  <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Detalle</div><div class="overflow-x-auto" style="max-height:50vh"><table class="dt"><thead><tr><th>Producto</th><th>Lote</th><th>Caducidad</th><th>Cantidad</th><th>Ubicación</th><th>Días</th></tr></thead><tbody>${detalles.length?detalles.map(item=>{const dias=item.dias??null;const cls=dias==null?'':dias<0?'vencido':dias<=30?'por-vencer':'';const ds=dias==null?'':dias<0?'color:#b91c1c;font-weight:700':dias<=30?'color:#b45309;font-weight:600':'';return`<tr class="row ${cls}"><td class="font-semibold text-[12px]">${esc(item.producto||'—')}</td><td class="mono text-[11px]">${esc(item.lote||'—')}</td><td class="text-[12px]">${fdate(item.caducidad_ms)}</td><td class="mono text-[12px]">${item.cantidad??'—'}</td><td class="text-[12px]">${esc(item.ubicacion||'—')}</td><td class="mono text-[12px]" style="${ds}">${dias!=null?dias:'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div></div>`;
+}
+function renderLedger(d,el){
+  _ledgerRows=d.results||[];
+  el.innerHTML=`<div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Ledger de movimientos</div><div class="overflow-x-auto" style="max-height:60vh"><table class="dt"><thead><tr><th>Fecha</th><th>Tx</th><th>Tipo</th><th>Producto</th><th>Lote</th><th>Cantidad</th><th>Ubicación</th></tr></thead><tbody>${_ledgerRows.length?_ledgerRows.map(r=>{const qty=r.cantidad??null;const qs=qty==null?'':qty<0?'color:#b91c1c;font-weight:700':'color:#15803d;font-weight:700';return`<tr class="row"><td class="text-[11px]">${fdate(r.fecha_ms)}</td><td class="mono text-[11px]">${esc(r.tx||r.movimiento_codigo||'—')}</td><td>${chipOf(r.tipo,TXTIPO)}</td><td class="font-semibold text-[12px]">${esc(r.producto||'—')}</td><td class="mono text-[11px]">${esc(r.lote||'—')}</td><td class="mono text-[12px]" style="${qs}">${qty!=null?(qty>=0?'+':'')+qty:'—'}</td><td class="text-[12px]">${esc(r.ubicacion||'—')}</td></tr>`;}).join(''):'<tr><td colspan="7" class="py-4 text-center text-on-surface-variant">Sin movimientos.</td></tr>'}</tbody></table></div></div>`;
+  const btn=$('#ledExportBtn');if(btn)btn.classList.toggle('hidden',!_ledgerRows.length);
+}
+function exportLedgerCSV(){
+  if(!_ledgerRows.length)return;
+  const hdr='Fecha,Tx,Tipo,Producto,Lote,Cantidad,Ubicación';
+  const csv=[hdr,..._ledgerRows.map(r=>[r.fecha_ms?new Date(Number(r.fecha_ms)).toISOString():'',r.tx||r.movimiento_codigo||'',r.tipo||'',r.producto||'',r.lote||'',r.cantidad??'',r.ubicacion||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','))].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='ledger-suministros.csv';a.click();URL.revokeObjectURL(a.href);
+}
+function renderFillRate(d,el){
+  const pct=d.fill_rate_pct!=null?Number(d.fill_rate_pct).toFixed(1)+'%':'—';
+  const rows=d.por_requisicion||[];const estados=d.por_estado||{};
+  el.innerHTML=`<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="card p-3"><div class="eyebrow mb-1">Fill-rate global</div><div class="font-display font-black text-2xl text-primary">${esc(pct)}</div></div>
+    <div class="card p-3"><div class="eyebrow mb-1">Total solicitado</div><div class="font-display font-black text-2xl">${d.total_solicitado??'—'}</div></div>
+    <div class="card p-3"><div class="eyebrow mb-1">Total surtido</div><div class="font-display font-black text-2xl" style="color:#15803d">${d.total_surtido??'—'}</div></div>
+    <div class="card p-3"><div class="eyebrow mb-1">Por estado</div><div class="flex flex-wrap gap-1 mt-1">${Object.entries(estados).map(([k,v])=>chipOf(k,RQEST)+`<span class="mono text-xs">${v}</span>`).join(' ')||'—'}</div></div>
+  </div>
+  <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Por requisición</div><div class="overflow-x-auto"><table class="dt"><thead><tr><th>Código</th><th>Solicitado</th><th>Surtido</th><th>Fill-rate</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr class="row"><td class="mono text-[11px] font-bold">${esc(r.codigo||r.id||'—')}</td><td class="mono text-[12px]">${r.solicitado??'—'}</td><td class="mono text-[12px]">${r.surtido??'—'}</td><td class="mono text-[12px] font-semibold">${r.fill_rate!=null?Number(r.fill_rate).toFixed(1)+'%':'—'}</td></tr>`).join(''):'<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div></div>`;
+}
+
+// ── Etiquetas ──
+let _etqData=[];
+async function loadEtqCatalogo(q=''){
+  const p=q?'?q='+encodeURIComponent(q):'';
+  const r=await api('etiquetas/catalogo'+p).catch(()=>null);
+  const el=$('#etqCatList');if(!el)return;
+  if(!r||!r.ok){el.innerHTML='<div class="text-sm text-on-surface-variant py-4 text-center">Sin datos.</div>';return;}
+  const d=await j(r).catch(()=>({}));const items=d.results||[];
+  if(!items.length){el.innerHTML='<div class="text-sm text-on-surface-variant py-4 text-center">Sin productos encontrados.</div>';return;}
+  el.innerHTML=items.map(i=>`<div class="alert-item cursor-pointer flex items-center justify-between hover:bg-blue-50" onclick="loadEtiquetas('${esc(i.producto_id||i.id)}')">
+    <div><div class="font-semibold text-[12px]">${esc(i.nombre||'—')}</div><div class="mono text-[11px] text-on-surface-variant">${esc(i.codigo||'—')}</div></div>
+    <div class="mono text-[11px] text-on-surface-variant">${i.n_lotes??0}L</div>
+  </div>`).join('');
+}
+async function loadEtiquetas(productoId){
+  _etqData=[];
+  const r=await api('etiquetas?producto_id='+encodeURIComponent(productoId)).catch(()=>null);
+  const el=$('#etqPrintArea');if(!el)return;
+  if(!r||!r.ok){el.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Sin etiquetas disponibles.</div>';return;}
+  const d=await j(r).catch(()=>({}));_etqData=d.results||[];
+  renderEtiquetas();
+}
+function renderEtiquetas(){
+  const el=$('#etqPrintArea');if(!el)return;
+  const copias=Math.max(1,parseInt($('#etqCopias')?.value||'1',10)||1);
+  if(!_etqData.length){el.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Selecciona un producto.</div>';return;}
+  const labels=[];_etqData.forEach(e=>{for(let i=0;i<copias;i++)labels.push(e);});
+  el.innerHTML=labels.map((e,idx)=>`<div class="etq-label" id="etq-item-${idx}">
+    <div class="font-semibold text-[12px] mb-1">${esc(e.nombre||'—')}</div>
+    <div class="mono text-[11px] text-on-surface-variant mb-1">${esc(e.codigo||'—')}</div>
+    <svg id="etq-bc-${idx}" class="w-full"></svg>
+    ${e.lote?`<div class="text-[11px] mt-1">Lote: <b>${esc(e.lote)}</b></div>`:''}
+    ${e.caducidad_ms?`<div class="text-[11px]">Cad: <b>${fdate(e.caducidad_ms)}</b></div>`:''}
+    ${e.existencia!=null?`<div class="text-[11px]">Stock: <b class="mono">${e.existencia}</b></div>`:''}
+  </div>`).join('');
+  if(typeof JsBarcode!=='undefined'){
+    labels.forEach((e,idx)=>{
+      const code=e.barcode||e.codigo;if(!code)return;
+      try{JsBarcode('#etq-bc-'+idx,code,{format:'CODE128',displayValue:true,height:40,margin:2,fontSize:11});}
+      catch(_){}
+    });
+  }
+}
+$('#etqSearch').addEventListener('input',function(){loadEtqCatalogo(this.value);});
+$('#etqCopias').addEventListener('change',renderEtiquetas);
+$('#etqPrintBtn').addEventListener('click',()=>window.print());
 
 // ── Generic POST ──
 async function post(endpoint,body,msgSel){
