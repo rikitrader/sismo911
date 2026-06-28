@@ -400,6 +400,7 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
       <button data-t="cronologia">Cronología <span class="b" id="tb_dock">0</span></button>
       <button data-t="ubicacion">Ubicación · GIS</button>
       <button data-t="evidencia">Evidencia <span class="b" id="tb_ev">0</span></button>
+      <button data-t="investigacion">Investigación <span class="b" id="tb_intel">0</span></button>
       <button data-t="ia">Resumen IA</button>
       <button data-t="auditoria">Auditoría</button>
       <button data-t="aportar">Aportar</button>
@@ -409,6 +410,7 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
     <div id="p_cronologia" class="tabpane"></div>
     <div id="p_ubicacion" class="tabpane"></div>
     <div id="p_evidencia" class="tabpane"></div>
+    <div id="p_investigacion" class="tabpane"></div>
     <div id="p_ia" class="tabpane"></div>
     <div id="p_auditoria" class="tabpane"></div>
     <div id="p_aportar" class="tabpane"></div>
@@ -710,6 +712,7 @@ function renderCase(d){
       ${pill(p.status)}
       <h2 class="disp" style="font-weight:900;font-size:24px;letter-spacing:-.02em;margin:8px 0 4px;color:#fff">${esc(p.full_name||'Sin nombre')}</h2>
       <div style="font:500 13px Inter;color:#bcd0f4">${p.age?p.age+' años':''}${p.sex?(p.age?' · ':'')+esc(p.sex):''}${(p.age||p.sex)?' · ':''}<span class="mono">${esc(typeLbl(p.incident_type))}</span></div>
+      ${d.identity_verified?`<div style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 10px;border-radius:999px;background:rgba(34,197,94,.16);border:1px solid rgba(34,197,94,.5);font:700 11.5px Inter;color:#86efac"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Identidad verificada</div>`:''}
     </div>`;
   const meta=[
     ['Estado',(ST[p.status]||ST.unknown).es],
@@ -732,6 +735,8 @@ function renderCase(d){
   startChrono(chronoMs);
   $('#tb_dock').textContent=dock.length;
   $('#tb_ev').textContent=p.evidence_count||0;
+  $('#tb_intel').textContent=(d.intel||[]).length;
+  renderInvestigation(d);
 
   /* ---- RESUMEN ---- */
   const sismoCard=e?`<div class="sismo-card">
@@ -900,6 +905,157 @@ function renderCase(d){
       else{const j=await res.json().catch(()=>({}));m.textContent='Error: '+(j.error==='rate_limited'?'demasiados envíos, intenta luego':(j.hint||j.error||'no se pudo enviar'));m.style.color='var(--crit)';f.querySelector('button').disabled=false;}
     });
   }
+}
+
+/* ---------------- INVESTIGACION (leads + identity) ---------------- */
+const INTEL_ICON={photo:'🖼️',social:'📱',link:'🔗',sighting:'👁️',tip:'📨',doc:'📄'};
+const INTEL_LBL={photo:'Foto',social:'Red social',link:'Enlace',sighting:'Avistamiento',tip:'Pista',doc:'Documento'};
+const SRC_LBL={cne:'CNE — Padrón',rif:'SENIAT — RIF',saime:'SAIME',ivss:'IVSS',manual:'Manual'};
+const RES_BADGE={match:['#16a34a','Coincide'],partial:['#d97706','Parcial'],no_match:['#dc2626','No coincide'],unavailable:['#64748b','No disponible'],pending:['#64748b','Pendiente']};
+
+function leadCard(l){
+  const ic=INTEL_ICON[l.type]||'🔗', lbl=INTEL_LBL[l.type]||l.type;
+  const pend=l.status==='pending'?'<span class="tag pend">En revisión</span>':(l.status==='dismissed'?'<span class="tag" style="background:#fee2e2;color:#b91c1c">Descartada</span>':'');
+  const cit=l.source==='citizen'?'<span class="tag cit">Ciudadano</span>':'<span class="tag op">Operador</span>';
+  const ops=OP?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      ${l.status!=='verified'?`<button class="pgbtn" data-intel="verify" data-lid="${esc(l.id)}">✓ Verificar</button>`:''}
+      ${l.status!=='dismissed'?`<button class="pgbtn" data-intel="dismiss" data-lid="${esc(l.id)}">Descartar</button>`:''}
+      <button class="pgbtn" data-intel="delete" data-lid="${esc(l.id)}" style="color:#b91c1c">Eliminar</button>
+    </div>`:'';
+  return `<div class="de" style="border:1px solid var(--line-2);border-radius:11px;padding:11px 13px;margin:0 0 9px">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:16px">${ic}</span>
+      <b style="font:700 13.5px Inter;color:var(--ink)">${esc(l.title||lbl)}</b>
+      ${l.platform?`<span class="mono" style="font-size:11px;color:var(--muted)">${esc(l.platform)}</span>`:''}
+      <span style="margin-left:auto;font:500 11px Inter;color:var(--muted)">${fmt(l.created_ms)}</span>
+    </div>
+    ${l.detail?`<div style="font:500 13px Inter;color:var(--ink);margin-top:5px;line-height:1.5">${esc(l.detail)}</div>`:''}
+    ${l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener nofollow" style="font:700 12px Inter;color:var(--crit);text-decoration:underline;display:inline-block;margin-top:5px;word-break:break-all">${esc(l.url)} ↗</a>`:''}
+    <div style="margin-top:6px">${cit}${pend}</div>
+    ${ops}
+  </div>`;
+}
+
+async function renderInvestigation(d){
+  const p=d.person, leads=d.intel||[];
+  const pane=$('#p_investigacion'); if(!pane)return;
+  const list=leads.length?leads.map(leadCard).join(''):'<div class="note">Aún no hay pistas registradas para este expediente.</div>';
+  const opAdd=OP?`<form id="intelAddForm" class="contrib" style="margin-top:12px;border-top:1px solid var(--line-2);padding-top:14px">
+      <label style="font:700 11px Inter;color:var(--muted);text-transform:uppercase">Añadir pista (operador · se publica de inmediato)</label>
+      <select name="type" style="width:100%;margin:7px 0;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font:500 13.5px Inter">
+        <option value="link">🔗 Enlace</option><option value="photo">🖼️ Foto</option><option value="social">📱 Red social</option><option value="sighting">👁️ Avistamiento</option><option value="doc">📄 Documento</option></select>
+      <input name="title" maxlength="160" placeholder="Título / etiqueta" style="width:100%;margin-bottom:7px;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font:500 13.5px Inter">
+      <input name="url" maxlength="600" placeholder="URL (https://…)" style="width:100%;margin-bottom:7px;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font:500 13.5px Inter">
+      <textarea name="detail" rows="2" maxlength="2000" placeholder="Detalle" style="width:100%;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font:500 13.5px Inter"></textarea>
+      <button class="btn-navy" type="submit" style="border:none;margin-top:9px">Añadir pista</button>
+      <span class="msg" id="intelAddMsg" style="display:none;margin-left:10px;font:600 13px Inter"></span>
+    </form>`:'';
+  // Public tip form (anyone).
+  const tipForm=`<div class="card contrib" style="max-width:560px">
+    <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>Enviar una pista</h3>
+    <p class="sub" style="margin:-6px 0 12px">¿Viste a esta persona, o una foto/perfil en redes? Tu pista queda <b style="color:var(--ink)">pendiente de verificación</b> antes de publicarse.</p>
+    <form id="tipForm" style="display:flex;flex-direction:column;gap:9px">
+      <select name="type"><option value="sighting">👁️ Avistamiento</option><option value="social">📱 Perfil en red social</option><option value="photo">🖼️ Foto</option><option value="link">🔗 Enlace / noticia</option></select>
+      <input name="url" maxlength="600" placeholder="Enlace (opcional, https://…)">
+      <textarea name="detail" rows="3" maxlength="2000" placeholder="¿Qué viste? Lugar, fecha, descripción…"></textarea>
+      <button class="btn-primary" type="submit">Enviar pista</button>
+      <p id="tipMsg" style="font:600 13px Inter;text-align:center;margin:0"></p>
+    </form>
+  </div>`;
+  pane.innerHTML=`<div class="grid2">
+    <div class="card">
+      <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4a7 7 0 105.2 11.7L21 20" stroke-linecap="round" stroke-linejoin="round"/></svg>Pistas de la investigación · ${leads.length}</h3>
+      <p style="font:500 12.5px Inter;color:var(--muted);margin:-2px 0 12px">Fotos, perfiles en redes, enlaces y avistamientos reunidos para localizar a la persona. Las pistas públicas se muestran tras verificación.</p>
+      <div id="intelList">${list}</div>
+      ${opAdd}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card" id="idvCard">Cargando verificación de identidad…</div>
+      ${tipForm}
+    </div>
+  </div>`;
+  wireTip(p.id); if(OP){wireIntelAdd(p.id);wireIntelOps(p.id);}
+  renderIdentity(d);
+}
+
+function wireTip(id){
+  const f=$('#tipForm'); if(!f)return;
+  f.addEventListener('submit',async ev=>{ev.preventDefault();
+    const m=$('#tipMsg'),url=(f.url.value||'').trim(),detail=(f.detail.value||'').trim();
+    if(!url&&!detail){m.textContent='Indica un enlace o una descripción.';m.style.color='var(--crit)';return;}
+    f.querySelector('button').disabled=true;
+    try{const r=await api('persons/'+encodeURIComponent(id)+'/tip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:f.type.value,url:url||undefined,detail:detail||undefined})});
+      const j=await r.json().catch(()=>({}));
+      if(r.ok){m.textContent='✓ Gracias. Tu pista quedará visible tras la verificación de un operador.';m.style.color='var(--green)';f.reset();}
+      else{m.textContent='Error: '+(j.error==='rate_limited'?'demasiados envíos, intenta luego':(j.hint||j.error||'no se pudo enviar'));m.style.color='var(--crit)';f.querySelector('button').disabled=false;}
+    }catch{m.textContent='Error de red.';m.style.color='var(--crit)';f.querySelector('button').disabled=false;}
+  });
+}
+function wireIntelAdd(id){
+  const f=$('#intelAddForm'); if(!f)return;
+  f.addEventListener('submit',async ev=>{ev.preventDefault();
+    const m=$('#intelAddMsg');m.style.display='inline';
+    f.querySelector('button').disabled=true;
+    try{const r=await api('persons/'+encodeURIComponent(id)+'/intel',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({type:f.type.value,title:(f.title.value||'').trim()||undefined,url:(f.url.value||'').trim()||undefined,detail:(f.detail.value||'').trim()||undefined})});
+      if(r.ok){m.style.color='var(--green)';m.textContent='✓ Añadida.';openCase(id);}
+      else{const j=await r.json().catch(()=>({}));m.style.color='var(--crit)';m.textContent='Error: '+(j.error||'no se pudo');f.querySelector('button').disabled=false;}
+    }catch{m.style.color='var(--crit)';m.textContent='Error de red.';f.querySelector('button').disabled=false;}
+  });
+}
+function wireIntelOps(id){
+  $('#intelList').addEventListener('click',async ev=>{
+    const b=ev.target.closest('[data-intel]'); if(!b)return;
+    const act=b.dataset.intel,lid=b.dataset.lid;b.disabled=true;
+    try{let r;
+      if(act==='delete')r=await api('persons/'+encodeURIComponent(id)+'/intel/'+encodeURIComponent(lid),{method:'DELETE'});
+      else r=await api('persons/'+encodeURIComponent(id)+'/intel/'+encodeURIComponent(lid),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:act==='verify'?'verified':'dismissed'})});
+      if(r.ok)openCase(id); else b.disabled=false;
+    }catch{b.disabled=false;}
+  });
+}
+async function renderIdentity(d){
+  const card=$('#idvCard'); if(!card)return; const id=d.person.id;
+  if(!OP){
+    card.innerHTML=`<h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 4.5-3.1 7.9-8 10-4.9-2.1-8-5.5-8-10V6z" stroke-linecap="round" stroke-linejoin="round"/></svg>Identidad</h3>
+      <div class="note" style="${d.identity_verified?'border-left:4px solid #16a34a':''}">${d.identity_verified?'✓ La identidad de esta persona fue verificada por un operador contra registros oficiales.':'La identidad aún no ha sido verificada.'}</div>
+      <p style="font:500 11.5px Inter;color:var(--muted);margin:10px 0 0">Por privacidad, la cédula y los datos del registro oficial son reservados; solo se muestra el estado de verificación.</p>`;
+    return;
+  }
+  // Operator: live records + source status + verify form.
+  let recs=[],sources=[];
+  try{const r=await api('persons/'+encodeURIComponent(id)+'/identity');if(r.ok){const j=await r.json();recs=j.records||[];}}catch{}
+  try{const r=await api('persons/identity/sources');if(r.ok){const j=await r.json();sources=j.sources||[];}}catch{}
+  const recHtml=recs.length?recs.map(x=>{const rb=RES_BADGE[x.result]||RES_BADGE.pending;
+    return `<div class="de" style="border:1px solid var(--line-2);border-radius:10px;padding:9px 11px;margin:0 0 8px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font:700 12.5px Inter">${esc(SRC_LBL[x.source]||x.source)}</b>
+      <span class="tag" style="background:${rb[0]}1a;color:${rb[0]}">${rb[1]}</span>
+      <span style="margin-left:auto;font:500 11px Inter;color:var(--muted)">${fmt(x.created_ms)}</span></div>
+      ${x.matched_name?`<div style="font:500 12.5px Inter;margin-top:4px">Nombre oficial: <b>${esc(x.matched_name)}</b></div>`:''}
+      ${x.cedula?`<div class="mono" style="font-size:11px;color:var(--muted);margin-top:2px">C.I. ${esc(x.cedula)}</div>`:''}
+    </div>`;}).join(''):'<div class="note">Sin verificaciones registradas.</div>';
+  const opts=(sources.length?sources:[{key:'cne',label:'CNE — Padrón',available:false},{key:'manual',label:'Manual',available:true}])
+    .map(s=>`<option value="${s.key}"${s.available===false&&s.key!=='manual'?' disabled':''}>${esc(s.label||s.key)}${s.available===false&&s.key!=='manual'?' (no disponible)':''}</option>`).join('')+'<option value="manual">Manual — confirmación offline</option>';
+  card.innerHTML=`<h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 4.5-3.1 7.9-8 10-4.9-2.1-8-5.5-8-10V6z" stroke-linecap="round" stroke-linejoin="round"/></svg>Verificación de identidad ${d.identity_verified?'<span class="tag" style="background:#16a34a1a;color:#16a34a;margin-left:6px">Verificada</span>':''}</h3>
+    <div id="idvRecs" style="margin-bottom:12px">${recHtml}</div>
+    <form id="idvForm" class="contrib" style="border-top:1px solid var(--line-2);padding-top:12px">
+      <label style="font:700 11px Inter;color:var(--muted);text-transform:uppercase">Verificar cédula (operador)</label>
+      <input name="cedula" placeholder="V-12.345.678" style="width:100%;margin:7px 0;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font:500 13.5px Inter">
+      <select name="source" style="width:100%;margin-bottom:9px;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font:500 13.5px Inter">${opts}</select>
+      <button class="btn-navy" type="submit" style="border:none">Verificar</button>
+      <span class="msg" id="idvMsg" style="display:none;margin-left:10px;font:600 13px Inter"></span>
+    </form>
+    <p style="font:500 11px Inter;color:var(--muted);margin:10px 0 0">CNE en vivo requiere el servicio resolutor externo; RIF/SAIME/IVSS no tienen fuente pública. La cédula nunca se expone al público.</p>`;
+  const f=$('#idvForm'); if(f)f.addEventListener('submit',async ev=>{ev.preventDefault();
+    const m=$('#idvMsg');m.style.display='inline';const ced=(f.cedula.value||'').trim();
+    if(!ced){m.style.color='var(--crit)';m.textContent='Indica una cédula.';return;}
+    f.querySelector('button').disabled=true;m.style.color='var(--muted)';m.textContent='Verificando…';
+    try{const r=await api('persons/'+encodeURIComponent(id)+'/identity/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cedula:ced,source:f.source.value})});
+      const j=await r.json().catch(()=>({}));
+      if(r.ok){const rb=RES_BADGE[j.result]||RES_BADGE.pending;m.style.color=rb[0];m.textContent='Resultado: '+rb[1]+(j.reason?(' ('+j.reason+')'):'');openCase(id);}
+      else{m.style.color='var(--crit)';m.textContent='Error: '+(j.error||'no se pudo');f.querySelector('button').disabled=false;}
+    }catch{m.style.color='var(--crit)';m.textContent='Error de red.';f.querySelector('button').disabled=false;}
+  });
 }
 
 /* deterministic Spanish narrative from the timeline */
