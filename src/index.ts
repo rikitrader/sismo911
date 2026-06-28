@@ -340,6 +340,8 @@ app.post('/flota/track/backfill', async (c) => {
 
 // Admin live map page (gated by isAdminPage → redirects unauth to /login).
 app.get('/admin/flota/live', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-flota-live.html', c.req.url))));
+// Operator unit onboarding: create units, issue/revoke scoped tracking tokens (with QR).
+app.get('/admin/flota/unidades', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-flota-unidades.html', c.req.url))));
 
 // Face-vetting review queue (gated by isAdminPage → redirects unauth to /login).
 app.get('/admin/dup-review', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-dup-review.html', c.req.url))));
