@@ -62,15 +62,54 @@ export function clearImpersonationCookies(c: Context): void {
   deleteCookie(c, ADMIN_TOKEN_COOKIE, { path: '/' });
 }
 
+/** Denial reason returned by {@link isPrivilegedTarget}; null ⇒ impersonation allowed. */
+export type ImpersonationDenial = 'cannot_impersonate_admin' | 'cannot_impersonate_more_privileged';
+
 /**
- * True if `user` is admin/super_admin-class and so must NEVER be impersonated.
- * Refuses on: legacy users.role='admin' (→ super_admin), OR holding the
- * 'users:impersonate' capability (which super_admin/admins hold via god-mode) —
- * this blocks lateral/upward escalation by hijacking another privileged session.
+ * Escalation-capable permissions a target must NEVER hold to be impersonated —
+ * defense-in-depth denylist enforced regardless of the subset check below. Holding
+ * any of these would let an impersonator gain role/permission/user-management or
+ * re-impersonation power they may not legitimately wield through the hijacked session.
  */
-export async function isPrivilegedTarget(env: Env, user: User | null): Promise<boolean> {
-  if (!user) return true; // unknown ⇒ treat as privileged (fail closed)
-  if (user.role === 'admin') return true; // legacy admin maps to super_admin
-  const perms = await getEffectivePermissions(env, user.id);
-  return perms.has('users:impersonate');
+const ESCALATION_PERMS = [
+  'roles:create', 'roles:update', 'roles:delete', 'roles:assign',
+  'permissions:grant', 'users:create', 'users:impersonate',
+] as const;
+
+/**
+ * Decide whether `impersonator` may impersonate `target`. Returns a denial code
+ * (→ 403) or null when allowed. Fail-closed against lateral/upward escalation:
+ *
+ *  1. Unknown/admin/super_admin target ⇒ `cannot_impersonate_admin`.
+ *  2. A super_admin impersonator (legacy users.role='admin') is god-mode and may
+ *     impersonate anyone non-admin (short-circuit allow).
+ *  3. Target holding ANY escalation-capable permission (ESCALATION_PERMS,
+ *     incl. 'users:impersonate') ⇒ `cannot_impersonate_more_privileged`.
+ *  4. SUBSET RULE: the target's effective permissions must be a subset of the
+ *     impersonator's own effective permissions — you cannot impersonate someone
+ *     STRICTLY MORE PRIVILEGED than you ⇒ `cannot_impersonate_more_privileged`.
+ */
+export async function isPrivilegedTarget(
+  env: Env,
+  target: User | null,
+  impersonator?: User | null,
+): Promise<ImpersonationDenial | null> {
+  if (!target) return 'cannot_impersonate_admin'; // unknown ⇒ fail closed
+  if (target.role === 'admin') return 'cannot_impersonate_admin'; // legacy admin maps to super_admin
+
+  // god-mode: a super_admin impersonator (legacy role 'admin') may impersonate anyone non-admin.
+  if (impersonator && impersonator.role === 'admin') return null;
+
+  const targetPerms = await getEffectivePermissions(env, target.id);
+
+  // Defense-in-depth denylist: never impersonate a holder of escalation-capable perms.
+  for (const p of ESCALATION_PERMS) if (targetPerms.has(p)) return 'cannot_impersonate_more_privileged';
+
+  // Subset rule: refuse if the target holds any permission the impersonator lacks.
+  if (impersonator) {
+    const actorPerms = await getEffectivePermissions(env, impersonator.id);
+    for (const p of targetPerms) if (!actorPerms.has(p)) return 'cannot_impersonate_more_privileged';
+  }
+
+  return null;
 }
