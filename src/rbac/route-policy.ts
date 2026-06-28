@@ -19,6 +19,7 @@ export const LEGACY_OPS_PERM = 'ops:console';
 export const ADMIN_WRITE_PREFIXES = [
   '/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales',
   '/api/admin', '/api/aid-orgs', '/api/emergencia', '/api/flota', '/api/suministros',
+  '/api/refugios',
 ];
 
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
@@ -49,7 +50,7 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   '/api/comms', '/api/contacts', '/api/damage', '/api/danos-estructurales',
   '/api/donations', '/api/e', '/api/emergencia', '/api/facilities', '/api/familia',
   '/api/funding', '/api/humanitarian', '/api/mascotas', '/api/monitor',
-  '/api/persons', '/api/push', '/api/rav', '/api/rbac', '/api/reports',
+  '/api/persons', '/api/push', '/api/rav', '/api/rbac', '/api/refugios', '/api/reports',
   '/api/resources', '/api/sat', '/api/shelters', '/api/sos', '/api/suministros',
   '/api/telemedicina', '/api/v1', '/api/voluntarios', '/api/x402', '/api/admin',
   // Profile Command Center — every endpoint self-authenticates via
@@ -162,6 +163,7 @@ function adminWritePermFor(path: string): string {
   if (path.startsWith('/api/acopio')) return 'acopio:manage';
   if (path.startsWith('/api/danos-estructurales')) return 'damage:moderate';
   if (path.startsWith('/api/aid-orgs')) return 'aid_orgs:manage';
+  if (path.startsWith('/api/refugios')) return 'refugios:manage';
   if (path.startsWith('/api/emergencia')) return 'emergencia:manage';
   if (path.startsWith('/api/suministros')) return 'suministros:manage';
   if (path.startsWith('/api/flota')) return 'flota:read';

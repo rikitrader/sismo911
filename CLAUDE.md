@@ -35,6 +35,22 @@ wt=$(./scripts/agent-worktree.sh <branch-name>) && cd "$wt"
 - Minimum per change: `06-Sessions/YYYY-MM-DD-<slug>.md` (what/why/how, PR #, prod version, gotchas),
   `00-Indices/Decisions-Log.md` (decision + why), and `00-Indices/Followups.md` (anything pending).
 
+## Refugios / Evacuación Engine (module)
+
+- **What:** decision-support engine for shelter (refugio) siting + evacuation logistics, focused on La Guaira (ex-Vargas). Pure engine in `src/refugios/engine.ts`; API in `src/routes/refugios.ts` mounted at `/api/refugios`; UI at `/refugios` (`public/refugios.html`, Leaflet/CartoDB map). Tables `refugios_sites` / `refugios_zones` / `refugios_assignments` (migration `0061_refugios_evacuacion.sql`).
+- **Engine contract (do NOT regress):** `scoreSite` returns 0-100 weighted by roads .25 / services .30 / bedCapacity .20 / safety .25; `computeCapacity` uses Sphere space standards (covered 3.5 m²/p, temporary 4.5 m²/p); `assignPopulation` MUST conserve people (`sheltered + unsheltered === population`) and NEVER over-fill a site beyond capacity; `computeLogistics` uses Sphere/WFP planning factors (water 15 L/p/day, food 2 100 kcal/p/day) — all ratios overridable via `LogisticsParams`.
+- **Honesty rule:** seed coordinates/areas/service-scores are PLANNING ESTIMATES, not surveyed truth. Never present them as verified; carry the "verificar en campo" caveat in the data and UI. This is the No-Fabrication discipline applied to humanitarian data.
+
+## CROSS-CHECK GATE (HARD RULE — Always Enforced, every engine/computation change)
+
+Any change touching an engine that produces numbers people act on (refugios scoring/capacity/assignment/logistics, and any future calculator of this kind) is **not done** until a full cross-check passes. This is an enforce-rule, not a suggestion — it blocks the ship cycle.
+
+1. **Unit tests green** — engine invariants are asserted, not assumed: score within [0,100]; capacity matches the Sphere formula for each `bed_type`; assignment conserves population and respects per-site capacity (no over-allocation); logistics ratios match the documented planning factors. A regression here is a red gate.
+2. **Build + full test suite + lint green** — `npm run build`, `npm test` (incl. `api-route-coverage` and `route-policy` backward-compat), `npm run lint`. A new `/api` prefix must be classified (public or gated) or coverage fails closed.
+3. **Migration idempotent** — re-running the migration is a no-op (`CREATE … IF NOT EXISTS`).
+4. **Numbers sanity-checked end-to-end** — at least one worked example (e.g. a parroquia population → assigned shelters → food/water/personnel) is hand-verified against the standard before merge.
+5. **No step skipped, no failure deflected** — composes with **No-Pre-Existing-Failure**: a red cross-check is fixed now, never labeled "pre-existing." Only ship after ALL of 1-4 pass.
+
 ## Cloudflare Secret Management & Zero-Trust Deployment (HARD RULE — never violate)
 
 - **No secret in git, ever** — not in `wrangler.toml`, `.env*`, `.dev.vars`, scripts, CI YAML, tests, or docs. Runtime secrets live ONLY in **Cloudflare Worker Secrets** (`wrangler secret put`). The authoritative list is `scripts/secrets.manifest`. Only non-secret config + **documented public** keys (`VAPID_PUBLIC_KEY`, `RAV_SUPABASE_KEY` anon JWT) may sit in `wrangler.toml [vars]`.

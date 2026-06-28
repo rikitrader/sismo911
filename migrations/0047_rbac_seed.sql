@@ -9,7 +9,7 @@
 -- All idempotent (INSERT OR IGNORE).
 -- ============================================================================
 
--- Permission catalog (100 permissions)
+-- Permission catalog (112 permissions)
 INSERT OR IGNORE INTO rbac_permissions (key, resource, action, label, category) VALUES
  ('users:read','users','read','Read Users','Administration'),
  ('users:create','users','create','Create Users','Administration'),
@@ -100,6 +100,8 @@ INSERT OR IGNORE INTO rbac_permissions (key, resource, action, label, category) 
  ('reports:read','reports','read','Read Reports','Operations'),
  ('reports:export','reports','export','Export Reports','Operations'),
  ('reports:moderate','reports','moderate','Moderate Reports','Operations'),
+ ('refugios:read','refugios','read','Read Refugios','Operations'),
+ ('refugios:manage','refugios','manage','Manage Refugios','Operations'),
  ('analytics:read','analytics','read','Read Analytics','Operations'),
  ('settings:read','settings','read','Read Settings','System'),
  ('settings:manage','settings','manage','Manage Settings','System'),
@@ -110,7 +112,17 @@ INSERT OR IGNORE INTO rbac_permissions (key, resource, action, label, category) 
  ('ai:use','ai','use','Use Ai','System'),
  ('ai:manage','ai','manage','Manage Ai','System'),
  ('monitoring:read','monitoring','read','Read Monitoring','System'),
- ('ops:console','ops','console','Console Ops','Administration');
+ ('ops:console','ops','console','Console Ops','Administration'),
+ ('admin:maintenance','admin','maintenance','Maintenance Admin','Operations'),
+ ('contacts:manage','contacts','manage','Manage Contacts','Operations'),
+ ('acopio:manage','acopio','manage','Manage Acopio','Logistics'),
+ ('aid_orgs:manage','aid_orgs','manage','Manage Aid Orgs','Operations'),
+ ('emergencia:manage','emergencia','manage','Manage Emergencia','Operations'),
+ ('damage:moderate','damage','moderate','Moderate Damage','Operations'),
+ ('persons:moderate','persons','moderate','Moderate Persons','Operations'),
+ ('sos:triage','sos','triage','Triage Sos','Operations'),
+ ('events:refresh','events','refresh','Refresh Events','Operations'),
+ ('sat:analyze','sat','analyze','Analyze Sat','Operations');
 
 -- Feature flags (modules enabled by default)
 INSERT OR IGNORE INTO feature_flags (org_id, module_key, enabled, updated_ms) VALUES
@@ -151,7 +163,8 @@ INSERT OR IGNORE INTO feature_flags (org_id, module_key, enabled, updated_ms) VA
  ('org_sismo911','flota',1,0),
  ('org_sismo911','suministros',1,0),
  ('org_sismo911','ai',1,0),
- ('org_sismo911','monitoring',1,0);
+ ('org_sismo911','monitoring',1,0),
+ ('org_sismo911','refugios',1,0);
 
 -- System roles (22)
 INSERT OR IGNORE INTO rbac_roles (id, org_id, key, name, description, inherits_json, is_system, created_ms) VALUES
@@ -175,7 +188,7 @@ INSERT OR IGNORE INTO rbac_roles (id, org_id, key, name, description, inherits_j
  ('role_support',NULL,'support','Support','Read-mostly support staff.','[]',1,0),
  ('role_read_only',NULL,'read_only','Read Only','View access across all modules, no writes.','[]',1,0),
  ('role_guest',NULL,'guest','Guest','No administrative access.','[]',1,0),
- ('role_operator',NULL,'operator','Operator (legacy)','Back-compat role mapped from legacy users.role=operator. Holds ops:console (the coarse operational gate) so the route→permission migration is access-preserving.','["emergency_manager","case_manager"]',1,0),
+ ('role_operator',NULL,'operator','Operator (legacy)','Back-compat role mapped from legacy users.role=operator. Holds the fine-grained per-surface ops permissions (Phase 2 R1) so the gate migration off ops:console is access-preserving.','["emergency_manager","case_manager"]',1,0),
  ('role_citizen',NULL,'citizen','Citizen (legacy)','Public user mapped from legacy users.role=citizen.','[]',1,0);
 
 -- Direct role→permission grants (effect=allow). Inheritance resolved at runtime.
@@ -269,6 +282,8 @@ INSERT OR IGNORE INTO role_permissions (role_id, perm_key, effect) VALUES
  ('role_super_admin','reports:read','allow'),
  ('role_super_admin','reports:export','allow'),
  ('role_super_admin','reports:moderate','allow'),
+ ('role_super_admin','refugios:read','allow'),
+ ('role_super_admin','refugios:manage','allow'),
  ('role_super_admin','analytics:read','allow'),
  ('role_super_admin','settings:read','allow'),
  ('role_super_admin','settings:manage','allow'),
@@ -280,6 +295,16 @@ INSERT OR IGNORE INTO role_permissions (role_id, perm_key, effect) VALUES
  ('role_super_admin','ai:manage','allow'),
  ('role_super_admin','monitoring:read','allow'),
  ('role_super_admin','ops:console','allow'),
+ ('role_super_admin','admin:maintenance','allow'),
+ ('role_super_admin','contacts:manage','allow'),
+ ('role_super_admin','acopio:manage','allow'),
+ ('role_super_admin','aid_orgs:manage','allow'),
+ ('role_super_admin','emergencia:manage','allow'),
+ ('role_super_admin','damage:moderate','allow'),
+ ('role_super_admin','persons:moderate','allow'),
+ ('role_super_admin','sos:triage','allow'),
+ ('role_super_admin','events:refresh','allow'),
+ ('role_super_admin','sat:analyze','allow'),
  ('role_operations_director','users:read','allow'),
  ('role_operations_director','users:create','allow'),
  ('role_operations_director','users:update','allow'),
@@ -323,6 +348,8 @@ INSERT OR IGNORE INTO role_permissions (role_id, perm_key, effect) VALUES
  ('role_emergency_manager','flota:manage','allow'),
  ('role_emergency_manager','suministros:read','allow'),
  ('role_emergency_manager','suministros:manage','allow'),
+ ('role_emergency_manager','refugios:read','allow'),
+ ('role_emergency_manager','refugios:manage','allow'),
  ('role_emergency_manager','analytics:read','allow'),
  ('role_emergency_manager','reports:read','allow'),
  ('role_emergency_manager','reports:export','allow'),
@@ -454,6 +481,7 @@ INSERT OR IGNORE INTO role_permissions (role_id, perm_key, effect) VALUES
  ('role_read_only','flota:read','allow'),
  ('role_read_only','suministros:read','allow'),
  ('role_read_only','reports:read','allow'),
+ ('role_read_only','refugios:read','allow'),
  ('role_read_only','analytics:read','allow'),
  ('role_read_only','settings:read','allow'),
  ('role_read_only','system:read','allow'),
@@ -465,7 +493,17 @@ INSERT OR IGNORE INTO role_permissions (role_id, perm_key, effect) VALUES
  ('role_operator','familia:moderate','allow'),
  ('role_operator','suministros:manage','allow'),
  ('role_operator','telemedicina:manage','allow'),
- ('role_operator','ops:console','allow');
+ ('role_operator','ops:console','allow'),
+ ('role_operator','admin:maintenance','allow'),
+ ('role_operator','contacts:manage','allow'),
+ ('role_operator','acopio:manage','allow'),
+ ('role_operator','aid_orgs:manage','allow'),
+ ('role_operator','emergencia:manage','allow'),
+ ('role_operator','damage:moderate','allow'),
+ ('role_operator','persons:moderate','allow'),
+ ('role_operator','sos:triage','allow'),
+ ('role_operator','events:refresh','allow'),
+ ('role_operator','sat:analyze','allow');
 
 -- Default field-level policies
 INSERT OR IGNORE INTO field_policies (id, org_id, resource, field, visibility, required_perm, created_ms) VALUES

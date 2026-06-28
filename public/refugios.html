@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Refugios y Evacuación — La Guaira | SISMO911</title>
+<meta name="description" content="Motor de refugios y evacuación para La Guaira (Vargas): puntúa sitios candidatos (vías, servicios, camas, seguridad), asigna a la población por capacidad y calcula la logística completa — agua, alimentos, personal médico y militar, y organización de comando." />
+<link rel="canonical" href="https://sismo911.com/refugios" />
+<meta property="og:title" content="Refugios y Evacuación — La Guaira | SISMO911" />
+<meta property="og:description" content="Puntúa, mapea y asigna refugios; calcula agua, alimentos, personal y logística de emergencia." />
+<meta property="og:url" content="https://sismo911.com/refugios" />
+<meta property="og:image" content="https://sismo911.com/og/og-default.png" />
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<meta name="theme-color" content="#13284f" />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/app.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{--navy:#13284f;--line:#dfe3ea;--ink:#1b2433;--muted:#5b6781}
+  body{background:#eef0f4;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+  .eyebrow{font:800 11px 'Public Sans';letter-spacing:.12em;text-transform:uppercase;color:#7a8092}
+  h1{font:900 30px/1.05 'Public Sans';letter-spacing:-.02em;margin:4px 0 6px;color:var(--navy)}
+  h2{font:800 18px 'Public Sans';color:var(--navy);margin:0 0 4px}
+  .lede{color:var(--muted);font-size:14px;max-width:760px;line-height:1.5}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(16,24,40,.04)}
+  .pad{padding:18px}
+  .grid{display:grid;gap:14px}
+  .stat .n{font:900 26px 'Public Sans';color:var(--navy)}
+  .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px}
+  .subnav{position:sticky;top:0;z-index:20;background:#eef0f4;display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;margin-bottom:6px}
+  .subnav a{font:800 12px 'Public Sans';text-transform:uppercase;letter-spacing:.04em;color:var(--navy);background:#fff;border:1px solid var(--line);border-radius:9999px;padding:7px 14px;text-decoration:none}
+  .subnav a:hover{background:var(--navy);color:#fff}
+  #map{height:520px;border-radius:10px;z-index:0}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
+  .dot{display:inline-block;width:11px;height:11px;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px #c4c6d0;vertical-align:middle;margin-right:4px}
+  table.dt{width:100%;font-size:13px;border-collapse:collapse}
+  table.dt th{font:800 10px 'Public Sans';text-transform:uppercase;letter-spacing:.05em;color:#6b7280;text-align:left;padding:8px 10px;background:#f4f6f9;position:sticky;top:0}
+  table.dt td{padding:8px 10px;border-top:1px solid #eceef3;vertical-align:top}
+  table.dt tr:hover,tr.row:hover{background:#f3f6fc}
+  .chip{display:inline-flex;align-items:center;gap:.3rem;font:800 10px 'Public Sans';padding:2px 8px;border-radius:9999px;text-transform:uppercase;letter-spacing:.03em;color:#fff}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .bar{height:7px;border-radius:9999px;background:#e7eaf0;overflow:hidden}
+  .bar>span{display:block;height:100%;border-radius:9999px}
+  .num{font-variant-numeric:tabular-nums}
+  input,select{width:100%;border:1px solid #c4c6d0;border-radius:8px;padding:8px 10px;font-size:14px;background:#fff}
+  .btn{font:800 12px 'Public Sans';border-radius:8px;padding:9px 16px;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;border:1px solid transparent;background:var(--navy);color:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+  .kbox{background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:12px}
+  .kbox .n{font:900 22px 'Public Sans';color:var(--navy)}
+  .kbox .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .note{font-size:12px;color:var(--muted);background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 11px}
+  .org li{list-style:none}
+  .leaflet-popup-content{font-family:Inter,sans-serif;font-size:13px}
+</style>
+</head>
+<body>
+<header style="background:linear-gradient(135deg,#0c1b38,#1f3a6b);color:#fff">
+  <div style="max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px">
+    <a href="/" style="display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font:800 15px 'Public Sans'"><img src="/logo.svg" alt="" style="width:28px;height:28px"> SISMO911</a>
+  </div>
+</header>
+
+<main>
+  <div class="eyebrow">Comando · Protección Civil La Guaira</div>
+  <h1>Refugios y Evacuación — La Guaira</h1>
+  <p class="lede">Motor de decisión para alojar a la población en emergencia (sismo, deslave, marejada). Puntúa cada sitio candidato por <b>vías, servicios, tipo de cama y seguridad</b>, asigna a la población por <b>capacidad y cercanía</b>, y calcula la <b>logística completa</b>: agua, alimentos, personal médico y de seguridad, saneamiento y organización de comando.</p>
+  <div class="note" style="margin-top:12px">⚠️ Los datos sembrados (coordenadas, áreas, puntajes 0-5) son <b>estimaciones de planificación</b> para ejercicio de escritorio, <b>no un levantamiento de campo</b>. Verificar en sitio antes de comprometer personas. Estándares: Esfera 2018 (agua 15 L/p/día, 3,5 m²/p techado), WFP/OMS (2.100 kcal/p/día).</p>
+
+  <!-- summary -->
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:16px 0">
+    <div class="card pad stat"><div class="n num" id="s_sites">—</div><div class="l">Sitios candidatos</div></div>
+    <div class="card pad stat"><div class="n num" id="s_cap">—</div><div class="l">Capacidad total (personas)</div></div>
+    <div class="card pad stat"><div class="n num" id="s_pop">—</div><div class="l">Población en riesgo</div></div>
+    <div class="card pad stat"><div class="n num" id="s_cov">—</div><div class="l">Cobertura</div></div>
+    <div class="card pad stat"><div class="n num" id="s_def">—</div><div class="l">Déficit de cupos</div></div>
+  </div>
+
+  <nav class="subnav">
+    <a href="#mapa">Mapa</a><a href="#sitios">Sitios + Puntaje</a><a href="#asignacion">Asignación</a><a href="#logistica">Logística</a><a href="#org">Organización</a>
+  </nav>
+
+  <!-- MAPA -->
+  <section id="mapa" class="card pad" style="margin-bottom:16px">
+    <h2>Mapa operacional</h2>
+    <p class="lede" style="margin-bottom:10px">Sitios coloreados por aptitud; círculos = parroquias (tamaño ∝ población en riesgo). Clic para ver el desglose del puntaje y la descripción.</p>
+    <div class="legend" style="margin-bottom:8px">
+      <span><span class="dot" style="background:#15803d"></span>Óptimo (≥75)</span>
+      <span><span class="dot" style="background:#1d4ed8"></span>Apto (55-74)</span>
+      <span><span class="dot" style="background:#b45309"></span>Marginal (40-54)</span>
+      <span><span class="dot" style="background:#bb0027"></span>No apto (&lt;40)</span>
+      <span><span class="dot" style="background:#7c3aed;opacity:.6"></span>Parroquia (riesgo)</span>
+    </div>
+    <div id="map"></div>
+  </section>
+
+  <!-- SITIOS -->
+  <section id="sitios" class="card" style="margin-bottom:16px;overflow:hidden">
+    <div class="pad" style="padding-bottom:8px"><h2>Sitios candidatos y puntaje de aptitud</h2>
+      <p class="lede">Ponderación: vías 25% · servicios 30% · cama/capacidad 20% · seguridad 25%.</p></div>
+    <div style="overflow:auto;max-height:560px"><table class="dt">
+      <thead><tr><th>Sitio</th><th>Tipo</th><th>Parroquia</th><th>Cap.</th><th>Cama</th><th>Vías</th><th>Serv.</th><th>Cap.</th><th>Seg.</th><th>Puntaje</th></tr></thead>
+      <tbody id="sitesBody"><tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:24px">Cargando…</td></tr></tbody>
+    </table></div>
+  </section>
+
+  <!-- ASIGNACION -->
+  <section id="asignacion" class="card pad" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:end;flex-wrap:wrap;gap:10px">
+      <div><h2>Asignación por capacidad</h2>
+        <p class="lede">Reparte la población de cada parroquia hacia los mejores refugios disponibles (mayor puntaje, luego más cercano), respetando la capacidad de cada sitio.</p></div>
+      <button class="btn" id="runAssign">Ejecutar asignación</button>
+    </div>
+    <div class="kpi" id="assignKpi" style="margin-top:14px;display:none"></div>
+    <div id="assignWrap" style="margin-top:12px;display:none">
+      <div style="overflow:auto;max-height:420px"><table class="dt">
+        <thead><tr><th>Parroquia</th><th>Refugio asignado</th><th class="num">Personas</th><th class="num">Dist. (km)</th></tr></thead>
+        <tbody id="assignBody"></tbody>
+      </table></div>
+      <div id="unassigned" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- LOGISTICA -->
+  <section id="logistica" class="card pad" style="margin-bottom:16px">
+    <h2>Calculadora de logística</h2>
+    <p class="lede">Agua, alimentos, saneamiento y personal (médico, militar, cocina, WASH) para una población alojada. Factores de planificación Esfera/WFP/OMS, ajustables.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:14px 0;max-width:560px">
+      <div><label class="eyebrow">Personas</label><input type="number" id="lPeople" value="10000" min="0" /></div>
+      <div><label class="eyebrow">Días</label><input type="number" id="lDays" value="7" min="1" /></div>
+      <div style="display:flex;align-items:end"><button class="btn" id="calcLog" style="width:100%">Calcular</button></div>
+    </div>
+    <div id="logOut"></div>
+  </section>
+
+  <!-- ORGANIZACION -->
+  <section id="org" class="card" style="margin-bottom:16px;overflow:hidden">
+    <div class="pad" style="padding-bottom:8px"><h2>Organización de comando (SCI)</h2>
+      <p class="lede">Sistema de Comando de Incidentes adaptado a las agencias de Venezuela.</p></div>
+    <div style="overflow:auto"><table class="dt">
+      <thead><tr><th>Rol</th><th>Agencia</th><th>Función</th><th>Reporta a</th></tr></thead>
+      <tbody id="orgBody"></tbody>
+    </table></div>
+  </section>
+</main>
+
+<script src="/app-shell.js" defer></script>
+<script>
+const TIER = {
+  optimo:  {c:'#15803d', l:'Óptimo'},
+  apto:    {c:'#1d4ed8', l:'Apto'},
+  marginal:{c:'#b45309', l:'Marginal'},
+  no_apto: {c:'#bb0027', l:'No apto'},
+};
+const TIPO = {
+  polideportivo:'Polideportivo', estadio:'Estadio', campo_golf:'Campo de golf', iglesia:'Iglesia',
+  club_puerto:'Club / Puerto', escuela_nautica:'Escuela náutica', deposito_contenedores:'Depósito contenedores',
+  zona_baldia:'Zona baldía', gimnasio:'Gimnasio', escuela:'Escuela', hospital:'Hospital', aeropuerto:'Aeropuerto',
+};
+const fmt = (n) => (n==null?'—':Number(n).toLocaleString('es-VE'));
+const esc = (s) => (s||'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const bar = (v,c) => `<div class="bar"><span style="width:${Math.max(0,Math.min(100,v))}%;background:${c}"></span></div>`;
+
+let SITES = [], ZONES = [], map, layerSites, layerZones;
+
+async function boot(){
+  const [sm, zm, su] = await Promise.all([
+    fetch('/api/refugios').then(r=>r.json()),
+    fetch('/api/refugios/zones').then(r=>r.json()),
+    fetch('/api/refugios/summary').then(r=>r.json()),
+  ]);
+  SITES = sm.sites||[]; ZONES = zm.zones||[];
+  document.getElementById('s_sites').textContent = fmt(su.sites);
+  document.getElementById('s_cap').textContent = fmt(su.capacityTotal);
+  document.getElementById('s_pop').textContent = fmt(su.population);
+  document.getElementById('s_cov').textContent = (su.coveragePct??0)+'%';
+  document.getElementById('s_def').textContent = fmt(su.deficit);
+  renderSites(); initMap(); loadOrg(); calcLog();
+}
+
+function renderSites(){
+  const rows = SITES.slice().sort((a,b)=>b.score-a.score).map(s=>{
+    const t = TIER[s.tier]||TIER.no_apto, b=s.score_breakdown||{};
+    return `<tr class="row" style="cursor:pointer" data-site="${s.id}">
+      <td><b>${esc(s.nombre)}</b></td>
+      <td>${TIPO[s.tipo]||esc(s.tipo)}</td>
+      <td>${esc(s.parroquia||'—')}</td>
+      <td class="num">${fmt(s.capacity)}</td>
+      <td style="text-transform:capitalize">${esc(s.bed_type||'—')}</td>
+      <td class="num">${b.roads??'—'}</td><td class="num">${b.services??'—'}</td>
+      <td class="num">${b.bedCapacity??'—'}</td><td class="num">${b.safety??'—'}</td>
+      <td><span class="chip" style="background:${t.c}">${s.score} · ${t.l}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('sitesBody').innerHTML = rows || '<tr><td colspan="10">Sin sitios.</td></tr>';
+  document.getElementById('sitesBody').querySelectorAll('tr[data-site]').forEach(tr =>
+    tr.addEventListener('click', () => focusSite(tr.getAttribute('data-site'))));
+}
+
+function popupHtml(s){
+  const t=TIER[s.tier]||TIER.no_apto, b=s.score_breakdown||{};
+  return `<div style="min-width:220px">
+    <div style="font:800 14px 'Public Sans';color:#13284f">${esc(s.nombre)}</div>
+    <div style="font-size:11px;color:#5b6781;margin-bottom:6px">${TIPO[s.tipo]||esc(s.tipo)} · ${esc(s.parroquia||'')}</div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+      <span class="chip" style="background:${t.c}">${s.score} · ${t.l}</span>
+      <span style="font-size:12px"><b>${fmt(s.capacity)}</b> cupos · libre ${fmt(s.free)}</span></div>
+    <div style="font-size:11px;color:#5b6781">Vías ${b.roads}</div>${bar(b.roads,'#13284f')}
+    <div style="font-size:11px;color:#5b6781;margin-top:3px">Servicios ${b.services}</div>${bar(b.services,'#0e7490')}
+    <div style="font-size:11px;color:#5b6781;margin-top:3px">Cama/Capacidad ${b.bedCapacity}</div>${bar(b.bedCapacity,'#7c3aed')}
+    <div style="font-size:11px;color:#5b6781;margin-top:3px">Seguridad ${b.safety}</div>${bar(b.safety,'#15803d')}
+    ${s.notes?`<div style="font-size:11px;color:#5b6781;margin-top:7px">${esc(s.notes)}</div>`:''}
+  </div>`;
+}
+
+function initMap(){
+  map = L.map('map',{attributionControl:false}).setView([10.60,-66.92], 11);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(map);
+  layerZones = L.layerGroup().addTo(map);
+  layerSites = L.layerGroup().addTo(map);
+  ZONES.forEach(z=>{ if(z.lat==null) return;
+    L.circle([z.lat,z.lon],{radius:Math.max(300,Math.sqrt(z.population)*9),color:'#7c3aed',weight:1,fillColor:'#7c3aed',fillOpacity:.12})
+      .bindPopup(`<b>${esc(z.nombre)}</b><br>${fmt(z.population)} personas · riesgo ${esc(z.risk_level||'')}`).addTo(layerZones);
+  });
+  SITES.forEach(s=>{ if(s.lat==null) return;
+    const t=TIER[s.tier]||TIER.no_apto;
+    L.circleMarker([s.lat,s.lon],{radius:7,color:'#fff',weight:2,fillColor:t.c,fillOpacity:1})
+      .bindPopup(popupHtml(s)).addTo(layerSites)._refId=s.id;
+  });
+}
+function focusSite(id){
+  const s=SITES.find(x=>x.id===id); if(!s||s.lat==null) return;
+  document.getElementById('mapa').scrollIntoView({behavior:'smooth'});
+  map.setView([s.lat,s.lon],14);
+  layerSites.eachLayer(l=>{ if(l._refId===id) l.openPopup(); });
+}
+
+async function runAssign(){
+  const btn=document.getElementById('runAssign'); btn.disabled=true; btn.textContent='Calculando…';
+  const r = await fetch('/api/refugios/assign').then(x=>x.json());
+  const T=r.totals;
+  document.getElementById('assignKpi').style.display='grid';
+  document.getElementById('assignKpi').innerHTML = [
+    ['Población',fmt(T.population)],['Alojados',fmt(T.sheltered)],['Sin cupo',fmt(T.unsheltered)],
+    ['Cupos usados',fmt(T.capacityUsed)+' / '+fmt(T.capacityTotal)],
+    ['Cobertura',(T.population?Math.round(T.sheltered/T.population*100):0)+'%'],
+  ].map(([l,n])=>`<div class="kbox"><div class="n num">${n}</div><div class="l">${l}</div></div>`).join('');
+  document.getElementById('assignWrap').style.display='block';
+  document.getElementById('assignBody').innerHTML = (r.assignments||[]).map(a=>
+    `<tr><td>${esc(a.zone_nombre||a.zone_id)}</td><td>${esc(a.site_nombre||a.site_id)}</td><td class="num">${fmt(a.people)}</td><td class="num">${a.distance_km}</td></tr>`
+  ).join('') || '<tr><td colspan="4">Sin asignaciones.</td></tr>';
+  const un=r.unassigned||[];
+  document.getElementById('unassigned').innerHTML = un.length
+    ? `<div class="note">⚠️ Sin cupo (${fmt(un.reduce((a,u)=>a+u.people,0))} personas): ${un.map(u=>esc(u.zone_nombre||u.zone_id)+' ('+fmt(u.people)+')').join(', ')}. Activar refugios de reserva o ampliar capacidad.</div>`
+    : `<div class="note" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534">✓ Toda la población en riesgo tiene cupo asignado.</div>`;
+  btn.disabled=false; btn.textContent='Ejecutar asignación';
+}
+
+async function calcLog(){
+  const people=+document.getElementById('lPeople').value||0, days=+document.getElementById('lDays').value||7;
+  const r = await fetch(`/api/refugios/logistics?people=${people}&days=${days}`).then(x=>x.json());
+  const box=(t,items)=>`<div class="card pad" style="margin-bottom:12px"><div class="eyebrow" style="margin-bottom:8px">${t}</div><div class="kpi">${items.map(([l,n])=>`<div class="kbox"><div class="n num">${n}</div><div class="l">${l}</div></div>`).join('')}</div></div>`;
+  document.getElementById('logOut').innerHTML =
+    box(`Agua (15 L/p/día · ${days} días)`, [
+      ['Litros/día',fmt(r.water.litersPerDay)],['Litros total',fmt(r.water.litersTotal)],['Cisternas 20 m³',fmt(r.water.trucks20kL)],
+    ]) +
+    box(`Alimentos (2.100 kcal/p/día · ${days} días)`, [
+      ['Comidas/día',fmt(r.food.mealsPerDay)],['Cereal (kg)',fmt(r.food.cerealKg)],['Legumbres (kg)',fmt(r.food.pulsesKg)],
+      ['Aceite (kg)',fmt(r.food.oilKg)],['Sal (kg)',fmt(r.food.saltKg)],['Ración total (kg)',fmt(r.food.totalRationKg)],
+    ]) +
+    box('Saneamiento (Esfera)', [
+      ['Letrinas (1/20)',fmt(r.sanitation.latrines)],['Duchas (1/50)',fmt(r.sanitation.showers)],['Puntos de agua (1/250)',fmt(r.sanitation.waterTaps)],
+    ]) +
+    box('Personal de emergencia', [
+      ['Médicos',fmt(r.personnel.doctors)],['Enfermeras',fmt(r.personnel.nurses)],['Paramédicos',fmt(r.personnel.paramedics)],
+      ['Psicólogos',fmt(r.personnel.psychologists)],['Seguridad / militares',fmt(r.personnel.security)],['Cocineros',fmt(r.personnel.cooks)],
+      ['Técnicos WASH',fmt(r.personnel.washTechs)],['Personal de refugio',fmt(r.personnel.shelterStaff)],['TOTAL personal',fmt(r.personnel.total)],
+    ]);
+}
+
+async function loadOrg(){
+  const r = await fetch('/api/refugios/org').then(x=>x.json());
+  document.getElementById('orgBody').innerHTML = (r.org||[]).map(o=>
+    `<tr><td><b>${esc(o.rol)}</b></td><td>${esc(o.agencia||'')}</td><td>${esc(o.funcion)}</td><td style="color:#5b6781">${esc(o.reporta_a||'—')}</td></tr>`
+  ).join('');
+}
+
+document.getElementById('runAssign').onclick = runAssign;
+document.getElementById('calcLog').onclick = calcLog;
+boot();
+</script>
+</body>
+</html>
