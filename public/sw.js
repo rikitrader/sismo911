@@ -1,8 +1,9 @@
 // SISMO911 service worker — offline shell + cached emergency guide.
-const CACHE = 'sismo911-v9';
+const CACHE = 'sismo911-v10';
 const PRECACHE = [
   '/',
   '/app',
+  '/flota/track',
   '/archivo',
   '/acopio',
   '/acopio.html',
