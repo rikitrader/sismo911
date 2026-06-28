@@ -88,6 +88,24 @@
         </div>
       </div>
     </div>
+    <!-- dispatch -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <span class="eyebrow">Despacho de unidades</span>
+        <span id="dispCount" class="text-[11px] text-on-surface-variant mono">—</span>
+      </div>
+      <div class="flex flex-wrap items-end gap-2 mb-3">
+        <label class="text-[11px] text-on-surface-variant">Unidad disponible
+          <select id="dispUnit" class="block mt-1 border rounded-md px-2 py-1.5 text-sm min-w-[12rem]"></select>
+        </label>
+        <label class="text-[11px] text-on-surface-variant">Caso / referencia
+          <input id="dispCase" type="text" autocomplete="off" placeholder="SOS, evento o nota" class="block mt-1 border rounded-md px-2 py-1.5 text-sm min-w-[12rem]" />
+        </label>
+        <button id="dispBtn" class="bg-primary text-white font-semibold rounded-md px-3 py-2 text-xs">Despachar</button>
+        <span id="dispMsg" class="text-[11px] text-on-surface-variant"></span>
+      </div>
+      <div id="dispList" class="ulist"></div>
+    </div>
     <p class="text-[11px] text-on-surface-variant">Posiciones GPS en vivo por WebSocket. Un punto solo aparece cuando la unidad ha reportado una posición; las unidades sin señal por más de 2 minutos se muestran en gris. Acceso de operador requerido.</p>
   </main>
 
@@ -306,11 +324,58 @@ setInterval(()=>{
   renderList();
 },30000);
 
-$('#refreshBtn').onclick=loadSnapshot;
+// ---------------- dispatch ----------------
+const DSTAT={assigned:'Asignada',enroute:'En ruta',onscene:'En sitio',cleared:'Cerrada'};
+const DNEXT={assigned:'enroute',enroute:'onscene',onscene:'cleared'};
+async function loadDispatch(){
+  const [ur,dr]=await Promise.all([api('admin/flota/units'),api('admin/flota/dispatches?open=1')]);
+  if(ur.status===401||dr.status===401){showAuth('Sesión de operador requerida.');return;}
+  if(!ur.ok||!dr.ok)return;
+  const units=((await ur.json().catch(()=>({}))).results)||[];
+  const disp=((await dr.json().catch(()=>({}))).results)||[];
+  const busy=new Set(disp.map(d=>d.unit_id));
+  const avail=units.filter(u=>u.status==='active'&&!busy.has(u.id));
+  $('#dispUnit').innerHTML=avail.length
+    ? avail.map(u=>`<option value="${esc(u.id)}">${esc(u.name)} · ${esc(u.type)}</option>`).join('')
+    : '<option value="">— sin unidades disponibles —</option>';
+  $('#dispCount').textContent=disp.length+' activo'+(disp.length===1?'':'s');
+  $('#dispList').innerHTML=disp.length ? disp.map(d=>{
+    const next=DNEXT[d.status];
+    return `<div class="uitem row" style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.5rem .75rem">
+      <div><div style="font-weight:700">${esc(d.unit_name||d.unit_id)}</div>
+        <div class="text-[11px] text-on-surface-variant">${esc(DSTAT[d.status]||d.status)}${d.case_id?' · '+esc(d.case_id):''}</div></div>
+      <div style="display:flex;gap:.35rem">
+        ${next?`<button class="dadv bg-primary text-white rounded px-2 py-1 text-[11px]" data-id="${esc(d.id)}" data-next="${next}">${esc(DSTAT[next])}</button>`:''}
+        <button class="dclr border rounded px-2 py-1 text-[11px]" data-id="${esc(d.id)}">Cerrar</button>
+      </div></div>`;
+  }).join('') : '<div class="px-4 py-6 text-center text-on-surface-variant text-sm">Sin despachos activos.</div>';
+  document.querySelectorAll('.dadv').forEach(b=>b.onclick=()=>patchDispatch(b.dataset.id,b.dataset.next));
+  document.querySelectorAll('.dclr').forEach(b=>b.onclick=()=>patchDispatch(b.dataset.id,'cleared'));
+}
+async function createDispatch(){
+  const unit=$('#dispUnit').value, caseId=$('#dispCase').value.trim();
+  if(!unit){$('#dispMsg').textContent='No hay unidad disponible.';return;}
+  $('#dispBtn').disabled=true; $('#dispMsg').textContent='…';
+  const r=await api('admin/flota/units/'+encodeURIComponent(unit)+'/dispatch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({case_id:caseId||null})});
+  $('#dispBtn').disabled=false;
+  if(r.status===401){showAuth('Sesión de operador requerida.');return;}
+  if(!r.ok){const e=await r.json().catch(()=>({}));$('#dispMsg').textContent='Error: '+(e.error||r.status);return;}
+  $('#dispCase').value=''; $('#dispMsg').textContent='Despachada ✓';
+  await loadDispatch(); await loadSnapshot();
+}
+async function patchDispatch(id,status){
+  const r=await api('admin/flota/dispatches/'+encodeURIComponent(id),{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status})});
+  if(r.status===401){showAuth('Sesión de operador requerida.');return;}
+  if(!r.ok)return;
+  await loadDispatch(); await loadSnapshot();
+}
+$('#dispBtn').onclick=createDispatch;
+$('#refreshBtn').onclick=()=>{loadSnapshot();loadDispatch();};
+setInterval(loadDispatch,30000); // keep the dispatch panel fresh
 
 // ---------------- boot ----------------
 initMap();
-(async()=>{ const ok=await loadSnapshot(); if(ok)connectWS(); })();
+(async()=>{ const ok=await loadSnapshot(); if(ok){connectWS();loadDispatch();} })();
 </script>
 </body>
 </html>
