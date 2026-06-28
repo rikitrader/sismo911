@@ -105,10 +105,12 @@ adminImpersonation.post('/impersonate/:userId', requirePermission('users:imperso
   ).bind(targetId).first();
   if (!target) return c.json({ error: 'not_found' }, 404);
 
-  // Never impersonate an admin/super_admin (or any impersonate-capable account).
-  if (await isPrivilegedTarget(c.env, target)) {
-    await logSecurity(c, 'impersonate.denied', targetId, { reason: 'target_is_admin' });
-    return c.json({ error: 'cannot_impersonate_admin' }, 403);
+  // Never impersonate an admin/super_admin, an escalation-capable account, or a
+  // target strictly MORE privileged than the impersonator (fail-closed subset rule).
+  const denial = await isPrivilegedTarget(c.env, target, admin);
+  if (denial) {
+    await logSecurity(c, 'impersonate.denied', targetId, { reason: denial });
+    return c.json({ error: denial }, 403);
   }
 
   // Stash the admin's OWN token so /stop can restore their session.
