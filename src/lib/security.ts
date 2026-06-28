@@ -85,7 +85,11 @@ export function setSecurityHeaders(c: Context) {
   c.header(
     'Content-Security-Policy-Report-Only',
     [
-      ...directives.map((d) => (d.startsWith('script-src') ? `script-src ${STRICT_SCRIPT_SRC}` : d)),
+      // `upgrade-insecure-requests` is ignored in a Report-Only policy (browsers
+      // warn) — keep it only in the enforcing header above, drop it here.
+      ...directives
+        .filter((d) => d !== 'upgrade-insecure-requests')
+        .map((d) => (d.startsWith('script-src') ? `script-src ${STRICT_SCRIPT_SRC}` : d)),
       'report-uri /api/csp-report',
     ].join('; '),
   );
