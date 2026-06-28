@@ -23,6 +23,29 @@ export async function upsertEvents(env: Env, events: SeismicEvent[], raw: any[])
   return batch.length;
 }
 
+// Health classification for an ingest_log row. Pure (testable): derives a
+// status from the recorded error + how long the source has been failing, so a
+// degraded feed (e.g. an upstream that started requiring reCAPTCHA) surfaces in
+// /api/status instead of failing silently every hour. `down` = a structured
+// `degraded:*` error (the cron explicitly classified the failure); `stale` = no
+// success in STALE_AFTER_MS while erroring; `ok` otherwise.
+export interface IngestLogRow {
+  source: string; last_run_ms: number | null; last_ok_ms: number | null;
+  last_count: number | null; last_error: string | null;
+}
+export type IngestHealth = 'ok' | 'stale' | 'down';
+const STALE_AFTER_MS = 3 * 60 * 60 * 1000;   // 3h without a success ⇒ stale
+
+export function classifyIngestHealth(row: IngestLogRow, nowMs: number): IngestHealth {
+  const err = (row.last_error || '').trim();
+  // A structured `degraded:<reason>` error means the cron positively identified a
+  // blocking condition (e.g. degraded:recaptcha) — treat as down regardless of age.
+  if (err.startsWith('degraded:')) return 'down';
+  const okAgeMs = row.last_ok_ms == null ? Infinity : nowMs - row.last_ok_ms;
+  if (err && okAgeMs > STALE_AFTER_MS) return 'stale';
+  return 'ok';
+}
+
 export async function recordIngest(
   env: Env, source: string, ok: boolean, count: number, error?: string
 ): Promise<void> {
