@@ -52,6 +52,9 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   '/api/persons', '/api/push', '/api/rav', '/api/rbac', '/api/reports',
   '/api/resources', '/api/sat', '/api/shelters', '/api/sos', '/api/suministros',
   '/api/telemedicina', '/api/v1', '/api/voluntarios', '/api/x402', '/api/admin',
+  // Profile Command Center — every endpoint self-authenticates via
+  // getUserFromRequest and is scoped to the caller's own user id (like /api/x402).
+  '/api/profile',
 ];
 
 /** True if `path` is on the public /api allow-list (prefix match on a path segment). */
