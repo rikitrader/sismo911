@@ -46,6 +46,12 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "none"
 run_worker_first = [
+  # Root is Worker-owned so it can host-branch by hostname: the SUMINISTROS
+  # subdomain root serves the inventory SPA, every other host serves the
+  # DESAPARECIDOS registry (see app.get('/') in src/index.ts). The homepage
+  # shell is still edge-cached (60s + SWR 300s) by serveAsset, so this does not
+  # meaningfully increase Worker load on the high-traffic apex.
+  "/",
   "/api/*",
   "/mcp",
   "/familia",

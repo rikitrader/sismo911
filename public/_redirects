@@ -2,14 +2,11 @@
 # Assets layer so these high-traffic paths serve WITHOUT invoking the Worker.
 # 200 = rewrite (serve target content at the original URL); 301 = redirect.
 
-# SUMINISTROS division subdomain — its root serves the inventory SPA shell
-# (suministros.html). Host-scoped + 200 (rewrite, URL stays on the subdomain).
-# MUST precede the generic "/" rule below, which is host-agnostic and would
-# otherwise rewrite the subdomain root to /personas. First match wins.
-https://suministros.sismo911.com/   /suministros   200
-
-# Homepage is the DESAPARECIDOS registry. Target the clean URL (not *.html) so
-# html_handling serves personas.html in place rather than 30x-ing on the .html.
+# Homepage "/" is owned by the WORKER (run_worker_first in wrangler.toml) so it
+# can host-branch: the SUMINISTROS subdomain root serves the inventory SPA, every
+# other host serves the DESAPARECIDOS registry. (_redirects can't match on host —
+# Workers Assets rejects absolute URLs in the source — so this rule no longer
+# fires for "/", but is kept as the documented fallback target.)
 /                /personas        200
 
 # /terremotos (old earthquake dashboard = index.html) is served by the WORKER —
