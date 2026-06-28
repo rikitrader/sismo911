@@ -52,6 +52,9 @@ run_worker_first = [
   # shell is still edge-cached (60s + SWR 300s) by serveAsset, so this does not
   # meaningfully increase Worker load on the high-traffic apex.
   "/",
+  # SUMINISTROS SPA shell is Worker-owned so the gate can require suministros:read
+  # (staff-only) before serving it — the division is not publicly open.
+  "/suministros",
   "/api/*",
   "/mcp",
   "/console",

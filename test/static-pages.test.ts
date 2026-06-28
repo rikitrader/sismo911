@@ -5,6 +5,10 @@ import worker, { PUBLIC_COMMAND_ASSETS } from '../src/index';
 describe('public command surfaces', () => {
   it('serves clean command URLs from explicit HTML assets', async () => {
     for (const [path, assetPath] of Object.entries(PUBLIC_COMMAND_ASSETS)) {
+      // /suministros is now a GATED division (staff-only) — it redirects to /login
+      // for unauthenticated requests, so it's not a public command URL. Its gating
+      // is covered by test/route-policy.test.ts.
+      if (path === '/suministros') continue;
       const requested: string[] = [];
       const env = {
         ASSETS: {

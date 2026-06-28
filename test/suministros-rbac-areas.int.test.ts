@@ -86,8 +86,12 @@ describe('SUMINISTROS RBAC — gate maps each write path to its area permission'
       if (d.kind === 'perm') expect(d.perm, `${m} ${p}`).toBe(perm);
     }
   });
-  it('inventory reads stay open', () => {
-    expect(evaluateGate('/api/suministros/inventario', 'GET').kind).toBe('open');
-    expect(evaluateGate('/api/suministros/reportes/valuacion', 'GET').kind).toBe('open');
+  it('inventory reads require suministros:read (division gated end-to-end)', () => {
+    const a = evaluateGate('/api/suministros/inventario', 'GET');
+    const b = evaluateGate('/api/suministros/reportes/valuacion', 'GET');
+    expect(a.kind).toBe('perm'); if (a.kind === 'perm') expect(a.perm).toBe('suministros:read');
+    expect(b.kind).toBe('perm'); if (b.kind === 'perm') expect(b.perm).toBe('suministros:read');
+    const page = evaluateGate('/suministros', 'GET');
+    expect(page.kind).toBe('page'); if (page.kind === 'page') expect(page.perm).toBe('suministros:read');
   });
 });
