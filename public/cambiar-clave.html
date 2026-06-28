@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SISMO911 — Cambiar contraseña</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#0b1830" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#0b1830,#13284f);font-family:'Inter',system-ui,sans-serif;color:#1a1c1e;padding:1.5rem}
+    .card{background:#fff;border-radius:1rem;max-width:430px;width:100%;padding:2rem 1.75rem;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .brand{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem}
+    .brand img{height:34px;width:34px}
+    .brand b{font-family:'Public Sans',sans-serif;font-weight:900;font-size:1.15rem;color:#00173a}
+    h1{font-family:'Public Sans',sans-serif;font-size:1.2rem;margin:.6rem 0 .25rem}
+    p.sub{font-size:.85rem;color:#44474f;margin:0 0 1.25rem}
+    label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#44474f;margin:.85rem 0 .3rem}
+    input{width:100%;border:1px solid #c4c6d0;border-radius:.55rem;padding:.65rem .7rem;font-size:.95rem}
+    input:focus{outline:2px solid #00173a;border-color:#00173a}
+    button{width:100%;margin-top:1.3rem;background:#bb0027;color:#fff;border:0;border-radius:.55rem;padding:.8rem;font-size:.95rem;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.6;cursor:wait}
+    .msg{margin-top:1rem;font-size:.85rem;padding:.6rem .7rem;border-radius:.5rem;display:none}
+    .msg.err{display:block;background:#fdecee;color:#9b1c2e;border:1px solid #f3b9c1}
+    .msg.ok{display:block;background:#e8f5ec;color:#1b6b32;border:1px solid #b6dcc1}
+    .hint{font-size:.72rem;color:#6b7280;margin-top:.3rem}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand"><img src="/logo.svg" alt="SISMO911" /><b>SISMO911</b></div>
+    <h1>Cambiar contraseña</h1>
+    <p class="sub">Por seguridad, debes reemplazar tu contraseña temporal antes de registrar operaciones.</p>
+    <form id="f" autocomplete="off">
+      <label for="cur">Contraseña actual (temporal)</label>
+      <input id="cur" type="password" required autocomplete="current-password" />
+      <label for="nw">Nueva contraseña</label>
+      <input id="nw" type="password" required minlength="10" autocomplete="new-password" />
+      <div class="hint">Mínimo 10 caracteres. Usa una distinta a la temporal.</div>
+      <label for="nw2">Confirmar nueva contraseña</label>
+      <input id="nw2" type="password" required minlength="10" autocomplete="new-password" />
+      <button id="b" type="submit">Cambiar contraseña</button>
+    </form>
+    <div id="m" class="msg"></div>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const msg = (t, ok) => { const m = $('m'); m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); };
+    $('f').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cur = $('cur').value, nw = $('nw').value, nw2 = $('nw2').value;
+      if (nw !== nw2) return msg('Las contraseñas nuevas no coinciden.');
+      if (nw.length < 10) return msg('La nueva contraseña debe tener al menos 10 caracteres.');
+      $('b').disabled = true;
+      try {
+        const r = await fetch('/api/auth/change-password', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ current_password: cur, new_password: nw }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) {
+          msg('Contraseña actualizada. Redirigiendo…', true);
+          const next = new URLSearchParams(location.search).get('next') || '/';
+          setTimeout(() => location.href = next, 1200);
+        } else if (r.status === 401) {
+          msg('Sesión no válida. Inicia sesión primero.');
+          setTimeout(() => location.href = '/login?next=' + encodeURIComponent('/cambiar-clave'), 1400);
+        } else {
+          const map = { invalid_current_password: 'La contraseña actual es incorrecta.', weak_password: 'Contraseña muy corta (mínimo 10).', same_password: 'Usa una contraseña distinta a la temporal.' };
+          msg(map[d.error] || d.hint || 'No se pudo cambiar la contraseña.');
+        }
+      } catch { msg('Error de red. Intenta de nuevo.'); }
+      $('b').disabled = false;
+    });
+  </script>
+</body>
+</html>
