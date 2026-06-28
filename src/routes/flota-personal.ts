@@ -5,8 +5,8 @@ import { uid } from '../lib/db';
 // FLOTA — personnel/crew CRUD (flota_personal). Responders are assigned to
 // units (unidad_id) and missions; `skills` is a JSON string array.
 //
-// Gating (src/index.ts ADMIN_WRITE_PREFIXES '/api/flota'): all writes here are
-// operator-only; all GET reads are public. Mounted at /api/flota/personal.
+// Gating: the whole /api/flota surface is operator/admin-only (src/index.ts
+// isFlotaApi) — including GET reads. Mounted at /api/flota/personal.
 
 export const flotaPersonal = new Hono<{ Bindings: Env }>();
 

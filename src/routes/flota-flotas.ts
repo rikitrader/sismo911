@@ -6,8 +6,8 @@ import { uid } from '../lib/db';
 // a label over a set of flota_unidades, tracked via the flota_flota_unidades
 // membership table. Mounted at /api/flota/flotas.
 //
-// Gating (src/index.ts ADMIN_WRITE_PREFIXES '/api/flota'): all writes here are
-// operator-only; all GET reads are public. Single-tenant national app — no org
+// Gating: the whole /api/flota surface is operator/admin-only (src/index.ts
+// isFlotaApi) — including GET reads. Single-tenant national app — no org
 // scoping.
 
 export const flotaFlotas = new Hono<{ Bindings: Env }>();
