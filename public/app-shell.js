@@ -81,7 +81,9 @@
   // Admin console stays pinned at the bottom of the nav list.
   const NAV_ADMIN = { label: 'Consola', href: '/admin', m: ['/admin'], d: 'M12 3l8 3.5v5c0 4-3 7-8 9-5-2-8-5-8-9v-5z M9.5 12l2 2 3.5-4' };
 
-  const NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0', GOLD = '#c9a227', CTARED = '#d62828';
+  // Single standardized YELLOW for every yellow nav button (TERREMOTOS, MASCOTAS,
+  // REFUGIOS, VOLUNTARIOS, TELEMEDICINA) — one source of truth so they never drift.
+  const NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0', YELLOW = '#f5c518', CTARED = '#d62828';
   const path = (location.pathname.replace(/\.html$/, '') || '/');
   const active = (it) => it.m.some((x) => x === '/' ? path === '/' : (path === x || path.startsWith(x + '/')));
 
@@ -104,7 +106,7 @@
     }
     if (it.gold) {
       // Solid Venezuela-flag gold feature button with navy text/icon (the flag's yellow+blue pairing).
-      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${GOLD};color:${NAVY};box-shadow:0 1px 3px rgba(201,162,39,.45)">
+      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${YELLOW};color:${NAVY};box-shadow:0 1px 3px rgba(245,197,24,.45)">
       <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
@@ -112,7 +114,7 @@
       // Yellow "REFUGIOS" chip — same compact frame/size as the TERREMOTOS (gold)
       // button right above it, but bright yellow (#f5c518) with navy text/icon.
       const onRef = active(it);
-      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 1px 3px rgba(245,197,24,.45)${onRef ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${YELLOW};color:${NAVY};box-shadow:0 1px 3px rgba(245,197,24,.45)${onRef ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
       <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
@@ -132,19 +134,19 @@
     if (it.volunteer) {
       // Big yellow "VOLUNTARIOS" CTA — same large shape as DAÑOS, yellow with navy text for contrast.
       const onV = active(it);
-      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 3px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onV ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 3px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${YELLOW};color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onV ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.telemed) {
       // Big yellow "TELEMEDICINA" CTA — same large shape/size/color as VOLUNTARIOS, yellow with navy text.
       const onT = active(it);
-      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 3px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:#f5c518;color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onT ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
+      return `<a href="${it.href}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 3px;padding:26px 12px;border-radius:14px;font:900 18px 'Public Sans',sans-serif;letter-spacing:.03em;text-decoration:none;background:${YELLOW};color:${NAVY};box-shadow:0 2px 10px rgba(245,197,24,.45)${onT ? ';outline:2px solid ' + NAVY + ';outline-offset:-4px' : ''}">
       ${icon(it.d)}${it.label}</a>`;
     }
     if (it.pets) {
       // "MASCOTAS" chip — same frame, size, spacing AND color as the TERREMOTOS (gold)
       // button: Venezuela-flag gold with navy text/icon, plus its paw-print glyph.
-      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${GOLD};color:${NAVY};box-shadow:0 1px 3px rgba(201,162,39,.45)">
+      return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;background:${YELLOW};color:${NAVY};box-shadow:0 1px 3px rgba(245,197,24,.45)">
       <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(0,23,58,.14);color:${NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
