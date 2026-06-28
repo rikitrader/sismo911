@@ -54,6 +54,34 @@ function parseJson(text: string): any {
   try { return JSON.parse(text.slice(a, b + 1)); } catch { return null; }
 }
 
+// Workers AI JSON mode schema — forces a structured, parseable response.
+const TRIAGE_SCHEMA = {
+  type: 'object',
+  properties: {
+    category: { type: 'string', enum: ['desaparecido', 'mascota', 'dano', 'ninguno'] },
+    confidence: { type: 'number' },
+    fields: {
+      type: 'object',
+      properties: {
+        nombre: { type: 'string' }, edad: { type: ['integer', 'null'] },
+        tipo: { type: 'string' }, estado: { type: 'string' }, severidad: { type: 'string' },
+        personas_atrapadas: { type: ['integer', 'null'] },
+        ubicacion: { type: 'string' }, descripcion: { type: 'string' }, contacto: { type: 'string' },
+      },
+    },
+  },
+  required: ['category'],
+};
+
+// Deterministic fallback so obvious reports file even if the model wavers.
+function kwCat(text: string): string {
+  const t = text.toLowerCase();
+  if (/(edificio|colaps|derrumb|agriet|grieta|fuga de gas|atrapad|escombro|se cay[oó]|da[ñn]o)/.test(t)) return 'dano';
+  if (/(perro|perra|gato|gata|mascota|cachorr|labrador|michi|felino|loro|ave)\b/.test(t)) return 'mascota';
+  if (/(busco a|desaparec|no aparece|se busca a|perdi[oó]? a mi (herman|hij|madre|padre|espos|t[ií]o|abuel|primo|sobrin|familiar)|mi (herman|hij|madre|padre|espos))/.test(t)) return 'desaparecido';
+  return 'ninguno';
+}
+
 triage.post('/', async (c) => {
   const burst = await burstLimit(c.env, c, 'triage', 20, 60);
   if (burst) return burst;
@@ -72,14 +100,17 @@ triage.post('/', async (c) => {
   try {
     const out: any = await c.env.AI.run(TRIAGE_MODEL, {
       messages: [{ role: 'system', content: SYS }, { role: 'user', content: message }],
+      response_format: { type: 'json_schema', json_schema: TRIAGE_SCHEMA },
     } as any);
-    parsed = parseJson(String(out?.response ?? out?.result?.response ?? ''));
+    const r = out?.response ?? out?.result?.response;
+    parsed = r && typeof r === 'object' ? r : parseJson(String(r ?? ''));
   } catch {
-    return c.json({ error: 'ia_no_disponible', message: 'No se pudo analizar el mensaje. Inténtalo de nuevo.' }, 503);
+    parsed = null; // fall back to the keyword classifier below
   }
 
-  const category = String(parsed?.category ?? 'ninguno').toLowerCase();
-  const f = parsed?.fields ?? {};
+  const f = (parsed && parsed.fields) || {};
+  let category = String(parsed?.category ?? '').toLowerCase();
+  if (!['desaparecido', 'mascota', 'dano'].includes(category)) category = kwCat(message);
   const now = Date.now();
   const descripcion = s(f.descripcion, 1000) || message;
   const ubicacion = s(f.ubicacion, 200);
