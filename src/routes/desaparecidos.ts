@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
+import { cspNonce } from '../lib/security';
 
 // Public, shareable "Se busca" articles — one per missing-person case in the
 // `personas` registry. Rendered dynamically from D1 so it scales to the full
@@ -40,7 +41,7 @@ function shareBar(title: string, url: string) {
     `<a class="inline-flex items-center gap-1 text-sm font-semibold text-white rounded-lg px-3 py-2 hover:opacity-90 transition-opacity no-underline" style="background:${bg}" target="_blank" rel="noopener" aria-label="Compartir en ${label}">${label}</a>`;
   return `<div class="mt-6 flex flex-wrap items-center gap-2" aria-label="Compartir este caso">
     <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wide mr-1">Difundir</span>
-    <button onclick="navigator.share?navigator.share({title:document.title,url:location.href}):navigator.clipboard.writeText(location.href).then(()=>alert('Enlace copiado'))" class="inline-flex items-center gap-1 text-sm font-semibold border border-outline-variant rounded-lg px-3 py-2 hover:bg-surface-container" aria-label="Compartir o copiar el enlace">🔗 Compartir</button>
+    <button data-act="__hShare" class="inline-flex items-center gap-1 text-sm font-semibold border border-outline-variant rounded-lg px-3 py-2 hover:bg-surface-container" aria-label="Compartir o copiar el enlace">🔗 Compartir</button>
     ${btn('WhatsApp', `https://wa.me/?text=${tu}`, '#25D366')}
     ${btn('Facebook', `https://www.facebook.com/sharer/sharer.php?u=${u}`, '#1877F2')}
     ${btn('X', `https://twitter.com/intent/tweet?text=${t}&url=${u}`, '#111827')}
@@ -60,6 +61,7 @@ const caseLink = (p: any) =>
 
 // ---------- single case article ----------
 desaparecidos.get('/blog/desaparecido/:id', async (c) => {
+  const nonce = cspNonce(c);
   const id = c.req.param('id');
   const p = await c.env.DB.prepare(
     `SELECT id, nombre, edad, ubicacion, descripcion, estado, foto, foto_r2, updated_at
@@ -111,13 +113,20 @@ ${HEADER}
     <p class="mt-6"><a href="/blog/desaparecidos" class="text-primary font-semibold text-sm">← Ver más personas desaparecidas</a></p>
   </article>
 </div></main>
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
+<script nonce="${nonce}">
+function __hShare(){navigator.share?navigator.share({title:document.title,url:location.href}):navigator.clipboard.writeText(location.href).then(function(){alert('Enlace copiado')});}
+var ACTIONS={__hShare:__hShare,__rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){var el=e.target.closest("[data-act]");if(!el)return;var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+</script>
 </body></html>`;
   return c.html(html);
 });
 
 // ---------- paginated index of all cases ----------
 desaparecidos.get('/blog/desaparecidos', async (c) => {
+  const nonce = cspNonce(c);
   const page = Math.max(1, Number(c.req.query('page') || '1') || 1);
   const offset = (page - 1) * PAGE;
   const where = `foto_r2 IS NOT NULL AND moderation = 'approved'`;
@@ -169,7 +178,7 @@ ${HEADER}
     ${pageLink(page + 1, 'Siguiente →', page >= pages)}
   </nav>
 </div></main>
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
+<script nonce="${nonce}">if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
 </body></html>`;
   return c.html(html);
 });

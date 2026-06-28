@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
+import { cspNonce } from '../lib/security';
 
 /**
  * /plan — invitation-only business-plan slide deck.
@@ -102,7 +103,8 @@ plan.get('/', async (c) => {
   const secret = requireSecret(c);
   if (secret instanceof Response) return secret;
   if (await tokenValid(c.env, readCookie(c, COOKIE))) {
-    return c.html(deckHtml());
+    const nonce = cspNonce(c);
+    return c.html(deckHtml(nonce));
   }
   return c.html(gateHtml(), 401);
 });
@@ -204,7 +206,7 @@ function gateHtml(error?: string): string {
   return shell('Acceso · SISMO911 Plan', body);
 }
 
-function deckHtml(): string {
+function deckHtml(nonce: string): string {
   const css = `
   :root{--navy:#13284f;--navy2:#0c1a36;--red:#dc2626;--amber:#ea580c;--gold:#d97706;--green:#16a34a;--cream:#f9f9fc;--ink:#13284f;--mut:#5b6884;--line:#e6e9f1;}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -445,7 +447,7 @@ function deckHtml(): string {
     </section>
 
   </main>
-  <script>
+  <script nonce="${nonce}">
   (function(){
     var deck=document.getElementById('deck'),prog=document.getElementById('prog');
     var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));
