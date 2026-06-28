@@ -208,7 +208,7 @@ function renderGallery(p){
   const g=$('gal'); const ph=p.gallery||[];
   g.innerHTML=ph.length?ph.map(x=>`<div class="g" style="background-image:url('${esc(x.src)}')">
       ${x.kind==='hero'?'<span class="hb">Hero</span>':''}
-      <button class="del" title="Eliminar" onclick="delPhoto('${esc(x.id)}')">×</button></div>`).join(''):'<div class="muted">Sin fotos todavía.</div>';
+      <button class="del" title="Eliminar" data-act="delPhoto" data-a1="${esc(x.id)}">×</button></div>`).join(''):'<div class="muted">Sin fotos todavía.</div>';
 }
 
 function body(){
@@ -272,7 +272,7 @@ function renderList(){
   if(!DATA.length){l.innerHTML='<div class="bd muted">Aún no hay perfiles. Crea el primero ←</div>';return;}
   l.innerHTML=DATA.map(p=>{
     const bg=p.hero?`background-image:url('${esc(p.hero)}')`:'';
-    return `<div class="it" data-id="${esc(p.id)}" onclick="pick('${esc(p.id)}')">
+    return `<div class="it" data-id="${esc(p.id)}" data-act="pick" data-a1="${esc(p.id)}">
       <div class="th" style="${bg}"></div>
       <div style="min-width:0">
         <div class="nm">${p.featured?'<span class="star">★</span> ':''}${esc(p.name)}${p.age?', '+p.age:''}</div>
@@ -294,6 +294,12 @@ async function load(){
     if(CUR){const np=DATA.find(x=>x.id===CUR.id);if(np)CUR=np;}
   }catch(e){$('list').innerHTML='<div class="bd msg err" style="display:block">Error al cargar.</div>';}
 }
+var ACTIONS={delPhoto:delPhoto,pick:pick};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+  var el=e.target.closest("[data-act]");if(!el)return;
+  var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 fill(null); load();
 </script>
 </body>

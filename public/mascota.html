@@ -68,6 +68,12 @@
 </style>
 <script src="/quake-clock.js"></script>
 <script src="/app-shell.js" defer></script>
+<script>addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;
+if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}
+if(t.hasAttribute("data-fb-remove")){t.remove();return}
+if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html");return}
+if(t.hasAttribute("data-fb-noimg")){t.style.display="none";var n=t.parentNode&&t.parentNode.querySelector(".noimg");if(n)n.style.display="grid";return}
+if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.parentNode.innerHTML=t.getAttribute("data-fb-parent")}},true)</script>
 </head>
 <body class="font-sans text-on-surface">
 <main class="wrap">
@@ -123,7 +129,7 @@ function timeline(d){
 function render(d){
   const p=d.pet,ev=d.timeline||[];
   const estado=p.estado||'perdida';
-  const photo=p.photo_url?`<img src="${esc(p.photo_url)}" class="case-photo" onerror="this.outerHTML='<div class=\\'case-photo\\'>🐾</div>'">`:`<div class="case-photo">🐾</div>`;
+  const photo=p.photo_url?`<img src="${esc(p.photo_url)}" class="case-photo" data-fb-html="<div class='case-photo'>🐾</div>">`:`<div class="case-photo">🐾</div>`;
   const loc=[p.city,p.state].filter(Boolean).join(', ')||'—';
   const movimientos=(p.movimientos!=null)?p.movimientos:ev.filter(x=>x.review==='approved').length;
   const avistamientos=ev.filter(x=>x.kind==='avistamiento'&&x.review!=='rejected').length;
@@ -187,7 +193,7 @@ function render(d){
         <a href="https://wa.me/?text=${shareTxt}%20${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">WhatsApp</a>
         <a href="https://twitter.com/intent/tweet?text=${shareTxt}&url=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">X</a>
         <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">Facebook</a>
-        <a href="#" onclick="navigator.clipboard.writeText('${shareUrl}');this.textContent='✓ Copiado';return false">Copiar enlace</a>
+        <a href="#" data-act="__copyShare" data-a1="${shareUrl}">Copiar enlace</a>
       </div>
     </div>
   </div>
@@ -312,6 +318,16 @@ async function loadDocs(id){
     }).join('');
   }catch{g.innerHTML='<div style="grid-column:1/-1;color:var(--muted)">No se pudieron cargar los documentos.</div>';}
 }
+// ---- Delegated event dispatcher (replaces inline handlers for CSP) ----
+var ACTIONS={
+  __copyShare:function(url,el){if(window.event&&window.event.preventDefault)window.event.preventDefault();navigator.clipboard.writeText(url);el.textContent='✓ Copiado';},
+  __rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
+};
+function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
+["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
+  var el=e.target.closest("[data-act]");if(!el)return;
+  var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
+  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 load();
 </script>
 </body>
