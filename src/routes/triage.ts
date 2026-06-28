@@ -54,25 +54,6 @@ function parseJson(text: string): any {
   try { return JSON.parse(text.slice(a, b + 1)); } catch { return null; }
 }
 
-// Workers AI JSON mode schema — forces a structured, parseable response.
-const TRIAGE_SCHEMA = {
-  type: 'object',
-  properties: {
-    category: { type: 'string', enum: ['desaparecido', 'mascota', 'dano', 'ninguno'] },
-    confidence: { type: 'number' },
-    fields: {
-      type: 'object',
-      properties: {
-        nombre: { type: 'string' }, edad: { type: ['integer', 'null'] },
-        tipo: { type: 'string' }, estado: { type: 'string' }, severidad: { type: 'string' },
-        personas_atrapadas: { type: ['integer', 'null'] },
-        ubicacion: { type: 'string' }, descripcion: { type: 'string' }, contacto: { type: 'string' },
-      },
-    },
-  },
-  required: ['category'],
-};
-
 // Deterministic fallback so obvious reports file even if the model wavers.
 function kwCat(text: string): string {
   const t = text.toLowerCase();
@@ -100,7 +81,7 @@ triage.post('/', async (c) => {
   try {
     const out: any = await c.env.AI.run(TRIAGE_MODEL, {
       messages: [{ role: 'system', content: SYS }, { role: 'user', content: message }],
-      response_format: { type: 'json_schema', json_schema: TRIAGE_SCHEMA },
+      max_tokens: 400,
     } as any);
     const r = out?.response ?? out?.result?.response;
     parsed = r && typeof r === 'object' ? r : parseJson(String(r ?? ''));
