@@ -6,6 +6,8 @@ export interface Env {
   PERSON_PHOTOS: R2Bucket;
   // FLOTA live-tracking Durable Object (real-time unit positions on the command map).
   FLOTA_TRACKING: DurableObjectNamespace;
+  // Live-GPS hub Durable Object (phone units stream GPS; admin consoles subscribe).
+  FLEET_LIVE: DurableObjectNamespace;
   DESAP: D1Database;
   DESAP_FOTOS: R2Bucket;
   USGS_MINLAT: string;

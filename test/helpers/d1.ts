@@ -56,7 +56,7 @@ export interface TestEnv {
 
 /** Build a fresh in-memory DB with the given migration files applied. */
 export function makeDb(
-  migrations: string[] = ['migrations/0037_flota.sql', 'migrations/0038_flota_unit_tokens.sql'],
+  migrations: string[] = ['migrations/0037_flota.sql', 'migrations/0045_fleet_live_gps.sql'],
 ): D1Mock {
   const db = new Database(':memory:');
   db.pragma('foreign_keys = OFF');
