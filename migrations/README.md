@@ -10,19 +10,22 @@ order**. Two rules keep this safe:
    tracker was reconciled 2026-06-27 and is honest — keep it that way (if you ever
    apply schema by hand on remote, also `INSERT OR IGNORE INTO d1_migrations(name)`).
 
-## ➡️ The next migration number = (current highest **+ 1**) — compute it, don't guess.
+## ➡️ Migration IDs are allocated at creation time only.
 
-Concurrent divisions keep adding migrations, so any number written here goes stale.
-**Always** compute the next free number right before you add a file:
+**A migration filename must always be generated from the highest migration number
+currently present in the repository, immediately before the new file is created.
+Never reserve, predict, or hardcode a future number** — this README does **not**
+reserve any ID. Compute it at the moment you create the file:
 
 ```bash
 # highest 4-digit prefix in use → add 1, zero-padded to 4
 ls migrations | grep -oE '^[0-9]{4}' | sort -n | tail -1
 ```
 
-As of this README's last update the highest was **0047** (`0047_rbac_seed.sql`), so
-the next migration is **0048**. Recompute with the command above — do **not** reuse
-or hardcode a number.
+Because concurrent divisions add migrations continuously, the highest number drifts.
+The snapshot below is illustrative only and is **not** a reservation: at one point
+the highest was `0047` (`0047_rbac_seed.sql`). Always recompute with the command
+above the instant before you write the file; whatever it returns + 1 is your ID.
 
 ## Numbering sprawl (historical — do not repeat)
 

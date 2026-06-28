@@ -42,15 +42,36 @@ describe('Flota GPS page is wired as the installable app', () => {
   it('the service worker precaches the bare /flota/track shell', () => {
     expect(readFileSync('public/sw.js', 'utf8')).toContain("'/flota/track'");
   });
+  it('prompts for a tracking token when launched without one', () => {
+    expect(html).toContain('id="tokenPrompt"');
+    expect(html).toContain('id="tokenInput"');
+    expect(html).toContain('id="tokenBtn"');
+    expect(html).toContain('fbu_[0-9a-fA-F]{16,}'); // extractToken accepts a pasted URL or raw token
+  });
+});
+
+describe('service worker update lifecycle (old-cache eviction)', () => {
+  const sw = readFileSync('public/sw.js', 'utf8');
+  it('uses a versioned cache that was bumped for this release', () => {
+    expect(sw).toContain("const CACHE = 'sismo911-v10'");
+  });
+  it('activate deletes every cache whose name != current, then claims clients', () => {
+    expect(sw).toContain('caches.keys()');
+    expect(sw).toContain('caches.delete');
+    expect(sw).toMatch(/k\s*!==?\s*CACHE/); // keep only the current cache
+    expect(sw).toContain('clients.claim()');
+  });
 });
 
 describe('migration numbering', () => {
-  it('README documents the dynamic next-free rule + the collision history', () => {
+  it('README states IDs are allocated at creation time (no reservation) + the rule + history', () => {
     const r = readFileSync('migrations/README.md', 'utf8');
-    // The rule must be dynamic (compute highest+1), not a frozen number.
-    expect(r.toLowerCase()).toContain('current highest');
+    const low = r.toLowerCase();
+    // Must be allocation-at-creation, explicitly NOT a reservation of future IDs.
+    expect(low).toContain('allocated at creation time');
+    expect(low).toContain('never reserve');
     expect(r).toContain("ls migrations | grep -oE '^[0-9]{4}'");
-    expect(r.toLowerCase()).toContain('sprawl');
+    expect(low).toContain('sprawl');
   });
   it('the next migration number is strictly greater than the current highest', () => {
     // Not a frozen max (concurrent divisions advance it); this documents the rule
