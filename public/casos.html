@@ -305,6 +305,16 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
         <div class="kpi"><span class="accent" style="background:var(--blue)"></span><div class="v" id="s_act" style="color:var(--blue)">—</div><div class="l">Movim. 24 h</div></div>
         <div class="kpi" id="kpiPend" style="display:none"><span class="accent" style="background:var(--red)"></span><div class="v" id="s_pend" style="color:var(--red)">—</div><div class="l">Por revisar</div></div>
       </div>
+
+      <!-- Agent tracking: continuous audit that the automated pollers keep working
+           the backlog (what was polled, name-matches, cases still unresolved). -->
+      <div id="agentTrack" class="panel" style="margin-top:12px;display:none">
+        <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line)">
+          <span style="font:800 13px 'Public Sans',system-ui;letter-spacing:.02em">🤖 Actividad del agente</span>
+          <span id="at_missing" style="margin-left:auto;font:700 12px Inter;color:var(--amber,#b45309)"></span>
+        </div>
+        <ul id="at_list" style="list-style:none;margin:0;padding:6px 0;max-height:188px;overflow:auto"></ul>
+      </div>
     </div>
 
     <div class="toolbar">
@@ -586,6 +596,24 @@ async function load(){
   renderRows();
   renderPager();
   loadBalanceOficial();
+  loadAgentActivity();
+}
+// CRM tracking feed — the automated pollers' heartbeat: shows operators the agent
+// is still working the backlog (latest polls, name-matches, cases still missing).
+async function loadAgentActivity(){
+  try{
+    const d=await (await fetch('/api/persons/agent-activity?limit=12')).json();
+    const items=d.items||[];
+    if(!items.length) return;
+    const box=$('#agentTrack'); const list=$('#at_list'); box.style.display='';
+    if(d.latestMissing!=null) $('#at_missing').textContent=Number(d.latestMissing).toLocaleString('es')+' aún sin localizar';
+    const ago=ms=>{const s=(Date.now()-ms)/1000;if(s<90)return'hace un momento';if(s<5400)return'hace '+Math.round(s/60)+' min';if(s<172800)return'hace '+Math.round(s/3600)+' h';return'hace '+Math.round(s/86400)+' d';};
+    const esc=t=>String(t||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    list.innerHTML=items.map(it=>`<li style="display:flex;gap:9px;padding:7px 14px;border-bottom:1px solid var(--line,#eef1f7);font:500 12.5px/1.45 Inter">
+      <span style="flex:0 0 auto;color:${it.ok?'#16a34a':'#dc2626'}">${it.ok?'●':'▲'}</span>
+      <span style="flex:1 1 auto;color:var(--ink,#0f172a)">${esc(it.summary)}</span>
+      <span style="flex:0 0 auto;color:var(--muted,#64748b);white-space:nowrap">${ago(Number(it.created_ms)||Date.now())}</span></li>`).join('');
+  }catch{/* tracking is enrichment; never block the docket */}
 }
 // Official/press casualty toll (RAV official_stats) — shown as a distinct banner
 // above the docket KPIs so it is never confused with the docket's own "Fallecidas"
