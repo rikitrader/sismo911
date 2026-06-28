@@ -13,7 +13,9 @@ const MIGRATIONS = [
   'migrations/0046_rbac_workforce.sql', // language, mfa_enabled, sessions.revoked_ms
   'migrations/0047_rbac_seed.sql',
   'migrations/0048_x402_payments.sql',  // x402_payments/x402_resources + x402_* user cols
+  'migrations/0050_x402_hardening.sql', // x402_resources.price_version + price history
   'migrations/0056_profile_fields.sql', // country, city, settings_json
+  'migrations/0057_payment_links.sql',  // x402_resources kind/currency/archived_ms
 ];
 
 async function setup() {
@@ -148,5 +150,70 @@ describe('profile API — payment-settings + payments summary (W2)', () => {
     expect(d.top_links[0].title).toBe('Servicio');
     const un = await app.request('/api/profile/payments/summary', {}, env);
     expect(un.status).toBe(401);
+  });
+});
+
+describe('profile API — payment links CRUD + access control (W3)', () => {
+  async function setupTwo() {
+    const s = await setup();
+    const now = Date.now();
+    const pw = await hashPassword('pw');
+    s.db.raw.prepare(`INSERT INTO users (id,email,name,role,language,pw_hash,pw_salt,status,created_ms) VALUES (?,?,?,?,?,?,?,?,?)`)
+      .run('usr_b', 'b@s.com', 'Beto', 'citizen', 'es', pw.hash, pw.salt, 'active', now);
+    s.db.raw.prepare(`INSERT INTO sessions (token,user_id,expires_ms,created_ms) VALUES (?,?,?,?)`).run('tok_b', 'usr_b', now + 86_400_000, now);
+    return s;
+  }
+  const AUTH_B = { 'content-type': 'application/json', origin: 'https://sismo911.com', Cookie: 'sismo_session=tok_b' };
+
+  it('POST creates a link (auto-slug, 201) + GET lists it with counts', async () => {
+    const { app, env } = await setup();
+    const r = await app.request('/api/profile/payment-links', { method: 'POST', headers: AUTH, body: JSON.stringify({ title: 'Asesoría Legal', amount: 25 }) }, env);
+    expect(r.status).toBe(201);
+    const d: any = await r.json();
+    expect(d.link.slug).toBe('asesoria-legal');
+    expect(d.link.kind).toBe('x402');
+    expect(d.link.payUrl).toContain('/api/x402/pay/usr_a/asesoria-legal');
+    const g: any = await (await app.request('/api/profile/payment-links', { headers: { Cookie: 'sismo_session=tok_a' } }, env)).json();
+    expect(g.links.length).toBe(1);
+    expect(g.links[0].paid_count).toBe(0);
+    expect(g.links[0].revenue_usd).toBe(0);
+  });
+
+  it('POST validates title + price; rejects bad', async () => {
+    const { app, env } = await setup();
+    const bad = async (b: any) => (await app.request('/api/profile/payment-links', { method: 'POST', headers: AUTH, body: JSON.stringify(b) }, env)).status;
+    expect(await bad({ amount: 5 })).toBe(400);                 // no title
+    expect(await bad({ title: 'X', amount: -1 })).toBe(400);    // negative price
+    expect(await bad({ title: 'X', amount: 'abc' })).toBe(400); // NaN price
+  });
+
+  it('PATCH toggles active + DELETE soft-archives (history preserved)', async () => {
+    const { app, env, db } = await setup();
+    const c: any = await (await app.request('/api/profile/payment-links', { method: 'POST', headers: AUTH, body: JSON.stringify({ title: 'Donativo', amount: 10, kind: 'donation' }) }, env)).json();
+    const id = c.link.id;
+    const p = await app.request(`/api/profile/payment-links/${id}`, { method: 'PATCH', headers: AUTH, body: JSON.stringify({ active: false }) }, env);
+    expect(p.status).toBe(200);
+    expect(db.raw.prepare('SELECT active FROM x402_resources WHERE id=?').get(id)).toMatchObject({ active: 0 });
+    const del = await app.request(`/api/profile/payment-links/${id}`, { method: 'DELETE', headers: AUTH }, env);
+    expect(del.status).toBe(200);
+    const row: any = db.raw.prepare('SELECT archived_ms FROM x402_resources WHERE id=?').get(id);
+    expect(row.archived_ms).toBeTruthy(); // soft-archived, row still exists
+    // default GET excludes archived
+    const g: any = await (await app.request('/api/profile/payment-links', { headers: { Cookie: 'sismo_session=tok_a' } }, env)).json();
+    expect(g.links.length).toBe(0);
+  });
+
+  it('access control: user B cannot PATCH/DELETE user A link (404)', async () => {
+    const { app, env } = await setupTwo();
+    const c: any = await (await app.request('/api/profile/payment-links', { method: 'POST', headers: AUTH, body: JSON.stringify({ title: 'Privado A', amount: 5 }) }, env)).json();
+    const id = c.link.id;
+    expect((await app.request(`/api/profile/payment-links/${id}`, { method: 'PATCH', headers: AUTH_B, body: '{"active":false}' }, env)).status).toBe(404);
+    expect((await app.request(`/api/profile/payment-links/${id}`, { method: 'DELETE', headers: AUTH_B }, env)).status).toBe(404);
+  });
+
+  it('all payment-link routes require auth (401)', async () => {
+    const { app, env } = await setup();
+    expect((await app.request('/api/profile/payment-links', {}, env)).status).toBe(401);
+    expect((await app.request('/api/profile/payment-links', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://sismo911.com' }, body: '{"title":"x","amount":1}' }, env)).status).toBe(401);
   });
 });
