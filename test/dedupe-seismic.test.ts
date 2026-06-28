@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findCrossSourceDups, haversineKm, type DedupeEvent } from '../src/lib/dedupe-seismic';
+import { findCrossSourceDups, haversineKm, SANITY_WIDE, type DedupeEvent } from '../src/lib/dedupe-seismic';
 
 const T = Date.UTC(2026, 5, 27, 19, 20); // FUNVISIS M5 "41km N de Maracay" origin
 
@@ -75,5 +75,28 @@ describe('findCrossSourceDups', () => {
     const pairs = findCrossSourceDups([funMaracay, usgsNear, usgsFarther]);
     expect(pairs).toHaveLength(1);
     expect(pairs[0].keepId).toBe('us7000near'); // the nearest in time+space won
+  });
+});
+
+describe('sanity (borderline) detection', () => {
+  // The hourly self-check (dedupeCrossSource) compares production tolerances to
+  // SANITY_WIDE; a pair caught only by the wide pass is "borderline" — the
+  // signal that the tuning may be too tight. This tests that comparison logic.
+  it('flags a pair just outside prod tolerances but inside the wide pass', () => {
+    const justOutside: DedupeEvent = { ...usgsMaracay, id: 'us7000_300s', time_ms: T + 300_000 }; // 300s: > 150s prod, < 600s wide
+    const prod = findCrossSourceDups([funMaracay, justOutside]);
+    const wide = findCrossSourceDups([funMaracay, justOutside], SANITY_WIDE);
+    expect(prod).toHaveLength(0);
+    expect(wide).toHaveLength(1);
+    const prodIds = new Set(prod.map((p) => p.dropId));
+    const borderline = wide.filter((p) => !prodIds.has(p.dropId));
+    expect(borderline).toHaveLength(1); // would warn → "revisit DEFAULTS"
+  });
+
+  it('reports no borderline when prod tolerances already catch the pair', () => {
+    const prod = findCrossSourceDups([funMaracay, usgsMaracay]); // 38s — inside prod
+    const wide = findCrossSourceDups([funMaracay, usgsMaracay], SANITY_WIDE);
+    const prodIds = new Set(prod.map((p) => p.dropId));
+    expect(wide.filter((p) => !prodIds.has(p.dropId))).toHaveLength(0);
   });
 });
