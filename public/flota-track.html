@@ -76,6 +76,20 @@
       <div style="margin-top:.5rem"><span id="statusBadge" class="badge">Inactivo</span></div>
     </section>
 
+    <!-- Token entry — shown ONLY when launched without a tracking token (e.g. the
+         installed PWA opened at the bare /flota/track with nothing in localStorage). -->
+    <section id="tokenPrompt" class="card hidden" style="padding:1rem 1.1rem">
+      <div class="eyebrow" style="margin-bottom:.4rem">Código de seguimiento</div>
+      <p class="help" style="margin:.2rem 0 .6rem">
+        Pega el <b>enlace</b> o el <b>código</b> de seguimiento que te envió el centro de despacho.
+      </p>
+      <input id="tokenInput" type="text" inputmode="text" autocomplete="off" autocapitalize="off"
+        spellcheck="false" placeholder="https://sismo911.com/flota/track/fbu_… o fbu_…"
+        style="width:100%;box-sizing:border-box;padding:.7rem .8rem;border-radius:.6rem;border:1px solid rgba(255,255,255,.18);background:#0b1830;color:#fff;font:600 .9rem 'JetBrains Mono',monospace" />
+      <button id="tokenBtn" class="bigbtn btn-go" type="button" style="margin-top:.7rem">Continuar</button>
+      <div id="tokenErr" class="banner banner-err hidden" style="margin-top:.6rem"></div>
+    </section>
+
     <!-- Connection status -->
     <section class="card" style="padding:.95rem 1.1rem">
       <div class="eyebrow" style="margin-bottom:.5rem">Conexión</div>
@@ -344,6 +358,30 @@
 
   $('goBtn').addEventListener('click', activate);
   $('stopBtn').addEventListener('click', stopAll);
+
+  // ---------------- token prompt (no token at launch) ----------------
+  // The installed app always launches at /flota/track. If a previously validated
+  // fbu_ token exists in localStorage it is reused automatically (above);
+  // otherwise we prompt for one here. Invalid/expired tokens are rejected by the
+  // backend at WS connect — this only checks the surface format.
+  function extractToken(s) {
+    var m = (s || '').trim().match(/fbu_[0-9a-fA-F]{16,}/);
+    return m ? m[0] : '';
+  }
+  if (!token) {
+    $('tokenPrompt').classList.remove('hidden');
+    $('goBtn').classList.add('hidden');
+    $('tokenBtn').addEventListener('click', function () {
+      var t = extractToken($('tokenInput').value);
+      if (!t) {
+        showBanner($('tokenErr'), 'err', 'Código inválido. Pega el enlace completo o el código fbu_ que te envió el despacho.');
+        return;
+      }
+      try { localStorage.setItem('flota_unit_token', t); } catch (e) {}
+      // Re-enter with the token in the path so all logic runs identically.
+      location.href = '/flota/track/' + encodeURIComponent(t);
+    });
+  }
 
   // initial state
   setStatus('stopped', 'Detenido');
