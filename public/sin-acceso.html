@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sin acceso — SISMO911</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#f4f5f7">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css" />
+<style>body{background:#f4f5f7}</style>
+</head>
+<body class="font-sans text-on-surface min-h-screen grid place-items-center px-4">
+  <div class="w-full max-w-md text-center">
+    <img src="/logo.png" class="h-16 w-16 mx-auto mb-3" alt="SISMO911">
+    <div class="font-display font-extrabold text-2xl text-[#0a0a0a]">SISMO911 · Suministros</div>
+    <div class="text-xs tracking-widest text-on-surface-variant uppercase mb-6">Fuerza de Protección Civil</div>
+
+    <div class="bg-[#f4f5f7] rounded-xl shadow-xl p-6">
+      <div class="text-5xl mb-2">🔒</div>
+      <h1 class="font-display font-extrabold text-xl text-[#0a0a0a] mb-2">No tienes acceso a Suministros</h1>
+      <p class="text-sm text-on-surface-variant mb-1">Esta división es solo para personal autorizado (permiso <code>suministros:read</code>).</p>
+      <p class="text-sm text-on-surface-variant mb-5">Tu sesión actual: <b id="who">…</b></p>
+      <button id="logout" class="w-full bg-primary text-white font-display font-bold rounded-lg py-3 mb-2" style="background:#0a1a3a">Cerrar sesión e iniciar con otra cuenta</button>
+      <a href="https://sismo911.com/" class="block text-center text-on-surface-variant hover:text-primary text-sm mt-3">← Ir al panel público</a>
+    </div>
+    <p class="text-xs text-on-surface-variant mt-4">Si crees que deberías tener acceso, pide a un administrador el permiso de Suministros.</p>
+  </div>
+<script>
+  // Show who is logged in (so the user knows which account to switch from).
+  fetch('/api/auth/me').then(r=>r.json()).then(d=>{
+    document.getElementById('who').textContent = d && d.authenticated && d.user ? (d.user.email + ' · ' + d.user.role) : 'no autenticado';
+  }).catch(()=>{ document.getElementById('who').textContent='—'; });
+  // Logout breaks out of the loop, then sends the user to a clean login.
+  document.getElementById('logout').onclick = async () => {
+    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}
+    location.href = '/login';
+  };
+</script>
+</body>
+</html>
