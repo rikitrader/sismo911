@@ -3,7 +3,7 @@ import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { rateLimit, validLatLon } from '../lib/security';
 import { audit } from '../lib/audit';
-import { COMMODITY_IDS, COMMODITY_UNIT } from '../data/commodities';
+import { COMMODITY_IDS, COMMODITY_UNIT, COMMODITIES } from '../data/commodities';
 
 // FEMA/NIMS-style logistics for centros de acopio: inventory, needs, shipments
 // (with chain-of-custody), a needs↔surplus matching engine, and a command
@@ -406,4 +406,40 @@ logistica.get('/dashboard', async (c) => {
     custody_events: (custody as any)?.n ?? 0,
     generated_ms: Date.now(),
   });
+});
+
+// GET /api/acopio/gaps — supply-gap (shortage) analysis: open demand vs inventory
+// per commodity, ESF-tagged. Public read; feeds the command dashboard's "brechas"
+// panel (renderGaps). Status classes match the dashboard CSS: critical_shortage /
+// shortage / surplus.
+logistica.get('/gaps', async (c) => {
+  const [needsR, invR] = await Promise.all([
+    c.env.DB.prepare(`SELECT commodity, COALESCE(SUM(qty),0) AS need, MIN(priority) AS prio FROM acopio_needs WHERE status='open' GROUP BY commodity`).all(),
+    c.env.DB.prepare(`SELECT commodity, COALESCE(SUM(qty),0) AS inv, MAX(unit) AS unit FROM acopio_inventory GROUP BY commodity`).all(),
+  ]);
+  const needBy = new Map<string, { need: number; prio: number }>();
+  for (const r of (needsR.results ?? []) as any[]) needBy.set(r.commodity, { need: Number(r.need) || 0, prio: Number(r.prio) || 3 });
+  const invBy = new Map<string, { inv: number; unit: string }>();
+  for (const r of (invR.results ?? []) as any[]) invBy.set(r.commodity, { inv: Number(r.inv) || 0, unit: r.unit || '' });
+
+  let critical_shortage = 0, shortage = 0;
+  const gaps = COMMODITIES.map((cm) => {
+    const n = needBy.get(cm.id), i = invBy.get(cm.id);
+    const open_need_qty = n?.need ?? 0;
+    const inventory_qty = i?.inv ?? 0;
+    if (open_need_qty <= 0 && inventory_qty <= 0) return null; // nothing tracked
+    const coverage_pct = open_need_qty > 0 ? Math.round((inventory_qty / open_need_qty) * 100) : null;
+    let status: 'critical_shortage' | 'shortage' | 'surplus' = 'surplus';
+    if (open_need_qty > 0) {
+      const cov = coverage_pct ?? 0;
+      if (cov < 25 || (n?.prio === 1 && cov < 100)) { status = 'critical_shortage'; critical_shortage++; }
+      else if (cov < 100) { status = 'shortage'; shortage++; }
+      // cov >= 100 → demand met → surplus
+    }
+    return { commodity: cm.id, label: cm.label, esf: cm.esf, unit: i?.unit || cm.unit, open_need_qty, inventory_qty, coverage_pct, status };
+  }).filter(Boolean) as any[];
+  // Most severe first (critical → shortage → surplus); within a band, lowest coverage first.
+  const rank: Record<string, number> = { critical_shortage: 0, shortage: 1, surplus: 2 };
+  gaps.sort((a, b) => rank[a.status] - rank[b.status] || (a.coverage_pct ?? 9999) - (b.coverage_pct ?? 9999));
+  return c.json({ gaps, counts: { critical_shortage, shortage }, generated_ms: Date.now() });
 });
