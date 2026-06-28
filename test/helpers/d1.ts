@@ -73,6 +73,7 @@ export const RBAC_MIGRATIONS = [
   'migrations/0052_rbac_finegrained.sql',
   'migrations/0053_lifecycle.sql',
   'migrations/0054_impersonation.sql',
+  'migrations/0056_auth_hardening.sql',
 ];
 
 /** Build a fresh in-memory DB with the given migration files applied. */

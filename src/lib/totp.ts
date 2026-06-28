@@ -113,6 +113,22 @@ export async function verifyTotp(secret: string, code: string, window = 1, atMs:
   return false;
 }
 
+/**
+ * Like verifyTotp but returns the matched TOTP counter STEP (audit L1 one-time
+ * replay prevention — the caller persists it and rejects any step ≤ the last
+ * consumed), or -1 if the code doesn't match within the window.
+ */
+export async function verifyTotpStep(secret: string, code: string, window = 1, atMs: number = Date.now()): Promise<number> {
+  const want = String(code ?? '').replace(/\D/g, '');
+  if (want.length !== DIGITS || !secret) return -1;
+  const step = Math.floor(atMs / 1000 / PERIOD);
+  for (let w = -window; w <= window; w++) {
+    const got = await hotp(secret, step + w);
+    if (timingSafeEq(got, want)) return step + w;
+  }
+  return -1;
+}
+
 // ── backup recovery codes ─────────────────────────────────────────────────────
 
 /** sha256 hex of a string (for storing backup-code hashes). */
