@@ -189,18 +189,37 @@
   // ---------------- offline buffer (IndexedDB) ----------------
   // GPS fixes captured while the socket is down are queued here and flushed to
   // POST /flota/track/backfill (token-auth, backfill mode) on reconnect/online.
-  var DB_NAME = 'flota-gps', STORE = 'queue', MAX_QUEUE = 1000, FLUSH_BATCH = 200;
+  var DB_NAME = 'flota-gps', STORE = 'queue', META = 'meta', MAX_QUEUE = 1000, FLUSH_BATCH = 200;
   var idbReady = null, flushing = false;
   function idb() {
     if (idbReady) return idbReady;
     idbReady = new Promise(function (res, rej) {
       if (!('indexedDB' in window)) { rej(new Error('no-idb')); return; }
-      var r = indexedDB.open(DB_NAME, 1);
-      r.onupgradeneeded = function () { r.result.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true }); };
+      var r = indexedDB.open(DB_NAME, 2); // v2: + 'meta' store (holds the token for the SW's Background Sync)
+      r.onupgradeneeded = function () {
+        var db = r.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+        if (!db.objectStoreNames.contains(META)) db.createObjectStore(META, { keyPath: 'k' });
+      };
       r.onsuccess = function () { res(r.result); };
       r.onerror = function () { rej(r.error); };
     });
     return idbReady;
+  }
+  // Persist the unit token in IndexedDB so the service worker can flush the queue
+  // via Background Sync even when the page is closed (SWs cannot read localStorage).
+  function idbSetMeta(k, v) {
+    return idb().then(function (db) { return new Promise(function (res, rej) {
+      var tx = db.transaction(META, 'readwrite'); tx.objectStore(META).put({ k: k, v: v });
+      tx.oncomplete = res; tx.onerror = function () { rej(tx.error); };
+    }); }).catch(function () {});
+  }
+  // Ask the SW to flush when connectivity returns (Chromium; no-op elsewhere — the
+  // online/reconnect flush below still covers those browsers while the page is open).
+  function registerBgSync() {
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      navigator.serviceWorker.ready.then(function (reg) { return reg.sync.register('flota-flush'); }).catch(function () {});
+    }
   }
   function idbCount() {
     return idb().then(function (db) { return new Promise(function (res, rej) {
@@ -212,7 +231,7 @@
     idb().then(function (db) { return new Promise(function (res, rej) {
       var tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).add({ fix: fix });
       tx.oncomplete = res; tx.onerror = function () { rej(tx.error); };
-    }); }).then(trimQueue).then(refreshBufUI).catch(function () {});
+    }); }).then(trimQueue).then(refreshBufUI).then(registerBgSync).catch(function () {});
   }
   function trimQueue() {
     return idbCount().then(function (n) {
@@ -487,6 +506,7 @@
 
   // Offline buffer: show any pending count + flush as soon as connectivity returns.
   refreshBufUI();
+  if (token) idbSetMeta('token', token); // give the SW the token for Background Sync
   window.addEventListener('online', flushBuffer);
 
   // PWA: register the shared offline-shell service worker (best-effort).
