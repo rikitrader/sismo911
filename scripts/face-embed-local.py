@@ -45,6 +45,13 @@ PHOTO_BASE = os.environ.get("PHOTO_BASE", "https://sismo911.com/api/familia/phot
 BATCH = 200
 MAX = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 10**9
 ONLY_IDS = [s for s in os.environ.get("IDS", "").split(",") if s.strip()]
+# Parallel sharding: launch N copies with SHARDS=N SHARD=0..N-1. Each drains a
+# DISJOINT slice via (rowid % N) so workers never select the same row (no wasted
+# work, no races — D1 writes are idempotent anyway). CPU-bound (~1.5s/photo), so
+# N≈cores-few gives ~Nx throughput. SHARDS=1 (default) = single-process, full table.
+SHARDS = max(1, int(os.environ.get("SHARDS", "1")))
+SHARD = int(os.environ.get("SHARD", "0")) % SHARDS
+SHARD_SQL = f" AND (rowid % {SHARDS}) = {SHARD} " if SHARDS > 1 else " "
 
 ENV = {**os.environ}
 ENV.pop("CLOUDFLARE_API_TOKEN", None)   # force gmail OAuth wrangler session
@@ -127,6 +134,7 @@ def main():
                 "SELECT id, foto, foto_r2 FROM personas "
                 "WHERE photo_face_vec IS NULL "
                 "AND (trim(coalesce(foto,'')) <> '' OR trim(coalesce(foto_r2,'')) <> '') "
+                f"{SHARD_SQL}"
                 f"ORDER BY (CASE WHEN trim(coalesce(foto_r2,'')) <> '' THEN 0 ELSE 1 END), "
                 f"updated_at DESC LIMIT {min(BATCH, MAX - done)}")
         if not rows:
@@ -161,14 +169,16 @@ def main():
             d1_file("\n".join(stmts[i:i + 200]))
 
         done += len(rows)
-        print(f"  batch: embedded {hashed}, no-face {noface}, dead {dead} "
+        tag = f"[shard {SHARD}/{SHARDS}] " if SHARDS > 1 else ""
+        print(f"  {tag}batch: embedded {hashed}, no-face {noface}, dead {dead} "
               f"(total processed {done})", flush=True)
         if ONLY_IDS:
             break
 
     remaining = d1_json(
         "SELECT COUNT(*) AS n FROM personas WHERE photo_face_vec IS NULL "
-        "AND (trim(coalesce(foto,'')) <> '' OR trim(coalesce(foto_r2,'')) <> '')")
+        "AND (trim(coalesce(foto,'')) <> '' OR trim(coalesce(foto_r2,'')) <> '')"
+        + SHARD_SQL)
     print(f"Done. Processed {done} this run. Remaining unembedded: {remaining[0]['n']}", flush=True)
 
 
