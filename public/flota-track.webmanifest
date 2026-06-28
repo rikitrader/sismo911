@@ -1,0 +1,18 @@
+{
+  "id": "/flota/track",
+  "name": "SISMO911 Flota — GPS de Unidad",
+  "short_name": "Flota GPS",
+  "description": "Transmisión de posición GPS de una unidad de respuesta SISMO911. Acceso por enlace seguro emitido por el despacho.",
+  "lang": "es-VE",
+  "start_url": "/flota/track",
+  "scope": "/flota/track",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b1830",
+  "theme_color": "#0b1830",
+  "categories": ["utilities", "navigation"],
+  "icons": [
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/logo.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

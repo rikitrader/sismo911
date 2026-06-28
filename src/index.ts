@@ -263,7 +263,10 @@ app.route('/api/flota/tablero', flotaTablero);     // command dashboard aggregat
 app.route('/api/admin/flota', flotaAdmin);
 
 // Phone PWA (public; the URL token is the credential, validated by the WS).
+// The bare /flota/track is the installed-PWA start_url — the page resumes the
+// unit token from localStorage there.
 app.get('/flota/track/:token', (c) => c.env.ASSETS.fetch(new Request(new URL('/flota-track.html', c.req.url))));
+app.get('/flota/track', (c) => c.env.ASSETS.fetch(new Request(new URL('/flota-track.html', c.req.url))));
 
 // Admin live map page (gated by isAdminPage → redirects unauth to /login).
 app.get('/admin/flota/live', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-flota-live.html', c.req.url))));
