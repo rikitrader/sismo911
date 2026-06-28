@@ -560,8 +560,16 @@ app.get('/console/', serveConsole);
 app.get('/', async (c) => {
   if (new URL(c.req.url).hostname === 'suministros.sismo911.com') {
     const user = await getUserFromRequest(c.env, c).catch(() => null);
+    // Unauthenticated → /login. But an AUTHENTICATED user who merely lacks the
+    // suministros:read permission must NOT be sent to /login: login.html auto-
+    // redirects any authenticated user back here, which produced an infinite
+    // redirect loop (login ↔ /). Serve a 403 "sin acceso" page instead, which
+    // gives them a way out (cerrar sesión / ir al panel público).
+    if (!user) return c.redirect('/login?next=' + encodeURIComponent('/'), 302);
     if (!(await authorize(c.env, user, 'suministros:read'))) {
-      return c.redirect('/login?next=' + encodeURIComponent('/'), 302);
+      const denied = await serveAsset(c, '/sin-acceso');
+      denied.headers.set('Cache-Control', 'no-store');
+      return new Response(denied.body, { status: 403, headers: denied.headers });
     }
     return serveAsset(c, '/suministros');
   }
