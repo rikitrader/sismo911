@@ -31,6 +31,7 @@ import { adminOrg } from './routes/admin-org';
 import { adminFlags } from './routes/admin-flags';
 import { adminLifecycle } from './routes/admin-lifecycle';
 import { adminImpersonation } from './routes/admin-impersonation';
+import { adminWithdrawals } from './routes/admin-withdrawals';
 import { adminRolesIo } from './routes/admin-roles-io';
 import { funding } from './routes/funding';
 import { dashboard } from './routes/dashboard';
@@ -313,6 +314,7 @@ app.route('/api/sitrep', sitrep);    // public non-PII operational sitrep / ESF 
 app.route('/api/acopio', acopio);    // /api/acopio/status — live status for acopio/hospitales/PC
 app.route('/api/acopio', logistica); // /api/acopio/{inventory,needs,shipments,match,dashboard} — FEMA-style logistics (GET public, writes operator-gated)
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
+app.route('/api/admin/withdrawals', adminWithdrawals); // operator review of payout requests (ops:console)
 app.route('/api/rbac', adminLifecycle); // Phase 2 W2: invitations/approvals/temp-roles — MOUNTED FIRST so its richer /invitations handlers win over adminRbac's
 app.route('/api/rbac', adminRbac);   // enterprise RBAC admin API (users/roles/permissions/audit/dashboard) — each route self-gates via requirePermission
 app.route('/api/rbac', adminSessions); // Phase 2: TOTP MFA + session mgmt + emergency lock
