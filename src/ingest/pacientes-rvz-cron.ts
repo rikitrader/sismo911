@@ -1,5 +1,7 @@
 import type { Env } from '../types';
 import { recordIngest } from '../lib/db';
+import { logAgentActivity, countStillMissing } from '../lib/agent-activity';
+import { backfillHospitalMatches } from './hospital-match';
 
 // Ingest of reportesvenezuela.com's open `pacientes.json` feed (CC0) — the live
 // list of people admitted to Venezuelan hospitals after the 24-Jun-2026 quake.
@@ -52,9 +54,16 @@ export async function ingestPacientesRvz(env: Env): Promise<PacientesRvzResult> 
     const rows = Array.isArray(feed.data) ? feed.data : [];
     const actualizado = clean(feed.actualizado, 40);
 
-    // Skip the bulk upsert when the upstream snapshot is unchanged.
+    // Skip the bulk upsert when the upstream snapshot is unchanged — but STILL
+    // write a tracking heartbeat so operators see the agent is alive and how many
+    // cases remain unresolved ("seguimos buscando").
     const seen = await env.CACHE.get(SEEN_KEY).catch(() => null);
     if (actualizado && seen === actualizado) {
+      const stillMissing = await countStillMissing(env);
+      await logAgentActivity(env, {
+        source: 'pacientes-rvz', action: 'poll', fetched: rows.length, stillMissing,
+        summary: `🤖 Sondeo reportesvenezuela/pacientes.json — ${rows.length} ingresados, sin cambios desde la última actualización. ${stillMissing} casos aún sin localizar.`,
+      });
       return { fetched: rows.length, written: 0, skipped: true, actualizado };
     }
 
@@ -87,10 +96,34 @@ export async function ingestPacientesRvz(env: Env): Promise<PacientesRvzResult> 
 
     if (actualizado) await env.CACHE.put(SEEN_KEY, actualizado).catch(() => {});
     await recordIngest(env, 'pacientes-rvz', true, written).catch(() => {});
+
+    // New data arrived → act like a case agent: immediately cross-match the fresh
+    // intakes against the desaparecidos registry so the matched cases get an
+    // agent-authored docket note THIS cycle (not only on the :15 sweep). The
+    // matcher is idempotent + cursor-drained; a full drain here is cheap because
+    // this branch only runs when the daily snapshot actually changed.
+    let matched = 0;
+    try {
+      const m = await backfillHospitalMatches(env, { pages: 40 });
+      matched = m.matched;
+    } catch (e: any) {
+      console.error('[pacientes-rvz] in-cycle match failed:', e?.message ?? e);
+    }
+
+    // CRM tracking entry — the agent's heartbeat + result for this cycle.
+    const stillMissing = await countStillMissing(env);
+    await logAgentActivity(env, {
+      source: 'pacientes-rvz', action: 'ingest', fetched: rows.length, created: written, matched, stillMissing,
+      summary: `🤖 Ingesta reportesvenezuela/pacientes.json — ${written} ingresados sincronizados, ${matched} coincidencia(s) de nombre con desaparecidos (nota pendiente de verificación en el expediente). ${stillMissing} casos aún sin localizar.`,
+    });
     return { fetched: rows.length, written, skipped: false, actualizado };
   } catch (e: any) {
     console.error('[pacientes-rvz] failed:', e?.message ?? e);
     await recordIngest(env, 'pacientes-rvz', false, 0, String(e?.message ?? e)).catch(() => {});
+    await logAgentActivity(env, {
+      source: 'pacientes-rvz', action: 'poll', ok: false,
+      summary: `⚠️ Fallo al sondear reportesvenezuela/pacientes.json: ${String(e?.message ?? e).slice(0, 180)}`,
+    }).catch(() => {});
     throw e;
   }
 }
