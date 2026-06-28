@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Riesgo Sísmico La Guaira / Venezuela — SISMO911</title>
+<meta name="description" content="Tablero de riesgo sísmico La Guaira y Venezuela: secuencia de réplicas en vivo (USGS), pronóstico probabilístico de réplicas (OAF), ShakeMap y falla de terreno. Evaluación de riesgo, NO predicción.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/laguaira">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Riesgo Sísmico La Guaira / Venezuela — SISMO911">
+<meta property="og:description" content="Réplicas en vivo, pronóstico probabilístico (OAF USGS), ShakeMap y falla de terreno. Evaluación de riesgo, no predicción.">
+<meta property="og:url" content="https://sismo911.com/laguaira">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- MapLibre GL JS (requested explicitly; note: other SISMO911 maps use Leaflet) -->
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  body{background:#f6f7fb;color:#101820;font-family:Inter,sans-serif}
+  .wrap{max-width:1460px;margin:0 auto;padding:24px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:14px}
+  .eyebrow{font:800 11px Public Sans,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5f6675}
+  h1{font:900 30px/1.05 Public Sans,sans-serif;color:#00173a;margin:5px 0 0}
+  .stamp{font:700 12px JetBrains Mono,monospace;color:#00173a;background:#fff;border:1px solid #c4c6d0;border-radius:8px;padding:9px 11px;white-space:nowrap}
+  .disclaimer{background:#fff7e6;border:1px solid #e7c66b;border-left:5px solid #d9a400;border-radius:8px;padding:11px 14px;margin-bottom:14px;font:600 12.5px/1.45 Inter,sans-serif;color:#5b4500}
+  .disclaimer b{color:#7a3b00}
+  .grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:14px}
+  .card{background:#fff;border:1px solid #d8dbe4;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .metric{padding:14px;border-left:5px solid var(--accent,#00173a)}
+  .metric .k{font:800 11px Public Sans,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#5f6675}
+  .metric .v{font:900 26px/1 Public Sans,sans-serif;color:#00173a;margin-top:7px}
+  .metric .s{font:600 11.5px/1.35 Inter,sans-serif;color:#5f6675;margin-top:6px;min-height:30px}
+  .main{grid-template-columns:minmax(0,1.35fr) minmax(360px,.85fr);align-items:start}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-bottom:1px solid #e3e5eb}
+  .panel-h h2{font:800 15px Public Sans,sans-serif;color:#00173a;margin:0}
+  .pill{font:800 11px Public Sans,sans-serif;border-radius:999px;padding:5px 8px;background:#eef2f8;color:#445e91}
+  .toggles{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px;border-bottom:1px solid #eef0f5}
+  .toggles label{font:700 11px Inter,sans-serif;color:#33405a;background:#eef2f8;border:1px solid #d8dbe4;border-radius:6px;padding:5px 8px;cursor:pointer;display:flex;gap:6px;align-items:center}
+  #map{height:560px;border-radius:0 0 8px 8px;background:#e8edf4}
+  .legend{font:600 11px Inter,sans-serif;color:#33405a;padding:10px 14px;border-top:1px solid #eef0f5;display:flex;flex-wrap:wrap;gap:12px}
+  .dot{width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+  .list{max-height:300px;overflow:auto}.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:11px 14px;border-top:1px solid #edf0f5}
+  .row:first-child{border-top:0}.badge{font:800 11px JetBrains Mono,monospace;color:#fff;background:#00173a;border-radius:6px;padding:4px 6px;white-space:nowrap}
+  .title{font:800 13px/1.25 Inter,sans-serif;color:#101820}.meta{font:600 11px/1.35 Inter,sans-serif;color:#6d7280;margin-top:3px}
+  .fc{width:100%;border-collapse:collapse;font:600 12px Inter,sans-serif}
+  .fc th,.fc td{padding:9px 10px;border-top:1px solid #edf0f5;text-align:right}.fc th:first-child,.fc td:first-child{text-align:left}
+  .fc thead th{font:800 11px Public Sans,sans-serif;color:#5f6675;text-transform:uppercase;border-top:0}
+  .gf{padding:12px 14px;font:600 12.5px/1.5 Inter,sans-serif;color:#33405a}
+  .alert{font:800 11px Public Sans,sans-serif;border-radius:6px;padding:3px 8px;color:#fff;text-transform:uppercase}
+  .a-red{background:#bb0027}.a-orange{background:#d97700}.a-yellow{background:#caa300}.a-green{background:#2e7d32}
+  .empty{padding:18px 14px;color:#6d7280;font:600 13px Inter,sans-serif}.err{color:#bb0027}
+  .foot{font:600 11px Inter,sans-serif;color:#6d7280;margin-top:16px;line-height:1.5}
+  @media(max-width:1160px){.kpis,.main{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.stamp{white-space:normal}#map{height:440px}}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Riesgo Sísmico La Guaira / Venezuela — SISMO911","description":"Réplicas en vivo, pronóstico probabilístico de réplicas (OAF USGS), ShakeMap y falla de terreno para La Guaira y Venezuela. Evaluación de riesgo, no predicción.","url":"https://sismo911.com/laguaira","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}
+</script>
+</head>
+<body>
+<main class="wrap">
+  <section class="top">
+    <div>
+      <div class="eyebrow">La Guaira · Venezuela · Secuencia sísmica en vivo · Pronóstico probabilístico</div>
+      <h1>Riesgo Sísmico — La Guaira / Venezuela</h1>
+    </div>
+    <div class="stamp" id="updated">CARGANDO…</div>
+  </section>
+
+  <div class="disclaimer">
+    <b>Esto NO es una predicción de terremotos.</b> Es una evaluación científica de riesgo basada en datos disponibles (USGS). Los terremotos no se pueden predecir (fecha/lugar/magnitud exactos). Mostramos <b>probabilidades de réplicas por ventana de tiempo</b>, escenarios e incertidumbre — y separamos la <b>detección en tiempo real</b> del <b>peligro sísmico de largo plazo</b>. Fuente oficial: USGS. Para alertas y vocería pública, seguir a FUNVISIS / Protección Civil.
+  </div>
+
+  <section class="grid kpis" id="kpis">
+    <div class="card metric" style="--accent:#bb0027"><div class="k">Sismo principal</div><div class="v" id="k-main">—</div><div class="s" id="k-main-s">cargando…</div></div>
+    <div class="card metric" style="--accent:#d97700"><div class="k">Réplicas 48 h</div><div class="v" id="k-48">—</div><div class="s" id="k-48-s">M≥2.5 reportadas por USGS</div></div>
+    <div class="card metric" style="--accent:#00173a"><div class="k">Mayor réplica</div><div class="v" id="k-maxrep">—</div><div class="s" id="k-maxrep-s">vs. esperada (Båth ≈ M−1.2)</div></div>
+    <div class="card metric" style="--accent:#7a1fa2"><div class="k">P(M≥5) próx. semana</div><div class="v" id="k-oaf">—</div><div class="s" id="k-oaf-s">Pronóstico oficial USGS (OAF)</div></div>
+    <div class="card metric" style="--accent:#2e7d32"><div class="k">Impacto (PAGER)</div><div class="v" id="k-pager">—</div><div class="s" id="k-pager-s">Nivel de alerta de pérdidas</div></div>
+  </section>
+
+  <section class="grid main">
+    <div class="card">
+      <div class="panel-h"><h2>Mapa — réplicas, epicentro, ShakeMap</h2><span class="pill" id="map-count">—</span></div>
+      <div class="toggles">
+        <label><input type="checkbox" id="t-after" checked> Réplicas</label>
+        <label><input type="checkbox" id="t-shake" checked> ShakeMap (intensidad)</label>
+        <label><input type="checkbox" id="t-cities" checked> Ciudades</label>
+      </div>
+      <div id="map"></div>
+      <div class="legend">
+        <span><span class="dot" style="background:#bb0027"></span>Principal M7+</span>
+        <span><span class="dot" style="background:#d97700"></span>Réplica M5+</span>
+        <span><span class="dot" style="background:#e0a900"></span>M4–5</span>
+        <span><span class="dot" style="background:#3a78c2"></span>M&lt;4</span>
+        <span><span class="dot" style="background:#7a1fa2"></span>Ciudad</span>
+      </div>
+    </div>
+
+    <div class="grid" style="gap:14px">
+      <div class="card">
+        <div class="panel-h"><h2>Pronóstico de réplicas (probabilístico)</h2><span class="pill">USGS OAF · ETAS</span></div>
+        <table class="fc"><thead><tr><th>Ventana</th><th>M≥5</th><th>M≥6</th><th>M≥7</th></tr></thead>
+          <tbody id="oaf-body"><tr><td class="empty" colspan="4">cargando pronóstico oficial…</td></tr></tbody>
+        </table>
+        <div class="gf" style="border-top:1px solid #eef0f5;color:#6d7280;font-size:11.5px">Probabilidad de <b>al menos una</b> réplica en la ventana, decae con el tiempo (ley de Omori). No indica día ni hora.</div>
+      </div>
+
+      <div class="card">
+        <div class="panel-h"><h2>Falla de terreno</h2><span class="pill">USGS ground-failure</span></div>
+        <div class="gf" id="gf-body">cargando…</div>
+      </div>
+
+      <div class="card">
+        <div class="panel-h"><h2>Réplicas — últimas 48 h</h2><span class="pill" id="rep-count">—</span></div>
+        <div class="list" id="rep-list"><div class="empty">cargando réplicas…</div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot" id="foot">
+    Datos: USGS Earthquake Hazards Program (evento <code id="evid">us6000t7zp</code>) — catálogo FDSNWS, ShakeMap, PAGER, ground-failure y Operational Aftershock Forecast (OAF). Tablero de SISMO911. Evaluación de riesgo probabilística — <b>no predicción</b>.
+  </div>
+</main>
+
+<script>
+const MAINSHOCK_ID = "us6000t7zp";
+const SEQ_START = "2026-06-24T22:00:00";     // inicio de la secuencia (sismo principal)
+const CENTER = [-67.7, 10.5];                // entre Yumare (epicentro) y La Guaira
+const CITIES = [
+  {n:"La Guaira", c:[-66.93,10.60]}, {n:"Caracas", c:[-66.88,10.49]},
+  {n:"Yumare (epicentro)", c:[-68.47,10.43]}, {n:"Puerto Cabello", c:[-68.01,10.47]},
+  {n:"Maracay", c:[-67.60,10.25]}, {n:"Valencia", c:[-68.00,10.16]}
+];
+const $ = id => document.getElementById(id);
+const fmt = d => new Date(d).toLocaleString("es-VE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+const pct = x => (x==null?"—":(x*100).toFixed(x*100<10?1:0)+"%");
+const magColor = m => m>=7?"#bb0027":m>=5?"#d97700":m>=4?"#e0a900":"#3a78c2";
+const magRadius = m => Math.max(5, 3+m*2.2);
+
+const map = new maplibregl.Map({
+  container:"map",
+  style:{version:8, sources:{osm:{type:"raster",tiles:["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png","https://b.tile.openstreetmap.org/{z}/{x}/{y}.png"],tileSize:256,attribution:"© OpenStreetMap"}}, layers:[{id:"osm",type:"raster",source:"osm"}]},
+  center:CENTER, zoom:6.4
+});
+map.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
+
+async function jget(u){ const r=await fetch(u); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
+function setErr(el,msg){ el.innerHTML='<div class="empty err">⚠ '+msg+'</div>'; }
+
+map.on("load", async () => {
+  // ---- cities ----
+  map.addSource("cities",{type:"geojson",data:{type:"FeatureCollection",features:CITIES.map(c=>({type:"Feature",geometry:{type:"Point",coordinates:c.c},properties:{n:c.n}}))}});
+  map.addLayer({id:"cities",type:"circle",source:"cities",paint:{"circle-radius":5,"circle-color":"#7a1fa2","circle-stroke-width":2,"circle-stroke-color":"#fff"}});
+  map.addLayer({id:"cities-lbl",type:"symbol",source:"cities",layout:{"text-field":["get","n"],"text-size":11,"text-offset":[0,1.2],"text-anchor":"top"},paint:{"text-color":"#33405a","text-halo-color":"#fff","text-halo-width":1.4}});
+
+  loadEverything();
+  setInterval(loadEverything, 120000); // refresco cada 2 min (tiempo real)
+});
+
+async function loadEverything(){
+  $("updated").textContent = "ACTUALIZADO " + fmt(Date.now());
+  await Promise.allSettled([loadSequence(), loadDetail()]);
+}
+
+// ---- 1. Secuencia / réplicas (catálogo FDSNWS) ----
+async function loadSequence(){
+  const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=10.43&longitude=-68.47&maxradiuskm=400&minmagnitude=2.5&starttime=${SEQ_START}&orderby=time`;
+  let gj;
+  try { gj = await jget(url); } catch(e){ setErr($("rep-list"),"USGS no disponible: "+e.message); $("map-count").textContent="sin datos"; return; }
+  const feats = gj.features.slice().sort((a,b)=>b.properties.time-a.properties.time);
+
+  // map layer
+  const fc = {type:"FeatureCollection",features:feats.map(f=>({type:"Feature",geometry:f.geometry,properties:{m:f.properties.mag,place:f.properties.place,t:f.properties.time}}))};
+  if(map.getSource("after")) map.getSource("after").setData(fc);
+  else {
+    map.addSource("after",{type:"geojson",data:fc});
+    map.addLayer({id:"after",type:"circle",source:"after",paint:{
+      "circle-radius":["interpolate",["linear"],["get","m"],2,4,5,12,7,22],
+      "circle-color":["case",[">=",["get","m"],7],"#bb0027",[">=",["get","m"],5],"#d97700",[">=",["get","m"],4],"#e0a900","#3a78c2"],
+      "circle-opacity":0.82,"circle-stroke-width":1.2,"circle-stroke-color":"#fff"}});
+    map.on("click","after",e=>{const p=e.features[0].properties;new maplibregl.Popup().setLngLat(e.lngLat).setHTML(`<b>M${(+p.m).toFixed(1)}</b><br>${p.place}<br>${fmt(p.t)}`).addTo(map);});
+    map.on("mouseenter","after",()=>map.getCanvas().style.cursor="pointer");
+    map.on("mouseleave","after",()=>map.getCanvas().style.cursor="");
+  }
+  $("map-count").textContent = feats.length+" eventos";
+
+  // mainshock + aftershocks split
+  const main = feats.filter(f=>f.properties.mag>=7);
+  const after = feats.filter(f=>f.properties.mag<7);
+  const now = Math.max(...feats.map(f=>f.properties.time));
+  const cut48 = now - 48*3600*1000;
+  const last48 = after.filter(f=>f.properties.time>=cut48);
+  const maxRep = after.length? Math.max(...after.map(f=>f.properties.mag)) : null;
+  const mainMag = main.length? Math.max(...main.map(f=>f.properties.mag)) : (feats.length?Math.max(...feats.map(f=>f.properties.mag)):null);
+
+  if(mainMag!=null){ $("k-main").textContent="M"+mainMag.toFixed(1); $("k-main-s").textContent = (main[0]?main[0].properties.place:"")+" · "+(main.length>1?"doblete":"principal"); }
+  $("k-48").textContent = last48.length; $("k-48-s").textContent = "M≥2.5 reportadas por USGS (48 h)";
+  if(maxRep!=null){
+    $("k-maxrep").textContent="M"+maxRep.toFixed(1);
+    const expected = mainMag? (mainMag-1.2):null;
+    $("k-maxrep-s").textContent = expected? `esperada ≈ M${expected.toFixed(1)} (Båth) → mayor réplica aún posible`:"";
+  }
+
+  // list (48h)
+  $("rep-count").textContent = last48.length+" en 48 h";
+  $("rep-list").innerHTML = last48.length? last48.map(f=>{
+    const m=f.properties.mag, c=magColor(m);
+    return `<div class="row"><span class="badge" style="background:${c}">M${m.toFixed(1)}</span><div><div class="title">${f.properties.place||"—"}</div><div class="meta">${fmt(f.properties.time)} · prof ${Math.round(f.geometry.coordinates[2])} km</div></div><span class="meta">${Math.round((now-f.properties.time)/3600000)} h</span></div>`;
+  }).join("") : '<div class="empty">Sin réplicas M≥2.5 reportadas por USGS en 48 h. Nota: USGS sub-reporta sismos pequeños en Venezuela; el conteo real es mayor.</div>';
+}
+
+// ---- 2. Detalle del evento: OAF + ShakeMap + ground-failure + PAGER ----
+async function loadDetail(){
+  let d;
+  try { d = await jget(`https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/${MAINSHOCK_ID}.geojson`); }
+  catch(e){ setErr($("oaf-body"),"detalle USGS no disponible"); return; }
+  const prod = d.properties.products || {};
+  const g = n => (prod[n]&&prod[n][0])||null;
+
+  // PAGER
+  const pg = g("losspager");
+  if(pg){ const a=(pg.properties.alertlevel||"").toLowerCase();
+    $("k-pager").textContent=a?a.toUpperCase():"—";
+    $("k-pager").style.color = a==="red"?"#bb0027":a==="orange"?"#d97700":a==="yellow"?"#caa300":"#2e7d32";
+    $("k-pager-s").textContent=`Intensidad máx ≈ MMI ${pg.properties.maxmmi||"?"}`;
+  }
+
+  // OAF forecast
+  const oaf = g("oaf");
+  if(oaf){
+    const k = Object.keys(oaf.contents||{}).find(x=>x.endsWith("forecast.json"));
+    if(k){
+      try{
+        const o = await jget(oaf.contents[k].url);
+        const rows = (o.forecast||[]).map(w=>{
+          const get=m=>{const b=(w.bins||[]).find(z=>z.magnitude===m);return b?b.probability:null;};
+          return `<tr><td>${w.label}</td><td>${pct(get(5))}</td><td>${pct(get(6))}</td><td>${pct(get(7))}</td></tr>`;
+        }).join("");
+        $("oaf-body").innerHTML = rows || '<tr><td class="empty" colspan="4">sin bins</td></tr>';
+        const wk = (o.forecast||[]).find(w=>/week/i.test(w.label));
+        if(wk){const b=(wk.bins||[]).find(z=>z.magnitude===5); if(b){$("k-oaf").textContent=pct(b.probability);}}
+      }catch(e){ setErr($("oaf-body"),"OAF no disponible"); }
+    }
+  } else setErr($("oaf-body"),"Sin pronóstico OAF para este evento");
+
+  // ShakeMap intensity contours (cont_mi.json)
+  const sm = g("shakemap");
+  if(sm){
+    const ck = Object.keys(sm.contents||{}).find(x=>/cont_mi\.json$/.test(x));
+    if(ck){
+      try{
+        const cont = await jget(sm.contents[ck].url);
+        if(map.getSource("shake")) map.getSource("shake").setData(cont);
+        else{
+          map.addSource("shake",{type:"geojson",data:cont});
+          map.addLayer({id:"shake",type:"line",source:"shake",paint:{
+            "line-color":["interpolate",["linear"],["coalesce",["to-number",["get","value"]],0],3,"#9ecae1",5,"#fdae61",7,"#d7301f",9,"#7f0000"],
+            "line-width":2,"line-opacity":0.75}}, "after");
+        }
+      }catch(e){/* contours optional */}
+    }
+  }
+
+  // ground-failure
+  const gf = g("ground-failure");
+  if(gf){
+    const p=gf.properties||{};
+    const a=(lvl,lab)=>{lvl=(lvl||"").toLowerCase();const cls=lvl==="red"?"a-red":lvl==="orange"?"a-orange":lvl==="yellow"?"a-yellow":"a-green";return `<div style="margin:6px 0"><span class="alert ${cls}">${lvl||"n/d"}</span> &nbsp;${lab}</div>`;};
+    $("gf-body").innerHTML = a(p["landslide-alert"],"Deslizamientos / deslaves (laderas, quebradas)") + a(p["liquefaction-alert"],"Licuefacción (suelos saturados, costa, rellenos)") + '<div style="margin-top:8px;color:#6d7280;font-size:11.5px">La Guaira: laderas de la Cordillera de la Costa + planicies costeras saturadas → mismo perfil de riesgo (precedente: deslave de Vargas 1999).</div>';
+  } else $("gf-body").textContent="Sin producto de falla de terreno.";
+
+  // layer toggles
+  const bind=(id,layers)=>{const el=$(id); if(!el)return; el.onchange=()=>layers.forEach(L=>{if(map.getLayer(L))map.setLayoutProperty(L,"visibility",el.checked?"visible":"none");});};
+  bind("t-after",["after"]); bind("t-shake",["shake"]); bind("t-cities",["cities","cities-lbl"]);
+}
+</script>
+</body>
+</html>
