@@ -22,6 +22,20 @@ misc.get('/comms', async (c) => {
   return c.json({ channels: results ?? [] });
 });
 
+// ---- Visitor geo (from Cloudflare's request.cf) — powers the welcome banner ----
+// No IP is stored or returned; only coarse city/region/country Cloudflare already
+// resolved at the edge. Used by /muro to greet the visitor by location.
+misc.get('/geo', (c) => {
+  c.header('Cache-Control', 'no-store');
+  const cf = ((c.req.raw as any).cf ?? {}) as Record<string, unknown>;
+  return c.json({
+    city: (cf.city as string) ?? null,
+    region: (cf.region as string) ?? null,
+    country: (cf.country as string) ?? null,       // ISO-2 (e.g. "VE")
+    timezone: (cf.timezone as string) ?? null,
+  });
+});
+
 // ---- Web Push (VAPID) ----
 misc.get('/push/vapid', (c) => c.json({ publicKey: c.env.VAPID_PUBLIC_KEY ?? '' }));
 misc.post('/push/subscribe', async (c) => {

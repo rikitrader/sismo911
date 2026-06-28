@@ -44,7 +44,7 @@ export type GateDecision =
 // Hono route table — a new prefix cannot merge/deploy unclassified.
 const PUBLIC_API_PREFIXES: readonly string[] = [
   '/api/health', '/api/ready', '/api/status', '/api/verified-info', '/api/stats', '/api/csp-report',
-  '/api/events', '/api/heatmap', '/api/dashboard', '/api/layers', '/api/sitrep',
+  '/api/events', '/api/heatmap', '/api/dashboard', '/api/geo', '/api/layers', '/api/sitrep',
   '/api/acopio', '/api/agencias', '/api/aid-orgs', '/api/alerts', '/api/auth',
   '/api/blog', '/api/botiquin', '/api/campaigns', '/api/campaigns-mine', '/api/chat', '/api/checkins',
   '/api/comms', '/api/contacts', '/api/damage', '/api/danos-estructurales',
