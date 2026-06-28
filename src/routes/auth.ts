@@ -7,6 +7,7 @@ import { audit } from '../lib/audit';
 import { sendEmail, randomToken, sha256hex, resetEmail, welcomeEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
 import { createWalletForEmail, isCrossmintConfigured } from '../lib/crossmint';
 import { x402Network, x402Asset } from '../lib/x402';
+import { verifyTotp, matchBackupCode } from '../lib/totp';
 
 export const auth = new Hono<{ Bindings: Env }>();
 
@@ -170,6 +171,27 @@ auth.post('/login', async (c) => {
       ).bind(uid('lh'), row?.id ?? null, email, ip, ua, 0, 'invalid_credentials', Date.now()).run();
     } catch { /* ignore */ }
     return c.json({ error: 'invalid_credentials' }, 401);
+  }
+  // MFA second factor — only enforced when this user has enabled it (non-MFA
+  // logins fall straight through, byte-identical). Accepts a TOTP code or a
+  // one-time backup code in the SAME request body; absent ⇒ 401 mfa_required
+  // (no session), present-but-wrong ⇒ 401 mfa_invalid.
+  if (Number(row.mfa_enabled) === 1) {
+    const code = typeof b?.code === 'string' ? b.code.trim() : '';
+    if (!code) return c.json({ error: 'mfa_required' }, 401);
+    let mfaOk = row.mfa_secret ? await verifyTotp(row.mfa_secret, code) : false;
+    if (!mfaOk && row.mfa_backup_codes) {
+      let backups: string[] = [];
+      try { backups = JSON.parse(row.mfa_backup_codes || '[]'); } catch { backups = []; }
+      const idx = await matchBackupCode(code, backups);
+      if (idx >= 0) {
+        mfaOk = true;
+        backups.splice(idx, 1); // backup codes are one-time use
+        await c.env.DB.prepare(`UPDATE users SET mfa_backup_codes = ? WHERE id = ?`)
+          .bind(JSON.stringify(backups), row.id).run();
+      }
+    }
+    if (!mfaOk) return c.json({ error: 'mfa_invalid' }, 401);
   }
   await c.env.DB.prepare(`UPDATE users SET last_login_ms = ?, last_ip = ? WHERE id = ?`).bind(Date.now(), ip, row.id).run();
   // Record the successful login (login_history) — wrapped so logging never breaks login.
