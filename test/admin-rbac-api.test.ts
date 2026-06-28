@@ -12,6 +12,7 @@ const MIGRATIONS = [
   'migrations/0009_password_resets.sql',
   'migrations/0046_rbac_workforce.sql', // rbac tables + ALTER users/sessions
   'migrations/0047_rbac_seed.sql',      // permission catalog + system roles
+  'migrations/0052_rbac_finegrained.sql', // fine-grained perms + user_roles.expires_ms
 ];
 
 async function setup() {

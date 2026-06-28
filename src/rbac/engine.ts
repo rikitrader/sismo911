@@ -52,7 +52,13 @@ export async function getEffectivePermissions(env: Env, userId: string): Promise
 }
 
 async function resolve(env: Env, userId: string, legacyRole: string | null): Promise<Set<string>> {
-  const assigned = await rows<any>(env, 'SELECT role_id FROM user_roles WHERE user_id = ?', userId);
+  // Phase 2 U4: a temporary role assignment with a past expires_ms no longer counts.
+  const assigned = await rows<any>(
+    env,
+    'SELECT role_id FROM user_roles WHERE user_id = ? AND (expires_ms IS NULL OR expires_ms > ?)',
+    userId,
+    Date.now(),
+  );
   const allRoles = await rows<any>(env, 'SELECT id, key, inherits_json FROM rbac_roles');
   const byId = new Map<string, any>(allRoles.map((r) => [r.id, r]));
   const byKey = new Map<string, any>(allRoles.map((r) => [r.key, r]));

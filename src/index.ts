@@ -75,6 +75,7 @@ import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
 import { evaluateGate, LEGACY_OPS_PERM, WRITE_METHODS } from './rbac/route-policy';
 import { authorize } from './rbac/middleware';
+import { getEffectivePermissions } from './rbac/engine';
 import { allowedOrigins, isAllowedOrigin, setSecurityHeaders } from './lib/security';
 import { audit } from './lib/audit';
 
@@ -376,6 +377,27 @@ export const PUBLIC_COMMAND_ASSETS: Record<string, string> = {
 for (const [routePath, assetPath] of Object.entries(PUBLIC_COMMAND_ASSETS)) {
   app.get(routePath, (c) => serveAsset(c, assetPath));
 }
+// Phase 2 S1: gate the ADMINISTRATION console SHELL behind page auth (not only
+// the /api/rbac APIs). /console + /console/ are run_worker_first so this route
+// runs; an unauthenticated or non-admin visitor is redirected to /login instead
+// of seeing the admin UI. The bundle (/console/app.js|css) stays asset-served and
+// public — it carries no data (every datum is gated at /api/rbac/*). "Can enter"
+// = holds any admin-read capability.
+const CONSOLE_BASELINE = ['users:read','roles:read','permissions:read','audit:read','security:read','sessions:read','organizations:read','feature_flags:read','login_history:read'];
+async function canEnterConsole(c: any): Promise<boolean> {
+  const user = await getUserFromRequest(c.env, c).catch(() => null);
+  if (!user) return false;
+  if (user.role === 'admin') return true; // super_admin
+  const perms = await getEffectivePermissions(c.env, user.id).catch(() => new Set<string>());
+  return CONSOLE_BASELINE.some((p) => perms.has(p));
+}
+const serveConsole = async (c: any) => {
+  if (!(await canEnterConsole(c))) return c.redirect('/login?next=/console/', 302);
+  return serveAsset(c, '/console/index.html');
+};
+app.get('/console', serveConsole);
+app.get('/console/', serveConsole);
+
 // Root is host-branched (see run_worker_first '/'): the SUMINISTROS subdomain
 // serves the inventory SPA shell; every other host serves the DESAPARECIDOS
 // registry (the app's post-quake front door).
