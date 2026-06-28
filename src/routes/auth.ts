@@ -20,8 +20,11 @@ async function provisionWallet(env: Env, userId: string, email: string): Promise
     if (!isCrossmintConfigured(env)) return;
     const w = await createWalletForEmail(env, email);
     if (!w) return;
-    // Same UPDATE enables x402 receiving on the wallet: the address becomes the
-    // payTo, with the configured network + USDC asset. "All features" on by default.
+    // Same UPDATE registers the wallet as an x402 receiver: the address becomes
+    // the payTo, with the configured network + USDC asset. This is the per-wallet
+    // opt-in only — effective acceptance ALSO requires the runtime master gate
+    // isX402Live() (facilitator configured + payments feature flag), enforced at
+    // the pay endpoint + discovery, so a partially configured deploy never settles.
     await env.DB.prepare(
       `UPDATE users SET wallet_address = ?, wallet_locator = ?, wallet_chain = ?, wallet_created_ms = ?,
               x402_enabled = 1, x402_pay_to = ?, x402_network = ?, x402_asset = ?, x402_enabled_ms = ?
