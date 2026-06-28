@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <title>SISMO911 — GPS de Unidad</title>
+  <meta name="description" content="Transmisión de posición GPS de una unidad de flota SISMO911. Acceso por enlace seguro." />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#0b1830" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SISMO911 Flota" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="apple-touch-icon" href="/logo.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/app.css" />
+  <style>
+    :root{color-scheme:dark}
+    html,body{background:#070d1a;color:#e8ecf4;-webkit-font-smoothing:antialiased}
+    body{min-height:100dvh;margin:0;font-family:'Public Sans',system-ui,sans-serif;display:flex;flex-direction:column}
+    .mono{font-family:'JetBrains Mono',monospace}
+    .topbar{background:linear-gradient(180deg,#0b1830 0%,#13284f 100%);padding:env(safe-area-inset-top) 0 0}
+    .wrap{width:100%;max-width:30rem;margin:0 auto;padding:1rem 1.1rem calc(1.6rem + env(safe-area-inset-bottom))}
+    .eyebrow{font-size:.62rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#7e8aa6}
+    .card{background:#0e1729;border:1px solid #1d2b47;border-radius:1rem}
+    /* Big primary action — thumb-reachable, high contrast */
+    .bigbtn{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;border:none;border-radius:1rem;
+      font-size:1.25rem;font-weight:900;letter-spacing:.01em;padding:1.25rem 1rem;cursor:pointer;
+      min-height:4.5rem;line-height:1.1;-webkit-tap-highlight-color:transparent;transition:transform .06s ease,filter .15s ease}
+    .bigbtn:active{transform:scale(.985)}
+    .bigbtn:disabled{opacity:.4;cursor:not-allowed}
+    .btn-go{background:linear-gradient(180deg,#19a45a 0%,#12833f 100%);color:#fff;box-shadow:0 10px 30px -10px rgba(25,164,90,.6)}
+    .btn-stop{background:#15233d;color:#ff8a9b;border:1px solid #6c2433}
+    .statline{display:flex;align-items:center;gap:.55rem;font-weight:800;font-size:1.05rem}
+    .pip{width:.85rem;height:.85rem;border-radius:9999px;background:#64748b;flex:none;box-shadow:0 0 0 4px rgba(100,116,139,.18)}
+    .pip.live{background:#21c46a;box-shadow:0 0 0 4px rgba(33,196,106,.22);animation:beat 1.6s ease-out infinite}
+    .pip.connecting,.pip.reconnecting{background:#e0a300;box-shadow:0 0 0 4px rgba(224,163,0,.2);animation:beat 1.6s ease-out infinite}
+    .pip.stopped{background:#64748b}
+    .pip.error{background:#e0314b;box-shadow:0 0 0 4px rgba(224,49,75,.2)}
+    @keyframes beat{0%{transform:scale(1);opacity:1}70%{transform:scale(1.18);opacity:.85}100%{transform:scale(1);opacity:1}}
+    .kv{display:flex;justify-content:space-between;gap:1rem;padding:.55rem 0;border-top:1px solid #16223b;font-size:.92rem}
+    .kv:first-child{border-top:none}
+    .kv .k{color:#8b97b3;font-weight:600}
+    .kv .v{font-weight:700;text-align:right}
+    .banner{border-radius:.75rem;padding:.7rem .85rem;font-size:.86rem;font-weight:600;line-height:1.35}
+    .banner-err{background:#2a0e15;border:1px solid #6c2433;color:#ffb3bf}
+    .banner-ok{background:#0c2418;border:1px solid #1d5a37;color:#8ff0bb}
+    .hidden{display:none}
+    .help{font-size:.82rem;line-height:1.5;color:#9aa6c2}
+    .badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.6rem;font-weight:800;letter-spacing:.05em;
+      text-transform:uppercase;padding:.2rem .55rem;border-radius:9999px;background:#15233d;color:#9fb2d8;border:1px solid #24375c}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap" style="padding-top:.75rem;padding-bottom:.75rem">
+      <div style="display:flex;align-items:center;gap:.7rem">
+        <img src="/logo.svg" alt="SISMO911" style="height:2.4rem;width:2.4rem" />
+        <div>
+          <div style="font-weight:900;font-size:1.05rem;line-height:1;color:#fff">SISMO911</div>
+          <div style="font-size:.6rem;letter-spacing:.18em;color:rgba(255,255,255,.6);margin-top:.18rem">GPS DE UNIDAD · CAMPO</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap" style="flex:1;display:flex;flex-direction:column;gap:1rem">
+
+    <!-- Unit identity -->
+    <section class="card" style="padding:1rem 1.1rem">
+      <div class="eyebrow">Unidad</div>
+      <div id="unitName" style="font-weight:900;font-size:1.55rem;line-height:1.15;margin-top:.2rem;color:#fff">—</div>
+      <div style="margin-top:.5rem"><span id="statusBadge" class="badge">Inactivo</span></div>
+    </section>
+
+    <!-- Connection status -->
+    <section class="card" style="padding:.95rem 1.1rem">
+      <div class="eyebrow" style="margin-bottom:.5rem">Conexión</div>
+      <div class="statline"><span id="pip" class="pip stopped"></span><span id="statusLabel">Detenido</span></div>
+    </section>
+
+    <!-- Alerts -->
+    <div id="gpsBanner" class="banner banner-err hidden"></div>
+    <div id="wsBanner" class="banner banner-err hidden"></div>
+
+    <!-- Primary action -->
+    <button id="goBtn" class="bigbtn btn-go" type="button">
+      <span aria-hidden="true">📍</span><span id="goBtnLabel">Activar GPS</span>
+    </button>
+
+    <p class="help">
+      Al activar, este teléfono enviará su posición GPS en tiempo real al centro de
+      despacho mientras la unidad esté en servicio. El navegador pedirá permiso de
+      <b>ubicación</b>: elige <b>“Permitir”</b>. Mantén esta página abierta y el
+      teléfono encendido. No compartas este enlace.
+    </p>
+
+    <!-- Last sent fix -->
+    <section class="card" style="padding:.6rem 1.1rem">
+      <div class="eyebrow" style="margin:.4rem 0 .2rem">Última posición enviada</div>
+      <div class="kv"><span class="k">Latitud</span><span class="v mono" id="lastLat">—</span></div>
+      <div class="kv"><span class="k">Longitud</span><span class="v mono" id="lastLng">—</span></div>
+      <div class="kv"><span class="k">Precisión</span><span class="v mono" id="lastAcc">—</span></div>
+      <div class="kv"><span class="k">Hora</span><span class="v mono" id="lastTime">—</span></div>
+      <div class="kv"><span class="k">Confirmado</span><span class="v mono" id="lastAck">—</span></div>
+    </section>
+
+    <button id="stopBtn" class="bigbtn btn-stop hidden" type="button">Detener transmisión</button>
+
+  </main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+
+  // --- token: last path segment of /flota/track/<TOKEN>. Never displayed/logged. ---
+  var parts = location.pathname.split('/').filter(Boolean);
+  var token = parts.length ? decodeURIComponent(parts[parts.length - 1]) : '';
+
+  // --- runtime state ---
+  var ws = null;
+  var watchId = null;
+  var pingTimer = null;
+  var backoff = 1000;            // ws reconnect backoff, 1s → 30s
+  var active = false;            // GPS watch running + intent to stream
+  var stopped = false;          // user pressed Detener → do not reconnect
+  var batteryPct = null;        // 0..100 or null
+  var lastFix = null;           // most recent geolocation position
+
+  // ---------------- status UI ----------------
+  function setStatus(state, label) {
+    var pip = $('pip');
+    pip.className = 'pip ' + state;
+    $('statusLabel').textContent = label;
+  }
+  function showBanner(el, kind, msg) {
+    el.textContent = msg;
+    el.className = 'banner ' + (kind === 'ok' ? 'banner-ok' : 'banner-err');
+  }
+  function hide(el) { el.classList.add('hidden'); }
+  function clearBanner(el) { hide(el); }
+
+  function fmtTime(ms) {
+    if (!ms) return '—';
+    try {
+      return new Date(ms).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) { return new Date(ms).toISOString(); }
+  }
+
+  // ---------------- battery (best-effort) ----------------
+  function initBattery() {
+    if (!navigator.getBattery) { batteryPct = null; return; }
+    navigator.getBattery().then(function (b) {
+      var read = function () { batteryPct = Math.round(b.level * 100); };
+      read();
+      b.addEventListener('levelchange', read);
+    }).catch(function () { batteryPct = null; });
+  }
+
+  // ---------------- WebSocket ----------------
+  function wsUrl() {
+    var scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+    return scheme + '://' + location.host + '/ws/flota/unit?token=' + encodeURIComponent(token);
+  }
+
+  function connectWS() {
+    if (stopped) return;
+    setStatus('connecting', backoff > 1000 ? 'Reconectando…' : 'Conectando…');
+    try {
+      ws = new WebSocket(wsUrl());
+    } catch (e) {
+      scheduleReconnect();
+      return;
+    }
+
+    ws.addEventListener('open', function () {
+      backoff = 1000;
+      clearBanner($('wsBanner'));
+      setStatus('live', 'En vivo');
+      if (pingTimer) clearInterval(pingTimer);
+      pingTimer = setInterval(function () {
+        if (ws && ws.readyState === WebSocket.OPEN) { try { ws.send('ping'); } catch (e) {} }
+      }, 25000);
+      // If we already have a fix waiting, push it immediately.
+      sendFix();
+    });
+
+    ws.addEventListener('message', function (ev) {
+      if (ev.data === 'pong') return;
+      var msg;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (!msg || typeof msg !== 'object') return;
+
+      if (msg.type === 'pong') return;
+
+      if (msg.type === 'hello') {
+        if (msg.unitName) $('unitName').textContent = msg.unitName;
+        $('statusBadge').textContent = msg.status === 'active' ? 'En servicio' : (msg.status || 'Desconocido');
+        return;
+      }
+      if (msg.type === 'ack') {
+        $('lastAck').textContent = fmtTime(msg.at || Date.now());
+        return;
+      }
+      if (msg.type === 'rate_limited') {
+        showBanner($('wsBanner'), 'err', 'Demasiadas posiciones por minuto; el servidor está limitando el envío. Se reanudará automáticamente.');
+        return;
+      }
+      if (msg.type === 'error') {
+        showBanner($('wsBanner'), 'err', 'El servidor rechazó la posición: ' + describeServerError(msg.error) + '.');
+        return;
+      }
+    });
+
+    ws.addEventListener('close', function () {
+      if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+      ws = null;
+      if (stopped) { setStatus('stopped', 'Detenido'); return; }
+      scheduleReconnect();
+    });
+
+    ws.addEventListener('error', function () {
+      try { if (ws) ws.close(); } catch (e) {}
+    });
+  }
+
+  function scheduleReconnect() {
+    if (stopped) return;
+    setStatus('reconnecting', 'Reconectando…');
+    setTimeout(connectWS, backoff);
+    backoff = Math.min(backoff * 2, 30000);
+  }
+
+  function describeServerError(code) {
+    var map = {
+      missing_coords: 'coordenadas faltantes',
+      coords_out_of_range: 'coordenadas fuera de rango',
+      accuracy_insane: 'precisión inválida',
+      bad_timestamp: 'marca de tiempo inválida',
+      timestamp_future: 'reloj del dispositivo adelantado',
+      timestamp_stale: 'posición demasiado antigua',
+      malformed_payload: 'formato inválido',
+      unit_not_found: 'unidad no encontrada',
+      unit_inactive: 'unidad fuera de servicio',
+      impossible_jump: 'salto de posición imposible'
+    };
+    return map[code] || (code || 'desconocido');
+  }
+
+  // ---------------- geolocation ----------------
+  function onPos(pos) {
+    lastFix = pos;
+    clearBanner($('gpsBanner'));
+    sendFix();
+  }
+
+  function onErr(err) {
+    var msg;
+    if (err && err.code === 1) msg = 'Permiso de ubicación denegado. Actívalo en los ajustes del navegador/teléfono y vuelve a intentar.';
+    else if (err && err.code === 2) msg = 'Ubicación no disponible. Verifica que el GPS esté encendido y haya señal.';
+    else if (err && err.code === 3) msg = 'Tiempo de espera agotado buscando señal GPS. Reintentando…';
+    else msg = 'No se pudo obtener la ubicación.';
+    showBanner($('gpsBanner'), 'err', msg);
+  }
+
+  function sendFix() {
+    if (!active || !lastFix) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    var c = lastFix.coords;
+    var payload = {
+      type: 'gps',
+      lat: c.latitude,
+      lng: c.longitude,
+      accuracy: c.accuracy,
+      heading: (c.heading != null && !isNaN(c.heading)) ? c.heading : null,
+      speed: (c.speed != null && !isNaN(c.speed)) ? c.speed : null,
+      battery: batteryPct,
+      recordedAt: new Date(lastFix.timestamp).toISOString()
+    };
+    try { ws.send(JSON.stringify(payload)); } catch (e) { return; }
+    // reflect the sent fix in the UI (last sent)
+    $('lastLat').textContent = c.latitude.toFixed(6);
+    $('lastLng').textContent = c.longitude.toFixed(6);
+    $('lastAcc').textContent = c.accuracy != null ? Math.round(c.accuracy) + ' m' : '—';
+    $('lastTime').textContent = fmtTime(lastFix.timestamp);
+  }
+
+  function startWatch() {
+    if (!('geolocation' in navigator)) {
+      showBanner($('gpsBanner'), 'err', 'Este dispositivo no soporta geolocalización.');
+      return false;
+    }
+    watchId = navigator.geolocation.watchPosition(onPos, onErr, {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 15000
+    });
+    return true;
+  }
+
+  function stopWatch() {
+    if (watchId != null) { try { navigator.geolocation.clearWatch(watchId); } catch (e) {} watchId = null; }
+  }
+
+  // ---------------- controls ----------------
+  function activate() {
+    if (!token) {
+      showBanner($('wsBanner'), 'err', 'Enlace inválido: falta el código de la unidad. Solicita un nuevo enlace al despacho.');
+      return;
+    }
+    stopped = false;
+    active = true;
+    backoff = 1000;
+    initBattery();
+    if (!startWatch()) { active = false; return; }
+    $('goBtn').classList.add('hidden');
+    $('stopBtn').classList.remove('hidden');
+    connectWS();
+  }
+
+  function stopAll() {
+    stopped = true;
+    active = false;
+    stopWatch();
+    if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+    if (ws) { try { ws.close(); } catch (e) {} ws = null; }
+    setStatus('stopped', 'Detenido');
+    $('statusBadge').textContent = 'Detenido';
+    $('stopBtn').classList.add('hidden');
+    $('goBtnLabel').textContent = 'Reanudar GPS';
+    $('goBtn').classList.remove('hidden');
+  }
+
+  $('goBtn').addEventListener('click', activate);
+  $('stopBtn').addEventListener('click', stopAll);
+
+  // initial state
+  setStatus('stopped', 'Detenido');
+})();
+</script>
+</body>
+</html>
