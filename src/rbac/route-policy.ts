@@ -126,7 +126,11 @@ export function evaluateGate(path: string, method: string): GateDecision {
   // granular roles can now be granted exactly one surface.
   let perm: string;
   if (isFlotaAdminApi) perm = 'flota:track';
-  else if (isFlotaApi) perm = 'flota:read';
+  // SECURITY (audit H1): flota GET is flota:read, but unsafe methods (dispatch/delete a
+  // unit, create/edit a mission) require the WRITE capability flota:dispatch — which
+  // read_only/auditor roles do NOT hold. Previously ALL flota mapped to flota:read,
+  // letting a read-only auditor mutate and dispatch the live emergency fleet.
+  else if (isFlotaApi) perm = WRITE_METHODS.has(method) ? 'flota:dispatch' : 'flota:read';
   else if (isCaseAdmin || isPersonModeration) perm = 'persons:moderate';
   else if (isReportModeration) perm = 'reports:moderate';
   else if (isSosTriage) perm = 'sos:triage';

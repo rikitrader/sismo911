@@ -20,6 +20,7 @@ import { uid } from '../lib/db';
 import { audit } from '../lib/audit';
 import { requirePermission, currentUser } from '../rbac/middleware';
 import { bumpEpoch } from '../rbac/engine';
+import { assertGrantable } from '../rbac/grant-guard';
 import { isAllowedOrigin, requestIp, rateLimit } from '../lib/security';
 import { sendEmail, randomToken, sha256hex, type EmailMsg } from '../lib/email';
 import { sendText } from '../lib/sms';
@@ -94,6 +95,11 @@ adminLifecycle.post('/invitations', requirePermission('users:invite'), async (c)
   const channel: InviteChannel = ['email', 'sms', 'magic', 'qr', 'csv'].includes(b?.channel) ? b.channel : 'email';
   const phone = b?.phone ? String(b.phone).trim() : null;
   if (channel === 'sms' && !phone) return c.json({ error: 'phone_required' }, 400);
+  // SECURITY (audit C2): can't invite someone into a role above your own privilege.
+  if (b?.roleKey) {
+    const v = await assertGrantable(c.env, currentUser(c), { roleKeys: [String(b.roleKey)] });
+    if (v) return c.json(v.body, v.status as any);
+  }
 
   const { id, token, link } = await createInvitation(c.env, {
     email, roleKey: b?.roleKey ?? null, deptId: b?.deptId ?? null, channel, phone,
@@ -198,7 +204,22 @@ adminLifecycle.post('/users/:id/approve', requirePermission('users:update'), asy
   const u: any = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(id).first();
   if (!u) return c.json({ error: 'not_found' }, 404);
   const approver = currentUser(c)?.id ?? null;
+  // SECURITY (audit L6): four-eyes — an approver cannot approve their own account.
+  if (approver && approver === id) return c.json({ error: 'cannot_self_approve' }, 403);
   const now = Date.now();
+  // SECURITY (audit H5): the invited role was DEFERRED at accept-time (not granted
+  // to a pending account). Grant it now, on approval, and reconcile the legacy role.
+  const apr: any = await c.env.DB.prepare(
+    `SELECT requested_role_id FROM approval_requests WHERE user_id = ? AND status = 'pending' ORDER BY created_ms DESC LIMIT 1`,
+  ).bind(id).first();
+  if (apr?.requested_role_id) {
+    await c.env.DB.prepare(
+      'INSERT OR IGNORE INTO user_roles (user_id, role_id, granted_by, granted_ms) VALUES (?,?,?,?)',
+    ).bind(id, apr.requested_role_id, approver, now).run();
+    const rk: any = await c.env.DB.prepare('SELECT key FROM rbac_roles WHERE id = ?').bind(apr.requested_role_id).first();
+    const legacy = rk?.key === 'super_admin' ? 'admin' : rk?.key === 'operator' ? 'operator' : null;
+    if (legacy) await c.env.DB.prepare(`UPDATE users SET role = ? WHERE id = ?`).bind(legacy, id).run();
+  }
   await c.env.DB.prepare(`UPDATE users SET status = 'active' WHERE id = ?`).bind(id).run();
   await c.env.DB.prepare(
     `UPDATE approval_requests SET status = 'approved', decided_by = ?, decided_ms = ? WHERE user_id = ? AND status = 'pending'`,
@@ -252,6 +273,12 @@ adminLifecycle.post('/users/:id/temp-roles', requirePermission('roles:assign'), 
   if (!Number.isFinite(expiresMs)) return c.json({ error: 'expires_ms_required' }, 400);
   const roleId = await resolveRoleId(c, b);
   if (!roleId) return c.json({ error: 'role_not_found' }, b?.roleId || b?.roleKey ? 404 : 400);
+  // SECURITY (audit H3): a temp-role grant is still subject to the privilege ceiling.
+  {
+    const rk: any = await c.env.DB.prepare('SELECT key FROM rbac_roles WHERE id = ?').bind(roleId).first();
+    const v = await assertGrantable(c.env, currentUser(c), { roleKeys: rk?.key ? [rk.key] : [] });
+    if (v) return c.json(v.body, v.status as any);
+  }
   // Upsert so re-granting (or converting a permanent grant to temp) updates expiry.
   await c.env.DB.prepare(
     `INSERT INTO user_roles (user_id, role_id, granted_by, granted_ms, expires_ms) VALUES (?,?,?,?,?)

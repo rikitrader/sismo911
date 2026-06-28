@@ -8,7 +8,7 @@ import { redactRow, redactRows, type FieldPolicy } from '../src/rbac/field-polic
 describe('R1 — fine-grained route→permission gate', () => {
   const cases: Array<[string, string, string]> = [
     ['/api/flota/unidades', 'GET', 'flota:read'],
-    ['/api/flota/unidades', 'POST', 'flota:read'],
+    ['/api/flota/unidades', 'POST', 'flota:dispatch'], // audit H1: writes require the write cap, not flota:read
     ['/api/admin/flota/live', 'GET', 'flota:track'],
     ['/api/admin/dedupe-personas', 'POST', 'admin:maintenance'],
     ['/api/contacts', 'POST', 'contacts:manage'],

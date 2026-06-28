@@ -134,9 +134,11 @@ export async function acceptInvitation(
   const status = needApproval ? 'pending' : 'active';
 
   // Keep the legacy users.role coherent with the invited RBAC role so the coarse
-  // fast-path gate stays correct before the engine resolves fine-grained perms.
+  // fast-path gate stays correct. SECURITY (audit H5): when approval is required,
+  // the account stays a privilege-less 'citizen' until an approver activates it —
+  // the privileged legacy role + the user_roles grant are DEFERRED to approval.
   let legacyRole = 'citizen';
-  if (inv.role_id) {
+  if (inv.role_id && !needApproval) {
     const r: any = await env.DB.prepare('SELECT key FROM rbac_roles WHERE id = ?').bind(inv.role_id).first();
     if (r?.key === 'super_admin') legacyRole = 'admin';
     else if (r?.key === 'operator') legacyRole = 'operator';
@@ -150,7 +152,9 @@ export async function acceptInvitation(
      VALUES (?,?,?,?,?,?,?,?,?,?)`,
   ).bind(id, email, name, legacyRole, hash, salt, status, orgId, inv.dept_id ?? null, now).run();
 
-  if (inv.role_id) {
+  // SECURITY (audit H5): only grant the role immediately when no approval is needed.
+  // When approval is required, the grant is deferred to /users/:id/approve.
+  if (inv.role_id && !needApproval) {
     await env.DB.prepare(
       'INSERT OR IGNORE INTO user_roles (user_id, role_id, scope_dept_id, granted_by, granted_ms) VALUES (?,?,?,?,?)',
     ).bind(id, inv.role_id, inv.dept_id ?? null, inv.invited_by ?? null, now).run();

@@ -193,6 +193,17 @@ auth.post('/login', async (c) => {
     }
     if (!mfaOk) return c.json({ error: 'mfa_invalid' }, 401);
   }
+  // SECURITY (audit H4/H5): only an ACTIVE account may obtain a session. A locked /
+  // suspended / inactive / pending account cannot re-authenticate around the
+  // kill-switch, even with valid credentials + MFA.
+  if (row.status && row.status !== 'active') {
+    try {
+      await c.env.DB.prepare(
+        `INSERT INTO login_history (id, user_id, email, ip, ua, ok, reason, created_ms) VALUES (?,?,?,?,?,?,?,?)`
+      ).bind(uid('lh'), row.id, email, ip, ua, 0, `status_${row.status}`, Date.now()).run();
+    } catch { /* ignore */ }
+    return c.json({ error: 'account_inactive', status: row.status }, 403);
+  }
   await c.env.DB.prepare(`UPDATE users SET last_login_ms = ?, last_ip = ? WHERE id = ?`).bind(Date.now(), ip, row.id).run();
   // Record the successful login (login_history) — wrapped so logging never breaks login.
   try {

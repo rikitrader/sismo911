@@ -19,6 +19,8 @@ import { audit } from '../lib/audit';
 import { hashPassword } from '../lib/auth';
 import { requirePermission, requireAnyPermission, currentUser } from '../rbac/middleware';
 import { getEffectivePermissions, bumpEpoch } from '../rbac/engine';
+import { assertGrantable } from '../rbac/grant-guard';
+import { redactRow, loadFieldPolicies } from '../rbac/field-policy';
 import { isAllowedOrigin, requestIp } from '../lib/security';
 import { randomToken, sha256hex, sendEmail, resetEmail } from '../lib/email';
 
@@ -106,8 +108,20 @@ adminRbac.get('/users/:id', requirePermission('users:read'), async (c) => {
   const id = c.req.param('id');
   const user: any = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
   if (!user) return c.json({ error: 'not_found' }, 404);
-  // Never leak credential material in an admin profile payload.
-  delete user.pw_hash; delete user.pw_salt; delete user.mfa_secret;
+  // SECURITY (audit H6): never leak ANY credential material — including the
+  // later-added mfa_backup_codes (hashed MFA recovery codes) — in a profile payload.
+  delete user.pw_hash; delete user.pw_salt; delete user.mfa_secret; delete user.mfa_backup_codes;
+  // SECURITY (audit M1): enforce field-level policies (emergency_contact, notes,
+  // last_ip, …) against the CALLER's permissions before returning the row.
+  let safeUser: any = user;
+  const callerId = currentUser(c)?.id;
+  if (callerId) {
+    const [policies, perms] = await Promise.all([
+      loadFieldPolicies(c.env, 'users'),
+      getEffectivePermissions(c.env, callerId),
+    ]);
+    safeUser = redactRow(user, policies, perms);
+  }
   const roles = ((await c.env.DB.prepare(
     'SELECT r.id, r.key, r.name FROM user_roles ur JOIN rbac_roles r ON r.id = ur.role_id WHERE ur.user_id = ?'
   ).bind(id).all()).results ?? []);
@@ -115,7 +129,7 @@ adminRbac.get('/users/:id', requirePermission('users:read'), async (c) => {
     'SELECT perm_key, effect FROM user_permissions WHERE user_id = ?'
   ).bind(id).all()).results ?? []);
   const effectivePermissions = [...await getEffectivePermissions(c.env, id)];
-  return c.json({ user, roles, directPermissions, effectivePermissions });
+  return c.json({ user: safeUser, roles, directPermissions, effectivePermissions });
 });
 
 adminRbac.post('/users', requirePermission('users:create'), async (c) => {
@@ -127,6 +141,11 @@ adminRbac.post('/users', requirePermission('users:create'), async (c) => {
     return c.json({ error: 'email_taken' }, 409);
 
   const roleKeys: string[] = Array.isArray(b.roleKeys) ? b.roleKeys.filter((k: any) => typeof k === 'string') : [];
+  // SECURITY (audit C1/H2): a `users:create` holder must not be able to mint a
+  // role above their own privilege — enforce the grant ceiling on the seeded roles.
+  const grantViolation = await assertGrantable(c.env, currentUser(c), { roleKeys });
+  if (grantViolation) return c.json(grantViolation.body, grantViolation.status as any);
+
   // Sensible legacy users.role so the coarse fast-path gate stays coherent.
   let legacyRole = 'citizen';
   if (roleKeys.includes('super_admin')) legacyRole = 'admin';
@@ -135,12 +154,15 @@ adminRbac.post('/users', requirePermission('users:create'), async (c) => {
   const id = uid('usr');
   const now = Date.now();
   const { hash, salt } = await hashPassword(randomToken(16)); // random temp password — never returned
+  // SECURITY (audit H2): status is NOT caller-controllable — new users always
+  // start 'pending' and must be activated/approved, so create can't mint an
+  // immediately-active privileged account.
   await c.env.DB.prepare(
     `INSERT INTO users (id,email,name,role,pw_hash,pw_salt,employment_type,job_title,department_id,status,org_id,created_ms)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id, email, b.name, legacyRole, hash, salt,
-    b.employment_type ?? 'employee', b.job_title ?? null, b.department_id ?? null, b.status ?? 'pending', ORG, now
+    b.employment_type ?? 'employee', b.job_title ?? null, b.department_id ?? null, 'pending', ORG, now
   ).run();
 
   for (const key of roleKeys) {
@@ -267,6 +289,14 @@ adminRbac.post('/roles', requirePermission('roles:create'), async (c) => {
   if (!key || !b?.name) return c.json({ error: 'key_and_name_required' }, 400);
   if (await c.env.DB.prepare(`SELECT 1 FROM rbac_roles WHERE key = ? AND IFNULL(org_id,'') = ?`).bind(key, ORG).first())
     return c.json({ error: 'role_exists' }, 409);
+  // SECURITY (audit H3): can't create a role granting perms/inherits beyond your own.
+  {
+    const v = await assertGrantable(c.env, currentUser(c), {
+      roleKeys: Array.isArray(b.inherits) ? b.inherits : [],
+      permKeys: Array.isArray(b.perms) ? b.perms : [],
+    });
+    if (v) return c.json(v.body, v.status as any);
+  }
   const id = uid('role');
   const now = Date.now();
   await c.env.DB.prepare(
@@ -288,6 +318,15 @@ adminRbac.patch('/roles/:id', requirePermission('roles:update'), async (c) => {
   const role: any = await c.env.DB.prepare('SELECT id, is_system FROM rbac_roles WHERE id = ?').bind(id).first();
   if (!role) return c.json({ error: 'not_found' }, 404);
   if (role.is_system && 'key' in b) return c.json({ error: 'system_role_key_immutable' }, 409);
+  // SECURITY (audit H3): a role update can't raise the role's perms/inherits
+  // above the actor's own privilege (e.g. inherits:["super_admin"] self-escalation).
+  {
+    const v = await assertGrantable(c.env, currentUser(c), {
+      roleKeys: b.inherits !== undefined && Array.isArray(b.inherits) ? b.inherits : [],
+      permKeys: Array.isArray(b.perms) ? b.perms : [],
+    });
+    if (v) return c.json(v.body, v.status as any);
+  }
 
   const sets: string[] = []; const binds: any[] = [];
   if (b.name != null) { sets.push('name = ?'); binds.push(b.name); }
@@ -335,8 +374,11 @@ adminRbac.post('/users/:id/roles', requirePermission('roles:assign'), async (c) 
     roleId = r?.id ?? null;
   }
   if (!roleId) return c.json({ error: 'role_required' }, 400);
-  if (!(await c.env.DB.prepare('SELECT 1 FROM rbac_roles WHERE id = ?').bind(roleId).first()))
-    return c.json({ error: 'role_not_found' }, 404);
+  const roleRow: any = await c.env.DB.prepare('SELECT key FROM rbac_roles WHERE id = ?').bind(roleId).first();
+  if (!roleRow) return c.json({ error: 'role_not_found' }, 404);
+  // SECURITY (audit H3/H8): can't assign a role conferring privileges above your own.
+  const v = await assertGrantable(c.env, currentUser(c), { roleKeys: [roleRow.key] });
+  if (v) return c.json(v.body, v.status as any);
   await c.env.DB.prepare(
     'INSERT OR IGNORE INTO user_roles (user_id, role_id, granted_by, granted_ms) VALUES (?,?,?,?)'
   ).bind(userId, roleId, currentUser(c)?.id ?? null, Date.now()).run();
@@ -380,6 +422,12 @@ adminRbac.post('/users/:id/permissions', requirePermission('permissions:grant'),
   if (!perm_key || !['allow', 'deny'].includes(effect)) return c.json({ error: 'perm_key_and_effect_required' }, 400);
   if (!(await c.env.DB.prepare('SELECT 1 FROM rbac_permissions WHERE key = ?').bind(perm_key).first()))
     return c.json({ error: 'unknown_permission' }, 400);
+  // SECURITY (audit H3): an ALLOW grant can't exceed the actor's own privilege.
+  // (A deny is restrictive, so it needs no ceiling.)
+  if (effect === 'allow') {
+    const v = await assertGrantable(c.env, currentUser(c), { permKeys: [perm_key] });
+    if (v) return c.json(v.body, v.status as any);
+  }
   await c.env.DB.prepare(
     `INSERT INTO user_permissions (user_id, perm_key, effect, granted_by, granted_ms) VALUES (?,?,?,?,?)
      ON CONFLICT(user_id, perm_key) DO UPDATE SET effect = excluded.effect, granted_by = excluded.granted_by, granted_ms = excluded.granted_ms`
