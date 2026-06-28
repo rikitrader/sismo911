@@ -365,6 +365,10 @@ app.get('/flota/track', (c) => c.env.ASSETS.fetch(new Request(new URL('/flota-tr
 // Refugios & Evacuación dashboard (public): map + scoring + assignment + logistics.
 app.get('/refugios', (c) => c.env.ASSETS.fetch(new Request(new URL('/refugios.html', c.req.url))));
 
+// Muro Sísmico (public): WhatsApp/Telegram-style community wall about the quakes
+// (reuses the /api/chat backend on the 'terremotos' channel).
+app.get('/muro', (c) => c.env.ASSETS.fetch(new Request(new URL('/muro.html', c.req.url))));
+
 // Offline GPS buffer flush: the phone uploads fixes it captured while the
 // WebSocket was down. Unit-token auth (same as the WS); ingested in 'backfill'
 // mode (24h window, no jump guard, source 'buffered', not broadcast).
