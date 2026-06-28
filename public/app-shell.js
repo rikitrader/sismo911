@@ -37,6 +37,7 @@
     { label: 'Sismos y Daños', d: 'M9 20l-5.4 2.7A1 1 0 012 21.8V6.6a1 1 0 01.55-.9L9 2.5m0 17.5l6 3m-6-3V2.5m6 20.5l5.45-2.72a1 1 0 00.55-.9V4.2a1 1 0 00-1.45-.9L15 5.5m0 17.5V5.5m0 0L9 2.5', items: [
       { label: 'Mapa de Capas', href: '/mapa', m: ['/mapa'], d: 'M9 20l-5.4 2.7A1 1 0 012 21.8V6.6a1 1 0 01.55-.9L9 2.5m0 17.5l6 3m-6-3V2.5m6 20.5l5.45-2.72a1 1 0 00.55-.9V4.2a1 1 0 00-1.45-.9L15 5.5m0 17.5V5.5m0 0L9 2.5' },
       { label: 'Centro Geosísmico', href: '/geosismico', m: ['/geosismico'], d: 'M12 20l-8-8 8-8 8 8-8 8z' },
+      { label: 'Riesgo La Guaira', href: '/laguaira', m: ['/laguaira', '/laguaira.html'], d: 'M3 12h4l2 7 4-14 2 7h6' },
       { label: 'Centro Humanitario', href: '/humanitario', m: ['/humanitario'], d: 'M12 21a9 9 0 100-18 9 9 0 000 18zm0-18c2.6 2.7 2.6 15.3 0 18M3 12h18' },
       { label: 'Capas COP', href: '/layers', m: ['/layers'], d: 'M4 6l8-4 8 4-8 4-8-4zm0 6 8 4 8-4m-16 6 8 4 8-4' },
       { label: 'Satélite IA', href: '/satellite', m: ['/satellite'], d: 'M11 3a8 8 0 108 8M3 21l6-6M14 10l6-6' },
