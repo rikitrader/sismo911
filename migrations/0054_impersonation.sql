@@ -1,0 +1,11 @@
+-- Phase 2 Wave 2 — Admin Tools: impersonation session tagging.
+--
+-- A session row whose `impersonator_id` is non-null is an ACTIVE IMPERSONATION:
+-- it authenticates as the target user, but was minted by the named admin. This
+-- lets getUserFromRequest keep working unchanged (it still resolves the target
+-- user), while the audit trail + SPA banner know who is really driving.
+--
+-- impersonation_log already exists (migrations/0046_rbac_workforce.sql); this
+-- migration only extends sessions. D1 runs each migration exactly once, so the
+-- single additive ADD COLUMN is safe (one ADD per statement, constant default).
+ALTER TABLE sessions ADD COLUMN impersonator_id TEXT;
