@@ -49,6 +49,10 @@ export interface Env {
   RAV_SUPABASE_KEY?: string;
   RAV_INGEST_TOKEN?: string;
   RAV_VISION_MODEL?: string;
+  // Identity-verification resolver (external Chrome service for CNE padrón lookup).
+  // The Worker can't drive a browser; when set, cédula verification POSTs here.
+  CNE_RESOLVER_URL?: string;
+  CNE_RESOLVER_TOKEN?: string; // bearer token for the resolver service
   // Social/web disaster monitor (all optional — features gate on their presence).
   PUBLIC_BASE_URL?: string;
   TELEGRAM_CHANNELS?: string;      // comma-separated public channel handles
