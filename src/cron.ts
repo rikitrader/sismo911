@@ -29,6 +29,7 @@ import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestR
 import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
 import { backfillHospitalMatches } from './ingest/hospital-match';
+import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
 
@@ -154,6 +155,11 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   '5 * * * *': [
     { name: 'history-bootstrap', run: bootstrapHistory },
     { name: 'rav-ingest', run: (env) => ingestRav(env) },
+    // reportesvenezuela.com /pacientes.json (CC0): hospital intakes (ingresados)
+    // upserted as rav_reports kind='hospital'. The :15 hospital-match cron then
+    // cross-matches our desaparecidos against these by name → leads + docket
+    // notes. Light (1 fetch; skips the bulk upsert when the snapshot is unchanged).
+    { name: 'pacientes-rvz', run: ingestPacientesRvz },
     { name: 'rav-stats', run: ingestRavStats },
     { name: 'rav-verified', run: ingestRavVerified },
     // RAV extra datasets: citizen reports (pets/volunteers/trapped/aid/damage) +
