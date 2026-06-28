@@ -11,7 +11,7 @@
     "secret-scan": "bash scripts/secret-scan.sh --all",
     "security-audit": "bash scripts/security-audit.sh",
     "predeploy": "bash scripts/preflight.sh",
-    "deploy": "npm run build:css && wrangler deploy",
+    "deploy": "npm run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:migrate:local": "wrangler d1 migrations apply sismo911 --local",
@@ -19,16 +19,20 @@
     "db:seed:local": "wrangler d1 execute sismo911 --local --file=./migrations/seed.sql",
     "db:seed:remote": "wrangler d1 execute sismo911 --remote --file=./migrations/seed.sql",
     "verify": "tsc --noEmit && vitest run",
-    "build:css": "tailwindcss -i src/styles.css -o public/app.css --minify"
+    "build": "npm run build:css && npm run build:admin",
+    "build:css": "tailwindcss -i src/styles.css -o public/app.css --minify",
+    "build:admin": "node esbuild.admin.mjs && tailwindcss -c tailwind.admin.config.js -i admin-src/admin.css -o public/console/app.css --minify"
   },
   "dependencies": {
     "hono": "^4.6.14",
+    "preact": "^10.29.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",
     "@types/better-sqlite3": "^7.6.13",
     "better-sqlite3": "^12.11.1",
+    "esbuild": "^0.28.1",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.7.2",
     "vitest": "^4.1.9",
