@@ -55,6 +55,20 @@ async function logSecurity(c: Context<{ Bindings: Env }>, type: string, targetId
   } catch { /* security logging never breaks the request */ }
 }
 
+/**
+ * Keep the legacy users.role fast-path consistent with the user's RBAC roles
+ * (audit follow-up: removing a user's super_admin role must also drop the legacy
+ * 'admin' fast-path, else the console shows them de-privileged while they retain
+ * god-mode). RBAC is the source of truth: admin > operator > citizen.
+ */
+async function reconcileLegacyRole(c: Context<{ Bindings: Env }>, userId: string) {
+  const keys = (((await c.env.DB.prepare(
+    'SELECT r.key FROM user_roles ur JOIN rbac_roles r ON r.id = ur.role_id WHERE ur.user_id = ?'
+  ).bind(userId).all()).results ?? []) as any[]).map((r) => r.key);
+  const legacy = keys.includes('super_admin') ? 'admin' : keys.includes('operator') ? 'operator' : 'citizen';
+  await c.env.DB.prepare('UPDATE users SET role = ? WHERE id = ?').bind(legacy, userId).run();
+}
+
 const csvCell = (v: unknown) => {
   const s = v == null ? '' : String(v);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -382,6 +396,7 @@ adminRbac.post('/users/:id/roles', requirePermission('roles:assign'), async (c) 
   await c.env.DB.prepare(
     'INSERT OR IGNORE INTO user_roles (user_id, role_id, granted_by, granted_ms) VALUES (?,?,?,?)'
   ).bind(userId, roleId, currentUser(c)?.id ?? null, Date.now()).run();
+  await reconcileLegacyRole(c, userId);
   await bumpEpoch(c.env, userId);
   await audit(c, 'roles.assign', { userId, roleId });
   await logSecurity(c, 'role.assign', userId, { roleId });
@@ -392,6 +407,7 @@ adminRbac.delete('/users/:id/roles/:roleId', requirePermission('roles:assign'), 
   const userId = c.req.param('id');
   const roleId = c.req.param('roleId');
   await c.env.DB.prepare('DELETE FROM user_roles WHERE user_id = ? AND role_id = ?').bind(userId, roleId).run();
+  await reconcileLegacyRole(c, userId);
   await bumpEpoch(c.env, userId);
   await audit(c, 'roles.unassign', { userId, roleId });
   await logSecurity(c, 'role.unassign', userId, { roleId });
