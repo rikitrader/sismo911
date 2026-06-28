@@ -181,6 +181,35 @@ describe('scoreThreat', () => {
     const t = scoreThreat([{ id: 'd', mag: 7.5, time_ms: now - 60 * H, alert: 'red', place: 'x' }], now);
     expect(t.level).toBe(1);
   });
+
+  // ---- continuous score system (arithmetic index 0..100) ----
+  it('emits a numeric score with an auditable component breakdown', () => {
+    const t = scoreThreat([{ id: 'e', mag: 4.6, time_ms: now - 3 * H, depth_km: 8, place: 'x', source: 'usgs' }], now);
+    expect(t.score).toBeGreaterThan(0);
+    expect(t.score).toBeLessThanOrEqual(100);
+    const sum = t.components.magnitude + t.components.impact + t.components.swarm + t.components.depth;
+    expect(Math.abs(sum - t.score)).toBeLessThanOrEqual(1);
+    expect(t.components.depth).toBeGreaterThan(0); // shallow 8km moderate quake amplifies
+  });
+  it('floors the score at >=90 for a PAGER-red event and credits both agencies', () => {
+    const t = scoreThreat([
+      { id: 'f', mag: 7.5, time_ms: now - 22 * H, alert: 'red', mmi: 9, place: 'Yumare', source: 'usgs' },
+      { id: 'g', mag: 5.1, time_ms: now - 1 * H, place: 'Falcón', source: 'funvisis' },
+    ], now);
+    expect(t.score).toBeGreaterThanOrEqual(90);
+    expect(t.sources).toEqual(['FUNVISIS', 'USGS']);
+  });
+  it('a quiet feed scores near zero', () => {
+    const t = scoreThreat([{ id: 'h', mag: 2.1, time_ms: now - 5 * H, place: 'x' }], now);
+    expect(t.score).toBeLessThan(15);
+    expect(t.level).toBe(1);
+  });
+  it('aftershock swarm lifts the swarm component', () => {
+    const quakes = Array.from({ length: 6 }, (_, i) => ({ id: 's' + i, mag: 3.8, time_ms: now - i * H, place: 'x' }));
+    const t = scoreThreat(quakes, now);
+    expect(t.recent_6h).toBeGreaterThanOrEqual(5);
+    expect(t.components.swarm).toBeGreaterThan(0);
+  });
 });
 
 describe('security: link-spam gate for public submissions', () => {
