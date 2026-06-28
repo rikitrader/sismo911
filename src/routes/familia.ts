@@ -214,7 +214,7 @@ familia.get('/person/:id', async (c) => {
   return c.json({
     id: p.id, full_name: p.nombre, age: p.edad, last_seen: p.ubicacion,
     since: p.fecha || null, reporter: op ? (p.contacto || null) : null, description: p.descripcion || null,
-    status: estadoToStatus(p.estado), estado: p.estado, found_by: p.localizado_por || null,
+    status: estadoToStatus(p.estado), estado: p.estado, found_by: op ? (p.localizado_por || null) : null,
     photo_url: (p.foto_r2 || p.foto) ? `/api/familia/photo/${p.id}` : null,
     share_url: `https://sismo911.com/familia?persona=${p.id}`,
   });

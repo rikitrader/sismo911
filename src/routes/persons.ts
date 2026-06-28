@@ -110,9 +110,19 @@ async function famPerson(env: any, id: string, op: boolean): Promise<any> {
     photo_url: row.foto_r2 ? `/api/familia/photo/${row.id}` : (row.foto || null),
     notes: row.descripcion, created_ms: row.created_at, updated_ms: row.updated_at, source: 'familia',
     contact_phone: row.contacto || null, reported_by: null, last_seen_lat: null, last_seen_lon: null,
+    // Estado provenance: estado is carried so the case file can synthesize a
+    // status timeline node (an ingested "localizado" lives only on this row, not
+    // in person_events). localizado_* identify WHO reported it found — reporter
+    // PII, operator-only — and are stripped for the public response below.
+    estado: row.estado || null,
+    localizado_por: row.localizado_por || null, localizado_relacion: row.localizado_relacion || null,
+    localizado_nota: row.localizado_nota || null, localizado_contacto: row.localizado_contacto || null,
   };
   if (op) return base;
-  const { contact_phone, reported_by, last_seen_lat, last_seen_lon, priority, assigned_to, ...pub } = base;
+  const {
+    contact_phone, reported_by, last_seen_lat, last_seen_lon, priority, assigned_to,
+    localizado_por, localizado_relacion, localizado_nota, localizado_contacto, ...pub
+  } = base;
   return pub;
 }
 
