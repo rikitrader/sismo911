@@ -279,6 +279,7 @@ app.get('/api/status', async (c) => {
     { key: 'traffic', label: 'Cierres viales / tráfico', configured: false, reason: 'Feeds 511 son EE.UU.; sin equivalente público en VE' },
     { key: 'funvisis', label: 'FUNVISIS (servicio sísmico nacional)', configured: true, reason: 'EN VIVO — feed público maravilla.json, ingerido cada hora junto a USGS' },
     { key: 'gov_official', label: 'Otros datos oficiales (PC/Defensa Civil)', configured: false, reason: 'Sin API pública — ingreso por consola / convenio' },
+    { key: 'familia_resolver', label: 'Resolver familia (Chrome real, theempire)', configured: Boolean(env.FAMILIA_RESOLVER_URL), reason: env.FAMILIA_RESOLVER_URL ? 'EN VIVO — ingest pasa por el resolver de Chrome real (theempire tras reCAPTCHA)' : 'Requiere FAMILIA_RESOLVER_URL (servicio Chrome externo); sin él el ingest de theempire queda degradado. RAV sigue como fuente.' },
   ];
   return c.json({
     ingest: ingestRows,
