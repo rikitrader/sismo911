@@ -70,6 +70,8 @@ export function SupportInboxPage() {
         actions={<button class="btn btn-ghost btn-sm" onClick={list.reload} aria-label="Recargar"><Icon.refresh size={15} /> Recargar</button>}
       />
 
+      <InboundEmailToggle />
+
       <div class="flex flex-wrap items-center gap-2 mb-4">
         {FILTERS.map((f) => (
           <button key={f.id} class={`pill ${filter === f.id ? 'bg-brand text-white' : 'surface-subtle bordered text-muted'}`} onClick={() => { setFilter(f.id); setSelectedId(null); }}>
@@ -193,6 +195,41 @@ function TicketDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
           <button class="btn btn-primary btn-sm" disabled={busy} onClick={sendReply}><Icon.mail size={14} /> Responder</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Persisted inbound-email toggle. Reflects + flips the server feature flag that
+// gates the Worker email() handler. Fail-closed: off until an operator enables it.
+function InboundEmailToggle() {
+  const r = useResource<{ inbound_email_enabled: boolean }>(() => sup('/admin/settings'), []);
+  const [busy, setBusy] = useState(false);
+  const on = !!r.data?.inbound_email_enabled;
+
+  async function flip() {
+    setBusy(true);
+    try {
+      await sup('/admin/settings', { method: 'PUT', body: JSON.stringify({ inbound_email_enabled: !on }) });
+      toast(!on ? 'Respuestas por correo activadas.' : 'Respuestas por correo desactivadas.', 'success');
+      r.reload();
+    } catch (e: any) { toast(e?.message || 'No se pudo cambiar.', 'error'); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div class="card flex items-center gap-3 mb-4 py-3">
+      <Icon.mail size={18} class={on ? 'text-ok' : 'text-faint'} />
+      <div class="min-w-0 flex-1">
+        <div class="font-medium text-[14px]">Respuestas por correo (inbound)</div>
+        <div class="text-[12px] text-faint">
+          {on
+            ? 'Activado: los correos de respuesta se adjuntan al ticket. Requiere la regla de Email Routing (soporte@ → Worker).'
+            : 'Desactivado: los correos entrantes se ignoran. Actívalo cuando la regla de Email Routing esté lista.'}
+        </div>
+      </div>
+      <button class={`btn btn-sm ${on ? 'btn-outline text-danger' : 'btn-primary'}`} disabled={busy || r.loading} onClick={flip}>
+        {r.loading ? '…' : on ? 'Desactivar' : 'Activar'}
+      </button>
     </div>
   );
 }
