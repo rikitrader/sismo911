@@ -17,7 +17,7 @@ export const MODULES = [
   'patients', 'cases', 'incidents', 'hospitals', 'volunteers', 'resources',
   'vehicles', 'shelters', 'donations', 'telemedicina', 'missing_persons',
   'familia', 'earthquake', 'flood', 'fire', 'hurricane', 'weather',
-  'reports', 'analytics', 'flota', 'suministros', 'ai', 'monitoring', 'refugios',
+  'reports', 'analytics', 'flota', 'suministros', 'ai', 'monitoring', 'refugios', 'ninez',
 ];
 
 // ── Permission catalog: resource → [actions], with UI category + labels ──────
@@ -57,6 +57,7 @@ const RESOURCES = {
   suministros:   { cat: 'Logistics',      actions: ['read','manage'] },
   reports:       { cat: 'Operations',     actions: ['read','export','moderate'] },
   refugios:      { cat: 'Operations',     actions: ['read','manage'] },
+  ninez:         { cat: 'Operations',     actions: ['read','manage'] },
   analytics:     { cat: 'Operations',     actions: ['read'] },
   settings:      { cat: 'System',         actions: ['read','manage'] },
   system:        { cat: 'System',         actions: ['read','manage'] },
@@ -113,7 +114,7 @@ export const ROLES = [
     desc: 'Runs operations; manages staff, teams and reporting.' },
   { key: 'emergency_manager', name: 'Emergency Manager',
     inherits: ['dispatcher'],
-    perms: [...allOf('cases','incidents','shelters','resources','volunteers','flota','suministros','refugios'), 'analytics:read','reports:read','reports:export'],
+    perms: [...allOf('cases','incidents','shelters','resources','volunteers','flota','suministros','refugios','ninez'), 'analytics:read','reports:read','reports:export'],
     desc: 'Coordinates incident response across modules.' },
   { key: 'dispatcher',   name: 'Dispatcher',
     perms: [...readOf('incidents','cases','shelters','resources','volunteers'), 'flota:read','flota:dispatch','flota:track','incidents:create','incidents:update','cases:assign'],

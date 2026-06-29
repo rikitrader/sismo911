@@ -19,7 +19,7 @@ export const LEGACY_OPS_PERM = 'ops:console';
 export const ADMIN_WRITE_PREFIXES = [
   '/api/contacts', '/api/resources', '/api/acopio', '/api/danos-estructurales',
   '/api/admin', '/api/aid-orgs', '/api/emergencia', '/api/flota', '/api/suministros',
-  '/api/refugios', '/api/casualties',
+  '/api/refugios', '/api/casualties', '/api/ninez',
 ];
 
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
@@ -52,6 +52,10 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   '/api/funding', '/api/humanitarian', '/api/mascotas', '/api/monitor',
   '/api/persons', '/api/push', '/api/rav', '/api/rbac', '/api/refugios', '/api/casualties', '/api/reports',
   '/api/resources', '/api/sat', '/api/shelters', '/api/sos', '/api/suministros', '/api/triage',
+  // Niñez/Vulnerables module — public reads return OFFICIAL, AGGREGATED data only
+  // (no individual minor). Operator /api/ninez/admin reads + all writes are gated
+  // below (ninez:manage). Public GETs reach the official-only handlers.
+  '/api/ninez',
   '/api/telemedicina', '/api/v1', '/api/voluntarios', '/api/x402', '/api/admin',
   // Profile Command Center — every endpoint self-authenticates via
   // getUserFromRequest and is scoped to the caller's own user id (like /api/x402).
@@ -121,11 +125,14 @@ export function evaluateGate(path: string, method: string): GateDecision {
   // SPA page AND its read APIs require suministros:read, not just writes.
   const isSuministrosPage = path === '/suministros' || path.startsWith('/suministros/');
   const isSuministrosRead = method === 'GET' && path.startsWith('/api/suministros/');
+  // Niñez operator reads (estimates included) are gated; public /api/ninez reads
+  // (official-only) stay open via PUBLIC_API_PREFIXES.
+  const isNinezAdminRead = method === 'GET' && path.startsWith('/api/ninez/admin');
 
   const gated = isAdminPage || isAdminWrite || isReportModeration || isPersonModeration ||
     isDocketSubmit || isCaseAdmin || isSosTriage || isDamageReview || isManualRefresh ||
     isShelterModeration || isSatWrite || isAcopioReview || isFlotaApi || isFlotaAdminApi ||
-    isSuministrosPage || isSuministrosRead;
+    isSuministrosPage || isSuministrosRead || isNinezAdminRead;
 
   if (!gated) {
     // M1 default-deny: an un-gated /api route must be on the public allow-list,
@@ -137,6 +144,7 @@ export function evaluateGate(path: string, method: string): GateDecision {
   if (isAdminPage) return { kind: 'page' };          // gated, but HTML → login redirect on fail
   if (isSuministrosPage) return { kind: 'page', perm: 'suministros:read' }; // SPA shell → login redirect
   if (isSuministrosRead) return { kind: 'perm', perm: 'suministros:read' }; // read APIs
+  if (isNinezAdminRead) return { kind: 'perm', perm: 'ninez:manage' };      // operator reads (estimates)
   if (isDocketSubmit) return { kind: 'login' };       // any logged-in user (citizen updates land 'pending')
 
   // Phase 2 R1: map each surface to its FINE-GRAINED permission (replaces the coarse
@@ -176,6 +184,7 @@ function adminWritePermFor(path: string): string {
   if (path.startsWith('/api/danos-estructurales')) return 'damage:moderate';
   if (path.startsWith('/api/aid-orgs')) return 'aid_orgs:manage';
   if (path.startsWith('/api/refugios')) return 'refugios:manage';
+  if (path.startsWith('/api/ninez')) return 'ninez:manage';
   // Casualty ledger manual entry → admin:maintenance (held by operator + super_admin),
   // so no new permission/role mapping is introduced (route-policy backward-compat test).
   if (path.startsWith('/api/casualties')) return 'admin:maintenance';
