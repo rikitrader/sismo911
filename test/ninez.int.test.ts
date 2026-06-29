@@ -93,6 +93,29 @@ describe('/api/ninez — PRIVACY: public reads are official-only + carry no mino
   });
 });
 
+describe('/api/ninez/alertas — child-priority classification', () => {
+  it('flags unmet life-critical needs as critica and others as alerta (official only)', async () => {
+    await call(app, 'POST', `/api/ninez/refugios/${SITE}/population`, env, { category_key: 'menores_0_5', count: 20, official: 1 });
+    await call(app, 'POST', `/api/ninez/refugios/${SITE}/need`, env, { need_key: 'formula_lactante', status: 'requerido', official: 1 });
+    await call(app, 'POST', `/api/ninez/refugios/${SITE}/need`, env, { need_key: 'ropa', status: 'requerido', official: 1 });
+    await call(app, 'POST', `/api/ninez/refugios/${SITE}/need`, env, { need_key: 'panales', status: 'requerido', official: 0 }); // estimate → excluded
+
+    const r = await call(app, 'GET', '/api/ninez/alertas', env);
+    expect(r.status).toBe(200);
+    const formula = r.json.alertas.find((a: any) => a.need_key === 'formula_lactante');
+    const ropa = r.json.alertas.find((a: any) => a.need_key === 'ropa');
+    expect(formula.severity).toBe('critica');
+    expect(ropa.severity).toBe('alerta');
+    expect(r.json.alertas.find((a: any) => a.need_key === 'panales')).toBeUndefined(); // official=0 excluded
+    expect(r.json.alertas[0].severity).toBe('critica'); // critica sorts first
+    expect(r.json.counts.critica).toBeGreaterThanOrEqual(1);
+  });
+
+  it('alertas is public (open) and carries no minor PII', () => {
+    expect(evaluateGate('/api/ninez/alertas', 'GET').kind).toBe('open');
+  });
+});
+
 describe('/api/ninez — RBAC classification', () => {
   it('public reads are open; admin reads + writes require ninez:manage', () => {
     expect(evaluateGate('/api/ninez/refugios', 'GET').kind).toBe('open');

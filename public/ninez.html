@@ -82,8 +82,15 @@
   </div>
 
   <nav class="subnav">
-    <a href="#mapa">Mapa</a><a href="#refugios">Refugios</a><a href="#regiones">Por región</a><a href="#necesidades">Necesidades</a>
+    <a href="#alertas">Alertas</a><a href="#mapa">Mapa</a><a href="#refugios">Refugios</a><a href="#regiones">Por región</a><a href="#necesidades">Necesidades</a>
   </nav>
+
+  <!-- ALERTAS -->
+  <section id="alertas" class="card pad" style="margin-bottom:16px">
+    <h2>Alertas prioritarias de la niñez</h2>
+    <p class="lede" style="margin-bottom:10px">Clasificación de alertas relacionadas con niños y adolescentes, derivada de los datos oficiales: necesidades prioritarias sin cubrir, refugios con población infantil al límite de su capacidad y cierres de centros con atención infantil.</p>
+    <div id="alertList"><div class="empty">—</div></div>
+  </section>
 
   <!-- empty-state banner (shown when no official data yet) -->
   <div class="note" id="emptyBanner" style="display:none;margin-bottom:16px">ℹ️ Aún no hay <b>datos oficiales</b> publicados por las autoridades para esta sección. Cuando un organismo competente autorice y registre información agregada (refugios con atención infantil, número de menores atendidos, necesidades prioritarias), aparecerá aquí automáticamente. Las estimaciones de planificación no se muestran al público.</div>
@@ -145,11 +152,13 @@ const esc = (s) => (s||'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':
 let REFUGIOS = [], map, layer;
 
 async function boot(){
-  const [refs, sum] = await Promise.all([
+  const [refs, sum, alr] = await Promise.all([
     fetch('/api/ninez/refugios').then(r=>r.json()).catch(()=>({refugios:[]})),
     fetch('/api/ninez/summary').then(r=>r.json()).catch(()=>null),
+    fetch('/api/ninez/alertas').then(r=>r.json()).catch(()=>({alertas:[]})),
   ]);
   REFUGIOS = refs.refugios || [];
+  renderAlerts(alr.alertas||[]);
   if(sum){
     document.getElementById('s_minors').textContent = fmt(sum.totals.minors);
     document.getElementById('s_shelters').textContent = fmt(sum.totals.sheltersWithChildPopulation);
@@ -201,6 +210,21 @@ function renderShelters(){
     </div>`).join('');
 }
 
+const ALERT_KIND = { necesidad:'Necesidad sin cubrir', capacidad:'Capacidad al límite', cierre:'Centro cerrado' };
+const SEV = { critica:{l:'Crítica',c:'#bb0027',bg:'#fef2f2',bd:'#fecaca'}, alerta:{l:'Alerta',c:'#b45309',bg:'#fffbeb',bd:'#fde68a'}, info:{l:'Info',c:'#475569',bg:'#f8fafc',bd:'#e2e8f0'} };
+function renderAlerts(rows){
+  const host = document.getElementById('alertList');
+  if(!rows.length){ host.innerHTML = '<div class="empty">Sin alertas prioritarias con información oficial.</div>'; return; }
+  host.innerHTML = rows.map(a=>{
+    const s = SEV[a.severity]||SEV.info;
+    const what = a.kind==='necesidad' ? (NEED_LABEL[a.need_key]||a.need_key) : (ALERT_KIND[a.kind]||a.kind);
+    return `<div class="regionrow" style="align-items:center">
+      <span><span class="need" style="background:${s.bg};color:${s.c};border:1px solid ${s.bd}">${s.l}</span>
+        &nbsp;<b>${esc(a.site_nombre)}</b> <span style="color:var(--muted)">· ${esc(a.region||'')}</span></span>
+      <span style="font-size:13px">${esc(what)}${a.minors?` <span style="color:var(--muted)">· ${fmt(a.minors)} menores</span>`:''}</span>
+    </div>`;
+  }).join('');
+}
 function renderRegions(rows){
   const host = document.getElementById('regionList');
   host.innerHTML = rows.length ? rows.map(r=>
