@@ -21,8 +21,9 @@ const get = async (app: Hono, env: any) =>
 
 const addConsult = (db: D1Mock, id: string, status: string) =>
   db.raw.prepare(`INSERT INTO telemed_requests (id, patient_name, status) VALUES (?,?,?)`).run(id, 'Paciente', status);
-const addPersona = (db: D1Mock, id: string, estado: string) =>
-  db.raw.prepare(`INSERT INTO personas (id, estado) VALUES (?,?)`).run(id, estado);
+// localizado_nota present only when SISMO911's operator-confirm flow recorded it.
+const addPersona = (db: D1Mock, id: string, estado: string, nota: string | null = null) =>
+  db.raw.prepare(`INSERT INTO personas (id, estado, localizado_nota) VALUES (?,?,?)`).run(id, estado, nota);
 
 describe('GET /api/impact/personas-ayudadas — real, auditable, never fake', () => {
   it('returns total 0 (→ UI shows "—") when there is NO verified data', async () => {
@@ -33,32 +34,36 @@ describe('GET /api/impact/personas-ayudadas — real, auditable, never fake', ()
     expect(j.breakdown).toEqual({ medical_consults: 0, persons_located_safe: 0 });
   });
 
-  it('counts ONLY completed consultations + located/found/hospitalized persons', async () => {
+  it('counts completed consults + ONLY platform-located persons (localizado + nota)', async () => {
     const { db, app, env } = setup();
-    // verified help:
+    // verified, platform-facilitated help:
     addConsult(db, 'c1', 'completed');
     addConsult(db, 'c2', 'completed');
-    addPersona(db, 'p1', 'aparecido');
-    addPersona(db, 'p2', 'localizado');
-    addPersona(db, 'p3', 'hospitalizado');
-    // NOT help (must be excluded):
+    addPersona(db, 'p1', 'localizado', 'Reunida con su familia en La Guaira'); // counts
+    addPersona(db, 'p2', 'localizado', 'Localizada en hospital');             // counts
+    // NOT SISMO911 outcomes (must be excluded):
     addConsult(db, 'c3', 'open');
     addConsult(db, 'c4', 'cancelled');
-    addConsult(db, 'c5', 'scheduled');
-    addPersona(db, 'p4', 'sin-contacto');
-    addPersona(db, 'p5', 'fallecido');
+    addPersona(db, 'pi1', 'aparecido');               // imported historical status
+    addPersona(db, 'pi2', 'hospitalizado');           // imported historical status
+    addPersona(db, 'pi3', 'localizado', null);        // localizado WITHOUT a platform note → imported
+    addPersona(db, 'pi4', 'localizado', '');          // empty note → not a real platform record
+    addPersona(db, 'pi5', 'sin-contacto');
+    addPersona(db, 'pi6', 'fallecido');
     const j = await get(app, env);
-    expect(j.breakdown).toEqual({ medical_consults: 2, persons_located_safe: 3 });
-    expect(j.total).toBe(5);
+    expect(j.breakdown).toEqual({ medical_consults: 2, persons_located_safe: 2 });
+    expect(j.total).toBe(4);
   });
 
-  it('the value tracks real rows (data-derived, not a constant)', async () => {
+  it('the imported registry NEVER inflates the metric (anti-fabrication guard)', async () => {
     const { db, app, env } = setup();
-    expect((await get(app, env)).total).toBe(0);
-    addPersona(db, 'p1', 'aparecido');
+    // simulate a large imported registry — none of these are SISMO911 outcomes
+    for (let i = 0; i < 50; i++) addPersona(db, 'imp' + i, i % 2 ? 'aparecido' : 'hospitalizado');
+    addPersona(db, 'impL', 'localizado', null); // imported localizado, no platform note
+    expect((await get(app, env)).total).toBe(0); // stays 0 → UI shows "—"
+    // one REAL platform location appears → counts exactly 1
+    addPersona(db, 'real1', 'localizado', 'Confirmada por operador');
     expect((await get(app, env)).total).toBe(1);
-    addConsult(db, 'c1', 'completed');
-    expect((await get(app, env)).total).toBe(2);
   });
 
   it('is public (no auth required) and exposes its definition for auditability', async () => {
