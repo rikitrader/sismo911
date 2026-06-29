@@ -45,6 +45,58 @@
       #packet{display:block !important;padding:0}
       .no-print{display:none !important}
     }
+
+    /* ── "Por estado" summary card (fintech style, per mockup) ─────────────── */
+    .pe-card{background:#fff;border:1px solid #eef1f6;border-radius:24px;padding:26px 28px 28px;box-shadow:0 18px 44px rgba(20,40,80,.06),0 2px 8px rgba(20,40,80,.04)}
+    .pe-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .pe-title{font:900 30px/1.05 'Public Sans';letter-spacing:-.02em;color:#0f1830;margin:0}
+    .pe-sub{font:500 15px Inter;color:#7b89a3;margin-top:6px}
+    .pe-pill{display:inline-flex;align-items:center;gap:9px;background:#fff;border:1px solid #e7ebf3;border-radius:14px;padding:10px 13px;box-shadow:0 4px 14px rgba(20,40,80,.06)}
+    .pe-pill>svg{width:18px;height:18px;color:#3b6df5;flex-shrink:0}
+    .pe-pill select{width:auto;border:none;background:transparent;box-shadow:none;font:700 15px 'Public Sans';color:#1f2a44;padding:0 4px 0 0;cursor:pointer;-webkit-appearance:none;appearance:none}
+    .pe-pill select:focus{outline:none;box-shadow:none}
+    .pe-caret{width:16px;height:16px;color:#9aa6bd;flex-shrink:0}
+
+    .pe-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:30px;align-items:center;margin-top:22px}
+    @media(max-width:780px){.pe-body{grid-template-columns:1fr;gap:24px}}
+
+    .pe-donut-wrap{display:grid;place-items:center}
+    .pe-donut{position:relative;width:300px;max-width:100%;aspect-ratio:1}
+    .pe-donut svg{width:100%;height:100%;display:block;transform:rotate(-90deg)}
+    .pe-donut-center{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:0 18%}
+    .pe-donut-total{font:900 62px/1 'Public Sans';letter-spacing:-.03em;color:#0f1830}
+    .pe-donut-lbl{font:700 17px 'Public Sans';color:#2a3650;margin-top:4px}
+    .pe-donut-sub{font:500 13.5px Inter;color:#8b98b1;margin-top:2px}
+
+    .pe-stats{display:flex;flex-direction:column;gap:16px}
+    .pe-stat{display:flex;align-items:center;gap:16px;border-radius:18px;padding:17px 20px}
+    .pe-stat.green{background:#eef8f0}
+    .pe-stat.amber{background:#fff6e8}
+    .pe-stat.red{background:#fdeeee}
+    .pe-ico{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;color:#fff}
+    .pe-ico svg{width:26px;height:26px}
+    .pe-stat.green .pe-ico{background:#22a04a}
+    .pe-stat.amber .pe-ico{background:#f5a417}
+    .pe-stat.red .pe-ico{background:#e4392f}
+    .pe-stat-main{flex:1;min-width:0}
+    .pe-stat-name{font:800 19px 'Public Sans';color:#1b2640}
+    .pe-stat-desc{font:500 14px Inter;color:#8492aa;margin-top:1px}
+    .pe-stat-fig{text-align:right;flex-shrink:0}
+    .pe-stat-n{font:900 26px 'Public Sans';letter-spacing:-.01em}
+    .pe-stat-pct{font:800 14px 'Public Sans';margin-top:2px}
+    .pe-stat.green .pe-stat-n,.pe-stat.green .pe-stat-pct{color:#1d873f}
+    .pe-stat.amber .pe-stat-n,.pe-stat.amber .pe-stat-pct{color:#b9760a}
+    .pe-stat.red .pe-stat-n,.pe-stat.red .pe-stat-pct{color:#c92f26}
+
+    .pe-empty{display:flex;align-items:center;gap:20px;background:#f6f8fc;border:1px solid #eef1f7;border-radius:18px;padding:22px 24px;margin-top:24px}
+    .pe-empty[hidden]{display:none}
+    .pe-empty-ico{width:58px;height:58px;border-radius:16px;background:#e7edfb;display:grid;place-items:center;flex-shrink:0;color:#3b6df5}
+    .pe-empty-ico svg{width:28px;height:28px}
+    .pe-empty-tt{font:800 19px 'Public Sans';color:#1b2640}
+    .pe-empty-tx{font:500 14.5px Inter;color:#7b89a3;margin-top:3px;max-width:440px}
+    .pe-empty-art{margin-left:auto;color:#cdd8f0;flex-shrink:0}
+    .pe-empty-art svg{width:118px;height:88px}
+    @media(max-width:600px){.pe-empty-art{display:none}}
   </style>
   <script>/* CSP-safe image fallback: hides broken imgs marked data-hide-on-err */addEventListener("error",function(e){var t=e.target;if(t&&t.tagName==="IMG"&&t.hasAttribute("data-hide-on-err"))t.style.display="none"},true)</script>
 </head>
@@ -92,22 +144,63 @@
       </div>
     </div>
 
-    <!-- summary -->
-    <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
-      <div class="card p-3"><div id="s_total" class="font-display font-black text-2xl">—</div><div class="eyebrow">Expedientes</div></div>
-      <div class="card p-3"><div id="s_missing" class="font-display font-black text-2xl text-warning">—</div><div class="eyebrow">Desaparecidas</div></div>
-      <div class="card p-3"><div id="s_safe" class="font-display font-black text-2xl text-safe">—</div><div class="eyebrow">A salvo</div></div>
-      <div class="card p-3"><div id="s_dead" class="font-display font-black text-2xl" style="color:#475569">—</div><div class="eyebrow">Fallecidas</div></div>
-      <div class="card p-3"><div id="s_pending" class="font-display font-black text-2xl text-primary">—</div><div class="eyebrow">Reportes pend.</div></div>
-      <div class="card p-3"><div id="s_alta" class="font-display font-black text-2xl text-error">—</div><div class="eyebrow">Prioridad alta</div></div>
+    <!-- summary: Por estado (resumen general de casos) -->
+    <div class="pe-card" id="estadoCard">
+      <div class="pe-head">
+        <div>
+          <h2 class="pe-title">Por estado</h2>
+          <div class="pe-sub">Resumen general de casos</div>
+        </div>
+        <label class="pe-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <select id="pe_period" aria-label="Período del resumen">
+            <option value="0">Todo el período</option>
+            <option value="1">Hoy</option>
+            <option value="7">Últimos 7 días</option>
+            <option value="30">Este mes</option>
+          </select>
+          <svg class="pe-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </label>
+      </div>
+      <div class="pe-body">
+        <div class="pe-donut-wrap">
+          <div class="pe-donut" id="pe_donut"></div>
+        </div>
+        <div class="pe-stats">
+          <div class="pe-stat green">
+            <div class="pe-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></div>
+            <div class="pe-stat-main"><div class="pe-stat-name">Completados</div><div class="pe-stat-desc">Casos resueltos</div></div>
+            <div class="pe-stat-fig"><div class="pe-stat-n" id="pe_n_green">0</div><div class="pe-stat-pct" id="pe_p_green">0%</div></div>
+          </div>
+          <div class="pe-stat amber">
+            <div class="pe-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
+            <div class="pe-stat-main"><div class="pe-stat-name">Pendientes</div><div class="pe-stat-desc">En proceso</div></div>
+            <div class="pe-stat-fig"><div class="pe-stat-n" id="pe_n_amber">0</div><div class="pe-stat-pct" id="pe_p_amber">0%</div></div>
+          </div>
+          <div class="pe-stat red">
+            <div class="pe-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></svg></div>
+            <div class="pe-stat-main"><div class="pe-stat-name">Fallidos</div><div class="pe-stat-desc">Sin resolución</div></div>
+            <div class="pe-stat-fig"><div class="pe-stat-n" id="pe_n_red">0</div><div class="pe-stat-pct" id="pe_p_red">0%</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="pe-empty" id="pe_empty" hidden>
+        <div class="pe-empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg></div>
+        <div>
+          <div class="pe-empty-tt">Sin registros aún</div>
+          <div class="pe-empty-tx">Aún no hay casos en el período seleccionado.</div>
+        </div>
+        <div class="pe-empty-art" aria-hidden="true">
+          <svg viewBox="0 0 120 90" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="14" width="46" height="62" rx="5"/><rect x="34" y="9" width="18" height="9" rx="3"/><path d="M30 33h26M30 44h26M30 55h18"/><path d="M78 76V46M92 76V34M106 76V54"/><path d="M74 40l14-12 10 8 12-14"/></svg>
+        </div>
+      </div>
     </div>
 
     <!-- filters -->
-    <div class="card p-4 grid sm:grid-cols-5 gap-3">
+    <div class="card p-4 grid sm:grid-cols-4 gap-3">
       <div class="sm:col-span-2"><input id="q" placeholder="Buscar nº de caso, nombre, lugar, teléfono…"></div>
       <select id="f_status"><option value="">Todos los estados</option><option value="missing">Desaparecida</option><option value="found_safe">A salvo</option><option value="aparecido">Apareció</option><option value="hospitalizado">Hospitalizada</option><option value="found_deceased">Fallecida</option><option value="unknown">Desconocido</option></select>
       <select id="f_priority"><option value="">Toda prioridad</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select>
-      <select id="f_since"><option value="0">Cualquier fecha</option><option value="1">Últimas 24 h</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option></select>
     </div>
 
     <!-- table -->
@@ -224,14 +317,11 @@ async function load(){
   if($('#q').value.trim())p.set('q',$('#q').value.trim());
   if($('#f_status').value)p.set('status',$('#f_status').value);
   if($('#f_priority').value)p.set('priority',$('#f_priority').value);
-  const d=Number($('#f_since').value); if(d)p.set('since',String(Date.now()-d*86400000));
+  const d=Number($('#pe_period').value); if(d)p.set('since',String(Date.now()-d*86400000));
   const r=await api('persons/cases?'+p.toString());
   if(r.status===401){document.body.innerHTML='<div style="padding:3rem;text-align:center;font-family:sans-serif">Sesión requerida. <a href="/login?next=/admin-casos">Inicia sesión como operador</a>.</div>';return;}
   const {cases=[],summary={}}=await r.json();
-  $('#s_total').textContent=summary.total??0; $('#s_missing').textContent=summary.missing??0;
-  $('#s_safe').textContent=summary.found_safe??0; $('#s_dead').textContent=summary.deceased??0;
-  $('#s_pending').textContent=summary.pending??0;
-  $('#s_alta').textContent=cases.filter(c=>c.priority==='alta').length;
+  renderEstadoCard(cases);
   const tb=$('#rows');
   if(!cases.length){tb.innerHTML='<tr><td colspan="10" class="text-center text-on-surface-variant py-8">No hay expedientes.</td></tr>';$('#count').textContent='';return;}
   tb.innerHTML=cases.map(c=>`<tr class="row" data-id="${esc(c.id)}">
@@ -254,7 +344,63 @@ async function load(){
 $('#refreshBtn').onclick=load;
 let t;const deb=fn=>{clearTimeout(t);t=setTimeout(fn,300);};
 $('#q').addEventListener('input',()=>deb(load));
-['f_status','f_priority','f_since'].forEach(id=>$('#'+id).addEventListener('change',load));
+['f_status','f_priority','pe_period'].forEach(id=>$('#'+id).addEventListener('change',load));
+
+// ---------------- "Por estado" summary card ----------------
+// Map the 6 case statuses into the 3 buckets shown in the card:
+//   Completados (resueltos)  = localizadas con vida      → found_safe + aparecido
+//   Pendientes  (en proceso) = casos aún activos          → missing + hospitalizado + unknown
+//   Fallidos    (sin resol.) = fallecidas                 → found_deceased
+// Counts are derived from the cases actually returned for the selected period,
+// so the donut total and the three buckets are always internally consistent.
+const PE_BUCKETS={
+  green:['found_safe','aparecido'],
+  amber:['missing','hospitalizado','unknown'],
+  red:['found_deceased'],
+};
+function renderEstadoCard(cases){
+  const n={green:0,amber:0,red:0};
+  for(const c of (cases||[])){
+    if(PE_BUCKETS.green.includes(c.status))n.green++;
+    else if(PE_BUCKETS.red.includes(c.status))n.red++;
+    else n.amber++; // missing/hospitalizado/unknown and any unmapped status
+  }
+  const total=n.green+n.amber+n.red;
+  const pct=v=>total?Math.round(v/total*100):0;
+  $('#pe_n_green').textContent=n.green; $('#pe_p_green').textContent=pct(n.green)+'%';
+  $('#pe_n_amber').textContent=n.amber; $('#pe_p_amber').textContent=pct(n.amber)+'%';
+  $('#pe_n_red').textContent=n.red;     $('#pe_p_red').textContent=pct(n.red)+'%';
+  $('#pe_donut').innerHTML=donutSVG([
+    {value:n.green,color:'#22a04a'},
+    {value:n.amber,color:'#f5a417'},
+    {value:n.red,color:'#e4392f'},
+  ],total);
+  const emp=$('#pe_empty'); if(emp)emp.hidden=total>0;
+}
+// Segmented donut. cx/cy=100, r=78, strokeWidth=26; rotated -90° via CSS so the
+// first segment starts at 12 o'clock. Empty (total 0) → just the grey track.
+function donutSVG(segs,total){
+  const r=78, C=2*Math.PI*r, gap=total>1?2.5:0; // tiny gap between segments
+  let off=0, arcs='';
+  if(total>0){
+    for(const s of segs){
+      if(!s.value)continue;
+      const len=(s.value/total)*C;
+      const dash=Math.max(0,len-gap);
+      arcs+=`<circle cx="100" cy="100" r="${r}" fill="none" stroke="${s.color}" stroke-width="26" stroke-linecap="butt" stroke-dasharray="${dash} ${C-dash}" stroke-dashoffset="${-off}"></circle>`;
+      off+=len;
+    }
+  }
+  return `<svg viewBox="0 0 200 200" role="img" aria-label="Distribución de casos por estado">
+    <circle cx="100" cy="100" r="${r}" fill="none" stroke="#e8ecf3" stroke-width="26"></circle>
+    ${arcs}
+  </svg>
+  <div class="pe-donut-center">
+    <div class="pe-donut-total">${total}</div>
+    <div class="pe-donut-lbl">Total</div>
+    <div class="pe-donut-sub">casos registrados</div>
+  </div>`;
+}
 
 // ---------------- pending queue ----------------
 async function loadPendingCount(){
