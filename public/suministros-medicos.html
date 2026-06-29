@@ -19,15 +19,54 @@
 <meta name="twitter:title" content="Suministros Médicos de Emergencia — SISMO911">
 <meta name="twitter:description" content="Botiquín de desastre: medicamentos, sueros y antibióticos para 100.000 damnificados / 90 días.">
 <meta name="twitter:image" content="https://sismo911.com/og/og-default.png">
-<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#14171b">
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css" />
+<link rel="stylesheet" href="/ops-theme.css" />
 <style>
-  body{background:#f9f9fc}
-  .tnum{font-variant-numeric:tabular-nums}
+  /* Seismic Operations reskin — palette + typography only, scoped to this page.
+     Color/structure of this page comes from compiled Tailwind utilities (no re-pointable
+     vars) + JS-injected inline colors; JS/markup are untouched, so the utility classes used
+     on this page are remapped here by ROLE to the --ops-* tokens from /ops-theme.css. */
+  body{background:var(--ops-bg)}
+  .tnum{font-variant-numeric:tabular-nums;font-family:var(--ops-mono)}
   table{border-collapse:collapse}
   th[data-sort]{cursor:pointer;user-select:none}
-  th[data-sort]:hover{color:#13284f}
+  th[data-sort]:hover{color:var(--ops-accent)}
+
+  /* Surfaces */
+  .bg-white{background-color:var(--ops-panel)}
+  .bg-surface-variant\/40{background-color:var(--ops-panel-2)}      /* table header + chart-bar track */
+  .hover\:bg-surface-variant\/20:hover,
+  .hover\:bg-surface-variant\/30:hover,
+  .hover\:bg-surface-variant\/40:hover{background-color:var(--ops-hover)}
+
+  /* Borders (inputs get the stronger border) */
+  .border-outline-variant,
+  .border-outline-variant\/40,
+  .border-outline-variant\/50,
+  .border-outline-variant\/60{border-color:var(--ops-border)}
+  input.border-outline-variant,select.border-outline-variant{border-color:var(--ops-border-strong)}
+
+  /* Text */
+  .text-on-surface{color:var(--ops-text)}
+  .text-on-surface-variant{color:var(--ops-muted)}
+  .hover\:text-on-surface:hover{color:var(--ops-text)}
+
+  /* Accent (graphite → seismograph amber): primary button + interactive marks */
+  .bg-primary{background-color:var(--ops-accent-soft)}             /* + .text-white fg stays #fff (AA) */
+  .hover\:bg-primary\/90:hover{background-color:var(--ops-accent)}
+  .text-primary{color:var(--ops-accent)}
+
+  /* Mono readout treatment for table-header labels */
+  thead th{font-family:var(--ops-mono)}
+
+  /* Input focus → amber ring */
+  #people:focus,#days:focus,#q:focus,#catFilter:focus{
+    border-color:var(--ops-accent-soft);
+    box-shadow:0 0 0 3px var(--ops-ring);
+    outline:none;
+  }
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebPage","name":"Suministros Médicos de Emergencia — SISMO911","description":"Botiquín de desastre para terremoto en Venezuela: lista completa de medicamentos, sueros y antibióticos con cantidades para 100.000 damnificados.","url":"https://sismo911.com/suministros-medicos","inLanguage":"es","isPartOf":{"@type":"WebSite","name":"SISMO911","url":"https://sismo911.com/"}}

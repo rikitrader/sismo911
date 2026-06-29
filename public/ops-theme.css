@@ -1,0 +1,92 @@
+/* ════════════════════════════════════════════════════════════════════════
+   SISMO911 — "Seismic Operations" theme tokens for OPERATOR pages
+   ────────────────────────────────────────────────────────────────────────
+   Standalone, framework-agnostic CSS variables that extend the /console
+   admin design system to the standalone operator HTML apps (incident queue,
+   missing persons, refugios, suministros). Mirrors the console's LIGHT
+   palette: graphite + seismograph-amber + mono instrument readouts, with a
+   semantic status hierarchy (red=critical, amber=warning, green=healthy,
+   cyan=info).
+
+   USAGE: <link rel="stylesheet" href="/ops-theme.css"> AFTER /app.css, then
+   reference the --ops-* vars from the page's own <style> (swap hardcoded hex).
+   Citizen-facing pages never link this file, so their look is unaffected.
+   All variables are namespaced --ops-* to avoid colliding with /app.css.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Surfaces — warm-neutral paper so amber reads as ink, not alarm */
+  --ops-bg: #f7f7f5;
+  --ops-panel: #ffffff;
+  --ops-panel-2: #f0f0ed;     /* recessed wells, table headers */
+  --ops-hover: #eaeae6;
+  --ops-border: #e2e2dd;
+  --ops-border-strong: #cecec8;
+
+  /* Text */
+  --ops-text: #17171a;
+  --ops-muted: #525258;
+  --ops-faint: #74747a;
+
+  /* Signal — seismograph amber (burnt; AA as text on paper) */
+  --ops-accent: #b45309;       /* amber-700 */
+  --ops-accent-soft: #d97706;  /* amber-600 — fills/glow */
+  --ops-accent-fg: #ffffff;    /* text on amber fills */
+  --ops-ring: rgba(217, 119, 6, 0.20);
+
+  /* Chrome bar — graphite gradient (replaces the old navy ops bar) */
+  --ops-bar-1: #14171b;
+  --ops-bar-2: #23282f;
+  --ops-bar-fg: #ededf0;
+  --ops-bar-faint: #9aa0a8;
+
+  /* Semantic status — operator scanning. Solid + soft-bg pairs for chips. */
+  --ops-ok: #15803d;        --ops-ok-bg: #e7f3ec;       /* green — healthy */
+  --ops-warn: #b45309;      --ops-warn-bg: #fbeeda;     /* amber — warning */
+  --ops-danger: #dc2626;    --ops-danger-bg: #fbe9e9;   /* red — CRITICAL only */
+  --ops-info: #0891b2;      --ops-info-bg: #e2f4f7;     /* cyan — informational */
+  --ops-neutral-bg: #eeeeea;
+
+  /* Type */
+  --ops-display: 'Public Sans', system-ui, sans-serif;
+  --ops-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Grid texture line (graph-paper) */
+  --ops-grid: 17 17 17;
+  --ops-grid-alpha: 0.030;
+}
+
+/* ── Shared helper classes (opt-in, namespaced) ─────────────────────────── */
+
+/* Graph-paper instrument texture — drop on a header bar / panel */
+.ops-grid-texture {
+  background-image:
+    linear-gradient(rgb(var(--ops-grid) / var(--ops-grid-alpha)) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--ops-grid) / var(--ops-grid-alpha)) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Mono tabular readout for metrics / codes / coordinates */
+.ops-readout { font-family: var(--ops-mono); font-variant-numeric: tabular-nums; }
+
+/* Mono uppercase micro-label */
+.ops-eyebrow {
+  font-family: var(--ops-mono); font-weight: 600; font-size: 10.5px;
+  letter-spacing: 0.11em; text-transform: uppercase; color: var(--ops-accent);
+}
+
+/* Glowing panel LED — set color via `color`, e.g. style="color:var(--ops-ok)" */
+.ops-led {
+  display: inline-block; width: 7px; height: 7px; border-radius: 999px;
+  background: currentColor; box-shadow: 0 0 6px 0 currentColor;
+}
+.ops-led-pulse { position: relative; }
+.ops-led-pulse::after {
+  content: ''; position: absolute; inset: -3px; border-radius: 999px;
+  border: 1px solid currentColor; opacity: .55;
+  animation: ops-ping 1.8s cubic-bezier(0,0,.2,1) infinite;
+}
+@keyframes ops-ping { 75%, 100% { transform: scale(1.9); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-led-pulse::after { animation: none; }
+}
