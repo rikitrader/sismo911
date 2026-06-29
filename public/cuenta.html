@@ -986,10 +986,9 @@ html body { padding-left:0 !important; padding-top:0 !important; }
 .ac-side-head { display:flex; align-items:center; justify-content:space-between; padding:2px 4px 18px; }
 .ac-logo {
   width:40px; height:40px; border-radius:11px; flex-shrink:0; text-decoration:none;
-  background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%);
-  color:#fff; display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-display); font-weight:800; font-size:1.15rem; letter-spacing:-.02em;
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
+.ac-logo img { width:100%; height:100%; object-fit:contain; display:block; }
 .ac-collapse {
   border:none; background:transparent; color:var(--muted); cursor:pointer;
   width:32px; height:32px; border-radius:8px; font-size:1.05rem;
@@ -1079,6 +1078,20 @@ html body { padding-left:0 !important; padding-top:0 !important; }
   background:var(--success); border:3px solid var(--surface); display:none;
 }
 .hero-av-dot.show { display:block; }
+/* Avatar photo fills the round avatar (hero + top bar) when uploaded. */
+.avatar-lg img, .ac-user-av img { width:100%; height:100%; object-fit:cover; border-radius:50%; display:block; }
+.avatar-lg, .ac-user-av { overflow:hidden; }
+/* Edit-modal avatar uploader */
+.avatar-upload { display:flex; align-items:center; gap:14px; }
+.avatar-upload-preview {
+  width:60px; height:60px; border-radius:50%; flex-shrink:0; overflow:hidden;
+  background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:800; font-size:1.15rem;
+}
+.avatar-upload-preview img { width:100%; height:100%; object-fit:cover; }
+.avatar-upload-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.avatar-upload-hint { flex-basis:100%; font-size:.73rem; color:var(--muted); }
 .hero-aside {
   flex:0 0 232px; display:flex; flex-direction:column; gap:18px;
   padding-left:24px; border-left:1px solid var(--border);
@@ -1225,7 +1238,7 @@ html body { padding-left:0 !important; padding-top:0 !important; }
   <!-- Sidebar -->
   <aside class="ac-side" id="ac-side">
     <div class="ac-side-head">
-      <a href="/" class="ac-logo" id="tb-logo" aria-label="SISMO911 inicio">R</a>
+      <a href="/" class="ac-logo" id="tb-logo" aria-label="SISMO911 inicio"><img src="/logo.svg" alt="SISMO911"></a>
       <button class="ac-collapse" id="ac-collapse" type="button" aria-label="Cerrar menú">«</button>
     </div>
     <nav class="ac-nav" role="tablist" aria-label="Secciones de cuenta">
@@ -1335,8 +1348,14 @@ html body { padding-left:0 !important; padding-top:0 !important; }
 
       <div class="form-group">
         <label class="form-label">Avatar</label>
-        <div class="readonly-display" style="opacity:.5;cursor:not-allowed;" aria-disabled="true">
-          📷&nbsp; Subir foto (próximamente)
+        <div class="avatar-upload">
+          <div class="avatar-upload-preview" id="av-preview" aria-hidden="true"></div>
+          <div class="avatar-upload-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="av-choose-btn">Subir foto</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="av-remove-btn" style="display:none;">Quitar</button>
+            <div class="avatar-upload-hint">JPG, PNG o WebP · máx. 2&nbsp;MB</div>
+          </div>
+          <input type="file" id="av-file" accept="image/jpeg,image/png,image/webp" hidden>
         </div>
       </div>
 
@@ -2053,9 +2072,91 @@ function openModal(profile) {
   const rd = document.getElementById('f-role-display');
   rd.className = rc; rd.textContent = rl;
 
+  renderAvatarPreview(profile);
+
   clearFormErrors();
   editModal.classList.add('open');
   document.getElementById('f-name').focus();
+}
+
+/* Render the modal's avatar preview from the current profile (photo or initials). */
+function renderAvatarPreview(profile) {
+  const prev = document.getElementById('av-preview');
+  const rm   = document.getElementById('av-remove-btn');
+  if (!prev) return;
+  if (profile.avatar_url) {
+    prev.innerHTML = `<img src="${esc(profile.avatar_url)}" alt="Avatar">`;
+    if (rm) rm.style.display = '';
+  } else {
+    prev.textContent = getInitials(profile.name);
+    if (rm) rm.style.display = 'none';
+  }
+}
+
+/* Wire the avatar uploader (once). Validates client-side, then POSTs the file. */
+function wireAvatarUpload() {
+  const fileInput = document.getElementById('av-file');
+  const chooseBtn = document.getElementById('av-choose-btn');
+  const removeBtn = document.getElementById('av-remove-btn');
+  if (!fileInput || fileInput._wired) return;
+  fileInput._wired = true;
+
+  const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX = 2_000_000;
+
+  chooseBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files && fileInput.files[0];
+    fileInput.value = ''; // allow re-selecting the same file
+    if (!file) return;
+    if (!ALLOWED.includes(file.type)) { toast('Formato no permitido. Usa JPG, PNG o WebP.', 'error'); return; }
+    if (file.size > MAX) { toast('La imagen supera 2 MB.', 'error'); return; }
+
+    chooseBtn.disabled = true;
+    const prevLabel = chooseBtn.textContent;
+    chooseBtn.textContent = 'Subiendo…';
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch('/api/profile/avatar', { method: 'POST', credentials: 'same-origin', body: fd });
+      if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.ok && d.avatar_url) {
+        _profile = { ..._profile, avatar_url: d.avatar_url, has_avatar: true };
+        renderAvatarPreview(_profile);
+        buildHero(_profile, _wallet);
+        toast('Foto de perfil actualizada ✓');
+      } else {
+        toast(d.error === 'invalid_image' ? 'Imagen no válida.' : (d.error || 'No se pudo subir la foto.'), 'error');
+      }
+    } catch (e) {
+      toast('Error de red. Intenta de nuevo.', 'error');
+    } finally {
+      chooseBtn.disabled = false; chooseBtn.textContent = prevLabel;
+    }
+  });
+
+  removeBtn.addEventListener('click', async () => {
+    removeBtn.disabled = true;
+    try {
+      const r = await fetch('/api/profile/avatar', { method: 'DELETE', credentials: 'same-origin' });
+      if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.ok) {
+        _profile = { ..._profile, avatar_url: null, has_avatar: false };
+        renderAvatarPreview(_profile);
+        buildHero(_profile, _wallet);
+        toast('Foto eliminada');
+      } else {
+        toast(d.error || 'No se pudo eliminar la foto.', 'error');
+      }
+    } catch (e) {
+      toast('Error de red. Intenta de nuevo.', 'error');
+    } finally {
+      removeBtn.disabled = false;
+    }
+  });
 }
 
 function closeModal() { editModal.classList.remove('open'); }
@@ -2073,6 +2174,7 @@ editModal.addEventListener('click', e => { if (e.target === editModal) closeModa
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && editModal.classList.contains('open')) closeModal();
 });
+wireAvatarUpload();
 
 /* ── State ──────────────────────────────────────────────────────────────── */
 let _profile    = {};
@@ -2086,8 +2188,11 @@ let _settings   = {};
 function buildHero(profile, wallet) {
   _profile = profile;
   const ini = getInitials(profile.name);
-  document.getElementById('hero-avatar').textContent = ini;
-  document.getElementById('tb-avatar').textContent   = ini;
+  const av  = profile.avatar_url
+    ? `<img src="${esc(profile.avatar_url)}" alt="${esc(profile.name || 'Avatar')}">`
+    : esc(ini);
+  document.getElementById('hero-avatar').innerHTML = av;
+  document.getElementById('tb-avatar').innerHTML   = av;
   document.getElementById('tb-name').textContent     = profile.name || profile.email || '';
   document.getElementById('hero-name').textContent   = profile.name  || '—';
   document.getElementById('hero-email').textContent  = profile.email || '';
