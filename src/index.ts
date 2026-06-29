@@ -21,6 +21,7 @@ import { auth } from './routes/auth';
 import { oauth } from './routes/oauth';
 import { x402, wellKnownX402 } from './routes/x402';
 import { profile } from './routes/profile';
+import { publicProfile } from './routes/public-profile';
 import { familia } from './routes/familia';
 import { voluntarios } from './routes/voluntarios';
 import { telemedicina } from './routes/telemedicina';
@@ -332,6 +333,7 @@ app.route('/api/auth', auth);
 app.route('/api/auth/oauth', oauth); // social login (Google OAuth) — public; under the /api/auth allowlist
 app.route('/api/x402', x402);        // x402 payment receiving: per-user wallet accepts USDC over HTTP (verify+settle via facilitator)
 app.route('/api/profile', profile);  // Profile Command Center: self-scoped profile/wallet/payments/accounting/withdrawals
+app.route('/api/u', publicProfile);   // Public payment profile (behind a citizen's "Enlace público"): name + active links + avatar. Public, no PII.
 // x402 service discovery (public). Agents/clients read this to learn the network + pay-URL template.
 // Fix 1: when payments are not LIVE, 503 instead of advertising a protocol we can't settle.
 app.get('/.well-known/x402.json', (c) => {
@@ -494,6 +496,10 @@ app.get('/admin-evidencias', (c) => c.env.ASSETS.fetch(new Request(new URL('/adm
 // PUBLIC signed-share viewer: /e/:token renders the share-safe (redacted+
 // watermarked) composite via /api/e/:token. No PII, no original file.
 app.get('/e/:token', (c) => c.env.ASSETS.fetch(new Request(new URL('/compartir.html', c.req.url))));
+
+// PUBLIC payment profile: /u/:id is a citizen's "Enlace público" landing — their
+// display name + active payment links so anyone can pay them. Reads /api/u/:id.
+app.get('/u/:id', (c) => c.env.ASSETS.fetch(new Request(new URL('/u.html', c.req.url))));
 
 // Unit GPS WebSocket: verify token + unit active, then hand to the FleetLive DO
 // tagged as a unit. Public path (token-validated here); never log the token.
