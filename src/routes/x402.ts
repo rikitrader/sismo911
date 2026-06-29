@@ -5,6 +5,7 @@ import { getUserFromRequest } from '../lib/auth';
 import { audit } from '../lib/audit';
 import { notify } from '../lib/notify';
 import { sendEmail, paymentReceivedEmail } from '../lib/email';
+import { enforceStepUp } from '../lib/stepup';
 import { burstLimit, subjectLimit } from '../lib/security';
 import { authorize } from '../rbac/middleware';
 import { LEGACY_OPS_PERM } from '../rbac/route-policy';
@@ -98,6 +99,7 @@ x402.get('/resources', async (c) => {
 x402.post('/resources', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const stepUp = await enforceStepUp(c, me.id); if (stepUp) return stepUp;
   const b = await c.req.json().catch(() => null);
   const slug = (b?.slug || '').trim().toLowerCase();
   const title = (b?.title || '').trim();

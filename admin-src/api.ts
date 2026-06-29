@@ -13,7 +13,7 @@ export class ApiError extends Error {
 
 const BASE = '/api/rbac';
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit, retried = false): Promise<T> {
   let res: Response;
   try {
     res = await fetch(BASE + path, {
@@ -34,6 +34,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     try { data = JSON.parse(text); } catch { data = text; }
   }
   if (!res.ok) {
+    // Step-up: a sensitive admin mutation needs a recent password re-confirmation
+    // (the acting admin enabled sec_require_login). Prompt once, then retry.
+    if (res.status === 403 && data?.error === 'step_up_required' && !retried && typeof window !== 'undefined') {
+      if (await stepUpPrompt()) return request<T>(path, init, true);
+    }
     const msg = (data && (data.error || data.message)) || res.statusText || 'Error';
     // Broadcast 401 so the shell can flip to the sign-in screen (session expiry).
     if (res.status === 401 && typeof window !== 'undefined') {
@@ -42,6 +47,55 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(res.status, msg, data);
   }
   return data as T;
+}
+
+// Step-up password prompt (imperative DOM, styled with the console tokens). Posts
+// to /api/profile/confirm; resolves true when the password is accepted.
+let _stepUpPending: Promise<boolean> | null = null;
+function stepUpPrompt(): Promise<boolean> {
+  if (_stepUpPending) return _stepUpPending;
+  _stepUpPending = new Promise<boolean>((resolve) => {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgb(0 0 0 / .5);display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.innerHTML = `<div style="background:rgb(var(--bg-elev));color:rgb(var(--text));border:1px solid rgb(var(--border));border-radius:12px;max-width:380px;width:100%;padding:22px;box-shadow:0 16px 48px -12px rgb(0 0 0 / .4)">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">Confirma tu identidad</div>
+      <div style="font-size:13px;color:rgb(var(--text-muted));margin-bottom:14px">Esta acción es sensible. Ingresa tu contraseña para continuar.</div>
+      <input type="password" autocomplete="current-password" placeholder="Contraseña" class="input" />
+      <div class="err" style="display:none;color:#ef4444;font-size:12px;margin-top:8px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn btn-ghost cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary ok">Confirmar</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+    const inp = ov.querySelector('input') as HTMLInputElement;
+    const err = ov.querySelector('.err') as HTMLElement;
+    const ok = ov.querySelector('.ok') as HTMLButtonElement;
+    const cancel = ov.querySelector('.cancel') as HTMLButtonElement;
+    const done = (v: boolean) => { ov.remove(); _stepUpPending = null; resolve(v); };
+    setTimeout(() => inp.focus(), 30);
+    cancel.onclick = () => done(false);
+    ov.addEventListener('click', (e) => { if (e.target === ov) done(false); });
+    async function go() {
+      if (!inp.value) { inp.focus(); return; }
+      ok.disabled = true; ok.textContent = 'Verificando…'; err.style.display = 'none';
+      try {
+        const r = await fetch('/api/profile/confirm', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: inp.value }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) { done(true); return; }
+        err.textContent = d.error === 'invalid_password' ? 'Contraseña incorrecta.' : 'No se pudo confirmar.';
+        err.style.display = 'block'; ok.disabled = false; ok.textContent = 'Confirmar'; inp.select();
+      } catch {
+        err.textContent = 'Error de red.'; err.style.display = 'block';
+        ok.disabled = false; ok.textContent = 'Confirmar';
+      }
+    }
+    ok.onclick = go;
+    inp.onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  });
+  return _stepUpPending;
 }
 
 export const api = {

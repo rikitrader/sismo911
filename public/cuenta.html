@@ -4743,6 +4743,26 @@ function stepUpConfirm() {
   });
 }
 
+/* ── Global step-up interceptor ───────────────────────────────────────────
+   Any sensitive action that returns 403 { error:'step_up_required' } triggers a
+   single password prompt and is retried once automatically — so EVERY gated
+   endpoint (settings, payment links, withdrawals, methods…) is covered without
+   per-call wiring. The /confirm call never returns step_up_required, so no loop. */
+(function () {
+  const _fetch = window.fetch.bind(window);
+  let pending = null; // share one modal if several requests trip at once
+  window.fetch = async function (input, init) {
+    const res = await _fetch(input, init);
+    if (res.status !== 403) return res;
+    let body; try { body = await res.clone().json(); } catch { return res; }
+    if (!body || body.error !== 'step_up_required') return res;
+    pending = pending || stepUpConfirm();
+    let ok;
+    try { ok = await pending; } finally { pending = null; }
+    return ok ? _fetch(input, init) : res;
+  };
+})();
+
 /* ── Submit ──────────────────────────────────────────────────────────────── */
 async function submitRetWithdrawal() {
   const btn  = document.getElementById('ret-s3-confirm');
@@ -4772,14 +4792,8 @@ async function submitRetWithdrawal() {
     });
     if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
     const d = await r.json().catch(() => ({}));
-
-    // Step-up: the user enabled "Exigir inicio de sesión para acciones sensibles".
-    // Confirm with the password, then retry the withdrawal once.
-    if (r.status === 403 && d.error === 'step_up_required') {
-      btn.disabled = false; btn.textContent = orig;
-      if (await stepUpConfirm()) return submitRetWithdrawal();
-      return;
-    }
+    // Note: step_up_required (403) is handled globally by the fetch interceptor
+    // (it prompts for the password and retries), so it never surfaces here.
 
     if ((r.status === 201 || r.status === 200) && (d.ok || d.idempotent)) {
       /* Optional: save method */
