@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
+import { isX402Live, x402Network, x402Asset } from '../lib/x402';
 
 // Public payment profile — the page behind a citizen's "Enlace público"
 // (sismo911.com/u/:id). PUBLIC by design: anyone, logged-in or not, can view a
@@ -86,6 +87,101 @@ publicProfile.get('/:id', async (c) => {
       avatar_url: u.avatar_r2 ? `/api/u/${encodeURIComponent(u.username || u.id)}/avatar` : null,
     },
     links,
+  });
+});
+
+// Resolve a citizen by vanity handle (username) OR raw id, returning the
+// public-safe wallet/x402 fields needed to render a checkout. NEVER returns PII.
+async function resolvePayee(env: Env, id: string) {
+  return env.DB.prepare(
+    `SELECT id, username, name, role, x402_enabled, x402_pay_to, wallet_address,
+            x402_network, x402_asset, settings_json
+       FROM users WHERE username = ? OR id = ? LIMIT 1`
+  ).bind(id.toLowerCase(), id).first<any>();
+}
+
+// One settled-revenue rollup for a resource (the donation "raised" amount).
+async function settledTotals(env: Env, resourceId: string) {
+  const r: any = await env.DB.prepare(
+    `SELECT COUNT(*) AS n, COALESCE(SUM(amount_usd),0) AS usd
+       FROM x402_payments WHERE resource_id = ? AND status = 'settled'`
+  ).bind(resourceId).first();
+  return { count: Number(r?.n) || 0, raised: Number(r?.usd) || 0 };
+}
+
+// GET /api/u/:id/cobro/:slug — PUBLIC checkout metadata for the hosted /pagar
+// page. Returns only safe display fields + the receiving x402 config (a public
+// receiving address is meant to be shared). The actual payment requirements are
+// fetched from the 402 handshake against /api/x402/pay/:id/:slug, not here.
+publicProfile.get('/:id/cobro/:slug', async (c) => {
+  const id = c.req.param('id'); const slug = c.req.param('slug');
+  if (!id || id.length > 64 || !slug || slug.length > 64) return c.json({ ok: false, found: false }, 404);
+  const u = await resolvePayee(c.env, id);
+  if (!u) return c.json({ ok: false, found: false }, 404);
+  const r: any = await c.env.DB.prepare(
+    `SELECT id, slug, title, description, price_usd, currency, kind, active,
+            goal_usd, campaign_blurb, campaign_image, client_name, invoice_status
+       FROM x402_resources
+      WHERE user_id = ? AND slug = ? AND archived_ms IS NULL LIMIT 1`
+  ).bind(u.id, slug).first();
+  if (!r || !r.active) return c.json({ ok: false, found: false }, 404);
+  if (r.kind === 'stripe') return c.json({ ok: false, found: false }, 404); // deferred
+
+  const payTo = u.x402_pay_to || u.wallet_address || null;
+  const receiving = Boolean(u.x402_enabled && payTo);
+  const network = u.x402_network || x402Network(c.env);
+  const totals = r.kind === 'donation' ? await settledTotals(c.env, r.id) : null;
+
+  return c.json({
+    ok: true, found: true,
+    payee: { handle: u.username || u.id, name: u.name || null },
+    link: {
+      slug: r.slug, title: r.title, description: r.description ?? null,
+      kind: r.kind || 'x402', price_usd: Number(r.price_usd) || 0, currency: r.currency || 'USDC',
+      goal_usd: Number(r.goal_usd) || null, campaign_blurb: r.campaign_blurb ?? null,
+      campaign_image: r.campaign_image ?? null,
+      client_name: r.client_name ?? null, invoice_status: r.invoice_status ?? null,
+      raised_usd: totals?.raised ?? null, donor_count: totals?.count ?? null,
+      // open-amount donations carry price_usd=0; the payer names the amount.
+      open_amount: (r.kind || 'x402') === 'donation' && (Number(r.price_usd) || 0) === 0,
+    },
+    x402: {
+      live: isX402Live(c.env), receiving, payTo,
+      network, asset: u.x402_asset || x402Asset(c.env, network),
+      payUrl: new URL(`/api/x402/pay/${u.id}/${r.slug}`, c.req.url).toString(),
+    },
+  });
+});
+
+// GET /api/u/:id/campana/:slug — PUBLIC donation campaign (goal + raised +
+// progress) behind the /campana page. 404 unless it's a public donation link.
+publicProfile.get('/:id/campana/:slug', async (c) => {
+  const id = c.req.param('id'); const slug = c.req.param('slug');
+  if (!id || id.length > 64 || !slug || slug.length > 64) return c.json({ ok: false, found: false }, 404);
+  const u = await resolvePayee(c.env, id);
+  if (!u) return c.json({ ok: false, found: false }, 404);
+  const r: any = await c.env.DB.prepare(
+    `SELECT id, slug, title, description, currency, kind, active,
+            goal_usd, campaign_blurb, campaign_image, campaign_public
+       FROM x402_resources
+      WHERE user_id = ? AND slug = ? AND archived_ms IS NULL LIMIT 1`
+  ).bind(u.id, slug).first();
+  if (!r || !r.active || (r.kind || 'x402') !== 'donation' || !r.campaign_public) {
+    return c.json({ ok: false, found: false }, 404);
+  }
+  const goal = Number(r.goal_usd) || 0;
+  const { raised, count } = await settledTotals(c.env, r.id);
+  return c.json({
+    ok: true, found: true,
+    campaign: {
+      slug: r.slug, title: r.title,
+      blurb: r.campaign_blurb ?? r.description ?? null, image: r.campaign_image ?? null,
+      currency: r.currency || 'USDC',
+      goal_usd: goal || null, raised_usd: raised, donor_count: count,
+      progress_pct: goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : null,
+    },
+    payee: { handle: u.username || u.id, name: u.name || null },
+    checkoutUrl: new URL(`/pagar/${u.id}/${r.slug}`, c.req.url).toString(),
   });
 });
 

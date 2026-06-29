@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pagar — SISMO911</title>
+<meta name="description" content="Paga de forma segura en USDC a través de SISMO911.">
+<link rel="icon" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:title" content="Pagar — SISMO911">
+<meta property="og:description" content="Paga de forma segura en USDC a través de SISMO911.">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fb; --surface:#fff; --surface-2:#f9fafc; --text:#111827; --muted:#6b7280;
+  --border:#d9dee8; --brand:#001b44; --brand-2:#0b5fff; --success:#2e7d32; --warning:#f59e0b; --danger:#dc2626;
+  --radius-lg:24px; --radius-md:16px; --shadow-sm:0 1px 2px rgba(16,24,40,.06);
+  --shadow-md:0 12px 32px rgba(16,24,40,.10);
+  --font:'Inter','Public Sans',system-ui,sans-serif; --font-display:'Public Sans','Inter',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0d1117; --surface:#161b22; --surface-2:#1c2128; --text:#e6edf3; --muted:#8b949e;
+    --border:#30363d; --brand:#58a6ff; --brand-2:#79c0ff; --success:#3fb950; --warning:#d29922; --danger:#f85149;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3); --shadow-md:0 12px 32px rgba(0,0,0,.45); }
+}
+*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+body{ background:var(--bg); color:var(--text); font-family:var(--font); min-height:100vh; line-height:1.55; }
+.wrap{ max-width:520px; margin:0 auto; padding:28px 16px 64px; }
+.site-head{ display:flex; align-items:center; justify-content:center; gap:9px; margin-bottom:22px; }
+.site-head img{ width:30px; height:30px; border-radius:7px; object-fit:contain; }
+.site-head a{ display:flex; align-items:center; gap:9px; text-decoration:none; color:inherit; }
+.site-head b{ font-family:var(--font-display); font-weight:800; font-size:1.02rem; color:var(--brand); letter-spacing:-.01em; }
+.card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); padding:30px 26px; }
+.kind-pill{ display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:100px; font-size:.72rem; font-weight:800; letter-spacing:.03em; text-transform:uppercase; }
+.kind-x402{ background:rgba(46,125,50,.12); color:var(--success); }
+.kind-donation{ background:rgba(11,95,255,.10); color:var(--brand-2); }
+.kind-invoice{ background:rgba(245,158,11,.14); color:#b45309; }
+.pay-title{ font-family:var(--font-display); font-weight:800; font-size:1.4rem; color:var(--text); letter-spacing:-.02em; margin:14px 0 4px; line-height:1.2; }
+.pay-desc{ font-size:.9rem; color:var(--muted); margin-bottom:6px; }
+.pay-to{ font-size:.8rem; color:var(--muted); margin-top:2px; }
+.amount-box{ text-align:center; margin:22px 0; }
+.amount-big{ font-family:var(--font-display); font-weight:800; font-size:2.6rem; color:var(--brand-2); letter-spacing:-.03em; }
+.amount-cur{ font-size:1rem; color:var(--muted); font-weight:700; margin-left:6px; }
+.amount-input-row{ display:flex; align-items:center; justify-content:center; gap:8px; margin:8px 0; }
+.amount-input-row .pre{ font-family:var(--font-display); font-weight:800; font-size:2rem; color:var(--muted); }
+input.amount{ width:170px; font-family:var(--font-display); font-weight:800; font-size:2.2rem; text-align:center;
+  border:none; border-bottom:2px solid var(--border); background:transparent; color:var(--text); padding:4px 0; }
+input.amount:focus{ outline:none; border-bottom-color:var(--brand-2); }
+.preset-row{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+.preset{ padding:7px 16px; border-radius:100px; border:1px solid var(--border); background:var(--surface-2);
+  font-weight:700; font-size:.85rem; color:var(--text); cursor:pointer; transition:all .15s; }
+.preset:hover,.preset.active{ border-color:var(--brand-2); color:var(--brand-2); background:rgba(11,95,255,.06); }
+/* Progress (donation) */
+.progress-wrap{ margin:18px 0 6px; }
+.progress-bar{ height:10px; border-radius:100px; background:var(--surface-2); border:1px solid var(--border); overflow:hidden; }
+.progress-fill{ height:100%; background:linear-gradient(90deg,var(--brand-2),var(--success)); border-radius:100px; transition:width .5s; }
+.progress-meta{ display:flex; justify-content:space-between; font-size:.82rem; margin-top:7px; }
+.progress-meta b{ font-family:var(--font-display); font-weight:800; color:var(--text); }
+.progress-meta span{ color:var(--muted); }
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:13px 18px; border-radius:13px;
+  font-size:.95rem; font-weight:800; cursor:pointer; border:1px solid transparent; text-decoration:none; width:100%; transition:all .15s; }
+.btn-pay{ background:var(--brand-2); color:#fff; margin-top:8px; }
+.btn-pay:hover{ filter:brightness(1.06); }
+.btn-pay:disabled{ opacity:.55; cursor:not-allowed; filter:none; }
+.btn-ghost{ background:var(--surface); border-color:var(--border); color:var(--muted); cursor:not-allowed; margin-top:10px; }
+.hint{ font-size:.78rem; color:var(--muted); text-align:center; margin-top:12px; }
+.hint a{ color:var(--brand-2); }
+.divider{ height:1px; background:var(--border); margin:22px 0; }
+.soon{ text-align:center; padding:14px; border:1px dashed var(--border); border-radius:var(--radius-md); color:var(--muted); font-size:.85rem; margin-top:12px; }
+/* States */
+.state{ text-align:center; padding:26px 8px; }
+.state-icon{ width:64px; height:64px; border-radius:18px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:30px; }
+.state-icon.ok{ background:rgba(46,125,50,.12); }
+.state-icon.err{ background:rgba(220,38,38,.10); }
+.state-icon.load{ background:rgba(11,95,255,.08); }
+.state-title{ font-family:var(--font-display); font-weight:800; font-size:1.15rem; margin-bottom:6px; }
+.state-text{ font-size:.88rem; color:var(--muted); }
+.tx-row{ font-size:.78rem; color:var(--muted); margin-top:14px; word-break:break-all; }
+.tx-row a{ color:var(--brand-2); }
+.spinner{ width:26px; height:26px; border:3px solid var(--border); border-top-color:var(--brand-2); border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.foot{ text-align:center; font-size:.74rem; color:var(--muted); margin-top:20px; }
+.alert{ background:rgba(220,38,38,.08); border:1px solid rgba(220,38,38,.25); color:var(--danger); border-radius:12px; padding:11px 14px; font-size:.83rem; margin-top:12px; display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="site-head"><a href="/"><img src="/logo.png" alt="SISMO911"><b>SISMO911</b></a></div>
+  <div class="card" id="card">
+    <div class="state"><div class="state-icon load"><div class="spinner"></div></div><div class="state-text">Cargando…</div></div>
+  </div>
+  <div class="foot">Pago seguro en USDC (red Base) vía el protocolo x402 · SISMO911</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var card = document.getElementById('card');
+  var parts = location.pathname.split('/').filter(Boolean); // [pagar, user, slug]
+  var USER = decodeURIComponent(parts[1] || '');
+  var SLUG = decodeURIComponent(parts[2] || '');
+  var DATA = null;          // /cobro response
+  var chosenAmount = null;  // donation: payer-chosen USD amount
+
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function fmtUSD(n){ return '$' + (Number(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  // UTF-8 safe base64 of a JSON object (mirrors server b64decodeJson).
+  function b64json(obj){
+    var bytes = new TextEncoder().encode(JSON.stringify(obj)); var bin='';
+    for (var i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function randNonce(){
+    var a = new Uint8Array(32); crypto.getRandomValues(a); var h='0x';
+    for (var i=0;i<a.length;i++) h += a[i].toString(16).padStart(2,'0'); return h;
+  }
+  function chainIdFromNetwork(net){ var m=/^eip155:(\d+)$/.exec(String(net||'')); return m?Number(m[1]):null; }
+
+  function stateLoading(text){
+    card.innerHTML = '<div class="state"><div class="state-icon load"><div class="spinner"></div></div>'+
+      '<div class="state-text">'+esc(text||'Cargando…')+'</div></div>';
+  }
+  function stateError(title, text){
+    card.innerHTML = '<div class="state"><div class="state-icon err">⚠️</div>'+
+      '<div class="state-title">'+esc(title)+'</div><div class="state-text">'+esc(text||'')+'</div>'+
+      '<a class="btn btn-pay" href="/" style="margin-top:18px;max-width:200px;margin-left:auto;margin-right:auto;display:inline-flex">Volver al inicio</a></div>';
+  }
+  function stateReceipt(amountUsd, tx, network){
+    var exp = '';
+    if (tx){
+      var base = chainIdFromNetwork(network)===84532 ? 'https://sepolia.basescan.org/tx/' : 'https://basescan.org/tx/';
+      exp = '<div class="tx-row">Transacción: <a href="'+base+esc(tx)+'" target="_blank" rel="noopener">'+esc(tx.slice(0,10))+'…'+esc(tx.slice(-8))+'</a></div>';
+    }
+    card.innerHTML = '<div class="state"><div class="state-icon ok">✅</div>'+
+      '<div class="state-title">¡Pago confirmado!</div>'+
+      '<div class="state-text">Se transfirieron '+esc(fmtUSD(amountUsd))+' USDC'+(DATA&&DATA.payee&&DATA.payee.name?(' a '+esc(DATA.payee.name)):'')+'.</div>'+
+      exp + '<div class="tx-row">Gracias por tu apoyo. 🫶</div></div>';
+  }
+
+  // ── Render the main checkout view ──────────────────────────────────────────
+  function render(){
+    var L = DATA.link, X = DATA.x402, payee = DATA.payee || {};
+    var kind = L.kind || 'x402';
+    var kindLabel = kind==='donation' ? 'Donación' : kind==='invoice' ? 'Factura' : 'Pago · USDC';
+    var kindCls = kind==='donation' ? 'kind-donation' : kind==='invoice' ? 'kind-invoice' : 'kind-x402';
+    var html = '<span class="kind-pill '+kindCls+'">'+esc(kindLabel)+'</span>'+
+      '<div class="pay-title">'+esc(L.title)+'</div>';
+    if (L.description) html += '<div class="pay-desc">'+esc(L.description)+'</div>';
+    if (kind==='invoice' && L.client_name) html += '<div class="pay-to">Facturado a: <b>'+esc(L.client_name)+'</b></div>';
+    html += '<div class="pay-to">Para: <b>'+esc(payee.name || payee.handle || 'SISMO911')+'</b></div>';
+
+    // Donation campaign progress
+    if (kind==='donation' && L.goal_usd){
+      var pct = L.goal_usd>0 ? Math.min(100, Math.round((Number(L.raised_usd||0)/L.goal_usd)*100)) : 0;
+      html += '<div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>'+
+        '<div class="progress-meta"><b>'+esc(fmtUSD(L.raised_usd||0))+'</b><span>meta '+esc(fmtUSD(L.goal_usd))+' · '+pct+'%</span></div></div>';
+    }
+
+    // Amount block
+    if (L.open_amount){
+      html += '<div class="amount-box"><div class="amount-input-row"><span class="pre">$</span>'+
+        '<input class="amount" id="amt" type="number" inputmode="decimal" min="1" step="1" placeholder="10" /></div>'+
+        '<div class="preset-row">'+[5,10,25,50,100].map(function(v){
+          return '<button class="preset" data-v="'+v+'">$'+v+'</button>'; }).join('')+'</div></div>';
+    } else {
+      html += '<div class="amount-box"><div class="amount-big">'+esc(fmtUSD(L.price_usd))+'<span class="amount-cur">'+esc(L.currency||'USDC')+'</span></div></div>';
+    }
+
+    html += '<div class="alert" id="alert"></div>';
+
+    if (X && X.live && X.receiving){
+      html += '<button class="btn btn-pay" id="payBtn">Pagar con USDC</button>'+
+        '<div class="hint">Necesitas una billetera Web3 (MetaMask, Coinbase Wallet) en la red Base. '+
+        'El pago se firma en tu billetera; SISMO911 nunca toca tus llaves.</div>';
+    } else {
+      html += '<div class="soon">Los pagos en USDC no están disponibles para este enlace en este momento.</div>';
+    }
+    card.innerHTML = html;
+    wire();
+  }
+
+  function wire(){
+    var amt = document.getElementById('amt');
+    if (amt){
+      var presets = card.querySelectorAll('.preset');
+      presets.forEach(function(p){ p.addEventListener('click', function(){
+        amt.value = p.getAttribute('data-v');
+        presets.forEach(function(x){ x.classList.remove('active'); }); p.classList.add('active');
+      }); });
+    }
+    var btn = document.getElementById('payBtn');
+    if (btn) btn.addEventListener('click', onPay);
+  }
+
+  function showAlert(msg){ var a=document.getElementById('alert'); if(a){ a.textContent=msg; a.style.display='block'; } }
+
+  // ── Pay flow: probe 402 → sign EIP-3009 → settle ───────────────────────────
+  async function onPay(){
+    var L = DATA.link, X = DATA.x402;
+    var a = document.getElementById('alert'); if(a) a.style.display='none';
+
+    // Resolve amount for open-amount donations.
+    var amountQuery = '';
+    if (L.open_amount){
+      var v = Number((document.getElementById('amt')||{}).value);
+      if (!(v > 0)){ showAlert('Ingresa un monto válido.'); return; }
+      if (v < 1 || v > 10000){ showAlert('El monto debe estar entre $1 y $10,000.'); return; }
+      chosenAmount = Math.round(v*100)/100; amountQuery = '?amount='+chosenAmount;
+    }
+
+    var eth = window.ethereum;
+    if (!eth){ showAlert('No se detectó una billetera Web3. Instala MetaMask o Coinbase Wallet.'); return; }
+
+    var btn = document.getElementById('payBtn'); btn.disabled = true; btn.textContent = 'Conectando billetera…';
+    try {
+      var accounts = await eth.request({ method:'eth_requestAccounts' });
+      var from = accounts && accounts[0];
+      if (!from) throw new Error('No se pudo conectar la billetera.');
+
+      var payUrl = X.payUrl + amountQuery;
+
+      // 1) Probe for authoritative payment requirements (402).
+      btn.textContent = 'Obteniendo requisitos…';
+      var probe = await fetch(payUrl, { method:'POST', headers:{ 'content-type':'application/json' } });
+      if (probe.status !== 402){
+        var pe = await probe.json().catch(function(){ return {}; });
+        throw new Error(pe.detail || pe.error || ('No se pudieron obtener los requisitos de pago ('+probe.status+').'));
+      }
+      var pbody = await probe.json();
+      var req = (pbody.accepts && pbody.accepts[0]) || null;
+      if (!req) throw new Error('Respuesta de pago inválida.');
+
+      // 2) Ensure the wallet is on the required Base network.
+      var wantChain = chainIdFromNetwork(req.network);
+      if (wantChain){
+        var hexChain = '0x'+wantChain.toString(16);
+        try { await eth.request({ method:'wallet_switchEthereumChain', params:[{ chainId:hexChain }] }); }
+        catch(sw){ throw new Error('Cambia tu billetera a la red Base ('+req.network+') e inténtalo de nuevo.'); }
+      }
+
+      // 3) Build + sign the EIP-3009 transferWithAuthorization (USDC).
+      btn.textContent = 'Firma en tu billetera…';
+      var nowSec = Math.floor(Date.now()/1000);
+      var validBefore = String(nowSec + (req.maxTimeoutSeconds || 300));
+      var nonce = randNonce();
+      var extra = req.extra || {};
+      var typedData = {
+        types: {
+          EIP712Domain: [
+            { name:'name', type:'string' }, { name:'version', type:'string' },
+            { name:'chainId', type:'uint256' }, { name:'verifyingContract', type:'address' },
+          ],
+          TransferWithAuthorization: [
+            { name:'from', type:'address' }, { name:'to', type:'address' }, { name:'value', type:'uint256' },
+            { name:'validAfter', type:'uint256' }, { name:'validBefore', type:'uint256' }, { name:'nonce', type:'bytes32' },
+          ],
+        },
+        domain: { name: extra.name || 'USD Coin', version: extra.version || '2', chainId: wantChain, verifyingContract: req.asset },
+        primaryType: 'TransferWithAuthorization',
+        message: { from: from, to: req.payTo, value: String(req.amount), validAfter: '0', validBefore: validBefore, nonce: nonce },
+      };
+      var signature = await eth.request({ method:'eth_signTypedData_v4', params:[from, JSON.stringify(typedData)] });
+
+      // 4) Settle: resend with the signed payload header.
+      btn.textContent = 'Procesando pago…';
+      var payload = {
+        x402Version: pbody.x402Version || 2, scheme: req.scheme || 'exact', network: req.network,
+        payload: { authorization: { from: from, to: req.payTo, value: String(req.amount),
+          validAfter: '0', validBefore: validBefore, nonce: nonce }, signature: signature },
+      };
+      var settle = await fetch(payUrl, { method:'POST',
+        headers:{ 'content-type':'application/json', 'payment-signature': b64json(payload), 'idempotency-key': nonce } });
+      var sbody = await settle.json().catch(function(){ return {}; });
+      if (settle.ok && sbody.paid){
+        var amtUsd = (sbody.payment && sbody.payment.amount_usd) != null ? sbody.payment.amount_usd : (chosenAmount || L.price_usd);
+        stateReceipt(amtUsd, sbody.payment && sbody.payment.tx, req.network);
+        return;
+      }
+      throw new Error(sbody.reason || sbody.detail || sbody.error || 'El pago no se pudo completar.');
+    } catch(e){
+      var msg = (e && (e.message || e.code)) ? (e.message || ('Error '+e.code)) : 'Ocurrió un error inesperado.';
+      if (e && e.code === 4001) msg = 'Cancelaste la firma en la billetera.';
+      showAlert(msg);
+      if (btn){ btn.disabled = false; btn.textContent = 'Pagar con USDC'; }
+    }
+  }
+
+  // ── Boot ────────────────────────────────────────────────────────────────────
+  if (!USER || !SLUG){ stateError('Enlace inválido', 'No encontramos este enlace de cobro.'); return; }
+  fetch('/api/u/'+encodeURIComponent(USER)+'/cobro/'+encodeURIComponent(SLUG), { credentials:'omit' })
+    .then(function(r){ return r.json().catch(function(){ return {}; }); })
+    .then(function(d){
+      if (!d || !d.ok || !d.found || !d.link){ stateError('Enlace no encontrado', 'Este enlace de cobro no existe o fue desactivado.'); return; }
+      DATA = d; document.title = (d.link.title || 'Pagar') + ' — SISMO911'; render();
+    })
+    .catch(function(){ stateError('Error de red', 'No pudimos cargar el enlace. Revisa tu conexión.'); });
+})();
+</script>
+</body>
+</html>

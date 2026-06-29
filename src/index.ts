@@ -556,6 +556,17 @@ app.get('/u/:id', async (c) => {
   return c.html(html, 200, { 'Cache-Control': 'public, max-age=300' });
 });
 
+// PUBLIC hosted checkout: /pagar/:user/:slug is the human-facing pay page for any
+// payable Cobros link (USDC via wallet-connect, open-amount donations, invoices).
+// Reads /api/u/:id/cobro/:slug for display + runs the x402 402→sign→settle flow.
+app.get('/pagar/:user/:slug', (c) => c.env.ASSETS.fetch(new Request(new URL('/pagar.html', c.req.url))));
+
+// PUBLIC donation campaign page: /campana/:user/:slug shows a Cobros donation
+// link's fundraising goal + live progress bar; reads /api/u/:id/campana/:slug and
+// links to /pagar to donate in USDC. (Distinct from the older card-based
+// campana.html of the /donar zone — this one is the per-user Cobros campaign.)
+app.get('/campana/:user/:slug', (c) => c.env.ASSETS.fetch(new Request(new URL('/campana-cobro.html', c.req.url))));
+
 // Unit GPS WebSocket: verify token + unit active, then hand to the FleetLive DO
 // tagged as a unit. Public path (token-validated here); never log the token.
 app.get('/ws/flota/unit', async (c) => {

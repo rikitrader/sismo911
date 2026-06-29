@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campaña de donación — SISMO911</title>
+<meta name="description" content="Apoya esta campaña con una donación en USDC a través de SISMO911.">
+<link rel="icon" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:title" content="Campaña de donación — SISMO911">
+<meta property="og:description" content="Apoya esta campaña con una donación en USDC.">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fb; --surface:#fff; --surface-2:#f9fafc; --text:#111827; --muted:#6b7280;
+  --border:#d9dee8; --brand:#001b44; --brand-2:#0b5fff; --success:#2e7d32; --warning:#f59e0b; --danger:#dc2626;
+  --radius-lg:24px; --radius-md:16px; --shadow-sm:0 1px 2px rgba(16,24,40,.06);
+  --shadow-md:0 12px 32px rgba(16,24,40,.10);
+  --font:'Inter','Public Sans',system-ui,sans-serif; --font-display:'Public Sans','Inter',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0d1117; --surface:#161b22; --surface-2:#1c2128; --text:#e6edf3; --muted:#8b949e;
+    --border:#30363d; --brand:#58a6ff; --brand-2:#79c0ff; --success:#3fb950; --warning:#d29922; --danger:#f85149;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3); --shadow-md:0 12px 32px rgba(0,0,0,.45); }
+}
+*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+body{ background:var(--bg); color:var(--text); font-family:var(--font); min-height:100vh; line-height:1.55; }
+.wrap{ max-width:560px; margin:0 auto; padding:28px 16px 64px; }
+.site-head{ display:flex; align-items:center; justify-content:center; gap:9px; margin-bottom:22px; }
+.site-head img{ width:30px; height:30px; border-radius:7px; object-fit:contain; }
+.site-head a{ display:flex; align-items:center; gap:9px; text-decoration:none; color:inherit; }
+.site-head b{ font-family:var(--font-display); font-weight:800; font-size:1.02rem; color:var(--brand); letter-spacing:-.01em; }
+.card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); overflow:hidden; }
+.hero{ width:100%; aspect-ratio:16/9; object-fit:cover; background:linear-gradient(135deg,var(--brand),var(--brand-2)); display:block; }
+.hero-fallback{ width:100%; aspect-ratio:16/9; background:linear-gradient(135deg,var(--brand),var(--brand-2)); display:flex; align-items:center; justify-content:center; font-size:54px; }
+.body{ padding:26px; }
+.pill{ display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:100px; font-size:.72rem; font-weight:800; letter-spacing:.03em; text-transform:uppercase; background:rgba(11,95,255,.10); color:var(--brand-2); }
+.title{ font-family:var(--font-display); font-weight:800; font-size:1.55rem; color:var(--text); letter-spacing:-.025em; margin:12px 0 6px; line-height:1.2; }
+.by{ font-size:.85rem; color:var(--muted); }
+.by b{ color:var(--text); }
+.blurb{ font-size:.94rem; color:var(--text); margin:16px 0; white-space:pre-line; }
+.progress-wrap{ margin:20px 0 6px; }
+.progress-bar{ height:14px; border-radius:100px; background:var(--surface-2); border:1px solid var(--border); overflow:hidden; }
+.progress-fill{ height:100%; background:linear-gradient(90deg,var(--brand-2),var(--success)); border-radius:100px; transition:width .6s; }
+.stats{ display:flex; gap:18px; margin-top:14px; flex-wrap:wrap; }
+.stat b{ font-family:var(--font-display); font-weight:800; font-size:1.3rem; color:var(--text); display:block; letter-spacing:-.02em; }
+.stat span{ font-size:.78rem; color:var(--muted); }
+.stat .accent{ color:var(--brand-2); }
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 18px; border-radius:13px;
+  font-size:1rem; font-weight:800; cursor:pointer; border:1px solid transparent; text-decoration:none; width:100%; transition:all .15s; margin-top:22px; }
+.btn-pay{ background:var(--brand-2); color:#fff; }
+.btn-pay:hover{ filter:brightness(1.06); }
+.hint{ font-size:.78rem; color:var(--muted); text-align:center; margin-top:12px; }
+.state{ text-align:center; padding:50px 26px; }
+.state-icon{ font-size:42px; margin-bottom:14px; }
+.state-title{ font-family:var(--font-display); font-weight:800; font-size:1.2rem; margin-bottom:6px; }
+.state-text{ font-size:.9rem; color:var(--muted); }
+.spinner{ width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--brand-2); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 14px; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.foot{ text-align:center; font-size:.74rem; color:var(--muted); margin-top:20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="site-head"><a href="/"><img src="/logo.png" alt="SISMO911"><b>SISMO911</b></a></div>
+  <div class="card" id="card">
+    <div class="state"><div class="spinner"></div><div class="state-text">Cargando campaña…</div></div>
+  </div>
+  <div class="foot">Donaciones seguras en USDC (red Base) vía el protocolo x402 · SISMO911</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var card = document.getElementById('card');
+  var parts = location.pathname.split('/').filter(Boolean); // [campana, user, slug]
+  var USER = decodeURIComponent(parts[1] || '');
+  var SLUG = decodeURIComponent(parts[2] || '');
+
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function fmtUSD(n){ return '$' + (Number(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}); }
+
+  function stateMsg(icon, title, text){
+    card.innerHTML = '<div class="state"><div class="state-icon">'+icon+'</div>'+
+      '<div class="state-title">'+esc(title)+'</div><div class="state-text">'+esc(text||'')+'</div>'+
+      '<a class="btn btn-pay" href="/" style="max-width:200px;margin:20px auto 0">Volver al inicio</a></div>';
+  }
+
+  function render(d){
+    var c = d.campaign, payee = d.payee || {};
+    var goal = Number(c.goal_usd) || 0;
+    var raised = Number(c.raised_usd) || 0;
+    var pct = c.progress_pct != null ? c.progress_pct : (goal>0 ? Math.min(100, Math.round((raised/goal)*100)) : 0);
+    var hero = c.image
+      ? '<img class="hero" src="'+esc(c.image)+'" alt="'+esc(c.title)+'" onerror="this.outerHTML=\'<div class=&quot;hero-fallback&quot;>🫶</div>\'">'
+      : '<div class="hero-fallback">🫶</div>';
+    var goalLine = goal>0
+      ? '<div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div></div>'+
+        '<div class="stats">'+
+          '<div class="stat"><b class="accent">'+esc(fmtUSD(raised))+'</b><span>recaudado de '+esc(fmtUSD(goal))+'</span></div>'+
+          '<div class="stat"><b>'+pct+'%</b><span>de la meta</span></div>'+
+          '<div class="stat"><b>'+(Number(c.donor_count)||0)+'</b><span>donaciones</span></div>'+
+        '</div>'
+      : '<div class="stats">'+
+          '<div class="stat"><b class="accent">'+esc(fmtUSD(raised))+'</b><span>recaudado</span></div>'+
+          '<div class="stat"><b>'+(Number(c.donor_count)||0)+'</b><span>donaciones</span></div>'+
+        '</div>';
+
+    card.innerHTML = hero + '<div class="body">'+
+      '<span class="pill">🫶 Campaña de donación</span>'+
+      '<div class="title">'+esc(c.title)+'</div>'+
+      '<div class="by">Organiza <b>'+esc(payee.name || payee.handle || 'SISMO911')+'</b></div>'+
+      (c.blurb ? '<div class="blurb">'+esc(c.blurb)+'</div>' : '')+
+      goalLine +
+      '<a class="btn btn-pay" href="'+esc(d.checkoutUrl)+'">Donar con USDC</a>'+
+      '<div class="hint">Tú eliges el monto · pago seguro en USDC (red Base)</div>'+
+    '</div>';
+    document.title = (c.title || 'Campaña') + ' — SISMO911';
+  }
+
+  if (!USER || !SLUG){ stateMsg('⚠️','Enlace inválido','No encontramos esta campaña.'); return; }
+  fetch('/api/u/'+encodeURIComponent(USER)+'/campana/'+encodeURIComponent(SLUG), { credentials:'omit' })
+    .then(function(r){ return r.json().catch(function(){ return {}; }); })
+    .then(function(d){
+      if (!d || !d.ok || !d.found || !d.campaign){ stateMsg('🔍','Campaña no encontrada','Esta campaña no existe, no es pública o fue desactivada.'); return; }
+      render(d);
+    })
+    .catch(function(){ stateMsg('⚠️','Error de red','No pudimos cargar la campaña. Revisa tu conexión.'); });
+})();
+</script>
+</body>
+</html>
