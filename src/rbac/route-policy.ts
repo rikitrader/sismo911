@@ -43,7 +43,7 @@ export type GateDecision =
 // Completeness is enforced by test/api-route-coverage.test.ts against the real
 // Hono route table — a new prefix cannot merge/deploy unclassified.
 const PUBLIC_API_PREFIXES: readonly string[] = [
-  '/api/health', '/api/ready', '/api/status', '/api/verified-info', '/api/stats', '/api/csp-report',
+  '/api/health', '/api/ready', '/api/status', '/api/verified-info', '/api/stats', '/api/impact', '/api/csp-report',
   '/api/events', '/api/heatmap', '/api/dashboard', '/api/geo', '/api/layers', '/api/sitrep',
   '/api/acopio', '/api/agencias', '/api/aid-orgs', '/api/alerts', '/api/auth',
   '/api/blog', '/api/botiquin', '/api/campaigns', '/api/campaigns-mine', '/api/chat', '/api/checkins',

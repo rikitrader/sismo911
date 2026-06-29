@@ -1980,6 +1980,10 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
           <h3 class="ov-card-title">Voluntarios</h3>
           <p class="ov-card-desc">Gestiona voluntarios, tareas y equipos de trabajo.</p>
           <a class="ov-card-btn" href="/voluntarios">Ir a Voluntarios →</a>
+          <a class="ov-card-btn ov-card-btn-muro" href="/muro" style="margin-top:8px;background:#f5c518;color:#1a1500;border-color:#f5c518;font-weight:800;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 4v5M15 9v5M9 14v6"/></svg>
+            Muro de Ayuda →
+          </a>
         </div>
       </div>
 
@@ -1997,8 +2001,9 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
               <div class="ov-stat-sub muted">este mes</div>
             </div>
             <div class="ov-stat">
-              <div class="ov-stat-val">—</div>
+              <div class="ov-stat-val" id="ov-stat-personas">—</div>
               <div class="ov-stat-lbl">Personas ayudadas</div>
+              <div class="ov-stat-sub muted" id="ov-stat-personas-sub">resultados verificados</div>
             </div>
             <div class="ov-stat">
               <div class="ov-stat-val" id="ov-stat-envios">—</div>
@@ -5478,6 +5483,23 @@ async function loadPlatformStats() {
       const n = Array.isArray(d && d.campaigns) ? d.campaigns.length : null;
       const el = document.getElementById('ov-stat-campanas');
       if (el && n != null) el.textContent = String(n);
+    }
+  } catch (e) {}
+  /* Personas ayudadas = REAL verified-outcome count (/api/impact). Stays "—"
+     until there is verified data; never fabricated. */
+  try {
+    const r = await fetch('/api/impact/personas-ayudadas', { credentials: 'same-origin' });
+    if (r.ok) {
+      const d = await r.json();
+      const n = Number(d && d.total);
+      const el = document.getElementById('ov-stat-personas');
+      const sub = document.getElementById('ov-stat-personas-sub');
+      if (el && Number.isFinite(n) && n > 0) {
+        el.textContent = n.toLocaleString('es-VE');
+        if (sub) sub.textContent = 'resultados verificados';
+      } else if (sub) {
+        sub.textContent = 'aún sin datos verificados';
+      }
     }
   } catch (e) {}
 }
