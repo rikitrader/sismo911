@@ -287,8 +287,8 @@
       </div>
       <div class="overflow-x-auto" style="max-height:60vh">
         <table class="dt">
-          <thead><tr><th>Producto</th><th>Código</th><th>Categoría</th><th>Ubicación</th><th>Lote</th><th>Caducidad</th><th>Cantidad</th><th>Unidad</th></tr></thead>
-          <tbody id="invRows"><tr><td colspan="8" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+          <thead><tr><th>Producto</th><th>Código</th><th>Categoría</th><th>Ubicación</th><th>Lote</th><th>Caducidad</th><th>Cantidad</th><th>Unidad</th><th>Estado</th></tr></thead>
+          <tbody id="invRows"><tr><td colspan="9" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -306,7 +306,7 @@
         <form id="fCat" class="hidden px-4 pb-3 space-y-2 border-b border-gray-100">
           <div class="grid grid-cols-[1fr_auto] gap-2 items-end">
             <input name="nombre" placeholder="Nombre de categoría*" required />
-            <input name="color" type="color" value="#0b1830" style="width:2.5rem;padding:.2rem;height:2.2rem;border-radius:.4rem;border:1px solid var(--ops-border-strong)">
+            <input name="color" type="color" value="#14171b" style="width:2.5rem;padding:.2rem;height:2.2rem;border-radius:.4rem;border:1px solid var(--ops-border-strong)">
           </div>
           <div class="flex gap-2">
             <button class="flex-1 bg-secondary text-white font-bold rounded py-1.5 text-xs">Guardar</button>
@@ -1318,9 +1318,9 @@ async function loadInv(){
   const p=new URLSearchParams();if(ubic)p.set('ubicacion_id',ubic);if(q)p.set('q',q);if(bajo)p.set('bajo',bajo);
   const r=await api('inventario?'+p).catch(()=>null);
   const tb=$('#invRows');if(!tb)return;
-  if(!r||!r.ok){tb.innerHTML='<tr><td colspan="8" class="text-center text-on-surface-variant py-8">Sin datos.</td></tr>';return;}
+  if(!r||!r.ok){tb.innerHTML='<tr><td colspan="9" class="text-center text-on-surface-variant py-8">Sin datos.</td></tr>';return;}
   const d=await j(r).catch(()=>({}));const rows=d.results||[];
-  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="text-center text-on-surface-variant py-8">Sin existencias todavía.</td></tr>';return;}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="text-center text-on-surface-variant py-8">Sin existencias todavía.</td></tr>';return;}
   const now=Date.now();
   tb.innerHTML=rows.map(row=>{
     const cad=row.caducidad_ms?Number(row.caducidad_ms):null;
@@ -1335,6 +1335,7 @@ async function loadInv(){
       <td class="text-[12px]">${cad?`<span style="${cad<now?'color:#b91c1c;font-weight:700':dias<=30?'color:#b45309;font-weight:600':''}">${fdate(cad)}</span>`:'—'}</td>
       <td class="mono text-[12px] font-semibold">${row.cantidad??'—'}</td>
       <td class="text-[12px]">${esc(row.unidad||'—')}</td>
+      <td class="text-[12px] whitespace-nowrap">${cls==='vencido'?'<span style="color:var(--ops-danger);font-weight:700">■ Vencido</span>':cls==='por-vencer'?`<span style="color:var(--ops-warn);font-weight:600">▲ Por vencer${dias!=null?` (${dias}d)`:''}</span>`:cls==='bajo'?'<span style="color:var(--ops-warn);font-weight:600">▼ Bajo stock</span>':'<span class="text-on-surface-variant">—</span>'}</td>
     </tr>`;
   }).join('');
 }

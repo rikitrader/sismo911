@@ -204,12 +204,12 @@ function renderSites(){
 function popupHtml(s){
   const t=TIER[s.tier]||TIER.no_apto, b=s.score_breakdown||{};
   return `<div style="min-width:220px">
-    <div style="font:800 14px 'Public Sans';color:#13284f">${esc(s.nombre)}</div>
+    <div style="font:800 14px 'Public Sans';color:var(--ops-text)">${esc(s.nombre)}</div>
     <div style="font-size:11px;color:#5b6781;margin-bottom:6px">${TIPO[s.tipo]||esc(s.tipo)} · ${esc(s.parroquia||'')}</div>
     <div style="display:flex;justify-content:space-between;margin-bottom:6px">
       <span class="chip" style="background:${t.c}">${s.score} · ${t.l}</span>
       <span style="font-size:12px"><b>${fmt(s.capacity)}</b> cupos · libre ${fmt(s.free)}</span></div>
-    <div style="font-size:11px;color:#5b6781">Vías ${b.roads}</div>${bar(b.roads,'#13284f')}
+    <div style="font-size:11px;color:#5b6781">Vías ${b.roads}</div>${bar(b.roads,'#d97706')}
     <div style="font-size:11px;color:#5b6781;margin-top:3px">Servicios ${b.services}</div>${bar(b.services,'#0e7490')}
     <div style="font-size:11px;color:#5b6781;margin-top:3px">Cama/Capacidad ${b.bedCapacity}</div>${bar(b.bedCapacity,'#7c3aed')}
     <div style="font-size:11px;color:#5b6781;margin-top:3px">Seguridad ${b.safety}</div>${bar(b.safety,'#15803d')}
