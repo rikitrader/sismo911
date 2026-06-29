@@ -729,6 +729,7 @@ profile.post('/withdrawals', async (c) => {
     title: 'Solicitud de retiro recibida',
     body: `Tu retiro de $${Number(amount).toFixed(2)} está en revisión. Te avisaremos cuando cambie de estado.`,
     link: '#retiros',
+    email: true,
   });
   const row: any = await c.env.DB.prepare(`SELECT * FROM withdrawal_requests WHERE id=?`).bind(id).first();
   return c.json({ ok: true, request: publicRequest(row) }, 201);

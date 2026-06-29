@@ -53,6 +53,18 @@ export function welcomeEmail(v: { name?: string; url: string; sample?: boolean }
   });
 }
 
+// NOTIF-01 — generic in-app notification mirrored to email (payments, withdrawals).
+export function notificationEmail(v: { title: string; body?: string; name?: string; url: string; sample?: boolean }): Rendered {
+  return renderBranded({
+    subject: v.title,
+    eyebrow: 'Notificación · SISMO911',
+    heading: v.title,
+    paras: [v.name ? `Hola ${v.name}:` : 'Hola:', ...(v.body ? [v.body] : [])],
+    button: { label: 'Ver en mi cuenta', url: v.url },
+    isSample: v.sample,
+  });
+}
+
 // AUTH-03 — password reset
 export function passwordResetEmail(v: { url: string; sample?: boolean }): Rendered {
   return renderBranded({
