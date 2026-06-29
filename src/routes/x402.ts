@@ -197,7 +197,7 @@ x402.all('/pay/:userId/:slug', async (c) => {
   const { userId, slug } = c.req.param();
 
   const res: any = await c.env.DB.prepare(
-    `SELECT r.id AS resource_id, r.title, r.description, r.price_usd, r.price_version, r.mime_type, r.active,
+    `SELECT r.id AS resource_id, r.title, r.description, r.price_usd, r.price_version, r.mime_type, r.active, r.kind,
             u.id AS payee_user_id, u.x402_enabled, u.x402_pay_to, u.wallet_address, u.x402_network, u.x402_asset
        FROM x402_resources r JOIN users u ON u.id = r.user_id
       WHERE r.user_id = ? AND r.slug = ?`
@@ -210,10 +210,24 @@ x402.all('/pay/:userId/:slug', async (c) => {
   // Fix 1/2: do not advertise payment capability we cannot settle.
   if (!isX402Live(c.env)) return c.json({ error: 'payments_unavailable' }, 503);
 
+  // Open-amount donations carry price_usd=0; the donor names the amount via
+  // ?amount= (USD). It is bounded and must be passed identically on the probe and
+  // the settle request so the advertised requirements match the signed value.
+  const OPEN_AMOUNT_MIN = 1, OPEN_AMOUNT_MAX = 10000;
+  let priceUsd = Number(res.price_usd) || 0;
+  if (res.kind === 'donation' && priceUsd === 0) {
+    const requested = Number(c.req.query('amount'));
+    if (!(requested > 0) || !isFinite(requested)) return c.json({ error: 'amount_required', detail: 'Especifica un monto de donación.' }, 400);
+    if (requested < OPEN_AMOUNT_MIN || requested > OPEN_AMOUNT_MAX) {
+      return c.json({ error: 'amount_out_of_range', min: OPEN_AMOUNT_MIN, max: OPEN_AMOUNT_MAX }, 400);
+    }
+    priceUsd = Math.round(requested * 100) / 100;
+  }
+
   const network = res.x402_network || x402Network(c.env);
   const asset = res.x402_asset || x402Asset(c.env, network);
   const chainId = chainIdFromNetwork(network);
-  const amount = usdToAtomic(Number(res.price_usd));
+  const amount = usdToAtomic(priceUsd);
   const requirements = buildRequirements(c.env, { payTo, amount, network, asset });
   const resourceUrl = c.req.url;
 
@@ -283,7 +297,7 @@ x402.all('/pay/:userId/:slug', async (c) => {
             pay_to, payer, status, facilitator, payload_json, ip, authorization_hash, idempotency_key, resource_price_version, created_ms)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       ).bind(id, res.payee_user_id, res.resource_id, resourceUrl, res.description || res.title, 'exact',
-             network, chainId, asset, amount, Number(res.price_usd), payTo, auth!.from ?? null, 'required',
+             network, chainId, asset, amount, priceUsd, payTo, auth!.from ?? null, 'required',
              c.env.X402_FACILITATOR_URL || null, JSON.stringify(payload),
              c.req.header('cf-connecting-ip') || null, authHash, idem, res.price_version, now).run();
     } catch {
@@ -330,7 +344,7 @@ x402.all('/pay/:userId/:slug', async (c) => {
     ).bind(res.payee_user_id).first();
     let ps: Record<string, unknown> = {};
     try { ps = JSON.parse(payee?.settings_json || '{}') || {}; } catch {}
-    const amountUsd = Number(res.price_usd) || 0;
+    const amountUsd = priceUsd || 0;
     if (ps.sec_receipt_notifs !== false) {
       await notify(c.env, res.payee_user_id, {
         type: 'payment_received',
@@ -353,7 +367,7 @@ x402.all('/pay/:userId/:slug', async (c) => {
   return c.json({
     ok: true, paid: true,
     resource: { title: res.title, description: res.description, mimeType: res.mime_type },
-    payment: { id, amount_usd: Number(res.price_usd), network, asset, payTo, payer: v.payer, tx: s.transactionHash, priceVersion: res.price_version },
+    payment: { id, amount_usd: priceUsd, network, asset, payTo, payer: v.payer, tx: s.transactionHash, priceVersion: res.price_version },
   });
 });
 

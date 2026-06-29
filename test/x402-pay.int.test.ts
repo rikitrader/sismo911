@@ -98,6 +98,18 @@ function buildDb(): D1Mock {
       price_version INTEGER NOT NULL DEFAULT 1,
       mime_type TEXT NOT NULL DEFAULT 'application/json',
       active INTEGER NOT NULL DEFAULT 1,
+      kind TEXT NOT NULL DEFAULT 'x402',
+      currency TEXT NOT NULL DEFAULT 'USDC',
+      goal_usd REAL,
+      campaign_blurb TEXT,
+      campaign_image TEXT,
+      campaign_public INTEGER NOT NULL DEFAULT 0,
+      client_name TEXT,
+      client_email TEXT,
+      invoice_status TEXT,
+      due_ms INTEGER,
+      paid_ms INTEGER,
+      archived_ms INTEGER,
       created_ms INTEGER NOT NULL,
       updated_ms INTEGER NOT NULL
     );
@@ -381,5 +393,48 @@ describe('x402 pay: transient settle failure then retry', () => {
     // still a single ledger row — re-used, not bricked, not duplicated.
     expect((db.raw.prepare('SELECT COUNT(*) n FROM x402_payments').get() as any).n).toBe(1);
     expect((db.raw.prepare('SELECT status FROM x402_payments').get() as any).status).toBe('settled');
+  });
+});
+
+// ── Case 8: open-amount donation (price_usd=0, kind='donation') ──────────────
+// The donor names the amount via ?amount=; the advertised requirements + the
+// settled ledger row must reflect the chosen amount, not the resource's 0 price.
+describe('x402 pay: open-amount donation', () => {
+  const DON_SLUG = 'rescate';
+  beforeEach(() => {
+    db.raw.prepare(
+      `INSERT INTO x402_resources (id, user_id, slug, title, description, price_usd, price_version, mime_type, active, kind, currency, campaign_public, created_ms, updated_ms)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    ).run('res_don', USER_ID, DON_SLUG, 'Campaña rescate', 'Apoya', 0, 1, 'application/json', 1, 'donation', 'USDC', 1, Date.now(), Date.now());
+  });
+  const donReq = (amount?: string, headers: Record<string, string> = {}) =>
+    x402.request(`/pay/${USER_ID}/${DON_SLUG}${amount != null ? `?amount=${amount}` : ''}`,
+      { method: 'POST', headers: { 'content-type': 'application/json', ...headers } }, env);
+
+  it('400 amount_required when no amount is given', async () => {
+    const res = await donReq();
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('amount_required');
+  });
+  it('400 amount_out_of_range below min / above max', async () => {
+    expect((await donReq('0.5')).status).toBe(400);
+    expect((await donReq('99999')).status).toBe(400);
+  });
+  it('402 advertises requirements for the chosen amount', async () => {
+    const res = await donReq('5');
+    expect(res.status).toBe(402);
+    const body = await res.json();
+    expect(body.accepts[0].amount).toBe('5000000'); // usdToAtomic(5), 6 decimals
+    expect(body.accepts[0].payTo).toBe(PAY_TO);
+  });
+  it('settles and records the donor-chosen amount_usd', async () => {
+    const payload = makePayload({ auth: { value: '7000000' } });
+    const res = await donReq('7', { 'payment-signature': encodeJsonB64(payload) });
+    expect(res.status).toBe(200);
+    expect((await res.json()).payment.amount_usd).toBe(7);
+    const row = db.raw.prepare("SELECT amount, amount_usd, status FROM x402_payments WHERE resource_id='res_don'").get() as any;
+    expect(row.amount).toBe('7000000');
+    expect(row.amount_usd).toBe(7);
+    expect(row.status).toBe('settled');
   });
 });

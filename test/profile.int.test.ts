@@ -20,6 +20,7 @@ const MIGRATIONS = [
   'migrations/0057_payment_links.sql',  // x402_resources kind/currency/archived_ms
   'migrations/0058_accounting.sql',     // x402_payments tax_category/notes/reconciled
   'migrations/0059_withdrawals.sql',    // withdrawal_methods + withdrawal_requests
+  'migrations/0070_cobros_donation_invoice.sql', // donation campaign + invoice columns
 ];
 
 async function setup() {
