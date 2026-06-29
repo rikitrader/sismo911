@@ -4641,6 +4641,52 @@ function showRetConfirm() {
     </div>`).join('');
 }
 
+/* ── Step-up re-auth modal (backs sec_require_login) ─────────────────────── */
+function stepUpConfirm() {
+  return new Promise((resolve) => {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;';
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg,#fff);color:var(--text,#0b1b3a);border-radius:14px;max-width:380px;width:100%;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.3);';
+    card.innerHTML =
+      '<div style="font-weight:800;font-size:1.05rem;margin-bottom:4px;">Confirma tu identidad</div>' +
+      '<div style="font-size:.85rem;color:var(--muted,#6b7280);margin-bottom:14px;">Por seguridad, ingresa tu contraseña para continuar con esta acción.</div>' +
+      '<input type="password" autocomplete="current-password" placeholder="Contraseña" style="width:100%;border:1px solid var(--border,#c4c6d0);border-radius:8px;padding:.6rem .7rem;font-size:.95rem;background:var(--bg,#fff);color:var(--text,#0b1b3a);" />' +
+      '<div class="su-err" style="display:none;color:#dc2626;font-size:.8rem;margin-top:8px;"></div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
+        '<button type="button" class="su-cancel" style="border:1px solid var(--border,#c4c6d0);background:transparent;color:inherit;border-radius:8px;padding:.5rem .9rem;font-weight:600;cursor:pointer;">Cancelar</button>' +
+        '<button type="button" class="su-ok" style="border:none;background:#13284f;color:#fff;border-radius:8px;padding:.5rem 1rem;font-weight:700;cursor:pointer;">Confirmar</button>' +
+      '</div>';
+    ov.appendChild(card); document.body.appendChild(ov);
+    const inp = card.querySelector('input'), err = card.querySelector('.su-err');
+    const ok = card.querySelector('.su-ok'), cancel = card.querySelector('.su-cancel');
+    const close = (v) => { ov.remove(); resolve(v); };
+    setTimeout(() => inp.focus(), 30);
+    cancel.addEventListener('click', () => close(false));
+    ov.addEventListener('click', (e) => { if (e.target === ov) close(false); });
+    async function go() {
+      const pw = inp.value;
+      if (!pw) { inp.focus(); return; }
+      ok.disabled = true; ok.textContent = 'Verificando…'; err.style.display = 'none';
+      try {
+        const r = await fetch('/api/profile/confirm', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: pw }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) { close(true); return; }
+        err.textContent = d.error === 'invalid_password' ? 'Contraseña incorrecta.' : 'No se pudo confirmar. Intenta de nuevo.';
+        err.style.display = 'block'; ok.disabled = false; ok.textContent = 'Confirmar'; inp.select();
+      } catch (e) {
+        err.textContent = 'Error de red. Intenta de nuevo.'; err.style.display = 'block';
+        ok.disabled = false; ok.textContent = 'Confirmar';
+      }
+    }
+    ok.addEventListener('click', go);
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  });
+}
+
 /* ── Submit ──────────────────────────────────────────────────────────────── */
 async function submitRetWithdrawal() {
   const btn  = document.getElementById('ret-s3-confirm');
@@ -4670,6 +4716,14 @@ async function submitRetWithdrawal() {
     });
     if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
     const d = await r.json().catch(() => ({}));
+
+    // Step-up: the user enabled "Exigir inicio de sesión para acciones sensibles".
+    // Confirm with the password, then retry the withdrawal once.
+    if (r.status === 403 && d.error === 'step_up_required') {
+      btn.disabled = false; btn.textContent = orig;
+      if (await stepUpConfirm()) return submitRetWithdrawal();
+      return;
+    }
 
     if ((r.status === 201 || r.status === 200) && (d.ok || d.idempotent)) {
       /* Optional: save method */
@@ -4771,11 +4825,11 @@ function buildSecurityTab(settings, profile) {
   if (rowsEl) {
     const s = settings || {};
     const rows = [
-      ['sec_payment_emails',   'Correos de pago',                                  'Recibe un correo por cada pago.',                                        !!s.sec_payment_emails],
-      ['sec_public_page',      'Página de pago pública',                           'Permite que tu perfil de cobro sea visible públicamente.',               !!s.sec_public_page],
-      ['sec_hide_email',       'Ocultar mi correo del perfil público',             'Tu correo no se muestra en tu página de pago pública.',                  !!s.sec_hide_email],
-      ['sec_require_login',    'Exigir inicio de sesión para acciones sensibles',  'Se pedirá confirmación al realizar acciones sensibles.',                  !!s.sec_require_login],
-      ['sec_receipt_notifs',   'Notificaciones de recibo',                         'Recibe una notificación por cada recibo generado.',                       !!s.sec_receipt_notifs],
+      ['sec_payment_emails',   'Correos de pago',                                  'Recibe un correo por cada pago que recibas.',                            !!s.sec_payment_emails],
+      ['sec_public_page',      'Página de pago pública',                           'Permite que tu perfil de cobro sea visible públicamente.',               s.sec_public_page !== false],
+      ['sec_hide_email',       'Ocultar mi correo del perfil público',             'Tu correo no se muestra en tu página de pago pública.',                  s.sec_hide_email !== false],
+      ['sec_require_login',    'Exigir inicio de sesión para acciones sensibles',  'Pide tu contraseña al realizar acciones sensibles (retiros, cambios).',   !!s.sec_require_login],
+      ['sec_receipt_notifs',   'Notificaciones de recibo',                         'Recibe una notificación en la app por cada pago recibido.',               s.sec_receipt_notifs !== false],
       ['sec_audit_visibility', 'Visibilidad del registro de auditoría',            'Permite que los administradores vean tu registro de auditoría.',          !!s.sec_audit_visibility],
     ];
     rowsEl.innerHTML = rows.map(([k, l, d, c]) => toggleRow(k, l, d, c)).join('');

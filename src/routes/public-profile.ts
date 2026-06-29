@@ -25,7 +25,7 @@ publicProfile.get('/:id', async (c) => {
   if (!id || id.length > 64) return c.json({ ok: false, found: false }, 404);
 
   const u: any = await c.env.DB.prepare(
-    `SELECT id, name, role, country, created_ms, settings_json,
+    `SELECT id, name, email, role, country, created_ms, settings_json,
             x402_enabled, wallet_address, avatar_r2
        FROM users WHERE id = ?`
   ).bind(id).first();
@@ -33,9 +33,16 @@ publicProfile.get('/:id', async (c) => {
   if (!u) return c.json({ ok: false, found: false }, 404);
 
   const settings = parseSettings(u.settings_json);
-  // Public unless the owner explicitly turned the public profile OFF.
-  const isPublic = settings.public_profile !== false;
+  // Public unless the owner turned the public page OFF via EITHER the payment
+  // pref (public_profile) or the security toggle (sec_public_page). Both default
+  // to public when unset, so existing profiles stay reachable.
+  const isPublic = settings.public_profile !== false && settings.sec_public_page !== false;
   if (!isPublic) return c.json({ ok: true, found: true, public: false });
+
+  // Email is PRIVATE by default. It is exposed publicly ONLY when the owner has
+  // explicitly opted in by turning the "Ocultar mi correo" toggle OFF (persisted
+  // sec_hide_email === false). Unset/true → hidden. No other PII is ever exposed.
+  const showEmail = settings.sec_hide_email === false;
 
   const receiving = settings.receive_payments !== false
     && Boolean(u.x402_enabled || u.wallet_address);
@@ -70,6 +77,7 @@ publicProfile.get('/:id', async (c) => {
       role_label: ROLE_LABEL[u.role] || 'Ciudadano',
       country: u.country || null,
       created_ms: u.created_ms || null,
+      email: showEmail ? (u.email || null) : null,
       has_avatar: Boolean(u.avatar_r2),
       avatar_url: u.avatar_r2 ? `/api/u/${encodeURIComponent(id)}/avatar` : null,
     },
