@@ -1558,7 +1558,8 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
 .ov-footer-body { flex:1; min-width:0; }
 .ov-footer-title { font-family:var(--font-display); font-weight:800; font-size:1.1rem; color:var(--text); }
 .ov-footer-text { font-size:.86rem; color:var(--muted); margin-top:3px; }
-.ov-footer-btn { flex-shrink:0; text-decoration:none; }
+.ov-footer-btn { flex-shrink:0; text-decoration:none; display:inline-flex; align-items:center; gap:6px; padding:11px 22px; border-radius:999px; border:none; background:var(--brand-2); color:#fff; font-family:var(--font); font-weight:700; font-size:.88rem; box-shadow:0 4px 14px rgba(11,95,255,.28); transition:filter .15s ease, transform .15s ease; }
+.ov-footer-btn:hover { filter:brightness(1.07); transform:translateY(-1px); }
 
 /* ── Finanzas division sub-tools ───────────────────────────────────────────── */
 .fin-subtools { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
@@ -2035,7 +2036,7 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
           <div class="ov-footer-title">Juntos somos más fuertes</div>
           <div class="ov-footer-text">Cada acción cuenta. Gracias por ser parte del cambio.</div>
         </div>
-        <a class="btn btn-primary ov-footer-btn" href="/humanitario">Ver impacto →</a>
+        <a class="ov-footer-btn" href="/humanitario">Ver impacto →</a>
       </section>
     </div>
 
