@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { cspNonce } from '../lib/security';
+import { isMinor, isPublicSuppressed, coarsenLocation, PERSONAS_MINOR_SQL, PERSONAS_PUBLIC_SUPPRESS_SQL } from '../lib/minor-protect';
 
 // Public, shareable "Se busca" articles — one per missing-person case in the
 // `personas` registry. Rendered dynamically from D1 so it scales to the full
@@ -17,11 +18,11 @@ const BASE = 'https://sismo911.com';
 
 const HEADER = `<header class="bg-primary text-white sticky top-0 z-50"><div class="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3"><a href="/" class="flex items-center gap-2 shrink-0"><img src="/logo.svg" class="h-8 w-8" alt="SISMO911"><b class="font-display tracking-tight">SISMO911</b></a><nav class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium"><a href="/" class="hover:text-white/70">Panel</a><a href="/mapa" class="hover:text-white/70">Mapa</a><a href="/sos" class="text-secondary-fixed font-bold">SOS</a><a href="/personas" class="hover:text-white/70">Personas</a><a href="/familia" class="hover:text-white/70">Familia</a><a href="/acopio" class="hover:text-white/70">Acopio</a><a href="/recursos" class="hover:text-white/70">Recursos</a><a href="/guia" class="hover:text-white/70">Guía</a><a href="/contacto" class="hover:text-white/70">Contacto</a><a href="/blog" class="text-white">Noticias</a></nav></div></header>`;
 
-const HEAD = (title: string, desc: string, canon: string, img: string, extra = '') => `<!DOCTYPE html><html lang="es"><head>
+const HEAD = (title: string, desc: string, canon: string, img: string, extra = '', robots = 'index,follow,max-image-preview:large') => `<!DOCTYPE html><html lang="es"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
-<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="robots" content="${esc(robots)}">
 <link rel="canonical" href="${esc(canon)}">
 <meta property="og:type" content="article"><meta property="og:site_name" content="SISMO911"><meta property="og:locale" content="es_VE">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${esc(canon)}"><meta property="og:image" content="${esc(img)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
@@ -64,15 +65,22 @@ desaparecidos.get('/blog/desaparecido/:id', async (c) => {
   const nonce = cspNonce(c);
   const id = c.req.param('id');
   const p = await c.env.DB.prepare(
-    `SELECT id, nombre, edad, ubicacion, descripcion, estado, foto, foto_r2, updated_at
+    `SELECT id, nombre, edad, ubicacion, descripcion, estado, foto, foto_r2, protected, updated_at
      FROM personas WHERE id = ? AND moderation = 'approved'`,
   ).bind(id).first<any>().catch(() => null);
   if (!p) return c.text('Caso no encontrado', 404);
+  // Minor protection: a resolved-minor or operator-protected case is auto-removed
+  // from this PUBLIC article (responder-only). A still-missing minor stays visible
+  // but is NEVER search-indexed and its location is coarsened to locality.
+  if (isPublicSuppressed({ age: p.edad, estado: p.estado, protected: p.protected })) {
+    return c.text('Caso no encontrado', 404);
+  }
+  const minor = isMinor(p.edad);
 
   const canon = `${BASE}/blog/desaparecido/${p.id}`;
   const img = (p.foto_r2 || p.foto) ? `${BASE}/api/familia/photo/${p.id}` : `${BASE}/og/og-default.png`;
   const age = p.edad ? `, ${p.edad} años` : '';
-  const lugar = p.ubicacion || 'Venezuela';
+  const lugar = minor ? (coarsenLocation(p.ubicacion) || 'Venezuela') : (p.ubicacion || 'Venezuela');
   const title = `🔴 Se busca a ${p.nombre}${age} — visto por última vez en ${lugar}`;
   const desc = `${p.nombre}${age} figura entre las personas reportadas como desaparecidas tras el terremoto M7.5 del 24-J en Venezuela. Última ubicación conocida: ${lugar}. Comparte para ayudar a su familia.`;
   const st = statusLabel(p.estado);
@@ -89,7 +97,7 @@ desaparecidos.get('/blog/desaparecido/:id', async (c) => {
     about: [{ '@type': 'Person', name: p.nombre }, { '@type': 'Event', name: 'Terremoto de Venezuela del 24 de junio de 2026' }],
   };
 
-  const html = `${HEAD(`${title} — SISMO911`, desc, canon, img, `<script type="application/ld+json">${JSON.stringify(ld)}</script>`)}
+  const html = `${HEAD(`${title} — SISMO911`, desc, canon, img, `<script type="application/ld+json">${JSON.stringify(ld)}</script>`, minor ? 'noindex,nofollow,noarchive' : undefined)}
 <body class="font-sans text-on-surface">
 ${HEADER}
 <main class="px-4 sm:px-6 lg:px-8 py-8"><div class="mx-auto max-w-3xl">
@@ -129,7 +137,8 @@ desaparecidos.get('/blog/desaparecidos', async (c) => {
   const nonce = cspNonce(c);
   const page = Math.max(1, Number(c.req.query('page') || '1') || 1);
   const offset = (page - 1) * PAGE;
-  const where = `foto_r2 IS NOT NULL AND moderation = 'approved'`;
+  // Hide operator-protected + resolved-minor cases from the public sharing wall.
+  const where = `foto_r2 IS NOT NULL AND moderation = 'approved' AND NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`;
   const total = ((await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas WHERE ${where}`).first<any>())?.n) ?? 0;
   const { results: rows } = await c.env.DB.prepare(
     `SELECT id, nombre, edad, ubicacion, estado FROM personas WHERE ${where}
@@ -144,7 +153,7 @@ desaparecidos.get('/blog/desaparecidos', async (c) => {
       <a href="${a}" class="block relative aspect-[4/3] overflow-hidden bg-surface-container"><img src="/api/familia/photo/${esc(p.id)}" alt="${esc(p.nombre)}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"><span class="absolute top-2 left-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm" style="background:${st.bg}cc">${st.txt}</span></a>
       <div class="p-3 flex flex-col flex-1">
         <a href="${a}"><h3 class="font-display font-bold text-[14px] leading-snug text-on-surface mb-0.5 line-clamp-2 group-hover:text-primary">${esc(p.nombre)}${p.edad ? `, ${esc(p.edad)}` : ''}</h3></a>
-        <p class="text-xs text-on-surface-variant line-clamp-1 mb-2">📍 ${esc(p.ubicacion || 'Venezuela')}</p>
+        <p class="text-xs text-on-surface-variant line-clamp-1 mb-2">📍 ${esc((isMinor(p.edad) ? coarsenLocation(p.ubicacion) : p.ubicacion) || 'Venezuela')}</p>
         <div class="mt-auto flex items-center justify-between text-[11px]"><a href="${a}" class="text-primary font-semibold hover:underline">Ver y difundir →</a><a target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(`Se busca a ${p.nombre}. ${BASE}/blog/desaparecido/${p.id}`)}" class="text-[#25D366] font-semibold hover:underline">WhatsApp</a></div>
       </div>
     </div>`;
@@ -188,8 +197,11 @@ desaparecidos.get('/sitemap-desaparecidos.xml', async (c) => {
   const KEY = 'sitemap:desaparecidos';
   const cached = await c.env.CACHE.get(KEY).catch(() => null);
   if (cached) return c.body(cached, 200, { 'content-type': 'application/xml; charset=utf-8' });
+  // Never feed a minor's case URL to search engines (their article is noindex),
+  // nor any operator-protected case.
   const { results } = await c.env.DB.prepare(
     `SELECT id FROM personas WHERE foto_r2 IS NOT NULL AND moderation = 'approved'
+       AND NOT ${PERSONAS_MINOR_SQL} AND NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}
      ORDER BY updated_at DESC LIMIT 45000`,
   ).all<any>();
   const urls = [`  <url><loc>${BASE}/blog/desaparecidos</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>`]

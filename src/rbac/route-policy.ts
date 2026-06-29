@@ -89,7 +89,7 @@ export function evaluateGate(path: string, method: string): GateDecision {
     path === '/api/persons/queue' ||
     path === '/api/persons/docket/queue' ||
     (path.startsWith('/api/persons/') && method === 'PATCH') ||
-    path.endsWith('/approve') || path.endsWith('/reject') || path.endsWith('/localizar');
+    path.endsWith('/approve') || path.endsWith('/reject') || path.endsWith('/localizar') || path.endsWith('/protect');
 
   const isDocketSubmit = method === 'POST' && /^\/api\/persons\/[^/]+\/docket$/.test(path);
 
