@@ -544,7 +544,7 @@ function caseRowHtml(c){
   const dc=c.docket_count||0, ev=c.evidence_count||0;
   return `<tr data-id="${esc(c.id)}">
       <td><div class="casecell"><span class="caseno">${esc(caseNo(c))}</span>${c.source==='familia'?'<span class="sub">Familia</span>':''}</div></td>
-      <td><div class="person">${avatar(c.photo_url,'avatar')}<div><div class="nm">${esc(c.full_name||'Sin nombre')}</div><div class="sub">${c.age?c.age+' años':''}${c.sex?(c.age?' · ':'')+esc(c.sex):''}</div>${c.hospital_match?`<span class="tag" title="Posible coincidencia con un ingreso hospitalario — verificar" style="background:#e3f6ea;color:#166534;margin-top:4px">🏥 Posible: ${esc(c.hospital_match)}</span>`:''}</div></div></td>
+      <td><div class="person">${avatar(c.photo_url,'avatar')}<div><div class="nm">${esc(c.full_name||'Sin nombre')}</div><div class="sub">${c.age?c.age+' años':''}${c.sex?(c.age?' · ':'')+esc(c.sex):''}</div>${c.hospital_match?`<span class="tag" title="Posible coincidencia con un ingreso hospitalario — verificar" style="background:#e3f6ea;color:#166534;margin-top:4px">🏥 Posible: ${esc(c.hospital_match)}</span>`:''}${(OP&&c.protected)?`<span class="tag" title="Caso protegido — oculto al público, solo responders" style="background:rgba(229,114,0,.16);color:#9a6400;margin-top:4px">🛡 Protegido</span>`:''}</div></div></td>
       <td>${pill(c.status)}</td>
       <td>${triageCell(c)}</td>
       <td><span class="sub" style="color:var(--ink);font-weight:600">${esc(typeLbl(c.incident_type))}</span></td>

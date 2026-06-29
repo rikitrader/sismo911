@@ -8,7 +8,7 @@ import { sha256Hex, imageDimensions, logCustody } from '../lib/evidence';
 import { scoreCase } from '../lib/case-score';
 import { recomputeCaseScore } from '../lib/case-score-sync';
 import { edgeCached } from '../lib/edge-cache';
-import { isMinor, isPublicSuppressed, coarsenLocation, PERSONAS_PUBLIC_SUPPRESS_SQL, personsPublicSuppressSql } from '../lib/minor-protect';
+import { isMinor, isPublicSuppressed, coarsenLocation, scrubMinorText, PERSONAS_PUBLIC_SUPPRESS_SQL, personsPublicSuppressSql } from '../lib/minor-protect';
 
 export const persons = new Hono<{ Bindings: Env }>();
 
@@ -124,8 +124,9 @@ async function famPerson(env: any, id: string, op: boolean): Promise<any> {
     contact_phone, reported_by, last_seen_lat, last_seen_lon, priority, assigned_to,
     localizado_por, localizado_relacion, localizado_nota, localizado_contacto, ...pub
   } = base;
-  // Minor protection: coarsen a child's last-seen to locality for the public.
-  if (isMinor(pub.age, pub.incident_type)) pub.last_seen = coarsenLocation(pub.last_seen);
+  // Minor protection: coarsen a child's last-seen to locality + scrub house/unit
+  // numbers from the description for the public.
+  if (isMinor(pub.age, pub.incident_type)) { pub.last_seen = coarsenLocation(pub.last_seen); pub.notes = scrubMinorText(pub.notes); }
   return pub;
 }
 
@@ -295,7 +296,7 @@ persons.get('/cases', async (c) => {
   if (personIds.length) {
     const stmts = chunk(personIds, 90).map((ids) => c.env.DB.prepare(
       `SELECT p.id, p.case_number, p.full_name, p.age, p.sex, p.last_seen, p.last_seen_lat, p.last_seen_lon,
-              p.status, p.priority, p.incident_type, p.assigned_to, p.review, p.photo_url, p.contact_phone, p.reported_by, p.notes,
+              p.status, p.priority, p.incident_type, p.assigned_to, p.review, p.photo_url, p.contact_phone, p.reported_by, p.notes, p.protected,
               p.event_id, p.created_ms, p.updated_ms,
               e.place_es AS event_place, e.place AS event_place_en, e.mag AS event_mag, e.alert AS event_alert, e.time_ms AS event_time,
               (SELECT COUNT(*) FROM person_events pe WHERE pe.person_id = p.id${dCount}) AS docket_count,
@@ -310,7 +311,8 @@ persons.get('/cases', async (c) => {
   const personCases = personRows.map((r) => op ? r : {
     id: r.id, case_number: r.case_number, full_name: r.full_name, age: r.age, sex: r.sex,
     last_seen: isMinor(r.age, r.incident_type) ? coarsenLocation(r.last_seen) : r.last_seen,  // minor → locality only
-    status: r.status, incident_type: r.incident_type, review: r.review, photo_url: r.photo_url, notes: r.notes,
+    status: r.status, incident_type: r.incident_type, review: r.review, photo_url: r.photo_url,
+    notes: isMinor(r.age, r.incident_type) ? scrubMinorText(r.notes) : r.notes,  // minor → scrub house/unit numbers
     event_id: r.event_id, created_ms: r.created_ms, updated_ms: r.updated_ms,
     event_place: r.event_place, event_place_en: r.event_place_en, event_mag: r.event_mag, event_alert: r.event_alert, event_time: r.event_time,
     docket_count: r.docket_count, last_activity_ms: r.last_activity_ms,
@@ -324,7 +326,7 @@ persons.get('/cases', async (c) => {
     try {
       const quake = await quakeRef(c.env);
       const famRowsRes = await c.env.DB.batch<any>(chunk(famKeys, 90).map((ks) => c.env.DB.prepare(
-        `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto, foto_r2, estado, created_at, updated_at
+        `SELECT id, nombre, edad, ubicacion, descripcion, contacto, foto, foto_r2, estado, protected, created_at, updated_at
          FROM personas WHERE id IN (${ks.map(() => '?').join(',')})`
       ).bind(...ks)));
       const famRows = famRowsRes.flatMap((r) => r.results ?? []);
@@ -345,7 +347,7 @@ persons.get('/cases', async (c) => {
           id, case_number: famCaseNumber(r.id), full_name: r.nombre, age: r.edad, sex: null,
           last_seen: r.ubicacion, status: estadoToStatus(r.estado), review: 'approved',
           priority: m.priority || 'media', incident_type: m.incident_type || 'persona_desaparecida', assigned_to: m.assigned_to || null,
-          photo_url: r.foto_r2 ? `/api/familia/photo/${r.id}` : (r.foto || null), notes: r.descripcion,
+          photo_url: r.foto_r2 ? `/api/familia/photo/${r.id}` : (r.foto || null), notes: r.descripcion, protected: r.protected ?? 0,
           event_id: quake?.id || null, created_ms: r.created_at, updated_ms: r.updated_at,
           event_place: quake?.place_es || quake?.place || null, event_place_en: quake?.place || null, event_mag: quake?.mag || null, event_alert: quake?.alert || null, event_time: quake?.time_ms || null,
           docket_count: cnt[id] || 0, evidence_count: 0, last_activity_ms: null, source: 'familia',
@@ -353,7 +355,7 @@ persons.get('/cases', async (c) => {
         };
         if (op) return full;
         const { contact_phone, priority, assigned_to, ...pub } = full;
-        if (isMinor(pub.age, pub.incident_type)) pub.last_seen = coarsenLocation(pub.last_seen);  // minor → locality only
+        if (isMinor(pub.age, pub.incident_type)) { pub.last_seen = coarsenLocation(pub.last_seen); pub.notes = scrubMinorText(pub.notes); }  // minor → locality only + scrub desc
         return pub;
       });
     } catch (e: any) { console.error('[cases] familia bridge failed:', e?.message ?? e); }
@@ -597,7 +599,9 @@ persons.get('/:id/docket', async (c) => {
     last_seen: isMinor(person.age, person.incident_type) ? coarsenLocation(person.last_seen) : person.last_seen,  // minor → locality only
     status: person.status, review: person.review,
     priority: person.priority, incident_type: person.incident_type,
-    photo_url: person.photo_url, notes: person.notes, event_id: person.event_id,
+    photo_url: person.photo_url,
+    notes: isMinor(person.age, person.incident_type) ? scrubMinorText(person.notes) : person.notes,  // minor → scrub house/unit numbers
+    event_id: person.event_id,
     created_ms: person.created_ms, updated_ms: person.updated_ms,
     // redacted: contact_phone, reported_by, last_seen_lat/lon, assigned_to
   };

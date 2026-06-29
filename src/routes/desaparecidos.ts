@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { cspNonce } from '../lib/security';
-import { isMinor, isPublicSuppressed, coarsenLocation, PERSONAS_MINOR_SQL, PERSONAS_PUBLIC_SUPPRESS_SQL } from '../lib/minor-protect';
+import { isMinor, isPublicSuppressed, coarsenLocation, scrubMinorText, PERSONAS_MINOR_SQL, PERSONAS_PUBLIC_SUPPRESS_SQL } from '../lib/minor-protect';
 
 // Public, shareable "Se busca" articles — one per missing-person case in the
 // `personas` registry. Rendered dynamically from D1 so it scales to the full
@@ -85,8 +85,10 @@ desaparecidos.get('/blog/desaparecido/:id', async (c) => {
   const desc = `${p.nombre}${age} figura entre las personas reportadas como desaparecidas tras el terremoto M7.5 del 24-J en Venezuela. Última ubicación conocida: ${lugar}. Comparte para ayudar a su familia.`;
   const st = statusLabel(p.estado);
   const cl = caseLink(p);
+  // Minor: scrub house/unit numbers from the public description (locality already coarsened above).
+  const descripcion = minor ? scrubMinorText(p.descripcion) : p.descripcion;
   const body = `<p>${esc(p.nombre)}${age ? ` (${esc(p.edad)} años)` : ''} figura entre las personas que sus familiares reportaron como <b>desaparecidas</b> tras el terremoto de magnitud 7.5 del <b>24 de junio de 2026</b> en Venezuela. La última ubicación conocida es <b>${esc(lugar)}</b>.</p>
-    ${p.descripcion ? `<p>${esc(p.descripcion)}</p>` : ''}
+    ${descripcion ? `<p>${esc(descripcion)}</p>` : ''}
     <p>Si has visto a esta persona o tienes cualquier información sobre su paradero, <b>repórtalo en el caso de búsqueda</b> de SISMO911. Cada vez que compartes este aviso aumentan las probabilidades de reunir a esta familia.</p>`;
 
   const ld = {
