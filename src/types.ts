@@ -88,6 +88,10 @@ export interface Env {
     reply_to?: { email: string; name?: string };
   }): Promise<unknown> };
   EMAIL_FROM?: string;
+  // Support inbox From/Reply-To address. Inbound replies to this address are
+  // routed to the Worker's email() handler and threaded back to the ticket by
+  // its [#REF]. Defaults to soporte@sismo911.com.
+  SUPPORT_EMAIL?: string;
   // Gates the transactional-email preview/test route (/api/notify) — set as a
   // Worker secret (wrangler secret put NOTIFY_TOKEN). Absent ⇒ route disabled.
   NOTIFY_TOKEN?: string;

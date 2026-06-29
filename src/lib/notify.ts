@@ -13,6 +13,7 @@ export type NotificationType =
   | 'link_created'
   | 'welcome'
   | 'plan_interest'
+  | 'support'
   | 'system';
 
 export interface NotifyInput {
