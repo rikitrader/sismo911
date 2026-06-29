@@ -23,11 +23,14 @@ describe('email wiring status — 77-email coverage ledger', () => {
     }
   });
 
-  it('reports the current tally (progress meter)', () => {
+  it('GOAL GATE — zero `deferred` (every email is wired, product_deferred, or n/a)', () => {
     const t = wiringTally();
     expect(t.total).toBe(77);
-    expect(t.wired + t.deferred + t.notApplicable).toBe(77);
+    expect(t.wired + t.deferred + t.productDeferred + t.notApplicable).toBe(77);
+    // The email SYSTEM is complete when nothing remains in the buildable-now
+    // `deferred` bucket. Any new/regressed deferred entry fails this gate.
+    expect(t.deferred, 'emails still in the buildable `deferred` bucket — wire or reclassify them').toBe(0);
     // eslint-disable-next-line no-console
-    console.log(`[email-wiring] WIRED ${t.wired}/77 · deferred ${t.deferred} · n/a ${t.notApplicable}`);
+    console.log(`[email-wiring] WIRED ${t.wired}/77 · product_deferred ${t.productDeferred} · n/a ${t.notApplicable} · deferred ${t.deferred}`);
   });
 });
