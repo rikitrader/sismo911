@@ -4,7 +4,10 @@ import { uid } from '../lib/db';
 import { hashPassword, verifyPassword, passwordNeedsUpgrade, createSession, setSessionCookie, clearSession, getUserFromRequest, getSessionToken, IDLE_TTL_MS, isPrivilegedRole } from '../lib/auth';
 import { rateLimit } from '../lib/security';
 import { audit } from '../lib/audit';
-import { sendEmail, randomToken, sha256hex, resetEmail, welcomeEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
+import { sendEmail, randomToken, sha256hex, resetEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
+// Rich branded catalog templates (AUTH-01 verify, AUTH-02 welcome) — the
+// transactional-email source of truth. Aliased to avoid clashing with email.ts.
+import { verifyEmail as verifyEmailTpl, welcomeEmail as welcomeEmailTpl } from '../lib/email-catalog';
 import { createWalletForEmail, isCrossmintConfigured } from '../lib/crossmint';
 import { x402Network, x402Asset } from '../lib/x402';
 import { verifyTotp, verifyTotpStep, matchBackupCode } from '../lib/totp';
@@ -78,11 +81,52 @@ auth.post('/register', async (c) => {
 
   const { token, expires } = await createSession(c.env, id, c.req.header('user-agent'));
   setSessionCookie(c, token);
-  fireEmail(c, email, welcomeEmail(b.name));
+  // AUTH-01: send the branded email-verification message (advisory — does NOT
+  // block login). The welcome (AUTH-02) is sent once the address is confirmed via
+  // GET /verify, matching the catalog's verify → welcome sequence.
+  await sendVerificationEmail(c, id, email, b.name);
   // Provision the user's encrypted custodial wallet (Crossmint, Base) in the
   // background — never blocks the signup response.
   fireWallet(c, id, email);
   return c.json({ ok: true, token, expires, user: { id, email, name: b.name, role } }, 201);
+});
+
+// Issue a single-use email-verification token and fire AUTH-01. Never throws /
+// blocks the response. base URL comes from PUBLIC_BASE_URL.
+async function sendVerificationEmail(c: any, userId: string, email: string, name?: string) {
+  try {
+    const raw = randomToken();
+    const now = Date.now();
+    await c.env.DB.prepare(
+      `INSERT INTO email_verifications (id, user_id, token_hash, expires_ms, used_ms, created_ms) VALUES (?,?,?,?,?,?)`
+    ).bind(uid('evr'), userId, await sha256hex(raw), now + 30 * 60 * 1000, null, now).run();
+    const base = c.env.PUBLIC_BASE_URL || 'https://sismo911.com';
+    fireEmail(c, email, verifyEmailTpl({ name, url: `${base}/api/auth/verify?token=${raw}` }));
+  } catch (e: any) {
+    console.error('[auth] verification email failed:', e?.message ?? e);
+  }
+}
+
+// GET /api/auth/verify?token — confirm an email address (AUTH-01 → AUTH-02).
+// Burns the single-use token, marks users.email_verified=1 (idempotent), and
+// sends the welcome email. Advisory: an already-logged-in user simply gets
+// verified. Redirects to /cuenta on success.
+auth.get('/verify', async (c) => {
+  const token = (c.req.query('token') || '').trim();
+  if (!token) return c.json({ error: 'token_required' }, 400);
+  const now = Date.now();
+  const row: any = await c.env.DB.prepare(
+    `SELECT ev.id AS vid, ev.user_id, u.email, u.name
+       FROM email_verifications ev JOIN users u ON u.id = ev.user_id
+      WHERE ev.token_hash = ? AND ev.used_ms IS NULL AND ev.expires_ms > ?`
+  ).bind(await sha256hex(token), now).first();
+  if (!row) return c.json({ error: 'token_invalid_or_expired' }, 400);
+  await c.env.DB.prepare(`UPDATE email_verifications SET used_ms = ? WHERE id = ?`).bind(now, row.vid).run();
+  await c.env.DB.prepare(`UPDATE users SET email_verified = 1 WHERE id = ?`).bind(row.user_id).run();
+  const base = c.env.PUBLIC_BASE_URL || 'https://sismo911.com';
+  fireEmail(c, row.email, welcomeEmailTpl({ name: row.name, url: `${base}/cuenta` }));
+  await audit(c, 'auth.verify', { user_id: row.user_id });
+  return c.redirect(`${base}/cuenta?verificado=1`, 302);
 });
 
 // POST /api/auth/wallet — lazily provision (or return) the caller's custodial
