@@ -30,6 +30,7 @@ import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
 import { backfillHospitalMatches } from './ingest/hospital-match';
 import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
+import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
 
@@ -41,6 +42,15 @@ async function drainHospitalMatch(env: Env): Promise<{ passes: number; matched: 
     const r = await backfillHospitalMatches(env, { pages: 3 });
     matched += r.matched; phase = r.phase;
     if (r.done) { passes++; break; }
+  }
+  // CRM tracking — one entry per sweep, only when NEW hospital↔desaparecido leads
+  // were found (status untouched; each is a pending docket note for verification).
+  if (matched > 0) {
+    const m = await missingStats(env);
+    await logAgentActivity(env, {
+      source: 'hospital-match', action: 'match', matched, stillMissing: m.total, stillUnique: m.unique,
+      summary: `🏥 Cruce hospitalario — ${matched} nueva(s) coincidencia(s) desaparecido↔ingreso (nota pendiente de verificación). ${missingPhrase(m)}.`,
+    });
   }
   return { passes, matched, phase };
 }

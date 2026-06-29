@@ -5,6 +5,7 @@ import {
   type RavPersonRow, type RavVerifiedRow, type RavStatsRow, type RavReportRow, type RavSafeRow, type PersonaUpsert,
 } from '../lib/rav';
 import { gatePersona, gateRavReport } from './gate-config';
+import { logAgentActivity, missingStats, missingPhrase } from '../lib/agent-activity';
 
 // Ingest of redayudavenezuela.com (RAV) into D1.
 //
@@ -87,6 +88,12 @@ export async function ingestRav(env: Env, pages = MAX_PAGES_PER_RUN): Promise<Ra
     await recordIngest(env, 'rav', true, written);
     const res = { written, from: offset, to: Math.min(cur, total), total, next, rejected };
     console.log(`[rav] ${offset}-${res.to}/${total}: upserted ${written}, rejected ${rejected}; next cursor=${next}`);
+    // CRM tracking heartbeat — the desaparecidos firehose (redayudavenezuela).
+    const m = await missingStats(env);
+    await logAgentActivity(env, {
+      source: 'rav', action: 'ingest', fetched: written + rejected, created: written, stillMissing: m.total, stillUnique: m.unique,
+      summary: `🤖 Ingesta RAV (desaparecidos) — ${written} sincronizados (offset ${offset}–${res.to}/${total}). ${missingPhrase(m)}.`,
+    });
     return res;
   } catch (e: any) {
     console.error('[rav] ingest failed:', e?.message ?? e);

@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 import { recordIngest } from '../lib/db';
 import { gatePersona } from './gate-config';
+import { logAgentActivity, missingStats, missingPhrase } from '../lib/agent-activity';
 import { isSafePublicUrl, safeFetch } from '../lib/sanitize';
 
 // Hourly re-ingest of the missing-persons (Familia) registry from the public
@@ -154,6 +155,12 @@ export async function ingestFamilia(env: Env): Promise<number> {
     await env.CACHE.put(CURSOR_KEY, String(next)).catch(() => {});
     await recordIngest(env, 'familia', true, written);
     console.log(`[familia] pages ${start}-${lastPage}/${totalPages}: upserted ${written}, rejected ${rejected}; next cursor=${next}`);
+    // CRM tracking heartbeat — the Familia (theempire) desaparecidos registry.
+    const m = await missingStats(env);
+    await logAgentActivity(env, {
+      source: 'familia', action: 'ingest', fetched: written + rejected, created: written, stillMissing: m.total, stillUnique: m.unique,
+      summary: `🤖 Ingesta Familia (desaparecidos) — ${written} sincronizados (págs ${start}–${lastPage}/${totalPages}). ${missingPhrase(m)}.`,
+    });
     return written;
   } catch (e: any) {
     const msg = String(e?.message ?? e);

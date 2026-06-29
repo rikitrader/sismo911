@@ -179,11 +179,20 @@ persons.get('/stats', async (c) => edgeCached(c, 60, async () => {
 persons.get('/agent-activity', async (c) => edgeCached(c, 30, async () => {
   const limit = Math.min(Math.max(Number(c.req.query('limit')) || 30, 1), 100);
   const { results } = await c.env.DB.prepare(
-    `SELECT id, source, action, fetched, created, updated, matched, still_missing AS stillMissing, summary, ok, created_ms
+    `SELECT id, source, action, fetched, created, updated, matched,
+            still_missing AS stillMissing, still_unique AS stillUnique, summary, ok, created_ms
      FROM agent_activity ORDER BY created_ms DESC LIMIT ?`,
   ).bind(limit).all().catch(() => ({ results: [] as any[] }));
   const items = results ?? [];
-  return { ok: true, items, latestMissing: items.length ? Number(items[0].stillMissing ?? 0) : null, total: items.length };
+  // latest still-* from the most recent row that actually computed them (USGS /
+  // casualty rows leave them 0 — they're seismic/toll, not registry counts).
+  const reg: any = items.find((r: any) => Number(r.stillMissing ?? 0) > 0);
+  return {
+    ok: true, items,
+    latestMissing: reg ? Number(reg.stillMissing) : null,
+    latestUnique: reg ? Number(reg.stillUnique) : null,
+    total: items.length,
+  };
 }));
 
 // GET /api/persons/cases — case index. PUBLIC (read-only): non-operators see only

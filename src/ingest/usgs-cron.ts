@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 import { fetchUsgs } from '../lib/usgs';
 import { upsertEvents, recordIngest, listEvents } from '../lib/db';
+import { logAgentActivity } from '../lib/agent-activity';
 
 // Shared hot-path snapshot for GET /api/events. Named `usgs:latest` for
 // historical reasons, but it is source-AGNOSTIC: any ingest source (USGS,
@@ -44,6 +45,13 @@ export async function ingestUsgs(env: Env): Promise<{ count: number }> {
     );
     const written = await upsertEvents(env, events, raw);
     await recordIngest(env, 'usgs', true, written);
+    // CRM tracking — only when there's a NEW quake, to avoid hourly empty noise.
+    if (written > 0) {
+      await logAgentActivity(env, {
+        source: 'usgs', action: 'poll', fetched: events.length, created: written,
+        summary: `🌎 USGS — ${written} sismo(s) nuevo(s) registrados.`,
+      });
+    }
     return { count: written };
   } catch (err: any) {
     await recordIngest(env, 'usgs', false, 0, String(err?.message ?? err));
