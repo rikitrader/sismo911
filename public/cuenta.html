@@ -1475,6 +1475,95 @@ html body { padding-left:0 !important; padding-top:0 !important; }
   body.printing-ledger .ac-content { max-width:none !important; padding:0 !important; }
   body.printing-ledger .panel[data-panel="contabilidad"] { display:block !important; }
 }
+/* ── Nav anchors + divider + help topbar link ──────────────────────────────── */
+a.side-link { text-decoration:none; }
+a.ac-tbtn { text-decoration:none; }
+.nav-divider { height:1px; background:var(--border); margin:10px 6px; opacity:.7; }
+.ac-tbtn.icon-only { padding:9px; width:42px; justify-content:center; }
+.ac-help-card { background:linear-gradient(135deg,rgba(11,95,255,.08),var(--surface-2)); border:1px solid var(--border); border-radius:16px; padding:16px; }
+.ac-help-title { font-family:var(--font-display); font-weight:800; font-size:.92rem; color:var(--text); margin-bottom:4px; }
+.ac-help-text { font-size:.76rem; color:var(--muted); line-height:1.5; margin-bottom:12px; }
+.ac-help-btn { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:9px; border-radius:10px; cursor:pointer; border:none; background:var(--brand-2); color:#fff; font-weight:700; font-size:.8rem; text-decoration:none; transition:filter .15s ease; box-shadow:0 4px 12px rgba(11,95,255,.25); }
+.ac-help-btn:hover { filter:brightness(1.07); }
+
+/* ── Inicio (master dashboard) ─────────────────────────────────────────────── */
+.ov-hero { display:flex; align-items:center; gap:24px; background:linear-gradient(135deg,#eaf1ff,#f3f7ff); border:1px solid var(--border); border-radius:var(--radius-lg); padding:32px; box-shadow:var(--shadow-sm); overflow:hidden; }
+html[data-theme="dark"] .ov-hero { background:linear-gradient(135deg,rgba(11,95,255,.16),rgba(11,95,255,.05)); }
+.ov-hero-text { flex:1; min-width:0; }
+.ov-hero-title { font-family:var(--font-display); font-weight:800; font-size:1.8rem; line-height:1.15; color:var(--brand); margin:0 0 10px; }
+html[data-theme="dark"] .ov-hero-title { color:var(--text); }
+.ov-hero-sub { font-size:.95rem; color:var(--muted); line-height:1.55; margin:0 0 16px; max-width:46ch; }
+.ov-hero-status { display:flex; align-items:center; gap:10px; font-size:.82rem; font-weight:600; flex-wrap:wrap; }
+.ov-dot { width:9px; height:9px; border-radius:50%; background:var(--success); box-shadow:0 0 0 4px rgba(46,125,50,.16); }
+.ov-status-ok { color:var(--success); }
+.ov-sep { width:1px; height:14px; background:var(--border); }
+.ov-status-upd { color:var(--muted); font-weight:500; }
+.ov-hero-art { position:relative; flex-shrink:0; width:230px; height:200px; display:flex; align-items:center; justify-content:center; }
+.ov-globe { width:185px; height:185px; filter:drop-shadow(0 12px 28px rgba(11,95,255,.35)); }
+.ov-proposito { position:absolute; left:-6px; bottom:6px; display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:10px 12px; box-shadow:var(--shadow-md); max-width:190px; }
+.ov-prop-heart { flex-shrink:0; width:30px; height:30px; border-radius:50%; background:rgba(220,38,38,.12); display:flex; align-items:center; justify-content:center; color:var(--danger); }
+.ov-prop-heart svg { width:16px; height:16px; }
+.ov-prop-title { font-size:.7rem; font-weight:700; color:var(--text); }
+.ov-prop-text { font-size:.68rem; color:var(--muted); line-height:1.35; }
+
+.ov-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; margin-top:18px; }
+.ov-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:22px; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; transition:transform .16s ease, box-shadow .16s ease; }
+.ov-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-md); }
+.ov-card-ic { width:56px; height:56px; border-radius:16px; display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
+.ov-card-ic svg { width:28px; height:28px; }
+.ov-card-title { font-family:var(--font-display); font-weight:800; font-size:1.05rem; color:var(--text); margin:0 0 6px; }
+.ov-card-desc { font-size:.84rem; color:var(--muted); line-height:1.5; margin:0 0 16px; flex:1; }
+.ov-card-btn { align-self:flex-start; display:inline-flex; align-items:center; gap:4px; padding:8px 16px; border-radius:999px; border:1.5px solid var(--border); background:transparent; cursor:pointer; font-family:var(--font); font-weight:700; font-size:.82rem; color:var(--brand-2); text-decoration:none; transition:all .15s ease; }
+.ov-card-btn:hover { border-color:var(--brand-2); background:rgba(11,95,255,.06); }
+.tint-blue { background:rgba(11,95,255,.10); color:var(--brand-2); }
+.tint-green { background:rgba(46,125,50,.12); color:var(--success); }
+.tint-purple { background:rgba(124,58,237,.12); color:#7c3aed; }
+.tint-orange { background:rgba(245,158,11,.16); color:#d97706; }
+.tint-teal { background:rgba(13,148,136,.12); color:#0d9488; }
+
+.ov-row { display:grid; grid-template-columns:1.4fr 1fr; gap:16px; margin-top:18px; }
+@media (max-width:900px){ .ov-row { grid-template-columns:1fr; } }
+.ov-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:22px; box-shadow:var(--shadow-sm); }
+.ov-panel-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.ov-panel-title { font-family:var(--font-display); font-weight:800; font-size:1.1rem; color:var(--text); margin:0; }
+.ov-pill { font-size:.78rem; font-weight:600; color:var(--muted); border:1px solid var(--border); border-radius:999px; padding:5px 12px; }
+.ov-link { background:none; border:none; cursor:pointer; font-family:var(--font); font-size:.85rem; font-weight:700; color:var(--brand-2); }
+.ov-link:hover { text-decoration:underline; }
+.ov-stats { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.ov-stat { background:var(--surface-2); border:1px solid var(--border); border-radius:14px; padding:16px; }
+.ov-stat-val { font-family:var(--font-display); font-weight:800; font-size:1.55rem; color:var(--text); line-height:1.1; }
+.ov-stat-lbl { font-size:.82rem; color:var(--muted); margin-top:4px; }
+.ov-stat-sub { font-size:.76rem; margin-top:6px; }
+.ov-stat-sub.up { color:var(--success); font-weight:700; }
+.ov-stat-sub.muted { color:var(--muted); }
+.ov-stat-link { display:inline-block; margin-top:6px; font-size:.76rem; font-weight:700; color:var(--brand-2); text-decoration:none; }
+.ov-stat-link:hover { text-decoration:underline; }
+.ov-act-list { display:flex; flex-direction:column; gap:4px; }
+.ov-act-item { display:flex; gap:12px; padding:10px 6px; border-radius:10px; }
+.ov-act-item:hover { background:var(--surface-2); }
+.ov-act-ic { flex-shrink:0; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(11,95,255,.10); color:var(--brand-2); }
+.ov-act-ic svg { width:18px; height:18px; }
+.ov-act-ic.t-payment_received { background:rgba(46,125,50,.13); color:var(--success); }
+.ov-act-ic.t-withdrawal_update { background:rgba(245,158,11,.16); color:#d97706; }
+.ov-act-body { display:flex; flex-direction:column; min-width:0; }
+.ov-act-title { font-size:.85rem; font-weight:700; color:var(--text); }
+.ov-act-text { font-size:.78rem; color:var(--muted); line-height:1.4; }
+.ov-act-time { font-size:.72rem; color:var(--muted); margin-top:2px; }
+.ov-act-empty { padding:24px 8px; text-align:center; color:var(--muted); font-size:.85rem; }
+
+.ov-footer-cta { display:flex; align-items:center; gap:18px; margin-top:18px; background:linear-gradient(135deg,rgba(11,95,255,.08),rgba(11,95,255,.02)); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px 28px; }
+html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(11,95,255,.14),rgba(11,95,255,.04)); }
+.ov-footer-ic { flex-shrink:0; width:52px; height:52px; border-radius:14px; background:rgba(11,95,255,.12); color:var(--brand-2); display:flex; align-items:center; justify-content:center; }
+.ov-footer-ic svg { width:26px; height:26px; }
+.ov-footer-body { flex:1; min-width:0; }
+.ov-footer-title { font-family:var(--font-display); font-weight:800; font-size:1.1rem; color:var(--text); }
+.ov-footer-text { font-size:.86rem; color:var(--muted); margin-top:3px; }
+.ov-footer-btn { flex-shrink:0; text-decoration:none; }
+
+/* ── Finanzas division sub-tools ───────────────────────────────────────────── */
+.fin-subtools { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+.fin-subtool { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:999px; border:1px solid var(--border); background:var(--surface); cursor:pointer; font-family:var(--font); font-weight:600; font-size:.82rem; color:var(--text); transition:all .15s ease; }
+.fin-subtool:hover { border-color:var(--brand-2); color:var(--brand-2); background:rgba(11,95,255,.05); }
 </style>
 </head>
 <body>
@@ -1487,34 +1576,28 @@ html body { padding-left:0 !important; padding-top:0 !important; }
     <div class="ac-side-head">
       <a href="/" class="ac-brand" id="tb-logo" aria-label="SISMO911 inicio">
         <img src="/logo.svg" alt="">
-        <span class="ac-brand-name">SISMO911</span>
+        <span class="ac-brand-name">SISMO911<span style="display:block;font-size:.62rem;font-weight:600;color:var(--muted);letter-spacing:.02em;margin-top:1px;">Plataforma Humanitaria</span></span>
       </a>
       <button class="ac-collapse" id="ac-collapse" type="button" aria-label="Colapsar menú" title="Colapsar menú">«</button>
     </div>
     <nav class="ac-nav" role="tablist" aria-label="Secciones de cuenta">
-      <button class="side-link active" role="tab" data-tab="overview" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Overview</span></button>
-      <div class="nav-group" id="grp-finanzas">
-        <button class="nav-parent" type="button" id="finanzas-toggle" aria-expanded="false" aria-controls="finanzas-sub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1"/><path d="M3 6v11a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg><span>Finanzas</span><svg class="nav-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-        <div class="nav-sub" id="finanzas-sub" role="group" aria-label="Finanzas">
-          <button class="side-link" role="tab" data-tab="wallet" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2"/><circle cx="16" cy="14" r="1.4" fill="currentColor" stroke="none"/></svg><span>Wallet</span></button>
-          <button class="side-link" role="tab" data-tab="pagos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><span>Pagos</span></button>
-          <button class="side-link" role="tab" data-tab="qr" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7M21 21h-4"/></svg><span>QR Codes</span></button>
-          <button class="side-link" role="tab" data-tab="contabilidad" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="12" y="7" width="3" height="11"/><rect x="17" y="13" width="3" height="5"/></svg><span>Contabilidad</span></button>
-          <button class="side-link" role="tab" data-tab="retiros" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/></svg><span>Retiros</span></button>
-        </div>
-      </div>
-      <button class="side-link" role="tab" data-tab="seguridad" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Seguridad</span></button>
+      <button class="side-link active" role="tab" data-tab="overview" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Inicio</span></button>
+      <button class="side-link" role="tab" data-tab="finanzas" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Finanzas</span></button>
+      <a class="side-link" href="/suministros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span>Suministros</span></a>
+      <a class="side-link" href="/flota"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span>Transporte</span></a>
+      <a class="side-link" href="/campana"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg><span>Campañas</span></a>
+      <div class="nav-divider" role="separator"></div>
+      <button class="side-link" role="tab" data-tab="contabilidad" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="12" y="7" width="3" height="11"/><rect x="17" y="13" width="3" height="5"/></svg><span>Reportes</span></button>
+      <button class="side-link" id="nav-activity" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Actividad reciente</span></button>
+      <a class="side-link" href="/contacto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 9h0M9 13a3 3 0 0 1 6 0M15 9h0"/></svg><span>Contactos</span></a>
       <button class="side-link" role="tab" data-tab="ajustes" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></button>
-      <button class="side-link" role="tab" data-tab="soporte" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="14" width="4" height="6" rx="1.5"/><rect x="18" y="14" width="4" height="6" rx="1.5"/><path d="M20 18v1a3 3 0 0 1-3 3h-3"/></svg><span>Soporte</span><span class="sup-nav-badge" id="sup-nav-badge" hidden></span></button>
     </nav>
     <div class="ac-side-foot">
-      <div class="ac-upsell">
-        <div class="ac-upsell-crown"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7l4.5 3.5L12 4l4.5 6.5L21 7l-1.8 11.2a1 1 0 0 1-1 .8H5.8a1 1 0 0 1-1-.8L3 7z"/></svg></div>
-        <div class="ac-upsell-title">Mejora tu cuenta</div>
-        <div class="ac-upsell-text">Accede a herramientas avanzadas y menores comisiones.</div>
-        <button class="ac-upsell-btn" id="qa-plans" type="button">Ver planes</button>
+      <div class="ac-help-card">
+        <div class="ac-help-title">¿Necesitas ayuda?</div>
+        <div class="ac-help-text">Estamos aquí para apoyarte.</div>
+        <a class="ac-help-btn" href="/guia"><span>Centro de ayuda</span> →</a>
       </div>
-      <a class="ac-support" href="#soporte" data-act="switchTab" data-a1="soporte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="14" width="4" height="6" rx="1.5"/><rect x="18" y="14" width="4" height="6" rx="1.5"/><path d="M20 18v1a3 3 0 0 1-3 3h-3"/></svg><span>Soporte</span></a>
     </div>
   </aside>
 
@@ -1526,6 +1609,7 @@ html body { padding-left:0 !important; padding-top:0 !important; }
     <button class="ac-burger" id="ac-burger" type="button" aria-label="Abrir menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <button class="ac-tbtn" id="tb-export" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Exportar reporte</button>
     <button class="ac-tbtn" id="tb-qr" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7M21 21h-4"/></svg> Descargar QR</button>
+    <a class="ac-tbtn icon-only" href="/guia" aria-label="Ayuda" title="Centro de ayuda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></a>
     <div class="ac-pop-wrap">
       <button class="ac-bell" id="tb-bell" type="button" aria-label="Notificaciones" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="ac-bell-badge" id="bell-badge" hidden>0</span></button>
       <div class="ac-pop ac-notif-pop" id="notif-pop" hidden role="dialog" aria-label="Notificaciones">
@@ -1814,8 +1898,155 @@ html body { padding-left:0 !important; padding-top:0 !important; }
   <!-- Loaded content -->
   <div id="content" style="display:none;">
 
-    <!-- Profile header card -->
-    <section class="hero-card" aria-label="Tu perfil">
+    <!-- ── Inicio: master system dashboard ──────────────────────────────── -->
+    <div class="panel active" data-panel="overview" role="tabpanel">
+
+      <!-- 1) Hero -->
+      <section class="ov-hero">
+        <div class="ov-hero-text">
+          <h1 class="ov-hero-title">¡Bienvenido, <span id="ov-hero-name">Riki</span>! 👋</h1>
+          <p class="ov-hero-sub">Desde aquí puedes gestionar y coordinar todas las operaciones humanitarias en tiempo real.</p>
+          <div class="ov-hero-status">
+            <span class="ov-dot"></span>
+            <span class="ov-status-ok">Todo en orden</span>
+            <span class="ov-sep"></span>
+            <span class="ov-status-upd">Última actualización: ahora</span>
+          </div>
+        </div>
+        <div class="ov-hero-art">
+          <svg class="ov-globe" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <radialGradient id="ovGlobeG" cx="38%" cy="32%" r="75%">
+                <stop offset="0%" stop-color="#5b9bff"/>
+                <stop offset="55%" stop-color="#0b5fff"/>
+                <stop offset="100%" stop-color="#012a73"/>
+              </radialGradient>
+              <clipPath id="ovGlobeClip"><circle cx="100" cy="100" r="82"/></clipPath>
+            </defs>
+            <circle cx="100" cy="100" r="82" fill="url(#ovGlobeG)"/>
+            <g clip-path="url(#ovGlobeClip)" fill="rgba(255,255,255,.22)">
+              <path d="M58 52c10-6 26-4 30 4s-2 18-12 22-8 16-20 18-22-6-22-18 14-20 24-26z"/>
+              <path d="M104 118c8-4 22-2 28 6s4 22-6 30-24 8-30-2 0-30 8-34z"/>
+              <path d="M128 44c10-2 24 4 22 14s-16 14-24 10-8-22 2-24z"/>
+            </g>
+            <g clip-path="url(#ovGlobeClip)" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.2">
+              <ellipse cx="100" cy="100" rx="82" ry="34"/>
+              <ellipse cx="100" cy="100" rx="40" ry="82"/>
+            </g>
+            <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
+            <g transform="translate(66,70)">
+              <path d="M14 0C6.3 0 0 6.3 0 14c0 10 14 24 14 24s14-14 14-24C28 6.3 21.7 0 14 0z" fill="#dc2626"/>
+              <circle cx="14" cy="14" r="6" fill="#fff"/>
+            </g>
+          </svg>
+          <div class="ov-proposito">
+            <span class="ov-prop-heart"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-10-9.3C.6 8.6 2 5 5.5 5c2 0 3.5 1.2 4.5 2.6C11 6.2 12.5 5 14.5 5 18 5 19.4 8.6 22 11.7 19.5 16.4 12 21 12 21z"/></svg></span>
+            <div>
+              <div class="ov-prop-title">Nuestro propósito</div>
+              <div class="ov-prop-text">Salvar vidas, unir esfuerzos y llevar esperanza.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2) Feature cards -->
+      <div class="ov-cards">
+        <div class="ov-card">
+          <div class="ov-card-ic tint-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <h3 class="ov-card-title">Finanzas</h3>
+          <p class="ov-card-desc">Administra donaciones, ingresos, gastos y reportes financieros.</p>
+          <button class="ov-card-btn" type="button" data-act="switchTab" data-a1="finanzas">Ir a Finanzas →</button>
+        </div>
+        <div class="ov-card">
+          <div class="ov-card-ic tint-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
+          <h3 class="ov-card-title">Suministros</h3>
+          <p class="ov-card-desc">Gestiona inventario, donaciones y distribución de ayuda.</p>
+          <a class="ov-card-btn" href="/suministros">Ir a Suministros →</a>
+        </div>
+        <div class="ov-card">
+          <div class="ov-card-ic tint-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <h3 class="ov-card-title">Transporte</h3>
+          <p class="ov-card-desc">Coordina envíos, rutas y tracking aéreo, terrestre y marítimo.</p>
+          <a class="ov-card-btn" href="/flota">Ir a Transporte →</a>
+        </div>
+        <div class="ov-card">
+          <div class="ov-card-ic tint-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></div>
+          <h3 class="ov-card-title">Campañas</h3>
+          <p class="ov-card-desc">Crea y administra campañas para recaudar fondos.</p>
+          <a class="ov-card-btn" href="/campana">Ir a Campañas →</a>
+        </div>
+        <div class="ov-card">
+          <div class="ov-card-ic tint-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <h3 class="ov-card-title">Voluntarios</h3>
+          <p class="ov-card-desc">Gestiona voluntarios, tareas y equipos de trabajo.</p>
+          <a class="ov-card-btn" href="/voluntarios">Ir a Voluntarios →</a>
+        </div>
+      </div>
+
+      <!-- 3) Resumen + Actividad -->
+      <div class="ov-row">
+        <section class="ov-panel">
+          <div class="ov-panel-head">
+            <h2 class="ov-panel-title">Resumen general</h2>
+            <span class="ov-pill">Este mes ▾</span>
+          </div>
+          <div class="ov-stats">
+            <div class="ov-stat">
+              <div class="ov-stat-val" id="ov-stat-total">—</div>
+              <div class="ov-stat-lbl">Total recaudado</div>
+              <div class="ov-stat-sub muted">este mes</div>
+            </div>
+            <div class="ov-stat">
+              <div class="ov-stat-val">—</div>
+              <div class="ov-stat-lbl">Personas ayudadas</div>
+            </div>
+            <div class="ov-stat">
+              <div class="ov-stat-val" id="ov-stat-envios">—</div>
+              <div class="ov-stat-lbl">Envíos en tránsito</div>
+              <a class="ov-stat-link" href="/flota-track">Ver tracking</a>
+            </div>
+            <div class="ov-stat">
+              <div class="ov-stat-val" id="ov-stat-campanas">—</div>
+              <div class="ov-stat-lbl">Campañas activas</div>
+              <a class="ov-stat-link" href="/campana">Ver campañas</a>
+            </div>
+          </div>
+        </section>
+        <section class="ov-panel">
+          <div class="ov-panel-head">
+            <h2 class="ov-panel-title">Actividad reciente</h2>
+            <button class="ov-link" id="ov-activity-all" type="button">Ver todo</button>
+          </div>
+          <div class="ov-act-list" id="ov-activity-list">
+            <div class="ov-act-empty">Cargando actividad…</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 4) Footer CTA -->
+      <section class="ov-footer-cta">
+        <span class="ov-footer-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+        <div class="ov-footer-body">
+          <div class="ov-footer-title">Juntos somos más fuertes</div>
+          <div class="ov-footer-text">Cada acción cuenta. Gracias por ser parte del cambio.</div>
+        </div>
+        <a class="btn btn-primary ov-footer-btn" href="/humanitario">Ver impacto →</a>
+      </section>
+    </div>
+
+    <!-- ── Finanzas: division overview (the repurposed original overview) ──── -->
+    <div class="panel" data-panel="finanzas" role="tabpanel">
+      <div class="fin-subtools" role="group" aria-label="Herramientas de Finanzas">
+        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="wallet">Wallet</button>
+        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="pagos">Pagos</button>
+        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="qr">QR Codes</button>
+        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="contabilidad">Contabilidad</button>
+        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="retiros">Retiros</button>
+        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="seguridad">Seguridad</button>
+      </div>
+
+      <!-- Profile header card -->
+      <section class="hero-card" aria-label="Tu perfil">
       <div class="hero-grid">
         <div class="hero-main">
           <div class="hero-top">
@@ -1881,8 +2112,7 @@ html body { padding-left:0 !important; padding-top:0 !important; }
       </div>
     </section>
 
-    <!-- ── Overview ─────────────────────────────────────────────────── -->
-    <div class="panel active" data-panel="overview" role="tabpanel">
+      <!-- Finance KPIs + charts (populated by JS) -->
       <div class="kpi-strip" id="kpi-grid"></div>
       <div id="overview-charts"></div>
 
@@ -2439,6 +2669,9 @@ function switchTab(name) {
   document.querySelectorAll('.panel').forEach(p => {
     p.classList.toggle('active', p.dataset.panel === name);
   });
+  /* Lazy-load finance sub-views the first time they're shown (nav or Finanzas sub-tools). */
+  if (name === 'contabilidad' && typeof loadLedger === 'function' && !_ledgerLoaded) loadLedger();
+  if (name === 'retiros'      && typeof loadWithdrawals === 'function' && !_retLoaded) loadWithdrawals();
   /* Reflect the active child on the Finanzas group: highlight + auto-open. */
   const grp = document.getElementById('grp-finanzas');
   if (grp) {
@@ -2462,7 +2695,9 @@ function setFinanzasOpen(open) {
 }
 
 document.querySelectorAll('.side-link').forEach(pill => {
-  pill.addEventListener('click', () => switchTab(pill.dataset.tab));
+  /* Anchor side-links (Suministros/Transporte/Campañas/Contactos) navigate via href;
+     only tab buttons carry data-tab and drive switchTab. */
+  pill.addEventListener('click', () => { if (pill.dataset.tab) switchTab(pill.dataset.tab); });
 });
 
 /* Finanzas parent button → toggle the submenu open/closed. */
@@ -2646,6 +2881,9 @@ function buildHero(profile, wallet) {
   document.getElementById('tb-avatar').innerHTML   = av;
   document.getElementById('tb-name').textContent     = profile.name || profile.email || '';
   document.getElementById('hero-name').textContent   = profile.name  || '—';
+  /* Inicio greeting — first name, default "Riki" (no fabrication, just a friendly fallback). */
+  var _ovName = document.getElementById('ov-hero-name');
+  if (_ovName) _ovName.textContent = (profile.name ? String(profile.name).trim().split(/\s+/)[0] : '') || 'Riki';
   document.getElementById('hero-email').textContent  = profile.email || '';
 
   const [rl, rc] = roleInfo(profile.role);
@@ -2759,6 +2997,10 @@ function buildOverview(profile, summary) {
         ${k.delta}
       </div>
     `).join('');
+
+    /* Inicio "Total recaudado" — real per-account total received (USD). */
+    var _ovTotal = document.getElementById('ov-stat-total');
+    if (_ovTotal) _ovTotal.textContent = fmtUSD(s.total_received_usd);
   }
 
   /* Brand-new account: surface a gentle "create a link" prompt. Otherwise the
@@ -5216,6 +5458,30 @@ async function fetchPaymentSummary() {
   }
 }
 
+/* ── Inicio platform stats (real public aggregates; "—" stays on any failure) ── */
+async function loadPlatformStats() {
+  /* Envíos en tránsito = misiones activas (public flota command dashboard). */
+  try {
+    const r = await fetch('/api/flota/tablero/resumen', { credentials: 'same-origin' });
+    if (r.ok) {
+      const d = await r.json();
+      const n = d && d.misiones ? Number(d.misiones.activas) : NaN;
+      const el = document.getElementById('ov-stat-envios');
+      if (el && Number.isFinite(n)) el.textContent = String(n);
+    }
+  } catch (e) {}
+  /* Campañas activas = count of active public campaigns. */
+  try {
+    const r = await fetch('/api/campaigns', { credentials: 'same-origin' });
+    if (r.ok) {
+      const d = await r.json();
+      const n = Array.isArray(d && d.campaigns) ? d.campaigns.length : null;
+      const el = document.getElementById('ov-stat-campanas');
+      if (el && n != null) el.textContent = String(n);
+    }
+  } catch (e) {}
+}
+
 (async () => {
   /* 1. Auth gate */
   let meData;
@@ -5268,18 +5534,11 @@ async function fetchPaymentSummary() {
   buildSecurityTab(_settings, profile);
   buildAjustesTab(_settings, profile);
   fetchPaymentSummary();                 /* async: fills KPIs + charts */
+  loadPlatformStats();                   /* async: fills Inicio platform stats */
   wirePagosForm();
   loadPaymentLinks();                    /* async: populates Pagos + QR tabs */
 
-  /* Lazy-load accounting tab on first click */
-  document.querySelector('[data-tab="contabilidad"]').addEventListener('click', () => {
-    if (!_ledgerLoaded) loadLedger();
-  });
-
-  /* Lazy-load retiros tab on first click */
-  document.querySelector('[data-tab="retiros"]').addEventListener('click', () => {
-    if (!_retLoaded) loadWithdrawals();
-  });
+  /* Contabilidad + Retiros lazy-load on first view — handled inside switchTab(). */
   wireRetModal();
 
   /* 5. Wire quick actions + top-bar (all real, no stubs) */
@@ -5347,6 +5606,23 @@ async function fetchPaymentSummary() {
     if (badge) { if (unread > 0) { badge.textContent = unread > 99 ? '99+' : String(unread); badge.hidden = false; } else { badge.hidden = true; } }
     const markall = document.getElementById('notif-markall');
     if (markall) markall.disabled = !unread;
+    /* Mirror the same real notifications into the Inicio "Actividad reciente" feed. */
+    const ovEl = document.getElementById('ov-activity-list');
+    if (ovEl) {
+      if (!list.length) {
+        ovEl.innerHTML = '<div class="ov-act-empty">Sin actividad reciente todavía.</div>';
+      } else {
+        ovEl.innerHTML = list.slice(0, 6).map((n) => `
+          <div class="ov-act-item">
+            <span class="ov-act-ic t-${esc(n.type)}">${NTF_ICON[n.type] || NTF_ICON.system}</span>
+            <span class="ov-act-body">
+              <span class="ov-act-title">${esc(n.title)}</span>
+              ${n.body ? `<span class="ov-act-text">${esc(n.body)}</span>` : ''}
+              <span class="ov-act-time">${esc(fmtRelDate(n.created_ms))}</span>
+            </span>
+          </div>`).join('');
+      }
+    }
     const el = document.getElementById('notif-list');
     if (!el) return;
     if (!list.length) {
@@ -5400,6 +5676,10 @@ async function fetchPaymentSummary() {
   };
   on('tb-user', () => togglePop('tb-user', 'user-menu'));
   on('qa-more', () => togglePop('qa-more', 'more-menu'));
+  /* "Actividad reciente" (sidebar) + "Ver todo" (Inicio) open the notifications popover. */
+  const openNotifs = (e) => { if (e) e.stopPropagation(); const b = document.getElementById('tb-bell'); if (b) b.click(); };
+  on('nav-activity', openNotifs);
+  on('ov-activity-all', openNotifs);
   on('menu-profile', openProfile);  on('menu-settings', goAjustes);  on('menu-export', exportCSV);  on('menu-logout', logout);
   on('more-profile', openProfile);  on('more-public', viewPublic);   on('more-export', exportCSV);   on('more-settings', goAjustes);
 
