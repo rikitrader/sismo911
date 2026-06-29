@@ -5,21 +5,25 @@
 module.exports = {
   darkMode: 'class',
   content: ['./admin-src/**/*.{ts,tsx}', './public/console/index.html'],
+  // Semantic tile rails are composed at runtime (`tile-${tone}`), so the content
+  // scanner can't see them — keep them from being purged.
+  safelist: ['tile-ok', 'tile-warn', 'tile-danger', 'tile-info'],
   theme: {
     extend: {
       colors: {
-        // Neutral scale (Linear/Stripe-style). Light + dark resolve via CSS vars.
+        // Seismic amber — the seismograph needle / alert beacon. The accent CSS
+        // vars resolve light/dark; this scale backs the `bg-brand-500/NN` tints.
         brand: {
-          50: '#eef4ff',
-          100: '#dbe6ff',
-          200: '#bccffe',
-          300: '#8eaffc',
-          400: '#5984f8',
-          500: '#345ff1',
-          600: '#1f43e6',
-          700: '#1a33d3',
-          800: '#1c2cab',
-          900: '#1d2c87',
+          50: '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#f97316',
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#7c2d12',
         },
         ok: '#16a34a',
         warn: '#d97706',
