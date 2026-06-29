@@ -4,6 +4,7 @@ import { getUserFromRequest } from '../lib/auth';
 import { audit } from '../lib/audit';
 import { uid } from '../lib/db';
 import { x402Network, x402Asset } from '../lib/x402';
+import { scanFile } from '../security/file-scan';
 import {
   WITHDRAWAL_METHODS, type WithdrawalMethod, computeBalance, withdrawnLast24h,
   maskDestination, riskScore, PER_TX_MAX_USD, DAILY_MAX_USD, MIN_WITHDRAWAL_USD,
@@ -32,7 +33,7 @@ profile.get('/me', async (c) => {
     `SELECT id, email, name, role, rank, unit, phone, country, city, language,
             wallet_address, wallet_chain, wallet_created_ms,
             x402_enabled, x402_pay_to, x402_network, x402_asset, x402_enabled_ms,
-            settings_json, created_ms, last_login_ms
+            settings_json, created_ms, last_login_ms, avatar_r2
        FROM users WHERE id = ?`
   ).bind(me.id).first();
   if (!u) return c.json({ error: 'not_found' }, 404);
@@ -44,7 +45,7 @@ profile.get('/me', async (c) => {
   const network = u.x402_network || x402Network(c.env);
 
   // Profile completion: count the filled optional fields.
-  const fields = [u.name, u.phone, u.country, u.city, u.language, u.wallet_address];
+  const fields = [u.name, u.phone, u.country, u.city, u.language, u.wallet_address, u.avatar_r2];
   const completion = Math.round((fields.filter(Boolean).length / fields.length) * 100);
 
   return c.json({
@@ -56,6 +57,8 @@ profile.get('/me', async (c) => {
       language: u.language ?? 'es',
       created_ms: u.created_ms ?? null, last_login_ms: u.last_login_ms ?? null,
       completion,
+      has_avatar: Boolean(u.avatar_r2),
+      avatar_url: u.avatar_r2 ? `/api/u/${encodeURIComponent(u.id)}/avatar` : null,
     },
     wallet: {
       address: u.wallet_address ?? null,
@@ -146,6 +149,83 @@ profile.patch('/payment-settings', async (c) => {
     .bind(JSON.stringify(current), me.id).run();
   await audit(c, 'profile.settings.update', { keys: Object.keys(b).filter((k) => SETTING_KEYS.has(k)) });
   return c.json({ ok: true, settings: current });
+});
+
+// ── Avatar upload rules ───────────────────────────────────────────────────────
+// Accepts a profile photo and stores it under a per-user KV key (PHOTOS), with the
+// key recorded in users.avatar_r2. Served publicly (image bytes only, no PII) via
+// GET /api/u/:id/avatar. Hard rules, enforced by scanFile (src/security/file-scan):
+//   • type: jpeg / png / webp ONLY — magic-byte sniffed, declared MIME must agree
+//   • no SVG (script-bearing), no executables, no polyglots
+//   • size: ≤ 2 MB (pre-checked on Content-Length, re-checked on bytes)
+// Idempotent key (avatar:{userId}) → re-upload overwrites; old bytes are replaced.
+const AVATAR_MAX_BYTES = 2_000_000;
+
+// ── POST /api/profile/avatar — upload/replace the caller's profile photo ───────
+// Accepts multipart/form-data (field "file" or "avatar") OR JSON { dataUrl }.
+profile.post('/avatar', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+
+  // Reject oversized uploads before reading the body when the client declares it.
+  const declaredLen = Number(c.req.header('content-length') || 0);
+  if (declaredLen && declaredLen > AVATAR_MAX_BYTES + 100_000)
+    return c.json({ error: 'too_large', detail: `max ${AVATAR_MAX_BYTES} bytes` }, 413);
+
+  let bytes: Uint8Array | null = null;
+  let declaredMime: string | null = null;
+  let filename: string | null = null;
+
+  const ctype = (c.req.header('content-type') || '').toLowerCase();
+  if (ctype.includes('multipart/form-data')) {
+    const form = await c.req.formData().catch(() => null);
+    const file = (form?.get('file') || form?.get('avatar')) as unknown;
+    if (file && typeof file !== 'string' && typeof (file as File).arrayBuffer === 'function') {
+      bytes = new Uint8Array(await (file as File).arrayBuffer());
+      declaredMime = (file as File).type || null;
+      filename = (file as File).name || null;
+    }
+  } else {
+    const b = await c.req.json().catch(() => null);
+    const dataUrl = b && typeof b.dataUrl === 'string' ? b.dataUrl : null;
+    if (dataUrl) {
+      const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (m) {
+        declaredMime = m[1];
+        try {
+          const bin = atob(m[2]);
+          const arr = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          bytes = arr;
+        } catch { bytes = null; }
+      }
+    }
+  }
+
+  if (!bytes || !bytes.length) return c.json({ error: 'no_image', detail: 'envía un archivo de imagen' }, 400);
+
+  // Magic-byte + size + type validation (jpeg/png/webp, ≤2MB, no svg/executable).
+  const scan = await scanFile(bytes, { maxSize: AVATAR_MAX_BYTES, declaredMime, filename, allowSvg: false });
+  if (!scan.ok) return c.json({ error: 'invalid_image', reason: scan.reason }, 400);
+
+  const contentType = `image/${scan.detectedType}`;
+  const key = `avatar:${me.id}`;
+  await c.env.PHOTOS.put(key, bytes, { metadata: { contentType } });
+  await c.env.DB.prepare(`UPDATE users SET avatar_r2 = ? WHERE id = ?`).bind(key, me.id).run();
+  await audit(c, 'profile.avatar.upload', { type: scan.detectedType, size: scan.size });
+
+  // Cache-bust the public avatar URL so the new image shows immediately.
+  return c.json({ ok: true, avatar_url: `/api/u/${encodeURIComponent(me.id)}/avatar?v=${Date.now()}` });
+});
+
+// ── DELETE /api/profile/avatar — remove the caller's profile photo ─────────────
+profile.delete('/avatar', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  await c.env.PHOTOS.delete(`avatar:${me.id}`).catch(() => {});
+  await c.env.DB.prepare(`UPDATE users SET avatar_r2 = NULL WHERE id = ?`).bind(me.id).run();
+  await audit(c, 'profile.avatar.delete', {});
+  return c.json({ ok: true });
 });
 
 // ── GET /api/profile/payments/summary — KPI + chart data from the x402 ledger ──
