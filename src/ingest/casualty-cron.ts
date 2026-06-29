@@ -20,6 +20,7 @@
 import type { Env } from '../types';
 import { uid, recordIngest } from '../lib/db';
 import { gateCasualty, type CasualtyRowInput } from './casualty-gate';
+import { logAgentActivity } from '../lib/agent-activity';
 
 /** The active event the public dashboard defaults to. */
 export const CURRENT_EVENT_ID = 've-eq-2026-06-24';
@@ -134,5 +135,10 @@ export async function ingestCasualties(env: Env): Promise<{ skipped?: boolean; w
     // Do not rethrow: a poll failure must not abort the rest of the :45 group.
   }
 
+  // CRM tracking — official toll poll (runs only on the 3h tick reached here).
+  await logAgentActivity(env, {
+    source: 'casualties', action: 'poll', fetched: usgsOk, updated: written,
+    summary: `🤖 Balance oficial — ${written} cifra(s) actualizada(s) (USGS PAGER ${usgsOk}; ReliefWeb ${reliefweb ? 'OK' : 'sin alcance'}).`,
+  });
   return { written, usgs: usgsOk, reliefweb };
 }

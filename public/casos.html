@@ -606,7 +606,7 @@ async function loadAgentActivity(){
     const items=d.items||[];
     if(!items.length) return;
     const box=$('#agentTrack'); const list=$('#at_list'); box.style.display='';
-    if(d.latestMissing!=null) $('#at_missing').textContent=Number(d.latestMissing).toLocaleString('es')+' aún sin localizar';
+    if(d.latestMissing!=null){var mt=Number(d.latestMissing).toLocaleString('es');var uq=(d.latestUnique!=null)?' (~'+Number(d.latestUnique).toLocaleString('es')+' únicas)':'';$('#at_missing').textContent=mt+uq+' aún sin localizar';}
     const ago=ms=>{const s=(Date.now()-ms)/1000;if(s<90)return'hace un momento';if(s<5400)return'hace '+Math.round(s/60)+' min';if(s<172800)return'hace '+Math.round(s/3600)+' h';return'hace '+Math.round(s/86400)+' d';};
     const esc=t=>String(t||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
     list.innerHTML=items.map(it=>`<li style="display:flex;gap:9px;padding:7px 14px;border-bottom:1px solid var(--line,#eef1f7);font:500 12.5px/1.45 Inter">
