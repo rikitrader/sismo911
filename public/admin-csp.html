@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CSP Violations — SISMO911</title>
+  <link rel="stylesheet" href="/app.css" />
+  <script src="/app-shell.js" defer></script>
+</head>
+<body class="bg-surface text-on-surface">
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <div class="flex items-center justify-between gap-3 mb-2 flex-wrap">
+      <h1 class="text-2xl font-display font-bold">CSP Violations <span class="text-on-surface-variant font-normal">(Report-Only)</span></h1>
+      <button id="refresh" class="border border-outline-variant rounded-lg px-3 py-2 text-sm font-semibold hover:bg-surface-container">Actualizar</button>
+    </div>
+    <p class="text-sm text-on-surface-variant mb-4">
+      Stragglers captured while the strict CSP runs in Report-Only. When this list is empty (or only
+      shows expected third-party noise), <code>script-src 'unsafe-inline'</code> can be dropped.
+    </p>
+    <div id="totals" class="text-sm font-semibold mb-3"></div>
+    <div id="status" class="text-sm text-on-surface-variant mb-3">Cargando…</div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="text-left border-b border-outline-variant">
+            <th class="py-2 pr-3">Hits</th><th class="py-2 pr-3">Directive</th>
+            <th class="py-2 pr-3">Blocked</th><th class="py-2 pr-3">Document</th>
+            <th class="py-2 pr-3">Source</th><th class="py-2 pr-3">Line:Col</th><th class="py-2 pr-3">Last seen</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+  <script>
+    (function () {
+      var statusEl = document.getElementById('status');
+      var rowsEl = document.getElementById('rows');
+      var totalsEl = document.getElementById('totals');
+      function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+      function fmt(ms) { try { return new Date(Number(ms)).toLocaleString('es-VE'); } catch (e) { return ''; } }
+      async function load() {
+        statusEl.textContent = 'Cargando…'; rowsEl.innerHTML = '';
+        try {
+          var res = await fetch('/api/rbac/csp-violations?limit=500', { credentials: 'same-origin' });
+          if (res.status === 401) { statusEl.textContent = 'Inicia sesión como operador para ver esto.'; return; }
+          if (res.status === 403) { statusEl.textContent = 'Tu cuenta no tiene el permiso security:read.'; return; }
+          if (!res.ok) { statusEl.textContent = 'Error ' + res.status; return; }
+          var data = await res.json();
+          var t = data.totals || {};
+          totalsEl.textContent = (t.distinct_violations || 0) + ' violaciones distintas · ' + (t.total_hits || 0) + ' hits totales';
+          var v = data.violations || [];
+          if (!v.length) { statusEl.textContent = '✓ Sin violaciones — listo para hacer cumplir la CSP estricta.'; return; }
+          statusEl.textContent = '';
+          rowsEl.innerHTML = v.map(function (r) {
+            return '<tr class="border-b border-outline-variant/40 align-top">' +
+              '<td class="py-2 pr-3 font-bold">' + esc(r.count) + '</td>' +
+              '<td class="py-2 pr-3 font-mono">' + esc(r.violated_directive) + '</td>' +
+              '<td class="py-2 pr-3 font-mono break-all">' + esc(r.blocked_uri) + '</td>' +
+              '<td class="py-2 pr-3 break-all">' + esc(r.document_uri) + '</td>' +
+              '<td class="py-2 pr-3 break-all">' + esc(r.source_file) + '</td>' +
+              '<td class="py-2 pr-3 font-mono">' + esc(r.line_no) + ':' + esc(r.col_no) + '</td>' +
+              '<td class="py-2 pr-3 whitespace-nowrap">' + esc(fmt(r.last_seen)) + '</td></tr>';
+          }).join('');
+        } catch (e) { statusEl.textContent = 'Error de red.'; }
+      }
+      document.getElementById('refresh').addEventListener('click', load);
+      load();
+    })();
+  </script>
+</body>
+</html>
