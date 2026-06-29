@@ -70,6 +70,26 @@ export function coarsenLocation(text?: string | null): string | null {
   return coarse || 'Venezuela';
 }
 
+// House/unit number locators — the SHARPEST doxxing-grade precise location, and
+// the safest to redact because they (almost) never appear in a physical
+// description ("#5", "Nº 12", "No. 5", "casa 5", "apto 3B", "piso 2", "torre 4").
+const HOUSE_NO_RE = /(?:#|n[º°]|n[o0]\.)\s*\d[\w-]*/gi;
+const UNIT_RE = /\b(?:casa|apto|apartamento|piso|local|edificio|edif|torre|bloque|manzana|mz|quinta|qta)\.?\s*#?\s*\d[\w-]*/gi;
+
+/**
+ * Conservative street-address scrubber for a MINOR's public free-text
+ * (descripcion / notes). Defense-in-depth on top of coarsenLocation() + noindex:
+ * it redacts the sharpest precise locators (house/apartment/floor numbers) while
+ * leaving physical-description prose (clothing, height, features) intact. Best-
+ * effort — operators always see the unredacted text. Null/'' pass through.
+ */
+export function scrubMinorText(text?: string | null): string | null {
+  const raw = text ?? '';
+  if (!raw) return text ?? null;
+  const out = raw.replace(HOUSE_NO_RE, '[reservado]').replace(UNIT_RE, '[reservado]');
+  return out.replace(/\s{2,}/g, ' ').trim();
+}
+
 // ---- SQL fragments (single source of truth with the predicates above) -------
 // Parameterless WHERE fragments so the public list/gallery/blog queries suppress
 // exactly the same rows isPublicSuppressed() does on read. Keep these in lockstep

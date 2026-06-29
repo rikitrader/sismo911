@@ -23,7 +23,7 @@ beforeEach(() => {
   const ins = (id: string, nombre: string, edad: number, estado: string, prot = 0) =>
     db.raw.prepare(
       `INSERT INTO personas (id, nombre, edad, ubicacion, descripcion, contacto, estado, moderation, protected, created_at, updated_at)
-       VALUES (?,?,?,'Av. Sucre, Catia, Caracas','desc','0414-1234567',?, 'approved', ?, 1000, 1000)`,
+       VALUES (?,?,?,'Av. Sucre, Catia, Caracas','Cabello negro, vive en Av. Sucre #5','0414-1234567',?, 'approved', ?, 1000, 1000)`,
     ).run(id, nombre, edad, estado, prot);
   ins('kid-missing', 'Niña Desaparecida', 10, 'desaparecido');
   ins('kid-found', 'Niño Localizado', 10, 'localizado');
@@ -33,10 +33,12 @@ beforeEach(() => {
 });
 
 describe('minor-protect — public detail (/api/familia/person/:id)', () => {
-  it('still-missing minor: 200 but last-seen coarsened to locality', async () => {
+  it('still-missing minor: 200, last-seen coarsened + description house-number scrubbed', async () => {
     const r = await call(app, 'GET', '/api/familia/person/kid-missing', env);
     expect(r.status).toBe(200);
-    expect(r.json.last_seen).toBe('Caracas'); // street/sector dropped
+    expect(r.json.last_seen).toBe('Caracas');          // street/sector dropped
+    expect(r.json.description).toContain('Cabello negro'); // prose kept
+    expect(r.json.description).not.toContain('#5');     // house number redacted
   });
   it('resolved minor: suppressed (404) for the public', async () => {
     const r = await call(app, 'GET', '/api/familia/person/kid-found', env);

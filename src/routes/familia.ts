@@ -14,7 +14,7 @@ import { edgeCached } from '../lib/edge-cache';
 import { isSafePublicUrl } from '../lib/sanitize';
 import { sendEmail } from '../lib/email';
 import { caseRegisteredEmail } from '../lib/email-catalog';
-import { isMinor, isPublicSuppressed, coarsenLocation, PERSONAS_PUBLIC_SUPPRESS_SQL, personsPublicSuppressSql } from '../lib/minor-protect';
+import { isMinor, isPublicSuppressed, coarsenLocation, scrubMinorText, PERSONAS_PUBLIC_SUPPRESS_SQL, personsPublicSuppressSql } from '../lib/minor-protect';
 
 // Missing-persons registry (/familia). Reads the `personas` dataset in the main
 // (sismo911) D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
@@ -51,14 +51,16 @@ const nextCursor = (rows: any[], limit: number) =>
   rows.length > limit ? `${rows[limit - 1].updated_at}_${rows[limit - 1].id}` : null;
 
 function mapPerson(p: any, op: boolean) {
-  // Minor protection: coarsen a child's last-seen to locality for the public.
-  const last_seen = (!op && isMinor(p.edad)) ? coarsenLocation(p.ubicacion) : p.ubicacion;
+  // Minor protection: coarsen a child's last-seen to locality + scrub house/unit
+  // numbers from the free-text description for the public.
+  const minorPub = !op && isMinor(p.edad);
+  const last_seen = minorPub ? coarsenLocation(p.ubicacion) : p.ubicacion;
   return {
     id: p.id, full_name: p.nombre, age: p.edad, sex: null,
     last_seen, status: estadoToStatus(p.estado),
     photo_url: p.foto_r2 ? `/api/familia/photo/${p.id}` : (isSafePublicUrl(p.foto) ? p.foto : null),
     contact_phone: op ? (p.contacto || null) : (p.contacto ? '•••••• (solo operadores)' : null),
-    notes: p.descripcion, updated_ms: p.updated_at,
+    notes: minorPub ? scrubMinorText(p.descripcion) : p.descripcion, updated_ms: p.updated_at,
   };
 }
 
@@ -214,7 +216,8 @@ familia.get('/person/:id', async (c) => {
     return c.json({
       id: r.id, full_name: r.full_name, age: r.age,
       last_seen: (!op && isMinor(r.age, r.incident_type)) ? coarsenLocation(r.last_seen) : r.last_seen,
-      since: null, reporter: op ? (r.contact_phone || null) : null, description: r.notes || null,
+      since: null, reporter: op ? (r.contact_phone || null) : null,
+      description: ((!op && isMinor(r.age, r.incident_type)) ? scrubMinorText(r.notes) : r.notes) || null,
       status: r.status || 'unknown', estado: null, found_by: null, kind: 'case',
       photo_url: r.photo_url || null,
       share_url: `https://sismo911.com/familia?caso=${r.id}`,
@@ -238,7 +241,8 @@ familia.get('/person/:id', async (c) => {
   return c.json({
     id: p.id, full_name: p.nombre, age: p.edad,
     last_seen: (!op && isMinor(p.edad)) ? coarsenLocation(p.ubicacion) : p.ubicacion,
-    since: p.fecha || null, reporter: op ? (p.contacto || null) : null, description: p.descripcion || null,
+    since: p.fecha || null, reporter: op ? (p.contacto || null) : null,
+    description: ((!op && isMinor(p.edad)) ? scrubMinorText(p.descripcion) : p.descripcion) || null,
     status: estadoToStatus(p.estado), estado: p.estado, found_by: op ? (p.localizado_por || null) : null,
     photo_url: (p.foto_r2 || p.foto) ? `/api/familia/photo/${p.id}` : null,
     share_url: `https://sismo911.com/familia?persona=${p.id}`,
