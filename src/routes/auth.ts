@@ -7,7 +7,7 @@ import { audit } from '../lib/audit';
 import { sendEmail, randomToken, sha256hex, resetEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
 // Rich branded catalog templates (AUTH-01 verify, AUTH-02 welcome) — the
 // transactional-email source of truth. Aliased to avoid clashing with email.ts.
-import { verifyEmail as verifyEmailTpl, welcomeEmail as welcomeEmailTpl } from '../lib/email-catalog';
+import { verifyEmail as verifyEmailTpl, welcomeEmail as welcomeEmailTpl, accountLockedEmail } from '../lib/email-catalog';
 import { createWalletForEmail, isCrossmintConfigured } from '../lib/crossmint';
 import { x402Network, x402Asset } from '../lib/x402';
 import { verifyTotp, verifyTotpStep, matchBackupCode } from '../lib/totp';
@@ -263,6 +263,11 @@ auth.post('/login', async (c) => {
       const lockUntil = fails >= 5 ? tnow + 15 * 60_000 : null;
       await c.env.DB.prepare(`UPDATE users SET mfa_fail_count = ?, mfa_locked_until = ? WHERE id = ?`)
         .bind(fails, lockUntil, row.id).run();
+      // AUTH-09: on the transition into lockout, email the account owner.
+      if (lockUntil && row.email) {
+        const base = c.env.PUBLIC_BASE_URL || 'https://sismo911.com';
+        fireEmail(c, row.email, accountLockedEmail({ minutes: 15, resetUrl: `${base}/restablecer` }));
+      }
       return c.json({ error: 'mfa_invalid' }, 401);
     }
     // success → reset the failure counter
