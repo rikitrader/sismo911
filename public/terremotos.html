@@ -253,9 +253,10 @@
           <div class="rounded-lg border border-outline-variant/60 p-3"><div id="bo-fallecidos" class="text-3xl font-extrabold tabular-nums text-critical">—</div><div class="text-[11px] uppercase tracking-wide text-on-surface-variant">Fallecidos</div></div>
           <div class="rounded-lg border border-outline-variant/60 p-3"><div id="bo-heridos" class="text-3xl font-extrabold tabular-nums text-warning">—</div><div class="text-[11px] uppercase tracking-wide text-on-surface-variant">Heridos</div></div>
           <div class="rounded-lg border border-outline-variant/60 p-3"><div id="bo-refugiados" class="text-3xl font-extrabold tabular-nums text-primary">—</div><div class="text-[11px] uppercase tracking-wide text-on-surface-variant">Refugiados</div></div>
-          <div class="rounded-lg border border-outline-variant/60 p-3"><div id="bo-desaparecidos" class="text-3xl font-extrabold tabular-nums text-secondary">—</div><div class="text-[11px] uppercase tracking-wide text-on-surface-variant">Desaparecidos</div></div>
+          <a id="bo-desaparecidos-box" href="/casos" class="block rounded-lg border border-outline-variant/60 p-3 hover:border-secondary transition-colors"><div id="bo-desaparecidos" class="text-3xl font-extrabold tabular-nums text-secondary">—</div><div class="text-[11px] uppercase tracking-wide text-on-surface-variant">Desaparecidos</div><div id="bo-desaparecidos-src" class="text-[10px] text-secondary font-semibold mt-0.5 hidden">registro SISMO911 →</div></a>
         </div>
-        <p id="bo-source" class="text-[11px] text-on-surface-variant mt-3"></p>
+        <a id="bo-sincontacto" href="/personas" class="hidden mt-3 text-[11px] text-on-surface-variant hover:text-secondary"></a>
+        <p id="bo-source" class="text-[11px] text-on-surface-variant mt-2"></p>
       </section>
       <script>
       // One cacheable call feeds the three load-once overlays (stats + heatmap +
@@ -270,6 +271,25 @@
           const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = fmt(v); };
           set('bo-fallecidos', s.fallecidos); set('bo-heridos', s.heridos);
           set('bo-refugiados', s.refugiados); set('bo-desaparecidos', s.desaparecidos);
+          // Desaparecidos (main figure) = VERIFIED missing-person docket (/casos).
+          // The official press balance doesn't report it, so surface its true source.
+          if (s.desaparecidos_origen === 'registro') {
+            const ds = document.getElementById('bo-desaparecidos-src');
+            if (ds) ds.classList.remove('hidden');
+          } else {
+            const box = document.getElementById('bo-desaparecidos-box');
+            if (box) box.removeAttribute('href'); // no docket figure → not a link
+          }
+          // Familia "sin-contacto" pool shown SEPARATELY — a larger, lower-assurance
+          // count of people not yet located, never merged into the verified figure.
+          if (s.sin_contacto != null && Number(s.sin_contacto) > 0) {
+            const sc = document.getElementById('bo-sincontacto');
+            if (sc) {
+              sc.textContent = '+ ' + Number(s.sin_contacto).toLocaleString('es-VE') +
+                ' personas sin contacto en el registro Familia →';
+              sc.classList.remove('hidden');
+            }
+          }
           const src = document.getElementById('bo-source');
           if (src) {
             // Relative freshness from when our worker last polled the source
