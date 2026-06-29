@@ -33,6 +33,11 @@
   .eyebrow{display:inline-flex;align-items:center;gap:8px;font:800 11px Inter;letter-spacing:.16em;text-transform:uppercase;color:#9fc0ff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);padding:6px 12px;border-radius:999px}
   .gov-title{font:800 clamp(28px,5vw,42px)/1.04 'Public Sans';letter-spacing:-.01em;margin:14px 0 6px}
   .gov-sub{color:#c5d3ee;font:500 14.5px/1.5 Inter;max-width:60ch}
+  .gov-disclaimer{display:flex;gap:10px;align-items:flex-start;margin-top:16px;max-width:74ch;background:rgba(255,204,0,.08);border:1px solid rgba(255,204,0,.32);border-left:3px solid #ffcc00;border-radius:12px;padding:11px 14px}
+  .gov-disclaimer .ico{flex:0 0 auto;font-size:15px;line-height:1.4}
+  .gov-disclaimer p{margin:0;color:#eaf1ff;font:500 13px/1.5 Inter}
+  .gov-disclaimer b{color:#ffe27a;font-weight:800}
+  .gov-disclaimer a{color:#ffe27a;text-decoration:underline;font-weight:700}
   .gov-stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
   .gstat{flex:1 1 130px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:12px 14px;backdrop-filter:blur(2px)}
   .gstat .n{font:800 26px 'Public Sans';line-height:1;font-variant-numeric:tabular-nums}
@@ -103,6 +108,10 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
       <span class="eyebrow">🛡 Registro Nacional · Comando Sísmico</span>
       <h1 class="gov-title">Personas Desaparecidas</h1>
       <p class="gov-sub">Registro oficial de personas reportadas como desaparecidas tras el terremoto. Busca y filtra por <b>estado, ciudad, edificio y fecha</b>. Si reconoces a alguien, abre su expediente. Todos los reportes pasan por revisión de un operador.</p>
+      <div class="gov-disclaimer" role="note">
+        <span class="ico" aria-hidden="true">⚠️</span>
+        <p><b>Importante:</b> esta base de datos puede contener <b>registros duplicados</b> y la información proviene de <b>múltiples fuentes</b>, por lo que algunos datos pueden estar incompletos o desactualizados. Si eres <b>familiar, allegado o estás vinculado a un caso</b>, por favor ayúdanos a <b>confirmar o actualizar la información</b> en su expediente. <a href="/familia?reportar=1&ref=https%3A%2F%2Fsismo911.com%2Fpersonas">Confirmar o actualizar datos →</a></p>
+      </div>
       <div class="gov-stats">
         <div class="gstat red"><div class="n" id="s_missing">—</div><div class="l">Buscadas</div></div>
         <div class="gstat green"><div class="n" id="s_found">—</div><div class="l">Reencontradas</div></div>
