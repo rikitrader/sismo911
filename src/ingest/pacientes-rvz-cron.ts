@@ -1,6 +1,6 @@
 import type { Env } from '../types';
 import { recordIngest } from '../lib/db';
-import { logAgentActivity, countStillMissing } from '../lib/agent-activity';
+import { logAgentActivity, missingStats, missingPhrase } from '../lib/agent-activity';
 import { backfillHospitalMatches } from './hospital-match';
 
 // Ingest of reportesvenezuela.com's open `pacientes.json` feed (CC0) — the live
@@ -59,10 +59,10 @@ export async function ingestPacientesRvz(env: Env): Promise<PacientesRvzResult> 
     // cases remain unresolved ("seguimos buscando").
     const seen = await env.CACHE.get(SEEN_KEY).catch(() => null);
     if (actualizado && seen === actualizado) {
-      const stillMissing = await countStillMissing(env);
+      const m = await missingStats(env);
       await logAgentActivity(env, {
-        source: 'pacientes-rvz', action: 'poll', fetched: rows.length, stillMissing,
-        summary: `🤖 Sondeo reportesvenezuela/pacientes.json — ${rows.length} ingresados, sin cambios desde la última actualización. ${stillMissing} casos aún sin localizar.`,
+        source: 'pacientes-rvz', action: 'poll', fetched: rows.length, stillMissing: m.total, stillUnique: m.unique,
+        summary: `🤖 Sondeo reportesvenezuela/pacientes.json — ${rows.length} ingresados, sin cambios desde la última actualización. ${missingPhrase(m)}.`,
       });
       return { fetched: rows.length, written: 0, skipped: true, actualizado };
     }
@@ -111,10 +111,10 @@ export async function ingestPacientesRvz(env: Env): Promise<PacientesRvzResult> 
     }
 
     // CRM tracking entry — the agent's heartbeat + result for this cycle.
-    const stillMissing = await countStillMissing(env);
+    const m = await missingStats(env);
     await logAgentActivity(env, {
-      source: 'pacientes-rvz', action: 'ingest', fetched: rows.length, created: written, matched, stillMissing,
-      summary: `🤖 Ingesta reportesvenezuela/pacientes.json — ${written} ingresados sincronizados, ${matched} coincidencia(s) de nombre con desaparecidos (nota pendiente de verificación en el expediente). ${stillMissing} casos aún sin localizar.`,
+      source: 'pacientes-rvz', action: 'ingest', fetched: rows.length, created: written, matched, stillMissing: m.total, stillUnique: m.unique,
+      summary: `🤖 Ingesta reportesvenezuela/pacientes.json — ${written} ingresados sincronizados, ${matched} coincidencia(s) de nombre con desaparecidos (nota pendiente de verificación en el expediente). ${missingPhrase(m)}.`,
     });
     return { fetched: rows.length, written, skipped: false, actualizado };
   } catch (e: any) {
