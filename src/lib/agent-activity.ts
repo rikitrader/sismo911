@@ -31,14 +31,43 @@ export interface MissingStats {
   unique: number;   // de-duplicated estimate: distinct normalized name across both registries
 }
 
+// Build a SQL expression that normalizes a name column to a comparison key:
+// Spanish accents folded (á/Á→a, é→e, í→i, ó→o, ú→u, ü→u, ñ→n — SQLite lower()
+// only folds ASCII), punctuation dropped (.,;:'"·), hyphens→spaces, repeated
+// spaces collapsed, then lower-cased + trimmed. This is CONSERVATIVE: it only
+// merges names identical up to accents/case/punctuation/whitespace — never a fuzzy
+// or token-order merge, so it cannot fold two DIFFERENT people together. (It still
+// won't catch typos or apellido/nombre order swaps — those would need a persisted
+// fuzzy key; deliberately out of scope to avoid false merges in a MISSING count.)
+export function nameKeySql(col: string): string {
+  const folds: Array<[string, string]> = [
+    ['á', 'a'], ['Á', 'a'], ['à', 'a'], ['ä', 'a'], ['â', 'a'],
+    ['é', 'e'], ['É', 'e'], ['è', 'e'], ['ë', 'e'], ['ê', 'e'],
+    ['í', 'i'], ['Í', 'i'], ['ì', 'i'], ['ï', 'i'], ['î', 'i'],
+    ['ó', 'o'], ['Ó', 'o'], ['ò', 'o'], ['ö', 'o'], ['ô', 'o'],
+    ['ú', 'u'], ['Ú', 'u'], ['ù', 'u'], ['ü', 'u'], ['û', 'u'], ['Ü', 'u'],
+    ['ñ', 'n'], ['Ñ', 'n'],
+    ['.', ''], [',', ''], [';', ''], [':', ''], ["'", ''], ['"', ''], ['·', ''],
+    ['-', ' '], ['_', ' '],
+    ['   ', ' '], ['  ', ' '], ['  ', ' '],   // collapse runs of spaces (a few passes)
+  ];
+  // SQL string literal: wrap in single quotes, escaping any embedded quote by
+  // doubling it. CRITICAL for the apostrophe fold ("'") — `'''` is invalid SQL;
+  // the correct escaped literal is `''''`.
+  const lit = (s: string) => `'${s.replace(/'/g, "''")}'`;
+  let e = `trim(${col})`;
+  for (const [a, b] of folds) e = `replace(${e}, ${lit(a)}, ${lit(b)})`;
+  return `lower(${e})`;
+}
+
 // `total` is the raw unresolved row count across the native `persons`
 // (status='missing') and the Familia/RAV `personas` registries. `unique` collapses
-// obvious duplicates by a normalized-name key (the registries carry heavy
-// cross-source duplication — see the dedupe crons). NOTE: SQLite lower() does NOT
-// fold accents, so `unique` is a conservative UNDER-dedupe ESTIMATE, never exact.
+// duplicates by an accent-folded normalized-name key (registries carry heavy
+// cross-source duplication — see the dedupe crons). `unique` is still an ESTIMATE
+// (no typo/order-swap fuzzy merge — see nameKeySql), but it now folds accents so
+// "José" and "Jose" count once.
 export async function missingStats(env: Env): Promise<MissingStats> {
-  const key = (col: string) =>
-    `lower(replace(replace(replace(replace(trim(${col}),'  ',' '),'.',''),',',''),'-',' '))`;
+  const key = nameKeySql;
   const [t, u] = await Promise.all([
     env.DB.prepare(
       `SELECT
