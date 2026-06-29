@@ -30,7 +30,7 @@ import {
   matchBackupCode,
 } from '../lib/totp';
 import { sendEmail } from '../lib/email';
-import { mfaChangedEmail } from '../lib/email-catalog';
+import { mfaChangedEmail, operationalAlert } from '../lib/email-catalog';
 
 const SEGURIDAD_URL = 'https://sismo911.com/cuenta/seguridad';
 // AUTH-07: notify the account owner that 2FA was turned on/off. Non-blocking.
@@ -237,6 +237,18 @@ adminSessions.post('/users/:id/lock', requirePermission('users:suspend'), async 
   await bumpEpoch(c.env, id);
   await audit(c, 'user.lock', { target: id, reason });
   await logSecurity(c, 'user.lock', id, { reason });
+  // AUTH-12: tell the account owner their access changed. Best-effort, non-blocking.
+  try {
+    const ue: any = await c.env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(id).first();
+    if (ue?.email) {
+      const p = sendEmail(c.env, ue.email, operationalAlert({
+        subject: 'El acceso a tu cuenta SISMO911 ha cambiado',
+        eyebrow: 'Acceso · Estado', heading: 'El estado de tu cuenta cambió.', roleTag: 'ACCESO',
+        paras: ['Hola:', 'El acceso a tu cuenta SISMO911 fue suspendido por un administrador. Si crees que es un error, contacta a tu administrador.'],
+      }));
+      try { c.executionCtx.waitUntil(p); } catch { /* no ctx (tests) */ }
+    }
+  } catch { /* alerting never blocks the lock */ }
   return c.json({ ok: true });
 });
 
