@@ -102,10 +102,13 @@ export function App() {
       {mobileNav && <div class="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setMobileNav(false)} />}
 
       {/* Sidebar */}
-      <aside class={`fixed lg:static z-40 h-full shrink-0 surface border-r flex flex-col transition-all duration-200 ${collapsed ? 'w-[68px]' : 'w-[252px]'} ${mobileNav ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside class={`fixed lg:static z-40 h-full shrink-0 surface grid-texture border-r flex flex-col transition-all duration-200 ${collapsed ? 'w-[68px]' : 'w-[252px]'} ${mobileNav ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div class={`flex items-center gap-2.5 h-14 px-4 border-b shrink-0 ${collapsed ? 'justify-center px-0' : ''}`}>
-          <img src="/logo.svg" alt="" class="w-7 h-7 shrink-0" />
-          {!collapsed && <div class="leading-tight min-w-0"><div class="font-semibold text-[13.5px] truncate">SISMO911</div><div class="label-caps !text-[9.5px]">Consola</div></div>}
+          <span class="relative shrink-0 inline-flex items-center justify-center">
+            <img src="/logo.svg" alt="" class="w-7 h-7" />
+            <span class="led led-pulse absolute -right-0.5 -top-0.5" style={{ color: 'rgb(var(--accent-soft))', background: 'rgb(var(--accent-soft))' }} aria-hidden="true" />
+          </span>
+          {!collapsed && <div class="leading-tight min-w-0"><div class="font-semibold text-[13.5px] tracking-[0.02em] truncate">SISMO<span style={{ color: 'rgb(var(--accent))' }}>911</span></div><div class="label-caps !text-[9px]">OPS · Consola</div></div>}
         </div>
 
         <nav class="flex-1 overflow-y-auto py-3 px-2.5">
@@ -122,7 +125,7 @@ export function App() {
                     aria-current={on ? 'page' : undefined}
                     class={`relative flex items-center gap-3 rounded-lg px-2.5 h-9 text-[13.5px] font-medium transition-colors focusable ${collapsed ? 'justify-center' : ''} ${on ? 'bg-[rgb(var(--bg-hover))] text-[rgb(var(--text))]' : 'text-muted hover:text-[rgb(var(--text))] hover:bg-[rgb(var(--bg-hover))]'}`}
                   >
-                    {on && <span class="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'rgb(var(--accent))' }} />}
+                    {on && <span class="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'rgb(var(--accent))', boxShadow: '0 0 8px 0 rgb(var(--accent-soft) / 0.7)' }} />}
                     <span class={on ? 'text-[rgb(var(--accent))]' : ''}><I size={18} /></span>
                     {!collapsed && <span class="truncate">{n.label}</span>}
                   </a>

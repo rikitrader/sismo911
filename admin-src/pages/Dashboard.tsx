@@ -7,12 +7,16 @@ import { Icon } from '../icons';
 import { relTime } from '../util';
 import { navigate } from '../router';
 
-function Tile({ label, value, accent, hint }: { label: string; value: number | string; accent?: string; hint?: string }) {
+// `tone` lights the top rail with a semantic color, but ONLY when the metric is
+// an actual non-zero condition — an idle board stays calm graphite so a real
+// warning (amber) or critical (red) reads instantly under pressure.
+function Tile({ label, value, accent, hint, tone }: { label: string; value: number | string; accent?: string; hint?: string; tone?: 'ok' | 'warn' | 'danger' | 'info' }) {
+  const active = tone && typeof value === 'number' && value > 0 ? `tile-${tone}` : '';
   return (
-    <div class="card p-4 transition-shadow hover:shadow-card">
+    <div class={`tile p-4 ${active}`}>
       <div class="label-caps">{label}</div>
-      <div class="flex items-end gap-2 mt-2">
-        <span class="text-[28px] leading-none font-semibold tracking-[-0.02em]">{value}</span>
+      <div class="flex items-end gap-2 mt-2.5">
+        <span class="readout text-[28px] leading-none font-semibold tracking-[-0.01em]">{value}</span>
         {hint && <span class={`text-[12px] font-medium mb-1 ${accent || 'text-faint'}`}>{hint}</span>}
       </div>
     </div>
@@ -70,10 +74,10 @@ export function DashboardPage() {
           <>
             <Tile label="Usuarios" value={u.total} />
             <Tile label="Activos" value={u.active} accent="text-ok" />
-            <Tile label="Suspendidos" value={u.suspended} accent="text-danger" />
-            <Tile label="Pendientes" value={u.pending} accent="text-warn" />
+            <Tile label="Suspendidos" value={u.suspended} accent="text-danger" tone="danger" />
+            <Tile label="Pendientes" value={u.pending} accent="text-warn" tone="warn" />
             <Tile label="En línea" value={u.online} accent="text-ok" hint="●" />
-            <Tile label="Accesos fallidos 24h" value={d!.failedLogins24h} accent="text-danger" />
+            <Tile label="Accesos fallidos 24h" value={d!.failedLogins24h} accent="text-danger" tone="danger" />
           </>
         )}
       </section>
