@@ -2,36 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ADMINISTRATION console — design tokens. Light + dark resolved via CSS custom
-   properties so we can flip a single `.dark` class on <html>. WCAG AA contrast. */
+/* ════════════════════════════════════════════════════════════════════════
+   SISMO911 — Consola de Operaciones · "Seismic Operations" design system
+   ────────────────────────────────────────────────────────────────────────
+   An instrument-panel identity for a seismic emergency platform: a cool
+   graphite canvas, seismograph-amber signal accent, monospace data readouts,
+   hairline graph-paper texture, and glowing panel-LED status indicators.
+   Light + dark resolve through CSS custom properties (flip `.dark` on <html>).
+   All foreground/background pairs target WCAG AA.
+   ════════════════════════════════════════════════════════════════════════ */
 @layer base {
   :root {
-    --bg: 250 250 251;          /* app background */
+    /* — Canvas: warm-neutral "paper" so amber reads as ink, not alarm — */
+    --bg: 247 247 245;          /* app background */
     --bg-elev: 255 255 255;     /* cards / panels */
-    --bg-subtle: 244 244 246;   /* table headers, hovers */
-    --bg-hover: 240 240 243;
-    --border: 229 229 234;
-    --border-strong: 212 212 219;
-    --text: 24 24 27;           /* zinc-900 */
-    --text-muted: 82 82 91;     /* zinc-600 */
-    --text-faint: 113 113 122;  /* zinc-500 */
-    --accent: 52 95 241;        /* brand-500 */
-    --accent-fg: 255 255 255;
-    --ring: 52 95 241;
+    --bg-subtle: 240 240 237;   /* table headers, readouts */
+    --bg-hover: 234 234 230;
+    --border: 226 226 221;
+    --border-strong: 206 206 200;
+    --text: 23 23 26;           /* near-ink */
+    --text-muted: 82 82 88;
+    --text-faint: 116 116 122;
+    /* — Signal: seismograph amber (burnt — AA as text on paper) — */
+    --accent: 180 83 9;         /* amber-700 */
+    --accent-soft: 217 119 6;   /* amber-600 — fills/glow */
+    --accent-fg: 255 255 255;   /* text on amber buttons */
+    --ring: 217 119 6;
+    /* — Semantic status (operator scanning): red=critical, amber=warning,
+         green=healthy, cyan=informational. Kept distinct so amber chrome never
+         steals prominence from a real warning. — */
+    --led-ok: 21 128 61;       /* green — healthy / active */
+    --led-warn: 217 119 6;     /* amber — warning / pending */
+    --led-danger: 220 38 38;   /* red  — CRITICAL only */
+    --led-info: 8 145 178;     /* cyan — informational */
+    /* — Texture — */
+    --grid-line: 0 0 0;
+    --grid-alpha: 0.028;
+    --scan: 217 119 6;
   }
   .dark {
-    --bg: 9 9 11;               /* zinc-950 */
-    --bg-elev: 24 24 27;        /* zinc-900 */
-    --bg-subtle: 32 32 36;
-    --bg-hover: 39 39 43;
-    --border: 39 39 43;
-    --border-strong: 63 63 70;
-    --text: 244 244 245;
-    --text-muted: 161 161 170;
-    --text-faint: 113 113 122;
-    --accent: 89 132 248;       /* brand-400 (brighter on dark) */
-    --accent-fg: 9 9 11;
-    --ring: 89 132 248;
+    /* — Canvas: cool graphite ops-room ink — */
+    --bg: 13 15 18;            /* graphite-950 */
+    --bg-elev: 21 24 28;       /* panel */
+    --bg-subtle: 28 32 37;
+    --bg-hover: 35 40 46;
+    --border: 38 43 50;
+    --border-strong: 58 64 73;
+    --text: 237 238 240;
+    --text-muted: 158 163 171;
+    --text-faint: 116 122 131;
+    /* — Signal: phosphor amber, brighter on graphite — */
+    --accent: 251 146 60;      /* orange-400 — needle glow */
+    --accent-soft: 251 146 60;
+    --accent-fg: 17 19 23;     /* ink text on amber buttons (hazard look) */
+    --ring: 251 146 60;
+    --led-ok: 52 211 153;      /* green */
+    --led-warn: 251 191 36;    /* amber */
+    --led-danger: 248 113 113; /* red — CRITICAL only */
+    --led-info: 34 211 238;    /* cyan */
+    --grid-line: 255 255 255;
+    --grid-alpha: 0.035;
+    --scan: 251 146 60;
   }
   html, body, #app { height: 100%; }
   body {
@@ -43,64 +74,126 @@
     text-rendering: optimizeLegibility;
   }
   * { border-color: rgb(var(--border)); }
-  ::selection { background: rgb(var(--accent) / 0.22); }
-  /* Custom scrollbars */
+  ::selection { background: rgb(var(--accent-soft) / 0.24); }
+  /* Custom scrollbars — thin instrument rails */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: rgb(var(--border-strong)); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
   ::-webkit-scrollbar-thumb:hover { background: rgb(var(--text-faint)); background-clip: content-box; }
 }
 
 @layer components {
+  /* ── Surfaces ─────────────────────────────────────────────────────── */
   .surface { background: rgb(var(--bg-elev)); }
   .surface-subtle { background: rgb(var(--bg-subtle)); }
   .bordered { border: 1px solid rgb(var(--border)); }
   .text-muted { color: rgb(var(--text-muted)); }
   .text-faint { color: rgb(var(--text-faint)); }
+
+  /* Graph-paper texture — the seismograph chart under the chrome */
+  .grid-texture {
+    background-image:
+      linear-gradient(rgb(var(--grid-line) / var(--grid-alpha)) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--grid-line) / var(--grid-alpha)) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Mono data readout — labels, metrics, codes speak in instrument type */
   .label-caps {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.11em;
     text-transform: uppercase; color: rgb(var(--text-faint));
   }
+  .readout { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
   .focusable:focus-visible {
     outline: 2px solid rgb(var(--ring)); outline-offset: 2px; border-radius: 6px;
   }
-  /* Buttons */
+
+  /* ── Buttons — squared instrument keys ────────────────────────────── */
   .btn {
     display: inline-flex; align-items: center; gap: 6px; justify-content: center;
-    height: 34px; padding: 0 12px; border-radius: 8px; font-size: 13px;
+    height: 34px; padding: 0 13px; border-radius: 7px; font-size: 13px;
     font-weight: 500; line-height: 1; cursor: pointer; white-space: nowrap;
-    transition: background .12s ease, border-color .12s ease, color .12s ease, transform .06s ease;
+    transition: background .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease, transform .06s ease;
     border: 1px solid transparent; user-select: none;
   }
   .btn:active { transform: translateY(0.5px); }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
-  .btn-primary { background: rgb(var(--accent)); color: rgb(var(--accent-fg)); }
-  .btn-primary:hover:not(:disabled) { background: rgb(var(--accent) / 0.88); }
+  .btn-primary { background: rgb(var(--accent-soft)); color: rgb(var(--accent-fg)); font-weight: 600; }
+  .btn-primary:hover:not(:disabled) { background: rgb(var(--accent)); box-shadow: 0 0 0 1px rgb(var(--accent-soft) / 0.4), 0 4px 14px -4px rgb(var(--accent-soft) / 0.55); }
   .btn-ghost { background: transparent; color: rgb(var(--text-muted)); }
   .btn-ghost:hover:not(:disabled) { background: rgb(var(--bg-hover)); color: rgb(var(--text)); }
   .btn-outline { background: rgb(var(--bg-elev)); border-color: rgb(var(--border-strong)); color: rgb(var(--text)); }
-  .btn-outline:hover:not(:disabled) { background: rgb(var(--bg-hover)); }
-  .btn-danger { background: transparent; color: #ef4444; border-color: rgb(var(--border-strong)); }
-  .btn-danger:hover:not(:disabled) { background: rgb(239 68 68 / 0.10); border-color: #ef4444; }
-  .btn-sm { height: 28px; padding: 0 9px; font-size: 12px; }
-  /* Inputs */
+  .btn-outline:hover:not(:disabled) { background: rgb(var(--bg-hover)); border-color: rgb(var(--accent-soft) / 0.6); }
+  .btn-danger { background: transparent; color: rgb(var(--led-danger)); border-color: rgb(var(--border-strong)); }
+  .btn-danger:hover:not(:disabled) { background: rgb(220 38 38 / 0.10); border-color: rgb(var(--led-danger)); }
+  .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+
+  /* ── Inputs — recessed data wells ─────────────────────────────────── */
   .input {
-    width: 100%; height: 36px; padding: 0 10px; border-radius: 8px;
-    background: rgb(var(--bg-elev)); border: 1px solid rgb(var(--border-strong));
-    color: rgb(var(--text)); font-size: 13px; transition: border-color .12s, box-shadow .12s;
+    width: 100%; height: 36px; padding: 0 11px; border-radius: 7px;
+    background: rgb(var(--bg-subtle)); border: 1px solid rgb(var(--border-strong));
+    color: rgb(var(--text)); font-size: 13px; transition: border-color .12s, box-shadow .12s, background .12s;
   }
   .input::placeholder { color: rgb(var(--text-faint)); }
-  .input:focus { outline: none; border-color: rgb(var(--accent)); box-shadow: 0 0 0 3px rgb(var(--ring) / 0.18); }
-  textarea.input { height: auto; padding: 8px 10px; line-height: 1.5; resize: vertical; }
-  /* Pills */
-  .pill { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
-  .pill-dot { width: 6px; height: 6px; border-radius: 999px; }
-  /* Skeleton shimmer */
+  .input:focus { outline: none; background: rgb(var(--bg-elev)); border-color: rgb(var(--accent-soft)); box-shadow: 0 0 0 3px rgb(var(--ring) / 0.18); }
+  textarea.input { height: auto; padding: 9px 11px; line-height: 1.5; resize: vertical; }
+
+  /* ── Pills — mono status tags ─────────────────────────────────────── */
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px;
+    border-radius: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  /* Status dot rendered as a glowing panel LED */
+  .pill-dot { width: 7px; height: 7px; border-radius: 999px; box-shadow: 0 0 0 2px rgb(var(--bg-elev)), 0 0 6px 0 currentColor; }
+  .led { position: relative; display: inline-block; width: 7px; height: 7px; border-radius: 999px; box-shadow: 0 0 6px 0 currentColor; }
+  .led-pulse::after {
+    content: ''; position: absolute; inset: -3px; border-radius: 999px;
+    border: 1px solid currentColor; opacity: .55; animation: ping 1.8s cubic-bezier(0,0,.2,1) infinite;
+  }
+
+  /* ── Cards / panels — instrument readouts ─────────────────────────── */
+  .card { background: rgb(var(--bg-elev)); border: 1px solid rgb(var(--border)); border-radius: 10px; }
+  /* Tile = a card with a hairline amber scanline along its top edge */
+  .tile {
+    position: relative; background: rgb(var(--bg-elev)); border: 1px solid rgb(var(--border));
+    border-radius: 10px; overflow: hidden; transition: border-color .14s, box-shadow .14s;
+  }
+  /* Rail is NEUTRAL by default so the dashboard reads as graphite instrumentation,
+     not a field of amber. Amber appears only on hover (interaction feedback). A
+     state metric may opt into a semantic rail via .tile-{ok,warn,danger,info}. */
+  .tile::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: rgb(var(--border-strong)); opacity: .7;
+    transition: opacity .14s, background .14s;
+  }
+  .tile:hover { border-color: rgb(var(--accent-soft) / 0.5); box-shadow: 0 6px 22px -12px rgb(var(--accent-soft) / 0.5); }
+  .tile:hover::before { background: linear-gradient(90deg, rgb(var(--scan) / 0.9), rgb(var(--scan) / 0)); opacity: 1; }
+  .tile-ok::before     { background: rgb(var(--led-ok));     opacity: .85; }
+  .tile-warn::before   { background: rgb(var(--led-warn));   opacity: .85; }
+  .tile-danger::before { background: rgb(var(--led-danger)); opacity: .85; }
+  .tile-info::before   { background: rgb(var(--led-info));   opacity: .85; }
+
+  /* ── Skeleton shimmer ─────────────────────────────────────────────── */
   .skeleton { position: relative; overflow: hidden; background: rgb(var(--bg-subtle)); border-radius: 6px; }
   .skeleton::after {
     content: ''; position: absolute; inset: 0; transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, rgb(var(--bg-hover)), transparent);
     animation: shimmer 1.5s infinite;
   }
-  .card { background: rgb(var(--bg-elev)); border: 1px solid rgb(var(--border)); border-radius: 12px; }
+
   .row-hover:hover { background: rgb(var(--bg-hover)); }
+}
+
+@layer utilities {
+  @keyframes ping { 75%, 100% { transform: scale(1.9); opacity: 0; } }
+
+  /* Respect motion preferences (WCAG 2.3.3): kill the beacon pulse, skeleton
+     shimmer, and any transition for operators who opt out / are motion-sensitive. */
+  @media (prefers-reduced-motion: reduce) {
+    .led-pulse::after { animation: none; }
+    .skeleton::after { animation: none; }
+    *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  }
 }

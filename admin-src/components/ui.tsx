@@ -33,9 +33,12 @@ export function StatusPill({ status }: { status: UserStatus }) {
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ComponentChildren }) {
   return (
     <header class="flex items-start justify-between gap-4 mb-6">
-      <div>
-        <h1 class="text-[22px] font-semibold tracking-[-0.01em] leading-tight">{title}</h1>
-        {subtitle && <p class="text-muted text-[13.5px] mt-1">{subtitle}</p>}
+      <div class="flex items-stretch gap-3">
+        <span class="w-[3px] rounded-full shrink-0" style={{ background: 'rgb(var(--accent))', boxShadow: '0 0 8px 0 rgb(var(--accent-soft) / 0.6)' }} aria-hidden="true" />
+        <div>
+          <h1 class="text-[22px] font-semibold tracking-[-0.01em] leading-tight">{title}</h1>
+          {subtitle && <p class="text-muted text-[13.5px] mt-1">{subtitle}</p>}
+        </div>
       </div>
       {actions && <div class="flex items-center gap-2 shrink-0">{actions}</div>}
     </header>
