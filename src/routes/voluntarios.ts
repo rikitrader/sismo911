@@ -5,6 +5,8 @@ import { rateLimit, nameHasSpam, textHasLink, requestIp, maskContact, maskPhone,
 import { audit } from '../lib/audit';
 import { SKILL_KEYS, AVAILABILITY, deriveSkills, normalizeRow, statsFromRows } from '../lib/volunteer-skills';
 import { buildSocial, extractSocial, parseSocial } from '../lib/social';
+import { sendEmail } from '../lib/email';
+import { volunteerApplicationEmail } from '../lib/email-catalog';
 
 export const voluntarios = new Hono<{ Bindings: Env }>();
 
@@ -272,5 +274,11 @@ voluntarios.post('/register', async (c) => {
     b.experience ? String(b.experience).slice(0, 200) : null, b.notes ? String(b.notes).slice(0, 1000) : null,
     socialJson, 'approved', 'activo', requestIp(c), new Date(now).toISOString(), now,
   ).run();
+  // VOL-01: confirmation of the volunteer application (only when an email was
+  // given). Non-blocking — runs after the response, never fails the registration.
+  if (email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    const p = sendEmail(c.env, email, volunteerApplicationEmail({ name, ref: id }));
+    try { c.executionCtx.waitUntil(p); } catch { /* no ctx (tests) — fire and forget */ }
+  }
   return c.json({ ok: true, id, status: 'approved', message: '¡Gracias! Tu registro como voluntario está activo.' }, 201);
 });

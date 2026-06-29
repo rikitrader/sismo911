@@ -8,6 +8,8 @@ import {
   isCrossmintConfigured, crossmintClientConfig, createDonationOrder,
   getOrder, orderToStatus, verifyWebhook,
 } from '../lib/crossmint';
+import { sendEmail } from '../lib/email';
+import { donationReceiptEmail } from '../lib/email-catalog';
 
 export const donations = new Hono<{ Bindings: Env }>();
 
@@ -286,6 +288,25 @@ async function applyPaid(
     await env.DB.prepare(
       `UPDATE campaigns SET raised_usd = raised_usd + ?, donors_count = donors_count + 1, updated_ms = ? WHERE id = ?`
     ).bind(amountUsd, Date.now(), campaignId).run();
+    // FIN-01: official donation receipt — fired ONCE, on the paid transition
+    // (the status != 'paid' guard above makes this idempotent across webhook +
+    // status-poll retries). Best-effort; sendEmail never throws.
+    try {
+      const d: any = await env.DB.prepare(
+        `SELECT donor_email, donor_name FROM donations WHERE id = ?`
+      ).bind(donationId).first();
+      if (d?.donor_email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.donor_email)) {
+        await sendEmail(env, d.donor_email, donationReceiptEmail({
+          name: d.donor_name || undefined,
+          amount: `$${amountUsd.toFixed(2)}`,
+          when: new Date().toLocaleDateString('es-VE'),
+          ref: donationId,
+          method: info.txId ? 'Cripto (USDC)' : 'Tarjeta',
+        }));
+      }
+    } catch (e: any) {
+      console.error('[donations] receipt email failed:', e?.message ?? e);
+    }
   }
 }
 
