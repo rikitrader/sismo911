@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  isMinor, isResolved, isPublicSuppressed, coarsenLocation, MINOR_MAX_AGE,
+  isMinor, isResolved, isPublicSuppressed, coarsenLocation, scrubMinorText, MINOR_MAX_AGE,
   PERSONAS_MINOR_SQL, PERSONAS_PUBLIC_SUPPRESS_SQL, personsPublicSuppressSql,
 } from '../src/lib/minor-protect';
 
@@ -93,6 +93,34 @@ describe('minor-protect: coarsenLocation', () => {
   });
   it('never returns an empty string for a present-but-numeric value', () => {
     expect(coarsenLocation('1010')).toBe('Venezuela');
+  });
+});
+
+describe('minor-protect: scrubMinorText (conservative address scrub)', () => {
+  it('redacts a # house number but keeps the surrounding prose', () => {
+    expect(scrubMinorText('Vestía camisa azul, vive en Av. Sucre #5'))
+      .toBe('Vestía camisa azul, vive en Av. Sucre [reservado]');
+  });
+  it('redacts Nº / No. house numbers', () => {
+    expect(scrubMinorText('Casa Nº 12')).toContain('[reservado]');
+    expect(scrubMinorText('local No. 7')).toContain('[reservado]');
+    expect(scrubMinorText('Nº 12')).not.toContain('12');
+  });
+  it('redacts unit keyword + number (apto/piso/torre)', () => {
+    expect(scrubMinorText('apto 3B, torre 4')).toBe('[reservado], [reservado]');
+    expect(scrubMinorText('piso 2')).toBe('[reservado]');
+  });
+  it('leaves a pure physical description untouched', () => {
+    const d = 'Niña de cabello negro, 1.20 m, vestía franela roja';
+    expect(scrubMinorText(d)).toBe(d);
+  });
+  it('does not redact bare prose containing "no" without a number', () => {
+    expect(scrubMinorText('no fue visto desde el lunes')).toBe('no fue visto desde el lunes');
+  });
+  it('preserves null / empty', () => {
+    expect(scrubMinorText(null)).toBeNull();
+    expect(scrubMinorText(undefined)).toBeNull();
+    expect(scrubMinorText('')).toBe('');
   });
 });
 
