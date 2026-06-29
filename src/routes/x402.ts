@@ -3,6 +3,7 @@ import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { getUserFromRequest } from '../lib/auth';
 import { audit } from '../lib/audit';
+import { notify } from '../lib/notify';
 import { burstLimit, subjectLimit } from '../lib/security';
 import { authorize } from '../rbac/middleware';
 import { LEGACY_OPS_PERM } from '../rbac/route-policy';
@@ -315,6 +316,14 @@ x402.all('/pay/:userId/:slug', async (c) => {
   }
   await c.env.DB.prepare(`UPDATE x402_payments SET status='settled', tx_hash=?, settled_ms=?, facilitator_response=? WHERE id=?`)
     .bind(s.transactionHash ?? null, Date.now(), facResp, id).run();
+
+  // Notify the payee that they received a payment (best-effort, never blocks).
+  await notify(c.env, res.payee_user_id, {
+    type: 'payment_received',
+    title: 'Pago recibido',
+    body: `Recibiste $${Number(res.price_usd).toFixed(2)} USDC por "${res.title}".`,
+    link: '#pagos',
+  });
 
   // Settlement receipt for the payer.
   c.header('PAYMENT-RESPONSE', encodeJsonB64({ transaction: s.transactionHash, network, payer: v.payer }));
