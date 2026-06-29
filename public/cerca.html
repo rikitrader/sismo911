@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ayuda cerca de mí — Refugios y servicios de emergencia | SISMO911</title>
+<meta name="description" content="Encuentra los refugios oficiales, hospitales, bomberos, policía y servicios de emergencia más cercanos a tu ubicación, con distancia, tiempo estimado a pie y en vehículo, y rutas que evitan las zonas de riesgo." />
+<link rel="canonical" href="https://sismo911.com/cerca" />
+<meta property="og:title" content="Ayuda cerca de mí | SISMO911" />
+<meta property="og:description" content="Refugios, hospitales, bomberos y policía más cercanos, con distancia y tiempo estimado." />
+<meta property="og:url" content="https://sismo911.com/cerca" />
+<meta property="og:image" content="https://sismo911.com/og/og-default.png" />
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<meta name="theme-color" content="#0f766e" />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/app.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{--teal:#0f766e;--teal-soft:#ccfbf1;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--panel:#fff;--panel2:#f8fafc}
+  *{box-sizing:border-box}
+  body{background:#f1f5f9;color:var(--ink);font-family:Inter,system-ui,sans-serif;margin:0}
+  main{max-width:1180px;margin:0 auto;padding:18px 16px 64px}
+  .eyebrow{font:800 11px 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+  h1{font:900 30px/1.05 'Public Sans';letter-spacing:-.02em;margin:4px 0 6px}
+  h2{font:800 18px 'Public Sans';margin:0 0 4px}
+  .lede{color:var(--muted);font-size:14px;max-width:780px;line-height:1.5}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(16,24,40,.04)}
+  .pad{padding:18px}
+  #map{height:460px;border-radius:10px;z-index:0}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+  .toggle{font:700 12px 'Public Sans';border:1px solid var(--line);background:var(--panel);border-radius:9999px;padding:6px 13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none}
+  .toggle.on{background:var(--teal-soft);border-color:#5eead4;color:#115e59}
+  .toggle .dot{width:10px;height:10px;border-radius:9999px}
+  select,.btn{font:700 13px 'Public Sans';border:1px solid var(--line);border-radius:9px;padding:7px 12px;background:var(--panel);color:var(--ink)}
+  .btn{cursor:pointer;background:var(--teal);color:#fff;border-color:var(--teal)}
+  .btn.ghost{background:var(--panel);color:var(--teal);border-color:#5eead4}
+  .item{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+  .item:first-child{border-top:none}
+  .item h3{font:800 15px 'Public Sans';margin:0 0 2px}
+  .item .meta{font-size:12px;color:var(--muted)}
+  .pill{display:inline-block;font:700 10px 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.03em;padding:2px 7px;border-radius:6px;margin:2px 3px 0 0}
+  .dist{font:900 16px 'JetBrains Mono',monospace;color:var(--teal);white-space:nowrap;text-align:right}
+  .eta{font-size:11px;color:var(--muted);white-space:nowrap}
+  .badge{display:inline-block;font:700 11px 'Public Sans';padding:2px 8px;border-radius:9999px;background:var(--teal-soft);color:#115e59;margin:2px 3px 0 0}
+  .warn{font-size:12px;color:#7c2d12;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:6px 10px;margin-top:6px}
+  .note{font-size:12.5px;color:#334155;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 13px;line-height:1.5}
+  .empty{text-align:center;color:var(--muted);padding:24px;font-size:13.5px}
+  header.top{background:linear-gradient(180deg,#0f766e,#115e59);color:#fff}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{border:none;background:var(--panel);font:700 12px 'Public Sans';padding:7px 12px;cursor:pointer;color:var(--ink)}
+  .seg button.on{background:var(--teal);color:#fff}
+</style>
+</head>
+<body>
+<header class="top">
+  <div style="max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px">
+    <a href="/" style="display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font:800 15px 'Public Sans'"><img src="/logo.svg" alt="" style="width:28px;height:28px"> SISMO911</a>
+  </div>
+</header>
+
+<main>
+  <div class="eyebrow">Localización de Emergencia</div>
+  <h1>Ayuda cerca de mí</h1>
+  <p class="lede">Encuentra los <b>refugios oficiales</b>, <b>hospitales</b>, <b>bomberos</b>, <b>policía</b> y demás servicios de emergencia más cercanos a tu ubicación, con distancia, tiempo estimado a pie y en vehículo, y una advertencia si la ruta cruza una zona de riesgo.</p>
+
+  <div class="toolbar">
+    <button class="btn" id="locateBtn">📍 Usar mi ubicación</button>
+    <span id="locStatus" class="meta" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+
+  <!-- layer toggles -->
+  <div class="toolbar" id="layerToggles"></div>
+
+  <!-- vulnerable-population filter -->
+  <div class="toolbar">
+    <label class="eyebrow" for="vulFilter" style="margin-right:4px">Necesito un refugio con</label>
+    <select id="vulFilter"><option value="">— cualquier refugio —</option></select>
+  </div>
+
+  <div class="card pad" style="margin-bottom:16px"><div id="map"></div>
+    <div class="note" style="margin-top:10px">ℹ️ Servicios de emergencia (hospitales, bomberos, policía…) provienen de <b>OpenStreetMap</b> y pueden estar incompletos. Los <b>refugios</b> con datos oficiales provienen de las autoridades. Verifica siempre con la autoridad competente antes de desplazarte.</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr;gap:16px">
+    <section class="card pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h2 id="listTitle">Lo más cercano</h2>
+        <div class="seg" id="catSeg">
+          <button data-cat="all" class="on">Todo</button>
+          <button data-cat="refugio">Refugios</button>
+          <button data-cat="salud">Salud</button>
+          <button data-cat="bomberos">Bomberos</button>
+          <button data-cat="policia">Policía</button>
+        </div>
+      </div>
+      <div id="nearList"><div class="empty">Activa tu ubicación para ver lo más cercano.</div></div>
+    </section>
+  </div>
+</main>
+
+<script src="/app-shell.js" defer></script>
+<script>
+const LG = {lat:10.60, lon:-66.92}; // La Guaira fallback center
+const KIND_STYLE = {
+  refugio:   {c:'#0f766e', l:'Refugio'},
+  salud:     {c:'#1d4ed8', l:'Salud'},
+  farmacia:  {c:'#0891b2', l:'Farmacia'},
+  bomberos:  {c:'#dc2626', l:'Bomberos'},
+  policia:   {c:'#1e293b', l:'Policía'},
+  ambulancia:{c:'#db2777', l:'Ambulancia'},
+  refugio_osm:{c:'#7c3aed', l:'Albergue (OSM)'},
+  otro:      {c:'#64748b', l:'Otro'},
+  riesgo:    {c:'#b45309', l:'Zona de riesgo'},
+};
+const CAP_LABEL = {recien_nacido:'Recién nacidos',lactante:'Lactantes',nino_pequeno:'Niños pequeños',escolar:'Edad escolar',adolescente:'Adolescentes',discapacidad_infantil:'Niños con discapacidad',cronico_infantil:'Niños con enfermedad crónica',medico_especializado:'Atención médica especializada',espacio_lactancia:'Espacio de lactancia',personal_infantil:'Personal especializado en niñez',discapacidad:'Personas con discapacidad',movilidad_reducida:'Movilidad reducida',adulto_mayor:'Adultos mayores',embarazada:'Embarazadas',familia_ninos:'Familias con niños',cronico:'Enfermedad crónica',mascotas:'Admite mascotas'};
+const esc = (s)=>(s||'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function haversineKm(aLat,aLon,bLat,bLon){const R=6371,dLa=(bLat-aLat)*Math.PI/180,dLo=(bLon-aLon)*Math.PI/180,la1=aLat*Math.PI/180,la2=bLat*Math.PI/180;const h=Math.sin(dLa/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+const fmtKm=(km)=>km<1?`${Math.round(km*1000)} m`:`${km.toFixed(1)} km`;
+const eta=(km)=>{const walk=Math.round(km/5*60),drive=Math.max(1,Math.round(km/30*60));return `🚶 ${walk} min · 🚗 ${drive} min`;};
+
+let me = null, map, userMarker, layers = {}, REFUGIOS = [], NINEZ = [], FAC = [], ZONES = [];
+let layerOn = {refugio:true, salud:true, bomberos:true, policia:true, riesgo:true, farmacia:false, ambulancia:false};
+let cat = 'all', vulKey = '';
+
+// ── point→segment distance (km) for risk-crossing detection ──
+function pointSegKm(p, a, b){
+  const toXY=(o)=>({x:o.lon*Math.cos(p.lat*Math.PI/180), y:o.lat});
+  const P=toXY(p),A=toXY(a),B=toXY(b);
+  const dx=B.x-A.x, dy=B.y-A.y, len2=dx*dx+dy*dy;
+  let t = len2? ((P.x-A.x)*dx+(P.y-A.y)*dy)/len2 : 0; t=Math.max(0,Math.min(1,t));
+  const proj={lat:A.y+t*dy, lon:(A.x+t*dx)/Math.cos(p.lat*Math.PI/180)};
+  return haversineKm(p.lat,p.lon,proj.lat,proj.lon);
+}
+function riskWarning(dest){
+  if(!me) return '';
+  const crossed = ZONES.filter(z=>z.risk_level==='alto' && z.lat!=null && pointSegKm({lat:z.lat,lon:z.lon}, me, dest) < 1.2);
+  if(!crossed.length) return '';
+  return `<div class="warn">⚠️ La ruta directa pasa cerca de zona(s) de alto riesgo: ${crossed.map(z=>esc(z.nombre)).join(', ')}. Evita quebradas, puentes y laderas; sigue las indicaciones oficiales.</div>`;
+}
+function directionsUrl(dest){
+  const o = me ? `${me.lat},${me.lon}` : '';
+  return `https://www.google.com/maps/dir/?api=1${o?`&origin=${o}`:''}&destination=${dest.lat},${dest.lon}&travelmode=walking`;
+}
+
+async function loadData(){
+  const ctr = me || LG;
+  const [rf, nz, zn] = await Promise.all([
+    fetch('/api/refugios').then(r=>r.json()).catch(()=>({sites:[]})),
+    fetch('/api/ninez/refugios').then(r=>r.json()).catch(()=>({refugios:[]})),
+    fetch('/api/refugios/zones').then(r=>r.json()).catch(()=>({zones:[]})),
+  ]);
+  REFUGIOS = (rf.sites||[]).filter(s=>s.lat!=null);
+  NINEZ = nz.refugios||[];
+  ZONES = zn.zones||[];
+  // emergency services need a coordinate; only fetch once we have one (user or fallback)
+  try{ const f = await fetch(`/api/facilities?lat=${ctr.lat}&lon=${ctr.lon}&radius=15000`).then(r=>r.json()); FAC = f.facilities||[]; }catch{ FAC=[]; }
+  buildVulFilter();
+  drawMap(); renderList();
+}
+
+function ninezCaps(id){ const n = NINEZ.find(x=>x.id===id); return n ? (n.capabilities||[]).map(c=>c.capability_key) : []; }
+function buildVulFilter(){
+  const present = new Set();
+  NINEZ.forEach(n=>(n.capabilities||[]).forEach(c=>present.add(c.capability_key)));
+  const sel = document.getElementById('vulFilter');
+  sel.innerHTML = '<option value="">— cualquier refugio —</option>' +
+    [...present].sort().map(k=>`<option value="${k}">${esc(CAP_LABEL[k]||k)}</option>`).join('');
+}
+
+// unified list of points with computed distance
+function points(){
+  const out = [];
+  REFUGIOS.forEach(s=>{
+    if(vulKey && !ninezCaps(s.id).includes(vulKey)) return;
+    out.push({kind:'refugio', id:'r'+s.id, name:s.nombre, lat:s.lat, lon:s.lon, sub:`${s.parroquia||''} · ${s.tier||''}`, phone:null, caps:ninezCaps(s.id), status:s.status});
+  });
+  if(!vulKey) FAC.forEach(f=>out.push({kind:f.kind, id:'f'+f.id, name:f.name, lat:f.lat, lon:f.lon, sub:(KIND_STYLE[f.kind]||KIND_STYLE.otro).l, phone:f.phone}));
+  const ctr = me || LG;
+  out.forEach(p=>p.km = haversineKm(ctr.lat,ctr.lon,p.lat,p.lon));
+  return out.sort((a,b)=>a.km-b.km);
+}
+
+function drawMap(){
+  if(!map){
+    map = L.map('map',{attributionControl:false}).setView([(me||LG).lat,(me||LG).lon], 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(map);
+    ['refugio','salud','bomberos','policia','farmacia','ambulancia','refugio_osm','otro','riesgo'].forEach(k=>layers[k]=L.layerGroup().addTo(map));
+  }
+  Object.values(layers).forEach(l=>l.clearLayers());
+  // risk zones
+  ZONES.forEach(z=>{ if(z.lat==null) return;
+    const hi = z.risk_level==='alto';
+    L.circle([z.lat,z.lon],{radius:Math.max(400,Math.sqrt(z.population||1)*8),color:hi?'#b45309':'#a78bfa',weight:1,fillColor:hi?'#f59e0b':'#a78bfa',fillOpacity:hi?.14:.08})
+      .bindPopup(`<b>${esc(z.nombre)}</b><br>Riesgo: ${esc(z.risk_level||'')}`).addTo(layers.riesgo);
+  });
+  // points
+  points().forEach(p=>{
+    const st = KIND_STYLE[p.kind]||KIND_STYLE.otro;
+    L.circleMarker([p.lat,p.lon],{radius:7,color:'#fff',weight:2,fillColor:st.c,fillOpacity:1})
+      .bindPopup(`<div style="min-width:200px"><b>${esc(p.name)}</b><br><span style="font-size:11px;color:#64748b">${esc(p.sub||st.l)}</span>
+        <div style="margin-top:6px"><b>${fmtKm(p.km)}</b> · ${eta(p.km)}</div>
+        ${p.phone?`<div style="font-size:12px;margin-top:4px">📞 ${esc(p.phone)}</div>`:''}
+        ${riskWarning(p)}
+        <a href="${directionsUrl(p)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;font:700 12px 'Public Sans';color:#0f766e">Cómo llegar →</a></div>`)
+      .addTo(layers[p.kind]||layers.otro);
+  });
+  applyLayerVis();
+  if(me){ if(userMarker) map.removeLayer(userMarker);
+    userMarker = L.circleMarker([me.lat,me.lon],{radius:9,color:'#fff',weight:3,fillColor:'#2563eb',fillOpacity:1}).bindPopup('Tu ubicación').addTo(map);
+    map.setView([me.lat,me.lon],13);
+  }
+}
+function applyLayerVis(){
+  Object.entries(layers).forEach(([k,l])=>{ const on = k==='riesgo'?layerOn.riesgo:(layerOn[k]!==false); if(on){l.addTo(map);}else{map.removeLayer(l);} });
+}
+
+function renderList(){
+  const host = document.getElementById('nearList');
+  let pts = points();
+  if(cat!=='all') pts = pts.filter(p=> cat==='refugio' ? (p.kind==='refugio'||p.kind==='refugio_osm') : p.kind===cat);
+  pts = pts.slice(0,30);
+  if(!pts.length){ host.innerHTML = '<div class="empty">No hay resultados para este filtro cerca de tu ubicación.</div>'; return; }
+  host.innerHTML = pts.map(p=>{
+    const st = KIND_STYLE[p.kind]||KIND_STYLE.otro;
+    const caps = (p.caps||[]).slice(0,4).map(k=>`<span class="badge">${esc(CAP_LABEL[k]||k)}</span>`).join('');
+    return `<div class="item">
+      <div>
+        <h3>${esc(p.name)}</h3>
+        <div class="meta"><span class="pill" style="background:${st.c}22;color:${st.c}">${st.l}</span> ${esc(p.sub||'')}${p.phone?` · 📞 ${esc(p.phone)}`:''}</div>
+        ${caps?`<div style="margin-top:4px">${caps}</div>`:''}
+        ${riskWarning(p)}
+        <a href="${directionsUrl(p)}" target="_blank" rel="noopener" class="btn ghost" style="display:inline-block;margin-top:8px;text-decoration:none">Cómo llegar →</a>
+      </div>
+      <div><div class="dist">${fmtKm(p.km)}</div><div class="eta">${eta(p.km)}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function buildToggles(){
+  const host = document.getElementById('layerToggles');
+  const ks = ['refugio','salud','bomberos','policia','riesgo'];
+  host.innerHTML = ks.map(k=>{ const st=KIND_STYLE[k]; const on = k==='riesgo'?layerOn.riesgo:(layerOn[k]!==false);
+    return `<span class="toggle ${on?'on':''}" data-layer="${k}"><span class="dot" style="background:${st.c}"></span>${st.l}</span>`;}).join('');
+  host.querySelectorAll('.toggle').forEach(t=>t.onclick=()=>{
+    const k=t.getAttribute('data-layer'); layerOn[k]=!(layerOn[k]!==false); t.classList.toggle('on'); applyLayerVis();
+  });
+}
+
+function locate(){
+  const st = document.getElementById('locStatus');
+  if(!navigator.geolocation){ st.textContent='Tu navegador no soporta geolocalización; mostrando La Guaira.'; return; }
+  st.textContent='Obteniendo tu ubicación…';
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{ me={lat:pos.coords.latitude, lon:pos.coords.longitude}; st.textContent='Ubicación activa.'; loadData(); },
+    ()=>{ st.textContent='No se pudo obtener tu ubicación; mostrando La Guaira.'; loadData(); },
+    {enableHighAccuracy:true, timeout:8000, maximumAge:60000}
+  );
+}
+
+document.getElementById('locateBtn').onclick = locate;
+document.getElementById('vulFilter').onchange = (e)=>{ vulKey=e.target.value; drawMap(); renderList(); };
+document.getElementById('catSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  document.getElementById('catSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); cat=b.getAttribute('data-cat'); renderList();
+});
+buildToggles();
+loadData();   // initial paint with La Guaira fallback
+locate();     // then try to upgrade to the user's location
+</script>
+</body>
+</html>

@@ -3,24 +3,37 @@ import type { Env } from '../types';
 
 export const facilities = new Hono<{ Bindings: Env }>();
 
-// GET /api/facilities?lat=&lon=&radius=10000 — nearby hospitals/clinics/shelters
-// from OpenStreetMap via Overpass (free). Cached in KV for 1h.
+// Map an OSM amenity/emergency tag to a friendly emergency-services kind.
+const KIND: Record<string, string> = {
+  hospital: 'salud', clinic: 'salud', doctors: 'salud', pharmacy: 'farmacia',
+  police: 'policia', fire_station: 'bomberos', ambulance_station: 'ambulancia',
+  shelter: 'refugio_osm',
+};
+
+// GET /api/facilities?lat=&lon=&radius=10000 — nearby emergency services from
+// OpenStreetMap via Overpass (free): hospitals, clinics, pharmacies, police,
+// fire stations, ambulance stations and shelters. Cached in KV for 1h.
 facilities.get('/', async (c) => {
   const lat = Number(c.req.query('lat'));
   const lon = Number(c.req.query('lon'));
   if (Number.isNaN(lat) || Number.isNaN(lon)) return c.json({ error: 'lat_lon_required' }, 400);
   const radius = Math.min(50000, Number(c.req.query('radius') ?? 10000));
 
-  const key = `osm:v2:${lat.toFixed(2)}:${lon.toFixed(2)}:${radius}`;
+  const key = `osm:v3:${lat.toFixed(2)}:${lon.toFixed(2)}:${radius}`;
   const cached: any = await c.env.CACHE.get(key, 'json');
   if (cached?.facilities?.length) return c.json(cached); // never serve a cached failure
 
-  const q = `[out:json][timeout:20];(
+  const q = `[out:json][timeout:25];(
     node["amenity"="hospital"](around:${radius},${lat},${lon});
     node["amenity"="clinic"](around:${radius},${lat},${lon});
+    node["amenity"="doctors"](around:${radius},${lat},${lon});
+    node["amenity"="pharmacy"](around:${radius},${lat},${lon});
+    node["amenity"="police"](around:${radius},${lat},${lon});
+    node["amenity"="fire_station"](around:${radius},${lat},${lon});
+    node["emergency"="ambulance_station"](around:${radius},${lat},${lon});
     node["emergency"="shelter"](around:${radius},${lat},${lon});
     node["amenity"="shelter"](around:${radius},${lat},${lon});
-  );out body 80;`;
+  );out body 120;`;
 
   const endpoints = [
     'https://overpass-api.de/api/interpreter',
@@ -42,13 +55,17 @@ facilities.get('/', async (c) => {
       upstream = `${ep.split('/')[2]}:${r.status}`;
       if (r.ok) {
         const j: any = await r.json();
-        list = (j.elements ?? []).map((e: any) => ({
-          id: e.id,
-          type: e.tags?.amenity || e.tags?.emergency || 'facility',
-          name: e.tags?.name || '(sin nombre)',
-          lat: e.lat, lon: e.lon,
-          phone: e.tags?.phone || e.tags?.['contact:phone'] || null,
-        }));
+        list = (j.elements ?? []).map((e: any) => {
+          const type = e.tags?.amenity || e.tags?.emergency || 'facility';
+          return {
+            id: e.id,
+            type,
+            kind: KIND[type] || 'otro',
+            name: e.tags?.name || '(sin nombre)',
+            lat: e.lat, lon: e.lon,
+            phone: e.tags?.phone || e.tags?.['contact:phone'] || null,
+          };
+        });
         if (list.length) break;
       }
     } catch (e: any) { upstream = `${ep.split('/')[2]}:err`; }
