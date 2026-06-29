@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'preact/hooks';
 import { rbac } from '../api';
 import { useResource } from '../hooks';
 import { PageHeader, StatTileSkeleton, Avatar, EmptyState } from '../components/ui';
@@ -18,6 +19,38 @@ function Tile({ label, value, accent, hint }: { label: string; value: number | s
   );
 }
 
+// Discoverable, permission-gated entry to the CSP violation review page (/admin-csp).
+// Self-gates by probing the security:read-protected endpoint with a RAW fetch (not the
+// rbac api wrapper, so a 403 here never trips the global 401 sign-in handler): the card
+// renders ONLY when the caller actually has access — invisible to everyone else.
+function CspReviewCard() {
+  const [s, setS] = useState<{ shown: boolean; distinct: number; hits: number }>({ shown: false, distinct: 0, hits: 0 });
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/rbac/csp-violations?limit=1', { credentials: 'same-origin' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((j) => { if (alive && j) setS({ shown: true, distinct: j.totals?.distinct_violations ?? 0, hits: j.totals?.total_hits ?? 0 }); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  if (!s.shown) return null;
+  const clean = s.distinct === 0;
+  return (
+    <a href="/admin-csp" class="card p-4 mb-7 flex items-center gap-4 transition-shadow hover:shadow-card" style={{ textDecoration: 'none' }}>
+      <span class="w-10 h-10 rounded-lg surface-subtle bordered flex items-center justify-center text-faint shrink-0"><Icon.shield size={20} /></span>
+      <div class="min-w-0 flex-1">
+        <div class="text-[14px] font-semibold">Revisión de Seguridad — CSP <span class="text-faint font-normal">(Report-Only)</span></div>
+        <div class="text-[12px] text-faint">
+          {clean
+            ? '✓ Sin violaciones registradas — listo para hacer cumplir la CSP estricta.'
+            : `${s.distinct} violaciones distintas · ${s.hits} hits — revisar antes de hacer cumplir.`}
+        </div>
+      </div>
+      <span class={`text-[12px] font-semibold shrink-0 ${clean ? 'text-ok' : 'text-warn'}`}>{clean ? 'Limpio →' : 'Revisar →'}</span>
+    </a>
+  );
+}
+
 export function DashboardPage() {
   const r = useResource(() => rbac.dashboard(), []);
 
@@ -29,6 +62,7 @@ export function DashboardPage() {
 
   return (
     <Shell>
+      <CspReviewCard />
       <section class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5 mb-7">
         {r.loading || !u ? (
           Array.from({ length: 6 }).map((_, i) => <StatTileSkeleton key={i} />)
