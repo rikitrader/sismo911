@@ -1010,16 +1010,38 @@ html body { padding-left:0 !important; padding-top:0 !important; }
 }
 .ac-collapse:hover { background:var(--surface-2); color:var(--text); }
 .ac-nav { display:flex; flex-direction:column; gap:3px; flex:1; overflow-y:auto; margin:0 -4px; padding:0 4px; }
-.side-link {
+.side-link, .nav-parent {
   display:flex; align-items:center; gap:12px; width:100%; text-align:left;
   padding:10px 12px; border-radius:11px; border:none; background:transparent; cursor:pointer;
   font-family:var(--font); font-size:.875rem; font-weight:600; color:var(--muted);
   transition:background .14s ease, color .14s ease;
 }
-.side-link svg { width:18px; height:18px; flex-shrink:0; }
-.side-link:hover { background:var(--surface-2); color:var(--text); }
+.side-link svg, .nav-parent svg { width:18px; height:18px; flex-shrink:0; }
+.side-link:hover, .nav-parent:hover { background:var(--surface-2); color:var(--text); }
 .side-link.active { background:var(--brand-2); color:#fff; box-shadow:0 4px 12px rgba(11,95,255,.30); }
-.side-link:focus-visible { outline:2px solid var(--brand-2); outline-offset:2px; }
+.side-link:focus-visible, .nav-parent:focus-visible { outline:2px solid var(--brand-2); outline-offset:2px; }
+/* ── Finanzas submenu (collapsible group) ───────────────────────────────── */
+.nav-group { display:flex; flex-direction:column; gap:3px; }
+.nav-parent .nav-caret { width:15px; height:15px; margin-left:auto; transition:transform .18s ease; opacity:.7; }
+.nav-parent.has-active { color:var(--text); }
+.nav-group.open .nav-parent .nav-caret { transform:rotate(180deg); }
+.nav-sub {
+  display:flex; flex-direction:column; gap:3px;
+  max-height:0; overflow:hidden; opacity:0;
+  transition:max-height .22s ease, opacity .18s ease;
+}
+.nav-group.open .nav-sub { max-height:320px; opacity:1; }
+.nav-sub .side-link { position:relative; padding-left:30px; }
+.nav-sub .side-link::before {
+  content:""; position:absolute; left:18px; top:50%; transform:translateY(-50%);
+  width:4px; height:4px; border-radius:50%; background:currentColor; opacity:.45;
+}
+.nav-sub .side-link.active::before { opacity:0; }
+/* Collapsed icon-rail: drop indentation, hide caret, keep the group expanded */
+.ac-side.collapsed .nav-parent .nav-caret { display:none; }
+.ac-side.collapsed .nav-sub { max-height:none; opacity:1; overflow:visible; }
+.ac-side.collapsed .nav-sub .side-link { padding-left:0; justify-content:center; }
+.ac-side.collapsed .nav-sub .side-link::before { display:none; }
 .ac-side-foot { display:flex; flex-direction:column; gap:8px; padding-top:12px; }
 .ac-upsell { background:var(--surface-2); border:1px solid var(--border); border-radius:16px; padding:16px; }
 .ac-upsell-crown { color:var(--warning); margin-bottom:8px; line-height:1; }
@@ -1398,11 +1420,16 @@ html body { padding-left:0 !important; padding-top:0 !important; }
     </div>
     <nav class="ac-nav" role="tablist" aria-label="Secciones de cuenta">
       <button class="side-link active" role="tab" data-tab="overview" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Overview</span></button>
-      <button class="side-link" role="tab" data-tab="wallet" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2"/><circle cx="16" cy="14" r="1.4" fill="currentColor" stroke="none"/></svg><span>Wallet</span></button>
-      <button class="side-link" role="tab" data-tab="pagos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><span>Pagos</span></button>
-      <button class="side-link" role="tab" data-tab="qr" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7M21 21h-4"/></svg><span>QR Codes</span></button>
-      <button class="side-link" role="tab" data-tab="contabilidad" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="12" y="7" width="3" height="11"/><rect x="17" y="13" width="3" height="5"/></svg><span>Contabilidad</span></button>
-      <button class="side-link" role="tab" data-tab="retiros" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/></svg><span>Retiros</span></button>
+      <div class="nav-group" id="grp-finanzas">
+        <button class="nav-parent" type="button" id="finanzas-toggle" aria-expanded="false" aria-controls="finanzas-sub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1"/><path d="M3 6v11a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg><span>Finanzas</span><svg class="nav-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="nav-sub" id="finanzas-sub" role="group" aria-label="Finanzas">
+          <button class="side-link" role="tab" data-tab="wallet" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2"/><circle cx="16" cy="14" r="1.4" fill="currentColor" stroke="none"/></svg><span>Wallet</span></button>
+          <button class="side-link" role="tab" data-tab="pagos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><span>Pagos</span></button>
+          <button class="side-link" role="tab" data-tab="qr" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7M21 21h-4"/></svg><span>QR Codes</span></button>
+          <button class="side-link" role="tab" data-tab="contabilidad" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="12" y="7" width="3" height="11"/><rect x="17" y="13" width="3" height="5"/></svg><span>Contabilidad</span></button>
+          <button class="side-link" role="tab" data-tab="retiros" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/></svg><span>Retiros</span></button>
+        </div>
+      </div>
       <button class="side-link" role="tab" data-tab="seguridad" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Seguridad</span></button>
       <button class="side-link" role="tab" data-tab="ajustes" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></button>
     </nav>
@@ -2240,6 +2267,8 @@ async function copyToClipboard(text, btn, label) {
 }
 
 /* ── Tab switching (sidebar nav) ────────────────────────────────────────── */
+var FINANZAS_TABS = ['wallet', 'pagos', 'qr', 'contabilidad', 'retiros'];
+
 function switchTab(name) {
   document.querySelectorAll('.side-link').forEach(p => {
     const on = p.dataset.tab === name;
@@ -2249,15 +2278,42 @@ function switchTab(name) {
   document.querySelectorAll('.panel').forEach(p => {
     p.classList.toggle('active', p.dataset.panel === name);
   });
+  /* Reflect the active child on the Finanzas group: highlight + auto-open. */
+  const grp = document.getElementById('grp-finanzas');
+  if (grp) {
+    const inFin = FINANZAS_TABS.indexOf(name) !== -1;
+    const parent = document.getElementById('finanzas-toggle');
+    if (parent) parent.classList.toggle('has-active', inFin);
+    if (inFin) setFinanzasOpen(true);
+  }
   /* Close the mobile drawer after navigating */
   const side = document.getElementById('ac-side');
   if (side) side.classList.remove('open');
   if (document.getElementById('app')) document.getElementById('app').scrollIntoView({block:'start'});
 }
 
+function setFinanzasOpen(open) {
+  const grp = document.getElementById('grp-finanzas');
+  const parent = document.getElementById('finanzas-toggle');
+  if (!grp || !parent) return;
+  grp.classList.toggle('open', open);
+  parent.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
 document.querySelectorAll('.side-link').forEach(pill => {
   pill.addEventListener('click', () => switchTab(pill.dataset.tab));
 });
+
+/* Finanzas parent button → toggle the submenu open/closed. */
+(function wireFinanzas() {
+  const parent = document.getElementById('finanzas-toggle');
+  const grp = document.getElementById('grp-finanzas');
+  if (!parent || !grp) return;
+  parent.addEventListener('click', () => setFinanzasOpen(!grp.classList.contains('open')));
+  /* Open by default if a finance tab is the current one. */
+  const active = document.querySelector('.nav-sub .side-link.active');
+  if (active) setFinanzasOpen(true);
+})();
 
 /* ── Sidebar drawer (mobile) + collapse ─────────────────────────────────── */
 (function wireShell() {
