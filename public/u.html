@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perfil de pago — SISMO911</title>
+<meta name="description" content="Paga de forma segura en USDC a través de SISMO911.">
+<link rel="icon" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo.png">
+<meta property="og:type" content="profile">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:title" content="Perfil de pago — SISMO911">
+<meta property="og:description" content="Paga de forma segura en USDC a través de SISMO911.">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fb; --surface:#fff; --surface-2:#f9fafc; --text:#111827; --muted:#6b7280;
+  --border:#d9dee8; --brand:#001b44; --brand-2:#0b5fff; --success:#2e7d32; --warning:#f59e0b;
+  --radius-lg:24px; --radius-md:16px; --shadow-sm:0 1px 2px rgba(16,24,40,.06);
+  --shadow-md:0 12px 32px rgba(16,24,40,.10);
+  --font:'Inter','Public Sans',system-ui,sans-serif; --font-display:'Public Sans','Inter',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0d1117; --surface:#161b22; --surface-2:#1c2128; --text:#e6edf3; --muted:#8b949e;
+    --border:#30363d; --brand:#58a6ff; --brand-2:#79c0ff; --success:#3fb950; --warning:#d29922;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3); --shadow-md:0 12px 32px rgba(0,0,0,.45); }
+}
+*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+body{ background:var(--bg); color:var(--text); font-family:var(--font); min-height:100vh; line-height:1.55; }
+.wrap{ max-width:520px; margin:0 auto; padding:28px 16px 64px; }
+.site-head{ display:flex; align-items:center; justify-content:center; gap:9px; margin-bottom:22px; }
+.site-head img{ width:30px; height:30px; border-radius:7px; object-fit:contain; }
+.site-head a{ display:flex; align-items:center; gap:9px; text-decoration:none; color:inherit; }
+.site-head b{ font-family:var(--font-display); font-weight:800; font-size:1.02rem; color:var(--brand); letter-spacing:-.01em; }
+.card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); padding:30px 26px; }
+
+/* Profile header */
+.p-top{ display:flex; flex-direction:column; align-items:center; text-align:center; }
+.p-avatar{
+  width:88px; height:88px; border-radius:50%; flex-shrink:0; overflow:hidden;
+  background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:800; font-size:1.9rem; letter-spacing:-.02em; margin-bottom:14px;
+}
+.p-avatar img{ width:100%; height:100%; object-fit:cover; }
+.p-name{ font-family:var(--font-display); font-weight:800; font-size:1.5rem; color:var(--text); letter-spacing:-.025em; line-height:1.15; }
+.p-badges{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-top:8px; }
+.badge{ display:inline-flex; align-items:center; gap:4px; padding:3px 11px; border-radius:100px; font-size:.74rem; font-weight:700; }
+.badge-role{ background:rgba(11,95,255,.10); color:var(--brand-2); }
+.badge-pay{ background:rgba(46,125,50,.12); color:var(--success); }
+.p-meta{ font-size:.82rem; color:var(--muted); margin-top:10px; }
+
+.divider{ height:1px; background:var(--border); margin:24px 0; }
+.section-title{ font-family:var(--font-display); font-weight:700; font-size:.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px; }
+
+/* Link cards */
+.link-card{ display:flex; align-items:center; gap:14px; border:1px solid var(--border); border-radius:var(--radius-md); padding:16px 18px; margin-bottom:12px; background:var(--surface-2); transition:box-shadow .16s,border-color .16s; }
+.link-card:hover{ box-shadow:var(--shadow-sm); border-color:var(--brand-2); }
+.link-info{ flex:1; min-width:0; }
+.link-title{ font-weight:700; font-size:.95rem; color:var(--text); }
+.link-desc{ font-size:.8rem; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.link-price{ font-family:var(--font-display); font-weight:800; font-size:1rem; color:var(--brand-2); margin-top:4px; }
+.btn{ display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:11px; font-size:.85rem; font-weight:700; cursor:pointer; border:1px solid transparent; text-decoration:none; white-space:nowrap; transition:all .15s; }
+.btn-pay{ background:var(--brand-2); color:#fff; }
+.btn-pay:hover{ filter:brightness(1.05); }
+.btn-ghost{ background:var(--surface); border-color:var(--border); color:var(--muted); cursor:not-allowed; }
+.btn-copy{ background:var(--surface); border:1px solid var(--border); color:var(--text); width:100%; justify-content:center; margin-top:4px; }
+.btn-copy:hover{ border-color:var(--brand-2); color:var(--brand-2); }
+
+/* States */
+.state{ text-align:center; padding:26px 8px; }
+.state-icon{ width:64px; height:64px; border-radius:16px; background:rgba(11,95,255,.08); color:var(--brand-2); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; }
+.state-icon svg{ width:30px; height:30px; }
+.state-title{ font-family:var(--font-display); font-weight:700; font-size:1.05rem; color:var(--text); margin-bottom:6px; }
+.state-text{ font-size:.86rem; color:var(--muted); max-width:320px; margin:0 auto; line-height:1.55; }
+.skel{ background:linear-gradient(90deg,var(--border) 25%,var(--surface-2) 37%,var(--border) 63%); background-size:400% 100%; animation:sh 1.4s ease infinite; border-radius:12px; }
+@keyframes sh{ 0%{background-position:100% 0} 100%{background-position:-100% 0} }
+@media (prefers-reduced-motion:reduce){ .skel{ animation:none } }
+
+.foot{ text-align:center; margin-top:22px; font-size:.78rem; color:var(--muted); }
+.foot a{ color:var(--brand-2); text-decoration:none; font-weight:600; }
+.usdc-note{ display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px; font-size:.74rem; color:var(--muted); }
+.toast{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(12px); background:var(--brand); color:#fff; padding:11px 18px; border-radius:12px; font-size:.85rem; font-weight:600; box-shadow:var(--shadow-md); opacity:0; pointer-events:none; transition:all .25s; z-index:50; }
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site-head">
+    <a href="/" aria-label="SISMO911 inicio"><img src="/logo.png" alt="SISMO911"><b>SISMO911</b></a>
+  </header>
+
+  <main class="card" id="card">
+    <!-- Loading skeleton -->
+    <div id="loading">
+      <div class="p-top">
+        <div class="skel" style="width:88px;height:88px;border-radius:50%;margin-bottom:14px;"></div>
+        <div class="skel" style="width:160px;height:22px;margin-bottom:10px;"></div>
+        <div class="skel" style="width:90px;height:18px;border-radius:100px;"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="skel" style="width:100%;height:64px;margin-bottom:12px;"></div>
+      <div class="skel" style="width:100%;height:64px;"></div>
+    </div>
+    <div id="content" style="display:none;"></div>
+  </main>
+
+  <div class="foot" id="foot" style="display:none;">
+    <div class="usdc-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Pagos en USDC sobre la red Base · seguro
+    </div>
+    <div style="margin-top:6px;">Con tecnología de <a href="/">SISMO911</a></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+(function () {
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); };
+  var fmtUSD = function (n) {
+    var x = parseFloat(n); if (isNaN(x)) x = 0;
+    return new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' }).format(x); };
+  var initials = function (name) {
+    if (!name) return '👤';
+    var p = String(name).trim().split(/\s+/).filter(Boolean);
+    return (p.map(function (w) { return w[0]; }).slice(0, 2).join('') || '?').toUpperCase(); };
+  var monthYear = function (ms) {
+    if (!ms) return null;
+    try { var s = new Date(ms).toLocaleDateString('es-VE', { month:'short', year:'numeric' }).replace('.', '');
+      return s.charAt(0).toUpperCase() + s.slice(1); } catch (e) { return null; } };
+  var toast = function (msg) {
+    var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 2200); };
+
+  var iconState = function (kind) {
+    var paths = {
+      lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+      ghost: '<circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>',
+      empty: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'
+    };
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (paths[kind] || paths.empty) + '</svg>'; };
+
+  var showState = function (kind, title, text) {
+    document.getElementById('loading').style.display = 'none';
+    var el = document.getElementById('content'); el.style.display = 'block';
+    el.innerHTML = '<div class="state"><div class="state-icon">' + iconState(kind) +
+      '</div><div class="state-title">' + esc(title) + '</div><div class="state-text">' + esc(text) + '</div></div>';
+  };
+
+  var id = (location.pathname.match(/\/u\/([^/?#]+)/) || [])[1] || '';
+  if (!id) { showState('ghost', 'Perfil no encontrado', 'El enlace no es válido.'); return; }
+
+  fetch('/api/u/' + encodeURIComponent(id), { credentials:'omit' })
+    .then(function (r) { return r.json().then(function (d) { return { status:r.status, d:d }; }); })
+    .then(function (res) {
+      var d = res.d || {};
+      if (res.status === 404 || d.found === false) {
+        showState('ghost', 'Perfil no encontrado', 'Este enlace de pago no existe o fue desactivado.'); return;
+      }
+      if (d.public === false) {
+        showState('lock', 'Perfil privado', 'Este usuario ha ocultado su perfil público de pago.'); return;
+      }
+
+      var p = d.profile || {}, links = d.links || [];
+      var name = p.name || 'Ciudadano';
+      var avatar = p.avatar_url
+        ? '<img src="' + esc(p.avatar_url) + '" alt="' + esc(name) + '">'
+        : esc(initials(p.name));
+      var since = monthYear(p.created_ms);
+      var payBadge = d.receiving ? '<span class="badge badge-pay">✓ Recibe pagos</span>' : '';
+
+      var html =
+        '<div class="p-top">' +
+          '<div class="p-avatar">' + avatar + '</div>' +
+          '<div class="p-name">' + esc(name) + '</div>' +
+          '<div class="p-badges"><span class="badge badge-role">' + esc(p.role_label || 'Ciudadano') + '</span>' + payBadge + '</div>' +
+          (since ? '<div class="p-meta">Miembro desde ' + esc(since) + (p.country ? ' · ' + esc(p.country) : '') + '</div>' : '') +
+        '</div>';
+
+      html += '<div class="divider"></div>';
+      html += '<div class="section-title">Enlaces de pago</div>';
+
+      if (!links.length) {
+        html += '<div class="state" style="padding:14px 8px;"><div class="state-icon">' + iconState('empty') +
+          '</div><div class="state-title">Sin enlaces activos</div>' +
+          '<div class="state-text">' + esc(name) + ' aún no tiene enlaces de pago disponibles.</div></div>';
+      } else {
+        links.forEach(function (l) {
+          var price = (Number(l.price_usd) > 0) ? fmtUSD(l.price_usd) : 'Monto libre';
+          var action = l.payUrl
+            ? '<a class="btn btn-pay" href="' + esc(l.payUrl) + '" target="_blank" rel="noopener">Pagar</a>'
+            : '<span class="btn btn-ghost">Próximamente</span>';
+          html += '<div class="link-card"><div class="link-info">' +
+            '<div class="link-title">' + esc(l.title || 'Enlace de pago') + '</div>' +
+            (l.description ? '<div class="link-desc">' + esc(l.description) + '</div>' : '') +
+            '<div class="link-price">' + esc(price) + ' <span style="font-size:.72rem;color:var(--muted);font-weight:600;">' + esc(l.currency || 'USDC') + '</span></div>' +
+            '</div>' + action + '</div>';
+        });
+      }
+
+      html += '<button class="btn btn-copy" id="copyBtn" type="button">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+        'Copiar este enlace</button>';
+
+      document.getElementById('loading').style.display = 'none';
+      var el = document.getElementById('content'); el.style.display = 'block'; el.innerHTML = html;
+      document.getElementById('foot').style.display = 'block';
+      document.title = name + ' — Perfil de pago · SISMO911';
+
+      var copyBtn = document.getElementById('copyBtn');
+      if (copyBtn) copyBtn.addEventListener('click', function () {
+        var url = location.origin + '/u/' + id;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(function () { toast('Enlace copiado ✓'); })
+            .catch(function () { toast('No se pudo copiar'); });
+        } else { toast(url); }
+      });
+    })
+    .catch(function () {
+      showState('ghost', 'No se pudo cargar', 'Verifica tu conexión e intenta de nuevo.');
+    });
+})();
+</script>
+</body>
+</html>
