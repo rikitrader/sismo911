@@ -89,6 +89,7 @@ run_worker_first = [
   "/admin-dup-review",
   "/admin-flota-live",
   "/admin-flota-unidades",
+  "/admin-ninez",
   "/admin-x402",
   "/e/*",
 ]

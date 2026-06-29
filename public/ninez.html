@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Protección de Niños y Adolescentes — Refugios | SISMO911</title>
+<meta name="description" content="Coordinación humanitaria para la niñez durante la emergencia: refugios clasificados por su capacidad de atender a recién nacidos, lactantes, niños y adolescentes; necesidades prioritarias (agua, fórmula, pañales, vacunas) y estadísticas oficiales agregadas. Solo información oficial y agregada — nunca datos que identifiquen a un menor." />
+<link rel="canonical" href="https://sismo911.com/ninez" />
+<meta property="og:title" content="Protección de Niños y Adolescentes | SISMO911" />
+<meta property="og:description" content="Refugios con atención infantil, necesidades pediátricas y estadísticas oficiales agregadas para la protección de la niñez en emergencia." />
+<meta property="og:url" content="https://sismo911.com/ninez" />
+<meta property="og:image" content="https://sismo911.com/og/og-default.png" />
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<meta name="theme-color" content="#0f766e" />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/app.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{--teal:#0f766e;--teal-soft:#ccfbf1;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--panel:#fff;--panel2:#f8fafc;
+        --req:#bb0027;--req-bg:#fef2f2;--part:#b45309;--part-bg:#fffbeb;--cov:#15803d;--cov-bg:#f0fdf4}
+  *{box-sizing:border-box}
+  body{background:#f1f5f9;color:var(--ink);font-family:Inter,system-ui,sans-serif;margin:0}
+  main{max-width:1180px;margin:0 auto;padding:18px 16px 64px}
+  .eyebrow{font:800 11px 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+  h1{font:900 30px/1.05 'Public Sans';letter-spacing:-.02em;margin:4px 0 6px;color:var(--ink)}
+  h2{font:800 18px 'Public Sans';color:var(--ink);margin:0 0 4px}
+  .lede{color:var(--muted);font-size:14px;max-width:780px;line-height:1.5}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(16,24,40,.04)}
+  .pad{padding:18px}
+  .grid{display:grid;gap:14px}
+  .stat .n{font:900 26px 'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;color:var(--teal)}
+  .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px}
+  .subnav{position:sticky;top:0;z-index:20;background:#f1f5f9;display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;margin-bottom:6px}
+  .subnav a{font:800 12px 'Public Sans';text-transform:uppercase;letter-spacing:.04em;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:9999px;padding:7px 14px;text-decoration:none}
+  .subnav a:hover{background:var(--teal-soft);color:var(--teal)}
+  #map{height:480px;border-radius:10px;z-index:0}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
+  .dot{display:inline-block;width:11px;height:11px;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);vertical-align:middle;margin-right:4px}
+  .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+  .note{font-size:12.5px;color:#7c2d12;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 13px;line-height:1.5}
+  .privacy{font-size:12.5px;color:#134e4a;background:var(--teal-soft);border:1px solid #99f6e4;border-radius:10px;padding:10px 13px;line-height:1.5}
+  .badge{display:inline-flex;align-items:center;gap:.25rem;font:700 11px 'Public Sans';padding:3px 9px;border-radius:9999px;background:var(--teal-soft);color:#115e59;margin:2px 3px 0 0;white-space:nowrap}
+  .badge.vul{background:#ede9fe;color:#5b21b6}
+  .shelter{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--panel)}
+  .shelter h3{font:800 16px 'Public Sans';margin:0 0 2px;color:var(--ink)}
+  .shelter .meta{font-size:12px;color:var(--muted);margin-bottom:8px}
+  .needbar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .need{font:700 11px 'Public Sans';padding:3px 9px;border-radius:8px;border:1px solid transparent}
+  .need.requerido{background:var(--req-bg);color:var(--req);border-color:#fecaca}
+  .need.parcial{background:var(--part-bg);color:var(--part);border-color:#fde68a}
+  .need.cubierto{background:var(--cov-bg);color:var(--cov);border-color:#bbf7d0}
+  .popcount{display:inline-block;font:900 14px 'JetBrains Mono',monospace;color:var(--teal)}
+  .status{font:700 10px 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:6px;background:#e2e8f0;color:#334155}
+  .status.activo{background:#dcfce7;color:#166534}.status.lleno{background:#fee2e2;color:#991b1b}.status.cerrado{background:#e2e8f0;color:#64748b}
+  .empty{text-align:center;color:var(--muted);padding:28px;font-size:13.5px}
+  .regionrow{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}
+  .regionrow:first-child{border-top:none}
+  header.top{background:linear-gradient(180deg,#0f766e,#115e59);color:#fff}
+</style>
+</head>
+<body>
+<header class="top">
+  <div style="max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px">
+    <a href="/" style="display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font:800 15px 'Public Sans'"><img src="/logo.svg" alt="" style="width:28px;height:28px"> SISMO911</a>
+  </div>
+</header>
+
+<main>
+  <div class="eyebrow">Protección Integral de la Niñez · Emergencia Sísmica</div>
+  <h1>Protección de Niños y Adolescentes</h1>
+  <p class="lede">Sección dedicada a la coordinación humanitaria y la atención prioritaria de niños, niñas y adolescentes durante la emergencia, con énfasis en los menores de 0 a 15 años. Muestra los refugios según su capacidad de atender a la niñez, las necesidades prioritarias de cada centro y estadísticas oficiales agregadas.</p>
+
+  <div class="privacy" style="margin-top:12px">🛡️ <b>Privacidad de menores:</b> esta sección presenta <b>únicamente información oficial y agregada</b> autorizada por las autoridades competentes. <b>No identifica públicamente a ningún niño</b> — no muestra nombres, cédulas, fotos ni direcciones de menores. Su único fin es facilitar la respuesta humanitaria, la coordinación institucional y la protección de la niñez.</p>
+
+  <!-- stats -->
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:16px 0">
+    <div class="card pad stat"><div class="n num" id="s_minors">—</div><div class="l">Menores atendidos (oficial)</div></div>
+    <div class="card pad stat"><div class="n num" id="s_shelters">—</div><div class="l">Refugios con población infantil</div></div>
+    <div class="card pad stat"><div class="n num" id="s_capable">—</div><div class="l">Refugios con atención infantil</div></div>
+    <div class="card pad stat"><div class="n num" id="s_cov">—</div><div class="l">Recursos cubiertos</div></div>
+  </div>
+
+  <nav class="subnav">
+    <a href="#mapa">Mapa</a><a href="#refugios">Refugios</a><a href="#regiones">Por región</a><a href="#necesidades">Necesidades</a>
+  </nav>
+
+  <!-- empty-state banner (shown when no official data yet) -->
+  <div class="note" id="emptyBanner" style="display:none;margin-bottom:16px">ℹ️ Aún no hay <b>datos oficiales</b> publicados por las autoridades para esta sección. Cuando un organismo competente autorice y registre información agregada (refugios con atención infantil, número de menores atendidos, necesidades prioritarias), aparecerá aquí automáticamente. Las estimaciones de planificación no se muestran al público.</div>
+
+  <!-- MAPA -->
+  <section id="mapa" class="card pad" style="margin-bottom:16px">
+    <h2>Refugios con atención a la niñez</h2>
+    <p class="lede" style="margin-bottom:10px">Refugios que reportan capacidad para atender a menores o que tienen población infantil registrada (datos oficiales). Clic en un punto para ver capacidades y necesidades.</p>
+    <div class="legend" style="margin-bottom:8px">
+      <span><span class="dot" style="background:#0f766e"></span>Refugio con atención infantil</span>
+      <span><span class="dot" style="background:#bb0027"></span>Necesidad prioritaria sin cubrir</span>
+    </div>
+    <div id="map"></div>
+  </section>
+
+  <!-- REFUGIOS -->
+  <section id="refugios" style="margin-bottom:16px">
+    <h2 style="margin-bottom:8px">Refugios y su atención infantil</h2>
+    <div id="shelterList"><div class="empty">Cargando…</div></div>
+  </section>
+
+  <div class="grid" style="grid-template-columns:1fr 1fr;align-items:start" id="lowerGrid">
+    <!-- REGIONES -->
+    <section id="regiones" class="card pad">
+      <h2>Menores atendidos por región</h2>
+      <p class="lede" style="margin-bottom:8px">Cifras oficiales agregadas por parroquia.</p>
+      <div id="regionList"><div class="empty">—</div></div>
+    </section>
+
+    <!-- NECESIDADES -->
+    <section id="necesidades" class="card pad">
+      <h2>Necesidades humanitarias prioritarias</h2>
+      <p class="lede" style="margin-bottom:8px">Necesidades reportadas en los refugios con población infantil (oficial).</p>
+      <div id="needList"><div class="empty">—</div></div>
+    </section>
+  </div>
+</main>
+
+<script src="/app-shell.js" defer></script>
+<script>
+const CAP_LABEL = {
+  recien_nacido:'Recién nacidos', lactante:'Lactantes', nino_pequeno:'Niños pequeños', escolar:'Edad escolar',
+  adolescente:'Adolescentes', discapacidad_infantil:'Niños con discapacidad', cronico_infantil:'Niños con enfermedad crónica',
+  medico_especializado:'Atención médica especializada', espacio_lactancia:'Espacio de lactancia', personal_infantil:'Personal especializado en niñez',
+  discapacidad:'Personas con discapacidad', movilidad_reducida:'Movilidad reducida', adulto_mayor:'Adultos mayores',
+  embarazada:'Mujeres embarazadas', familia_ninos:'Familias con niños', cronico:'Enfermedad crónica', mascotas:'Admite mascotas',
+};
+const CHILD_CAPS = new Set(['recien_nacido','lactante','nino_pequeno','escolar','adolescente','discapacidad_infantil','cronico_infantil','medico_especializado','espacio_lactancia','personal_infantil']);
+const NEED_LABEL = {
+  agua:'Agua potable', formula_lactante:'Fórmula para lactantes', panales:'Pañales', ropa:'Ropa', mantas:'Mantas',
+  medicamento_pediatrico:'Medicamentos pediátricos', atencion_medica:'Atención médica', atencion_psicologica:'Atención psicológica',
+  vacunas:'Vacunas', kit_higiene:'Kits de higiene', leche:'Leche', alimento_especial:'Alimentos especiales', alimento_infantil:'Alimentos infantiles',
+};
+const POP_LABEL = { menores_0_5:'0 a 5 años', menores_6_15:'6 a 15 años', menores_16_17:'16 a 17 años',
+  recien_nacidos:'Recién nacidos', lactantes:'Lactantes', embarazadas:'Embarazadas', adultos_mayores:'Adultos mayores', discapacidad:'Discapacidad', total:'Total' };
+const fmt = (n) => (n==null?'—':Number(n).toLocaleString('es-VE'));
+const esc = (s) => (s||'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let REFUGIOS = [], map, layer;
+
+async function boot(){
+  const [refs, sum] = await Promise.all([
+    fetch('/api/ninez/refugios').then(r=>r.json()).catch(()=>({refugios:[]})),
+    fetch('/api/ninez/summary').then(r=>r.json()).catch(()=>null),
+  ]);
+  REFUGIOS = refs.refugios || [];
+  if(sum){
+    document.getElementById('s_minors').textContent = fmt(sum.totals.minors);
+    document.getElementById('s_shelters').textContent = fmt(sum.totals.sheltersWithChildPopulation);
+    document.getElementById('s_capable').textContent = fmt(sum.totals.sheltersChildCapable);
+    document.getElementById('s_cov').textContent = (sum.resources?.pct_cubierto??0)+'%';
+    renderRegions(sum.byRegion||[]);
+    renderNeeds(sum.needs||[]);
+  }
+  const empty = !REFUGIOS.length;
+  document.getElementById('emptyBanner').style.display = empty ? 'block' : 'none';
+  renderShelters();
+  initMap();
+}
+
+function capBadges(caps){
+  return (caps||[]).map(c=>{
+    const label = CAP_LABEL[c.capability_key] || c.capability_key;
+    const cls = CHILD_CAPS.has(c.capability_key) ? 'badge' : 'badge vul';
+    return `<span class="${cls}">${esc(label)}${c.value>1?(' · '+c.value):''}</span>`;
+  }).join('');
+}
+function needPills(needs){
+  return (needs||[]).map(n=>{
+    const label = NEED_LABEL[n.need_key] || n.need_key;
+    return `<span class="need ${esc(n.status)}">${esc(label)}</span>`;
+  }).join('');
+}
+function popLine(pop){
+  const minors = (pop||[]).filter(p=>['menores_0_5','menores_6_15','menores_16_17','recien_nacidos','lactantes'].includes(p.category_key));
+  if(!minors.length) return '';
+  return '<div style="margin-top:8px;font-size:13px">' + minors.map(p=>
+    `<span class="popcount">${fmt(p.count)}</span> <span style="color:var(--muted)">${esc(POP_LABEL[p.category_key]||p.category_key)}</span>`
+  ).join(' &nbsp;·&nbsp; ') + '</div>';
+}
+
+function renderShelters(){
+  const host = document.getElementById('shelterList');
+  if(!REFUGIOS.length){ host.innerHTML = '<div class="empty">No hay refugios con información oficial de niñez por ahora.</div>'; return; }
+  host.innerHTML = REFUGIOS.map(s=>`
+    <div class="shelter">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;flex-wrap:wrap">
+        <div><h3>${esc(s.nombre)}</h3>
+          <div class="meta">${esc(s.parroquia||s.municipio||'')} · cap. ${fmt(s.capacity)} personas</div></div>
+        <span class="status ${esc(s.status||'')}">${esc(s.status||'')}</span>
+      </div>
+      <div>${capBadges(s.capabilities)}</div>
+      ${popLine(s.population)}
+      ${s.needs&&s.needs.length?`<div class="needbar">${needPills(s.needs)}</div>`:''}
+    </div>`).join('');
+}
+
+function renderRegions(rows){
+  const host = document.getElementById('regionList');
+  host.innerHTML = rows.length ? rows.map(r=>
+    `<div class="regionrow"><span>${esc(r.region)}</span><span><b class="num">${fmt(r.minors)}</b> menores · ${fmt(r.shelters)} refugio(s)</span></div>`
+  ).join('') : '<div class="empty">Sin datos oficiales por región.</div>';
+}
+function renderNeeds(rows){
+  const host = document.getElementById('needList');
+  if(!rows.length){ host.innerHTML = '<div class="empty">Sin necesidades reportadas oficialmente.</div>'; return; }
+  host.innerHTML = rows.map(n=>{
+    const label = NEED_LABEL[n.need_key] || n.need_key;
+    const tot = n.requerido+n.parcial+n.cubierto;
+    return `<div class="regionrow"><span>${esc(label)}</span><span>
+      ${n.requerido?`<span class="need requerido">${n.requerido} requerido</span> `:''}
+      ${n.parcial?`<span class="need parcial">${n.parcial} parcial</span> `:''}
+      ${n.cubierto?`<span class="need cubierto">${n.cubierto} cubierto</span>`:''}
+      ${!tot?'<span style="color:var(--muted)">—</span>':''}</span></div>`;
+  }).join('');
+}
+
+function initMap(){
+  map = L.map('map',{attributionControl:false}).setView([10.60,-66.92], 11);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(map);
+  layer = L.layerGroup().addTo(map);
+  REFUGIOS.forEach(s=>{ if(s.lat==null) return;
+    const hasUnmet = (s.needs||[]).some(n=>n.status==='requerido');
+    const color = hasUnmet ? '#bb0027' : '#0f766e';
+    const minors = (s.population||[]).filter(p=>['menores_0_5','menores_6_15','menores_16_17'].includes(p.category_key)).reduce((a,p)=>a+(p.count||0),0);
+    L.circleMarker([s.lat,s.lon],{radius:8,color:'#fff',weight:2,fillColor:color,fillOpacity:1})
+      .bindPopup(`<div style="min-width:210px">
+        <div style="font:800 14px 'Public Sans'">${esc(s.nombre)}</div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:6px">${esc(s.parroquia||'')}${minors?` · ${fmt(minors)} menores`:''}</div>
+        <div>${capBadges(s.capabilities)}</div>
+        ${s.needs&&s.needs.length?`<div class="needbar" style="margin-top:6px">${needPills(s.needs)}</div>`:''}
+      </div>`).addTo(layer);
+  });
+}
+
+boot();
+</script>
+</body>
+</html>
