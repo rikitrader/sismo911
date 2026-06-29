@@ -7,7 +7,7 @@ import { audit } from '../lib/audit';
 import { sendEmail, randomToken, sha256hex, resetEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
 // Rich branded catalog templates (AUTH-01 verify, AUTH-02 welcome) — the
 // transactional-email source of truth. Aliased to avoid clashing with email.ts.
-import { verifyEmail as verifyEmailTpl, welcomeEmail as welcomeEmailTpl, accountLockedEmail } from '../lib/email-catalog';
+import { verifyEmail as verifyEmailTpl, welcomeEmail as welcomeEmailTpl, accountLockedEmail, newLoginEmail } from '../lib/email-catalog';
 import { createWalletForEmail, isCrossmintConfigured } from '../lib/crossmint';
 import { x402Network, x402Asset } from '../lib/x402';
 import { verifyTotp, verifyTotpStep, matchBackupCode } from '../lib/totp';
@@ -295,6 +295,25 @@ auth.post('/login', async (c) => {
       await c.env.DB.prepare(`UPDATE users SET pw_hash = ?, pw_salt = ? WHERE id = ?`).bind(up.hash, up.salt, row.id).run();
     } catch { /* ignore — keep the existing valid hash */ }
   }
+  // AUTH-08: new-device sign-in alert. Checked BEFORE recording this login so the
+  // current row isn't counted. Sent only when the user has logged in before AND
+  // never from this user-agent — a genuinely new device — so it isn't sent every
+  // login. Best-effort; never blocks login.
+  try {
+    const seen: any = await c.env.DB.prepare(
+      `SELECT COUNT(*) AS total, SUM(CASE WHEN ua = ? THEN 1 ELSE 0 END) AS same
+         FROM login_history WHERE user_id = ? AND ok = 1`
+    ).bind(ua, row.id).first();
+    if (row.email && Number(seen?.total ?? 0) >= 1 && Number(seen?.same ?? 0) === 0) {
+      const base = c.env.PUBLIC_BASE_URL || 'https://sismo911.com';
+      fireEmail(c, row.email, newLoginEmail({
+        when: new Date().toLocaleString('es-VE'),
+        device: (ua || 'desconocido').slice(0, 80),
+        location: ip || 'desconocida',
+        secureUrl: `${base}/cuenta/seguridad`,
+      }));
+    }
+  } catch { /* ignore — alerting never breaks login */ }
   // Record the successful login (login_history) — wrapped so logging never breaks login.
   try {
     await c.env.DB.prepare(
