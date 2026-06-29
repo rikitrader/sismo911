@@ -11,12 +11,18 @@ const SESSION_TTL_MS = 30 * 86_400_000; // 30 days (citizens — absolute)
 export const IDLE_TTL_MS = 30 * 60_000; // 30 minutes idle
 export const isPrivilegedRole = (role: string | null | undefined) =>
   role === 'operator' || role === 'admin';
-// SECURITY (audit L3): the versioned hash format now carries the iteration count,
-// so new hashes use the OWASP-recommended ≥600,000 PBKDF2-SHA256 iterations while
-// legacy 100k hashes still verify at their recorded cost and are transparently
-// re-hashed on the next successful login (passwordNeedsUpgrade + the login handler).
+// SECURITY (audit L3): the versioned hash format carries the iteration count, so
+// hashes verify at their recorded cost and are transparently re-hashed at the
+// current cost on the next successful login (passwordNeedsUpgrade + login handler).
 // Format: pw_hash = "v2$<iters>$<b64hash>"; legacy = bare "<b64hash>".
-const PBKDF2_ITERS = 600_000;
+//
+// RUNTIME CAP: the Cloudflare Workers WebCrypto runtime REJECTS PBKDF2 iteration
+// counts above 100,000 (`NotSupportedError: iteration counts above 100000 are not
+// supported`). OWASP recommends ≥600k, but deriveBits() simply throws on Workers
+// for anything higher — which 500'd every new-password write (register +
+// password-reset) until this was capped. 100k is the Workers ceiling; a stronger
+// KDF needs a WASM impl (bcrypt/argon2/scrypt), tracked as a follow-up.
+const PBKDF2_ITERS = 100_000;
 const PBKDF2_ITERS_LEGACY = 100_000;
 
 export type Role = 'citizen' | 'operator' | 'admin';
