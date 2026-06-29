@@ -1,5 +1,6 @@
-import type { Context } from 'hono';
+import type { Context, MiddlewareHandler } from 'hono';
 import type { Env } from '../types';
+import { getUserFromRequest } from './auth';
 
 // Step-up (re-confirmation) for sensitive actions. When a user enables
 // sec_require_login, sensitive mutating endpoints require a RECENT password
@@ -50,4 +51,20 @@ export async function enforceStepUp(
     return c.json({ error: 'step_up_required' }, 403);
   }
   return null;
+}
+
+const STEPUP_UNSAFE = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+
+// Sub-app middleware: enforce step-up for the ACTING user on every state-changing
+// request, except paths the caller marks break-glass (e.g. emergency lock) via
+// `exclude`. Mount AFTER a sub-app's same-site/CSRF guard so cross-site requests
+// are rejected first. The client catches 403 step_up_required, prompts, retries.
+export function stepUpGuard(opts?: { exclude?: (path: string) => boolean }): MiddlewareHandler<{ Bindings: Env }> {
+  return async (c, next) => {
+    if (STEPUP_UNSAFE.has(c.req.method) && !opts?.exclude?.(c.req.path)) {
+      const actor = await getUserFromRequest(c.env, c).catch(() => null);
+      if (actor) { const blocked = await enforceStepUp(c, actor.id); if (blocked) return blocked; }
+    }
+    return next();
+  };
 }

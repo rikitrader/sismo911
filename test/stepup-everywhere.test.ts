@@ -4,6 +4,8 @@ import { makeDb, makeEnv, type D1Mock } from './helpers/d1';
 import { hashPassword } from '../src/lib/auth';
 import { profile } from '../src/routes/profile';
 import { adminRbac } from '../src/routes/admin-rbac';
+import { adminFlags } from '../src/routes/admin-flags';
+import { stepUpGuard } from '../src/lib/stepup';
 
 // Step-up is enforced on EVERY sensitive mutation (not just withdrawals) when the
 // acting user has enabled sec_require_login.
@@ -25,7 +27,9 @@ async function setup(opts: { adminStepUp?: boolean; userStepUp?: boolean } = {})
   const env = makeEnv(db);
   const app = new Hono();
   app.route('/api/profile', profile);
+  app.use('/api/rbac/*', stepUpGuard({ exclude: (p) => p.endsWith('/lock') })); // mirrors index.ts
   app.route('/api/rbac', adminRbac);
+  app.route('/api/rbac', adminFlags);
   const now = Date.now();
   const pw = await hashPassword('pw12345');
   const ins = db.raw.prepare(`INSERT INTO users (id,email,name,role,phone,language,wallet_address,pw_hash,pw_salt,status,settings_json,created_ms) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
@@ -74,6 +78,12 @@ describe('step-up enforced on all sensitive actions', () => {
     await app.request('/api/profile/confirm', { method: 'POST', headers: ADMIN, body: JSON.stringify({ password: 'pw12345' }) }, env);
     r = await app.request('/api/rbac/users/usr_t/suspend', { method: 'POST', headers: ADMIN, body: '{}' }, env);
     expect(await err(r)).not.toBe('step_up_required');
+  });
+
+  it('admin SUB-APPS (feature flags via the shared guard) are gated too', async () => {
+    const { app, env } = await setup({ adminStepUp: true });
+    const r = await app.request('/api/rbac/feature-flags', { method: 'PUT', headers: ADMIN, body: '{}' }, env);
+    expect(r.status).toBe(403); expect(await err(r)).toBe('step_up_required');
   });
 
   it('emergency lock (/lock) is NOT gated — break-glass stays fast', async () => {
