@@ -59,7 +59,7 @@ describe('Flota GPS page is wired as the installable app', () => {
 describe('service worker update lifecycle (old-cache eviction)', () => {
   const sw = readFileSync('public/sw.js', 'utf8');
   it('uses a versioned cache that was bumped for this release', () => {
-    expect(sw).toContain("const CACHE = 'sismo911-v10'");
+    expect(sw).toContain("const CACHE = 'sismo911-v11'");
   });
   it('activate deletes every cache whose name != current, then claims clients', () => {
     expect(sw).toContain('caches.keys()');
