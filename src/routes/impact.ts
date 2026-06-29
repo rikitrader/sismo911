@@ -4,27 +4,30 @@ import type { Env } from '../types';
 // ── Impact metrics — REAL, auditable, never demo/fabricated ──────────────────
 //
 // "Persona ayudada" CONTRACT:
-//   A distinct person who reached a positive outcome FACILITATED BY SISMO911 —
-//   ONLY outcomes the platform itself recorded, NEVER pre-existing/imported data.
-//     • medical_consults     = completed telemedicine consultations
-//                              (telemed_requests.status = 'completed')
-//     • persons_located_safe = reported missing persons an operator confirmed
-//                              LOCATED THROUGH SISMO911 — the platform's
-//                              /api/familia/:id/localizar flow stamps
-//                              estado='localizado' + a non-empty localizado_nota.
-//   ANTI-FABRICATION (critical): the `personas` table is an IMPORT from an
-//   external dataset (desaparecidos-vzla). Its historical aparecido /
-//   hospitalizado / localizado-without-note statuses are NOT SISMO911 outcomes
-//   and MUST NOT count — only a present localizado_nota proves the platform
-//   recorded the location. Also excluded: planning estimates (refugios seed),
-//   deceased, not-yet-contacted. No hardcoded/demo numbers — the value is purely
-//   the sum of real platform records. total = medical + located; 0 → UI "—".
+//   A distinct person who received an outcome we can PROVE SISMO911 delivered.
+//   Counted ONLY from records with unambiguous platform provenance:
+//     • medical_consults = completed telemedicine consultations
+//                          (telemed_requests.status = 'completed') — a SISMO911-
+//                          native service; every completed request is a real
+//                          person attended through the platform.
+//   total = medical_consults. When 0, the UI shows "—" ("aún sin datos verificados").
+//
+// WHY missing-persons "located" is NOT counted (yet): the `personas` table is an
+//   IMPORT from an external dataset (desaparecidos-vzla). Its `estado` AND
+//   `localizado_nota` fields were backfilled by that import, so they do NOT prove
+//   SISMO911 facilitated the location — counting them FABRICATED impact (a live
+//   value of 12,422 → 2,810 came entirely from imported rows). The platform does
+//   record genuine locations (operator docket events), but separating those
+//   cleanly from imported state needs an explicit provenance signal (e.g. a
+//   launch-date cutoff or a `helped_via_platform` marker). Until that exists this
+//   component is DEFERRED, not faked. See the vault follow-up. No hardcoded/demo
+//   numbers anywhere — the value is purely the count of real platform records.
 //
 // Public, read-only, NO PII (counts only). Mounted at /api/impact.
 export const impact = new Hono<{ Bindings: Env }>();
 
 // Count helper: a missing table (partial schema) contributes 0 and NEVER throws —
-// so a metric component degrades to 0 rather than fabricating or 500ing.
+// so a component degrades to 0 rather than fabricating or 500ing.
 async function count(env: Env, sql: string, binds: unknown[] = []): Promise<number> {
   try {
     const r: any = await env.DB.prepare(sql).bind(...binds).first();
@@ -41,24 +44,17 @@ impact.get('/personas-ayudadas', async (c) => {
     c.env,
     `SELECT COUNT(*) AS n FROM telemed_requests WHERE status = 'completed'`,
   );
-  // ONLY persons located through the platform's operator-confirmed flow, proven
-  // by a non-empty localizado_nota. This deliberately EXCLUDES the imported
-  // registry's historical statuses (which are not SISMO911 outcomes).
-  const persons_located_safe = await count(
-    c.env,
-    `SELECT COUNT(*) AS n FROM personas
-       WHERE estado = 'localizado' AND localizado_nota IS NOT NULL AND TRIM(localizado_nota) <> ''`,
-  );
+  const persons_located_safe = 0; // DEFERRED: imported-registry provenance unclear (see header).
   const total = medical_consults + persons_located_safe;
   return c.json({
     ok: true,
     total, // REAL count from platform records; the UI renders "—" when total === 0
     breakdown: { medical_consults, persons_located_safe },
     definition:
-      'Personas con un resultado facilitado por SISMO911: consultas de telemedicina ' +
-      'completadas + personas reportadas que un operador confirmó como localizadas a ' +
-      'través de la plataforma. Excluye datos importados/históricos y estimaciones de ' +
-      'planificación (p. ej. capacidad de refugios). Solo registros reales de la plataforma.',
+      'Personas con un resultado que SISMO911 facilitó de forma verificable: por ahora, ' +
+      'consultas de telemedicina completadas en la plataforma. Excluye datos importados/' +
+      'históricos y estimaciones de planificación. El conteo de personas localizadas se ' +
+      'incorporará cuando exista una señal de origen confiable en la plataforma.',
     as_of: Date.now(),
   });
 });
