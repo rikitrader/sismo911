@@ -440,6 +440,8 @@ app.get('/refugios', (c) => c.env.ASSETS.fetch(new Request(new URL('/refugios.ht
 app.get('/ninez', (c) => c.env.ASSETS.fetch(new Request(new URL('/ninez.html', c.req.url))));
 // Niñez operator editor (gated as an /admin page → login redirect; writes need ninez:manage).
 app.get('/admin-ninez', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-ninez.html', c.req.url))));
+// Ayuda cerca de mí (public): nearest refugios + emergency services + safe-route deep-link.
+app.get('/cerca', (c) => c.env.ASSETS.fetch(new Request(new URL('/cerca.html', c.req.url))));
 
 // Víctimas y Fallecidos dashboard (public): multi-source casualty ledger with a
 // RED-ALERT banner, per-source figures, computed range, confidence + citations.

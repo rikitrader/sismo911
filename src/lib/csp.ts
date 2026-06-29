@@ -75,6 +75,7 @@ export const STRICT_SCRIPT_SRC = [
   "'sha256-Xvsyxwkb0q8bdg2NwaOGG4TAe/j+VxqSmJpfRFI7LRc='",
   "'sha256-Y8LK4C9dJbtbIVGsmKs+F2JjiE8eB/E7shpdTZv8O5M='",
   "'sha256-YibQYtDQ4i+vpn/2K96I8PEmHPEJtosZ4GjSZCU7mo8='",
+  "'sha256-ZqzbrPUYZf2/m3XnR2d3AZtpdUKFR1f7uKZ6OPqDTpg='",
   "'sha256-aV6mXokbuh3iHZdj9EVKBBdW60w+zkMV2GRaR3kq4qU='",
   "'sha256-aWSIoR8C+5sU3x1vQu66hLRXMsojuiadp122PyptNvg='",
   "'sha256-b0lb6KQp0Mt13WmRlXdwOfwDWX5BJWqiJEQbSNcgNes='",
