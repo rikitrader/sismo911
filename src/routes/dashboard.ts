@@ -20,10 +20,38 @@ dashboard.get('/geoseismic', async (c) => edgeCached(c, 30, async () => {
   const points = (hm.results ?? []).map((e: any) => [e.lat, e.lon, Math.max(0.1, Math.min(1, e.mag / 8))]);
 
   // Official casualty stats (same as /api/stats/official, rav.ts)
-  const stats = await c.env.DB.prepare(
+  const stats: any = await c.env.DB.prepare(
     `SELECT fallecidos, heridos, refugiados, desaparecidos, source, origen, updated_at, pulled_at
      FROM official_stats WHERE id = 1`
   ).first().catch(() => null);
+
+  // Desaparecidos: the official press balance never reports this figure (shows
+  // "—"), but WE run the missing-persons registry. We surface two DISTINCT counts
+  // so we never conflate them:
+  //   • desaparecidos  → VERIFIED missing-person case files (the /casos docket,
+  //     persons.status='missing'). This is the defensible "desaparecidos" figure.
+  //   • sin_contacto   → Familia/personas registry entries still "sin-contacto"
+  //     (not located yet) — a much larger, lower-assurance pool shown separately.
+  // The docket count backfills the official figure only when the press source is
+  // empty, tagged with its true provenance so the UI never mislabels it "oficial".
+  if (stats) {
+    const docket: any = await c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM persons WHERE review='approved' AND status='missing'`
+    ).first().catch(() => null);
+    const familia: any = await c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM personas WHERE moderation='approved'
+       AND estado NOT IN('localizado','aparecido','hospitalizado','fallecido')`
+    ).first().catch(() => null);
+    const docketMissing = Number(docket?.n) || 0;
+    const sinContacto = Number(familia?.n) || 0;
+    if (stats.desaparecidos == null || Number(stats.desaparecidos) === 0) {
+      if (docketMissing > 0) {
+        stats.desaparecidos = docketMissing;
+        stats.desaparecidos_origen = 'registro';
+      }
+    }
+    if (sinContacto > 0) stats.sin_contacto = sinContacto;
+  }
 
   // Structural-damage overlay (same as /api/danos-estructurales, damage-map.ts)
   const danos = (await c.env.DB.prepare(
