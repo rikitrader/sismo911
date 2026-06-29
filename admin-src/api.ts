@@ -132,6 +132,7 @@ export const rbac = {
 
   sessions: () => api.get<{ sessions: SessionRow[] }>(`/sessions`),
   userSessions: (id: string) => api.get<{ sessions: SessionRow[] }>(`/users/${id}/sessions`),
+  userAudit: (id: string) => api.get<{ ok: boolean; opted_in: boolean; items: { id: string; action: string; detail: string; created_ms: number }[] }>(`/users/${id}/audit`),
   revokeSession: (token: string) => api.del(`/sessions/${encodeURIComponent(token)}`),
   revokeUserSession: (id: string, token: string) => api.del(`/users/${id}/sessions/${encodeURIComponent(token)}`),
   revokeAllUserSessions: (id: string) => api.post(`/users/${id}/sessions/revoke-all`, {}),

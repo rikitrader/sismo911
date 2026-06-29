@@ -146,6 +146,23 @@ adminRbac.get('/users/:id', requirePermission('users:read'), async (c) => {
   return c.json({ user: safeUser, roles, directPermissions, effectivePermissions });
 });
 
+// GET /users/:id/audit — a specific user's audit trail. Respects the user's OWN
+// privacy opt-in: returns rows ONLY when that user has enabled sec_audit_visibility
+// ("Visibilidad del registro de auditoría"); otherwise opted_in:false with no rows.
+adminRbac.get('/users/:id/audit', requirePermission('users:read'), async (c) => {
+  const id = c.req.param('id');
+  const user: any = await c.env.DB.prepare('SELECT id, email, settings_json FROM users WHERE id = ?').bind(id).first();
+  if (!user) return c.json({ error: 'not_found' }, 404);
+  let s: Record<string, unknown> = {};
+  try { s = JSON.parse(user.settings_json || '{}') || {}; } catch {}
+  if (s.sec_audit_visibility !== true) return c.json({ ok: true, opted_in: false, items: [] });
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, action, detail, created_ms FROM audit
+      WHERE actor = ? OR actor = ? ORDER BY created_ms DESC LIMIT 200`
+  ).bind(user.email ?? '', user.id).all();
+  return c.json({ ok: true, opted_in: true, items: results ?? [] });
+});
+
 adminRbac.post('/users', requirePermission('users:create'), async (c) => {
   const b: any = await c.req.json().catch(() => ({}));
   const email = (b?.email || '').trim().toLowerCase();

@@ -97,6 +97,32 @@ export function passwordChangedEmail(name: string): EmailMsg {
   return { subject: 'Tu contraseña fue cambiada — SISMO911', html, text };
 }
 
+// Sent to the PAYEE when an x402 USDC payment to them settles on-chain.
+export function paymentReceivedEmail(opts: { name?: string; amountUsd: number; description?: string; txHash?: string; network?: string; manageUrl: string }): EmailMsg {
+  const hi = opts.name ? `Hola ${opts.name},` : 'Hola,';
+  const amount = `$${(Number(opts.amountUsd) || 0).toFixed(2)}`;
+  const rows = [
+    ['Monto', `${amount} USDC`],
+    ...(opts.description ? [['Concepto', opts.description]] : []),
+    ['Red', opts.network || 'Base'],
+    ...(opts.txHash ? [['Transacción', `${opts.txHash.slice(0, 10)}…${opts.txHash.slice(-6)}`]] : []),
+  ];
+  const tbody = rows.map(([k, v]) =>
+    `<tr><td style="padding:8px 14px;color:#6b7280">${k}</td><td style="padding:8px 14px;text-align:right;font-weight:700;color:#13284f">${v}</td></tr>`
+  ).join('');
+  const html = layout('Recibiste un pago en USDC — SISMO911',
+    h2('✓ Pago recibido') +
+    p(hi) +
+    p(`Recibiste un pago de <b>${amount} USDC</b> en tu perfil de cobro de SISMO911.`) +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;font-size:14px">
+       <tr><td colspan="2" style="background:#13284f;color:#fff;padding:10px 14px;font-weight:700;letter-spacing:.04em">RECIBO DE PAGO</td></tr>
+       ${tbody}
+     </table>` +
+    `<p style="margin:0 0 20px">${button(opts.manageUrl, 'Ver mis pagos')}</p>`);
+  const text = `${hi}\n\nRecibiste un pago de ${amount} USDC en SISMO911.\n${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nVer tus pagos: ${opts.manageUrl}`;
+  return { subject: `Recibiste ${amount} USDC — SISMO911`, html, text };
+}
+
 // ---- Telemedicine ----------------------------------------------------------
 
 // Sent to a physician right after they register as a volunteer telemedicine doctor.

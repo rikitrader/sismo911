@@ -4,6 +4,7 @@ import { uid } from '../lib/db';
 import { getUserFromRequest } from '../lib/auth';
 import { audit } from '../lib/audit';
 import { notify } from '../lib/notify';
+import { sendEmail, paymentReceivedEmail } from '../lib/email';
 import { burstLimit, subjectLimit } from '../lib/security';
 import { authorize } from '../rbac/middleware';
 import { LEGACY_OPS_PERM } from '../rbac/route-policy';
@@ -317,13 +318,32 @@ x402.all('/pay/:userId/:slug', async (c) => {
   await c.env.DB.prepare(`UPDATE x402_payments SET status='settled', tx_hash=?, settled_ms=?, facilitator_response=? WHERE id=?`)
     .bind(s.transactionHash ?? null, Date.now(), facResp, id).run();
 
-  // Notify the payee that they received a payment (best-effort, never blocks).
-  await notify(c.env, res.payee_user_id, {
-    type: 'payment_received',
-    title: 'Pago recibido',
-    body: `Recibiste $${Number(res.price_usd).toFixed(2)} USDC por "${res.title}".`,
-    link: '#pagos',
-  });
+  // Notify the PAYEE that they received a payment — controlled by their settings:
+  // sec_receipt_notifs (in-app bell notification, default ON) and sec_payment_emails
+  // (email receipt, default OFF / opt-in). Best-effort and non-blocking: a failure
+  // here never affects the payer's 200.
+  try {
+    const payee: any = await c.env.DB.prepare(
+      `SELECT name, email, settings_json FROM users WHERE id = ?`
+    ).bind(res.payee_user_id).first();
+    let ps: Record<string, unknown> = {};
+    try { ps = JSON.parse(payee?.settings_json || '{}') || {}; } catch {}
+    const amountUsd = Number(res.price_usd) || 0;
+    if (ps.sec_receipt_notifs !== false) {
+      await notify(c.env, res.payee_user_id, {
+        type: 'payment_received',
+        title: 'Pago recibido',
+        body: `Recibiste $${amountUsd.toFixed(2)} USDC${res.title ? ` por "${res.title}"` : ''}.`,
+        link: '#pagos',
+      });
+    }
+    if (ps.sec_payment_emails === true && payee?.email) {
+      await sendEmail(c.env, payee.email, paymentReceivedEmail({
+        name: payee.name || undefined, amountUsd, description: res.title || res.description || undefined,
+        txHash: s.transactionHash || undefined, network, manageUrl: new URL('/cuenta', c.req.url).toString(),
+      })).catch(() => {});
+    }
+  } catch {}
 
   // Settlement receipt for the payer.
   c.header('PAYMENT-RESPONSE', encodeJsonB64({ transaction: s.transactionHash, network, payer: v.payer }));
