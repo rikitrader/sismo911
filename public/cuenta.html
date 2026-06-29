@@ -1561,10 +1561,6 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
 .ov-footer-btn { flex-shrink:0; text-decoration:none; display:inline-flex; align-items:center; gap:6px; padding:11px 22px; border-radius:999px; border:none; background:var(--brand-2); color:#fff; font-family:var(--font); font-weight:700; font-size:.88rem; box-shadow:0 4px 14px rgba(11,95,255,.28); transition:filter .15s ease, transform .15s ease; }
 .ov-footer-btn:hover { filter:brightness(1.07); transform:translateY(-1px); }
 
-/* ── Finanzas division sub-tools ───────────────────────────────────────────── */
-.fin-subtools { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
-.fin-subtool { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:999px; border:1px solid var(--border); background:var(--surface); cursor:pointer; font-family:var(--font); font-weight:600; font-size:.82rem; color:var(--text); transition:all .15s ease; }
-.fin-subtool:hover { border-color:var(--brand-2); color:var(--brand-2); background:rgba(11,95,255,.05); }
 </style>
 </head>
 <body>
@@ -1583,7 +1579,18 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
     </div>
     <nav class="ac-nav" role="tablist" aria-label="Secciones de cuenta">
       <button class="side-link active" role="tab" data-tab="overview" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Inicio</span></button>
-      <button class="side-link" role="tab" data-tab="finanzas" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Finanzas</span></button>
+      <div class="nav-group" id="grp-finanzas">
+        <button class="nav-parent" id="finanzas-toggle" type="button" aria-expanded="false" aria-controls="nav-sub-finanzas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Finanzas</span><svg class="nav-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="nav-sub" id="nav-sub-finanzas" role="group" aria-label="Herramientas de Finanzas">
+          <button class="side-link" role="tab" data-tab="finanzas" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg><span>Resumen</span></button>
+          <button class="side-link" role="tab" data-tab="wallet" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h16a1 1 0 0 1 1 1v3M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-3"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg><span>Wallet</span></button>
+          <button class="side-link" role="tab" data-tab="pagos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><span>Pagos</span></button>
+          <button class="side-link" role="tab" data-tab="qr" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7M21 21h-4"/></svg><span>QR Codes</span></button>
+          <button class="side-link" role="tab" data-tab="contabilidad" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="12" y="7" width="3" height="11"/><rect x="17" y="13" width="3" height="5"/></svg><span>Contabilidad</span></button>
+          <button class="side-link" role="tab" data-tab="retiros" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7v10"/><path d="m4 14 3 3 3-3"/><path d="M17 17V7"/><path d="m20 10-3-3-3 3"/></svg><span>Retiros</span></button>
+          <button class="side-link" role="tab" data-tab="seguridad" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg><span>Seguridad</span></button>
+        </div>
+      </div>
       <a class="side-link" href="/suministros-ciudadano"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span>Suministros</span></a>
       <a class="side-link" href="/flota"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span>Transporte</span></a>
       <a class="side-link" href="/campana"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg><span>Campañas</span></a>
@@ -2042,15 +2049,6 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
 
     <!-- ── Finanzas: division overview (the repurposed original overview) ──── -->
     <div class="panel" data-panel="finanzas" role="tabpanel">
-      <div class="fin-subtools" role="group" aria-label="Herramientas de Finanzas">
-        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="wallet">Wallet</button>
-        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="pagos">Pagos</button>
-        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="qr">QR Codes</button>
-        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="contabilidad">Contabilidad</button>
-        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="retiros">Retiros</button>
-        <button class="fin-subtool" type="button" data-act="switchTab" data-a1="seguridad">Seguridad</button>
-      </div>
-
       <!-- Profile header card -->
       <section class="hero-card" aria-label="Tu perfil">
       <div class="hero-grid">
@@ -2714,7 +2712,7 @@ async function copyToClipboard(text, btn, label) {
 }
 
 /* ── Tab switching (sidebar nav) ────────────────────────────────────────── */
-var FINANZAS_TABS = ['wallet', 'pagos', 'qr', 'contabilidad', 'retiros'];
+var FINANZAS_TABS = ['finanzas', 'wallet', 'pagos', 'qr', 'contabilidad', 'retiros', 'seguridad'];
 
 function switchTab(name) {
   document.querySelectorAll('.side-link').forEach(p => {
