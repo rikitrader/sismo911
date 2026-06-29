@@ -168,6 +168,9 @@ binding = "AI"
 name = "EMAIL"
 
 [vars]
+# Ops distribution address for operational alerts (SYS-02 cron-failure, etc.).
+# Plain address, not a secret. Comment out to disable operational email alerts.
+OPS_ALERT_EMAIL = "rikitrader@gmail.com"
 # Social login (Google OAuth): the client ID is PUBLIC, so it belongs here. The
 # client SECRET is a Worker Secret (never here): `wrangler secret put OAUTH_GOOGLE_CLIENT_SECRET`.
 # Uncomment + set this to your Google OAuth client ID to turn on the "Continuar

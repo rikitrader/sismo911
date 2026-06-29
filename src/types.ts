@@ -91,6 +91,9 @@ export interface Env {
   // Gates the transactional-email preview/test route (/api/notify) — set as a
   // Worker secret (wrangler secret put NOTIFY_TOKEN). Absent ⇒ route disabled.
   NOTIFY_TOKEN?: string;
+  // Ops distribution address for operational alerts (e.g. SYS-02 cron-failure).
+  // Plain address (not a secret) — configured in wrangler.toml [vars].
+  OPS_ALERT_EMAIL?: string;
   // Twilio text messaging (SMS + WhatsApp) for appointment confirmations/reminders.
   // Optional: when absent, text sends no-op gracefully (see src/lib/sms.ts).
   TWILIO_ACCOUNT_SID?: string;

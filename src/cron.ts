@@ -13,6 +13,8 @@
 // `test/cron.test.ts` asserts they match.
 
 import type { Env } from './types';
+import { sendEmail } from './lib/email';
+import { operationalAlert } from './lib/email-catalog';
 import { ingestUsgs } from './ingest/usgs-cron';
 import { ingestFunvisis } from './ingest/funvisis-cron';
 import { bootstrapHistory } from './ingest/usgs-history';
@@ -201,6 +203,25 @@ export async function runCronGroup(cron: string | undefined, env: Env): Promise<
       if (r !== undefined) console.log(`[cron:${cron ?? 'all'}] ${job.name}:`, typeof r === 'object' ? JSON.stringify(r) : r);
     } catch (e: any) {
       console.error(`[cron:${cron ?? 'all'}] ${job.name} failed:`, e?.message ?? e);
+      // SYS-02: job-failure alert to the ops distribution (only if configured).
+      // Best-effort + isolated — a mail failure must never abort the cron loop,
+      // and this is the rare (catch) path so it adds no steady-state subrequests.
+      if (env.OPS_ALERT_EMAIL) {
+        try {
+          await sendEmail(env, env.OPS_ALERT_EMAIL, operationalAlert({
+            subject: `[SISMO911-SYS] Trabajo fallido — ${job.name}`,
+            eyebrow: 'Sistema · Trabajos',
+            heading: 'Trabajo programado fallido.',
+            roleTag: 'SISTEMA',
+            paras: ['Un trabajo programado (cron) falló. Revisa los registros del Worker.'],
+            details: [
+              { label: 'Trabajo', value: job.name },
+              { label: 'Grupo', value: cron ?? 'all' },
+              { label: 'Error', value: String(e?.message ?? e).slice(0, 200) },
+            ],
+          }));
+        } catch { /* ignore — alerting must never break the cron loop */ }
+      }
     }
   }
 }
