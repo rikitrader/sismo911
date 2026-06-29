@@ -119,6 +119,26 @@ investigation.post('/:id/tip', async (c) => {
   return c.json({ ok: true, id: lid, status: 'pending', message: 'Gracias. Tu pista quedó pendiente de verificación por un operador.' }, 201);
 });
 
+// POST /api/persons/:id/protect — operator flags a case as PROTECTED (responder-
+// only): it is suppressed from every PUBLIC surface (list, gallery, photo, detail,
+// docket, shareable article, sitemap). Body { protected?: boolean } — default true;
+// pass false to lift. Handles native (per_) + Familia (fam-) cases. Gated
+// persons:moderate (route-policy: path ends with /protect). See lib/minor-protect.
+investigation.post('/:id/protect', async (c) => {
+  const id = c.req.param('id');
+  if (!(await caseExists(c.env, id))) return c.json({ error: 'not_found' }, 404);
+  if (id.startsWith(HOSP)) return c.json({ error: 'unsupported', hint: 'Las altas hospitalarias no se protegen aquí.' }, 400);
+  const b = await c.req.json().catch(() => ({} as any));
+  const flag = b?.protected === false ? 0 : 1;
+  if (id.startsWith(FAM)) {
+    await c.env.DB.prepare(`UPDATE personas SET protected = ?, updated_at = ? WHERE id = ?`).bind(flag, Date.now(), id.slice(FAM.length)).run();
+  } else {
+    await c.env.DB.prepare(`UPDATE persons SET protected = ?, updated_ms = ? WHERE id = ?`).bind(flag, Date.now(), id).run();
+  }
+  await audit(c, 'persons.protect', { id, protected: !!flag });
+  return c.json({ ok: true, protected: !!flag });
+});
+
 // ---- Identity verification (operator-only) ------------------------------
 // GET /api/persons/identity/sources — honest per-institution status.
 investigation.get('/identity/sources', async (c) => {

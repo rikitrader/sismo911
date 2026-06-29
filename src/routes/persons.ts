@@ -8,6 +8,7 @@ import { sha256Hex, imageDimensions, logCustody } from '../lib/evidence';
 import { scoreCase } from '../lib/case-score';
 import { recomputeCaseScore } from '../lib/case-score-sync';
 import { edgeCached } from '../lib/edge-cache';
+import { isMinor, isPublicSuppressed, coarsenLocation, PERSONAS_PUBLIC_SUPPRESS_SQL, personsPublicSuppressSql } from '../lib/minor-protect';
 
 export const persons = new Hono<{ Bindings: Env }>();
 
@@ -114,7 +115,7 @@ async function famPerson(env: any, id: string, op: boolean): Promise<any> {
     // status timeline node (an ingested "localizado" lives only on this row, not
     // in person_events). localizado_* identify WHO reported it found — reporter
     // PII, operator-only — and are stripped for the public response below.
-    estado: row.estado || null,
+    estado: row.estado || null, protected: row.protected ?? 0,
     localizado_por: row.localizado_por || null, localizado_relacion: row.localizado_relacion || null,
     localizado_nota: row.localizado_nota || null, localizado_contacto: row.localizado_contacto || null,
   };
@@ -123,6 +124,8 @@ async function famPerson(env: any, id: string, op: boolean): Promise<any> {
     contact_phone, reported_by, last_seen_lat, last_seen_lon, priority, assigned_to,
     localizado_por, localizado_relacion, localizado_nota, localizado_contacto, ...pub
   } = base;
+  // Minor protection: coarsen a child's last-seen to locality for the public.
+  if (isMinor(pub.age, pub.incident_type)) pub.last_seen = coarsenLocation(pub.last_seen);
   return pub;
 }
 
@@ -222,7 +225,7 @@ persons.get('/cases', async (c) => {
   if (status && CASE_STATUSES.includes(status)) { pWhere.push('p.status = ?'); pBind.push(status); }
   if (priority && ['alta', 'media', 'baja'].includes(priority)) { pWhere.push('p.priority = ?'); pBind.push(priority); }
   if (since > 0) { pWhere.push('p.created_ms >= ?'); pBind.push(since); }
-  if (!op) { pWhere.push("p.review = 'approved'"); }                                  // public: approved cases only
+  if (!op) { pWhere.push("p.review = 'approved'"); pWhere.push(`NOT ${personsPublicSuppressSql('p')}`); }  // public: approved + minor-protected hidden
   else if (review && ['pending', 'approved', 'rejected'].includes(review)) { pWhere.push('p.review = ?'); pBind.push(review); }
   const pW = pWhere.length ? 'WHERE ' + pWhere.join(' AND ') : '';
 
@@ -236,7 +239,7 @@ persons.get('/cases', async (c) => {
   // native cases. Without this, the cleaner's moderation='rejected' demotions had
   // NO effect on /casos: junk / spam / duplicate personas stayed visible no matter
   // what the cleaner did. Operators still see every row (no filter).
-  if (!op) fWhere.push("moderation = 'approved'");
+  if (!op) { fWhere.push("moderation = 'approved'"); fWhere.push(`NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`); }
   if (q) { fWhere.push('(nombre LIKE ? OR ubicacion LIKE ?' + (op ? ' OR contacto LIKE ?' : '') + ')'); fBind.push(l, l); if (op) fBind.push(l); }
   if (status === 'found_safe') fWhere.push("estado = 'localizado'");
   else if (status === 'aparecido') fWhere.push("estado = 'aparecido'");
@@ -305,7 +308,8 @@ persons.get('/cases', async (c) => {
     personRows = res.flatMap((r) => r.results ?? []);
   }
   const personCases = personRows.map((r) => op ? r : {
-    id: r.id, case_number: r.case_number, full_name: r.full_name, age: r.age, sex: r.sex, last_seen: r.last_seen,
+    id: r.id, case_number: r.case_number, full_name: r.full_name, age: r.age, sex: r.sex,
+    last_seen: isMinor(r.age, r.incident_type) ? coarsenLocation(r.last_seen) : r.last_seen,  // minor → locality only
     status: r.status, incident_type: r.incident_type, review: r.review, photo_url: r.photo_url, notes: r.notes,
     event_id: r.event_id, created_ms: r.created_ms, updated_ms: r.updated_ms,
     event_place: r.event_place, event_place_en: r.event_place_en, event_mag: r.event_mag, event_alert: r.event_alert, event_time: r.event_time,
@@ -348,7 +352,9 @@ persons.get('/cases', async (c) => {
           contact_phone: op ? (r.contacto || null) : undefined, reported_by: null,
         };
         if (op) return full;
-        const { contact_phone, priority, assigned_to, ...pub } = full; return pub;
+        const { contact_phone, priority, assigned_to, ...pub } = full;
+        if (isMinor(pub.age, pub.incident_type)) pub.last_seen = coarsenLocation(pub.last_seen);  // minor → locality only
+        return pub;
       });
     } catch (e: any) { console.error('[cases] familia bridge failed:', e?.message ?? e); }
   }
@@ -562,11 +568,15 @@ persons.get('/:id/docket', async (c) => {
   if (isFam(id)) {
     person = await famPerson(c.env, id, op);
     if (!person) return c.notFound();
+    // Minor protection: a protected or resolved-minor case file is responder-only.
+    if (!op && isPublicSuppressed({ age: person.age, incidentType: person.incident_type, status: person.status, estado: person.estado, protected: person.protected })) return c.notFound();
     event = await quakeRef(c.env);
   } else {
     person = await c.env.DB.prepare(`SELECT * FROM persons WHERE id = ?`).bind(id).first();
     if (!person) return c.notFound();
     if (!op && person.review !== 'approved') return c.notFound();   // public: approved cases only
+    // Minor protection: a protected or resolved-minor case file is responder-only.
+    if (!op && isPublicSuppressed({ age: person.age, incidentType: person.incident_type, status: person.status, protected: person.protected })) return c.notFound();
     event = person.event_id
       ? await c.env.DB.prepare(`SELECT id, mag, place, place_es, time_ms, depth_km, alert, lat, lon, url FROM events WHERE id = ?`).bind(person.event_id).first()
       : null;
@@ -584,7 +594,8 @@ persons.get('/:id/docket', async (c) => {
   // ones get redacted here for the public.
   const pubPerson = (isFam(id) || op) ? person : {
     id: person.id, case_number: person.case_number, full_name: person.full_name, age: person.age, sex: person.sex,
-    last_seen: person.last_seen, status: person.status, review: person.review,
+    last_seen: isMinor(person.age, person.incident_type) ? coarsenLocation(person.last_seen) : person.last_seen,  // minor → locality only
+    status: person.status, review: person.review,
     priority: person.priority, incident_type: person.incident_type,
     photo_url: person.photo_url, notes: person.notes, event_id: person.event_id,
     created_ms: person.created_ms, updated_ms: person.updated_ms,

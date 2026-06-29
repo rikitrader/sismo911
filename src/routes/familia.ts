@@ -14,6 +14,7 @@ import { edgeCached } from '../lib/edge-cache';
 import { isSafePublicUrl } from '../lib/sanitize';
 import { sendEmail } from '../lib/email';
 import { caseRegisteredEmail } from '../lib/email-catalog';
+import { isMinor, isPublicSuppressed, coarsenLocation, PERSONAS_PUBLIC_SUPPRESS_SQL, personsPublicSuppressSql } from '../lib/minor-protect';
 
 // Missing-persons registry (/familia). Reads the `personas` dataset in the main
 // (sismo911) D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
@@ -50,9 +51,11 @@ const nextCursor = (rows: any[], limit: number) =>
   rows.length > limit ? `${rows[limit - 1].updated_at}_${rows[limit - 1].id}` : null;
 
 function mapPerson(p: any, op: boolean) {
+  // Minor protection: coarsen a child's last-seen to locality for the public.
+  const last_seen = (!op && isMinor(p.edad)) ? coarsenLocation(p.ubicacion) : p.ubicacion;
   return {
     id: p.id, full_name: p.nombre, age: p.edad, sex: null,
-    last_seen: p.ubicacion, status: estadoToStatus(p.estado),
+    last_seen, status: estadoToStatus(p.estado),
     photo_url: p.foto_r2 ? `/api/familia/photo/${p.id}` : (isSafePublicUrl(p.foto) ? p.foto : null),
     contact_phone: op ? (p.contacto || null) : (p.contacto ? '•••••• (solo operadores)' : null),
     notes: p.descripcion, updated_ms: p.updated_at,
@@ -74,7 +77,8 @@ familia.get('/persons', async (c) => {
   const limit = clampLimit(c.req.query('limit'), DEFAULT_LIMIT);
   const base: string[] = []; const baseBinds: unknown[] = [];
   // Public sees only moderated rows; operators see everything (incl. pending).
-  if (!op) base.push("moderation = 'approved'");
+  // Minor protection: hide operator-protected + resolved-minor cases from the public.
+  if (!op) { base.push("moderation = 'approved'"); base.push(`NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`); }
   if (q) { base.push('(nombre LIKE ? OR ubicacion LIKE ?)'); baseBinds.push(`%${q}%`, `%${q}%`); }
   const est = statusToEstado(c.req.query('status') || '');
   if (est) { base.push('estado = ?'); baseBinds.push(est); }
@@ -96,7 +100,7 @@ familia.get('/persons', async (c) => {
   let nativeCases: any[] = []; let nativeTotal = 0;
   if (!(c.req.query('cursor') || '')) {
     const nb: string[] = []; const nbinds: unknown[] = [];
-    if (!op) nb.push("review = 'approved'");
+    if (!op) { nb.push("review = 'approved'"); nb.push(`NOT ${personsPublicSuppressSql('persons')}`); }
     if (q) { nb.push('(full_name LIKE ? OR last_seen LIKE ?)'); nbinds.push(`%${q}%`, `%${q}%`); }
     const stq = c.req.query('status') || '';
     if (['missing', 'found_safe', 'found_deceased', 'unknown'].includes(stq)) { nb.push('status = ?'); nbinds.push(stq); }
@@ -141,7 +145,8 @@ familia.get('/gallery', async (c) => {
   const isoDay = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
   const desde = isoDay((c.req.query('desde') || '').trim());
   const hasta = isoDay((c.req.query('hasta') || '').trim());
-  const base = ['foto_r2 IS NOT NULL', "moderation = 'approved'"]; const baseBinds: unknown[] = [];
+  // Gallery is always the public (anonymous) view → suppress protected + resolved minors.
+  const base = ['foto_r2 IS NOT NULL', "moderation = 'approved'", `NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`]; const baseBinds: unknown[] = [];
   if (est) { base.push('estado = ?'); baseBinds.push(est); }
   if (q) { base.push('(nombre LIKE ? OR ubicacion LIKE ?)'); baseBinds.push(`%${q}%`, `%${q}%`); }
   if (edo) { base.push('ubicacion LIKE ?'); baseBinds.push(`%${edo}%`); }
@@ -159,7 +164,7 @@ familia.get('/gallery', async (c) => {
   ).bind(...binds, limit + 1).all<any>();
   const rows = results ?? [];
   return {
-    photos: rows.slice(0, limit).map((p) => ({ id: p.id, full_name: p.nombre, age: p.edad, status: estadoToStatus(p.estado), last_seen: p.ubicacion, photo_url: `/api/familia/photo/${p.id}` })),
+    photos: rows.slice(0, limit).map((p) => ({ id: p.id, full_name: p.nombre, age: p.edad, status: estadoToStatus(p.estado), last_seen: isMinor(p.edad) ? coarsenLocation(p.ubicacion) : p.ubicacion, photo_url: `/api/familia/photo/${p.id}` })),
     total, nextCursor: nextCursor(rows, limit),
   };
   });
@@ -167,12 +172,20 @@ familia.get('/gallery', async (c) => {
 
 // GET /api/familia/photo/:id  — serve from DESAP_FOTOS R2, fall back to the external URL
 familia.get('/photo/:id', async (c) => {
-  const row: any = await c.env.DB.prepare(`SELECT foto_r2, foto FROM personas WHERE id = ?`).bind(c.req.param('id')).first();
+  const row: any = await c.env.DB.prepare(`SELECT foto_r2, foto, edad, estado, protected FROM personas WHERE id = ?`).bind(c.req.param('id')).first();
   if (!row) return c.notFound();
+  // Minor protection: a protected or resolved-minor photo is responder-only. The
+  // operator lookup runs only for a suppressed row, so the public hot path is
+  // unchanged; an operator response is never publicly cached.
+  let opOnly = false;
+  if (isPublicSuppressed({ age: row.edad, estado: row.estado, protected: row.protected })) {
+    if (!(await isOperator(c))) return c.notFound();
+    opOnly = true;
+  }
   if (row.foto_r2) {
     const obj = await c.env.DESAP_FOTOS.get(row.foto_r2);
     if (obj) return new Response(obj.body, {
-      headers: { 'Content-Type': obj.httpMetadata?.contentType || 'image/jpeg', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' },
+      headers: { 'Content-Type': obj.httpMetadata?.contentType || 'image/jpeg', 'Cache-Control': opOnly ? 'private, no-store' : 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' },
     });
   }
   if (row.foto) return c.redirect(row.foto, 302);
@@ -188,14 +201,19 @@ familia.get('/person/:id', async (c) => {
   if (id.startsWith('per_')) {
     const op = await isOperator(c);
     const r: any = await c.env.DB.prepare(
-      `SELECT id, full_name, age, last_seen, status, photo_url, contact_phone, notes, review
+      `SELECT id, full_name, age, last_seen, status, incident_type, photo_url, contact_phone, notes, review, protected
        FROM persons WHERE id = ?`
     ).bind(id).first();
     if (!r || (!op && r.review !== 'approved')) return c.json({ error: 'not_found' }, 404);
+    // Minor protection: a protected or resolved-minor case is responder-only.
+    if (!op && isPublicSuppressed({ age: r.age, incidentType: r.incident_type, status: r.status, protected: r.protected })) {
+      return c.json({ error: 'not_found' }, 404);
+    }
     // Operator responses include the reporter phone (PII) → never publicly cached.
     c.header('Cache-Control', op ? 'private, no-store' : 'public, max-age=120');
     return c.json({
-      id: r.id, full_name: r.full_name, age: r.age, last_seen: r.last_seen,
+      id: r.id, full_name: r.full_name, age: r.age,
+      last_seen: (!op && isMinor(r.age, r.incident_type)) ? coarsenLocation(r.last_seen) : r.last_seen,
       since: null, reporter: op ? (r.contact_phone || null) : null, description: r.notes || null,
       status: r.status || 'unknown', estado: null, found_by: null, kind: 'case',
       photo_url: r.photo_url || null,
@@ -203,7 +221,7 @@ familia.get('/person/:id', async (c) => {
     });
   }
   const p: any = await c.env.DB.prepare(
-    `SELECT id, nombre, edad, ubicacion, fecha, descripcion, contacto, estado, foto, foto_r2, localizado_por, updated_at
+    `SELECT id, nombre, edad, ubicacion, fecha, descripcion, contacto, estado, foto, foto_r2, localizado_por, protected, updated_at
      FROM personas WHERE id = ? AND moderation = 'approved'`
   ).bind(id).first();
   if (!p) return c.json({ error: 'not_found' }, 404);
@@ -212,9 +230,14 @@ familia.get('/person/:id', async (c) => {
   // leaked it to ANY anonymous caller. Redact for non-operators, and never publicly
   // cache an operator response (which carries the PII).
   const op = await isOperator(c);
+  // Minor protection: a protected or resolved-minor case is responder-only.
+  if (!op && isPublicSuppressed({ age: p.edad, estado: p.estado, protected: p.protected })) {
+    return c.json({ error: 'not_found' }, 404);
+  }
   c.header('Cache-Control', op ? 'private, no-store' : 'public, max-age=120');
   return c.json({
-    id: p.id, full_name: p.nombre, age: p.edad, last_seen: p.ubicacion,
+    id: p.id, full_name: p.nombre, age: p.edad,
+    last_seen: (!op && isMinor(p.edad)) ? coarsenLocation(p.ubicacion) : p.ubicacion,
     since: p.fecha || null, reporter: op ? (p.contacto || null) : null, description: p.descripcion || null,
     status: estadoToStatus(p.estado), estado: p.estado, found_by: op ? (p.localizado_por || null) : null,
     photo_url: (p.foto_r2 || p.foto) ? `/api/familia/photo/${p.id}` : null,
