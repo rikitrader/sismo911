@@ -353,3 +353,112 @@ export function orgTable(): OrgNode[] {
     { rol: 'Jefe Sección Administración/Finanzas', agencia: 'Gobernación', funcion: 'Costos, contratos, registro de donaciones y rendición de cuentas.', reporta_a: 'Comandante de Incidente' },
   ];
 }
+
+// ── Niñez y poblaciones vulnerables — aggregation ─────────────────────────────
+// Pure aggregation over the shelter-side child/vulnerable tables. NEVER receives
+// an individual minor record — only aggregated per-shelter rows. The officialOnly
+// flag (default true) drops planning estimates so public surfaces show authorized
+// data only. (See migration 0072_refugios_ninez_vulnerables.sql.)
+
+/** Age bands that count toward the minor total (non-overlapping). */
+export const MINOR_AGE_BANDS = ['menores_0_5', 'menores_6_15', 'menores_16_17'] as const;
+
+export interface NinezSiteMeta { id: string; parroquia?: string | null; municipio?: string | null; status?: string | null; }
+export interface CapabilityRow { site_id: string; capability_key: string; value: number; official: number; }
+export interface PopulationRow { site_id: string; category_key: string; count: number; official: number; }
+export interface NeedRow {
+  site_id: string; need_key: string; status: string;
+  qty_required?: number | null; qty_received?: number | null; official: number;
+}
+
+export interface NinezSummary {
+  totals: { minors: number; sheltersWithChildPopulation: number; sheltersChildCapable: number };
+  byRegion: { region: string; minors: number; shelters: number }[];
+  needs: { need_key: string; requerido: number; parcial: number; cubierto: number; qty_required: number; qty_received: number }[];
+  resources: { qty_required: number; qty_received: number; pct_cubierto: number };
+  capabilities: { capability_key: string; sites: number }[];
+}
+
+/**
+ * Aggregate child/vulnerable shelter data into the stats panel shape:
+ * minors by region, # shelters with child population, top needs, resources
+ * delivered vs required, and capability coverage. Deterministic; officialOnly
+ * defaults to true (planning estimates excluded).
+ */
+export function summarizeNinez(
+  sites: NinezSiteMeta[],
+  capabilities: CapabilityRow[],
+  populations: PopulationRow[],
+  needs: NeedRow[],
+  officialOnly = true,
+): NinezSummary {
+  const keep = (official: number) => (officialOnly ? official === 1 : true);
+  const regionOf = new Map(sites.map((s) => [s.id, (s.parroquia || s.municipio || 'Sin región') as string]));
+  const minorBands = new Set<string>(MINOR_AGE_BANDS);
+
+  // — population → minors by region —
+  const regionMinors = new Map<string, number>();
+  const regionShelters = new Map<string, Set<string>>();
+  const sheltersWithChildren = new Set<string>();
+  for (const p of populations) {
+    if (!keep(p.official) || !minorBands.has(p.category_key)) continue;
+    const c = Math.max(0, Math.round(n0(p.count)));
+    if (c <= 0) continue;
+    const region = regionOf.get(p.site_id) || 'Sin región';
+    regionMinors.set(region, (regionMinors.get(region) ?? 0) + c);
+    if (!regionShelters.has(region)) regionShelters.set(region, new Set());
+    regionShelters.get(region)!.add(p.site_id);
+    sheltersWithChildren.add(p.site_id);
+  }
+  const byRegion = [...regionMinors.entries()]
+    .map(([region, minors]) => ({ region, minors, shelters: regionShelters.get(region)?.size ?? 0 }))
+    .sort((a, b) => b.minors - a.minors || a.region.localeCompare(b.region));
+  const totalMinors = byRegion.reduce((a, r) => a + r.minors, 0);
+
+  // — needs board —
+  const needAgg = new Map<string, { requerido: number; parcial: number; cubierto: number; qty_required: number; qty_received: number }>();
+  for (const nd of needs) {
+    if (!keep(nd.official)) continue;
+    const cur = needAgg.get(nd.need_key) ?? { requerido: 0, parcial: 0, cubierto: 0, qty_required: 0, qty_received: 0 };
+    if (nd.status === 'requerido') cur.requerido += 1;
+    else if (nd.status === 'parcial') cur.parcial += 1;
+    else if (nd.status === 'cubierto') cur.cubierto += 1;
+    cur.qty_required += Math.max(0, n0(nd.qty_required));
+    cur.qty_received += Math.max(0, n0(nd.qty_received));
+    needAgg.set(nd.need_key, cur);
+  }
+  const needsOut = [...needAgg.entries()]
+    .map(([need_key, v]) => ({ need_key, ...v }))
+    .sort((a, b) => b.requerido - a.requerido || b.parcial - a.parcial || a.need_key.localeCompare(b.need_key));
+  const reqTotal = needsOut.reduce((a, n) => a + n.qty_required, 0);
+  const recTotal = needsOut.reduce((a, n) => a + n.qty_received, 0);
+
+  // — capability coverage (# of distinct sites offering each capability) —
+  const capSites = new Map<string, Set<string>>();
+  const childCapable = new Set<string>();
+  for (const cap of capabilities) {
+    if (!keep(cap.official) || n0(cap.value) <= 0) continue;
+    if (!capSites.has(cap.capability_key)) capSites.set(cap.capability_key, new Set());
+    capSites.get(cap.capability_key)!.add(cap.site_id);
+    childCapable.add(cap.site_id);
+  }
+  const capabilities_ = [...capSites.entries()]
+    .map(([capability_key, set]) => ({ capability_key, sites: set.size }))
+    .sort((a, b) => b.sites - a.sites || a.capability_key.localeCompare(b.capability_key));
+
+  return {
+    totals: {
+      minors: totalMinors,
+      sheltersWithChildPopulation: sheltersWithChildren.size,
+      sheltersChildCapable: childCapable.size,
+    },
+    byRegion,
+    needs: needsOut,
+    resources: {
+      qty_required: reqTotal,
+      qty_received: recTotal,
+      pct_cubierto: reqTotal > 0 ? Math.round((recTotal / reqTotal) * 100) : 0,
+    },
+    capabilities: capabilities_,
+  };
+}

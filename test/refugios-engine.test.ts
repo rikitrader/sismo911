@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   scoreSite, computeCapacity, scoreTier, assignPopulation, computeLogistics,
-  orgTable, haversineKm, SPACE, DEFAULT_LOGISTICS,
+  orgTable, haversineKm, summarizeNinez, SPACE, DEFAULT_LOGISTICS,
   type SiteInput, type ZoneInput, type SiteForAssign,
+  type NinezSiteMeta, type CapabilityRow, type PopulationRow, type NeedRow,
 } from '../src/refugios/engine';
 
 // Cross-check gate: the engine's numeric invariants are asserted, not assumed.
@@ -132,5 +133,75 @@ describe('geo + org', () => {
     expect(org.length).toBeGreaterThan(8);
     expect(org[0].rol).toMatch(/Comandante de Incidente/);
     expect(org[0].reporta_a).toBeUndefined();
+  });
+});
+
+describe('summarizeNinez — child/vulnerable aggregation', () => {
+  const sites: NinezSiteMeta[] = [
+    { id: 's1', parroquia: 'Catia La Mar', status: 'activo' },
+    { id: 's2', parroquia: 'Caraballeda', status: 'activo' },
+  ];
+  const caps: CapabilityRow[] = [
+    { site_id: 's1', capability_key: 'escolar', value: 1, official: 1 },
+    { site_id: 's1', capability_key: 'lactante', value: 1, official: 1 },
+    { site_id: 's2', capability_key: 'escolar', value: 1, official: 1 },
+    { site_id: 's2', capability_key: 'mascotas', value: 1, official: 0 }, // estimate
+  ];
+  const pop: PopulationRow[] = [
+    { site_id: 's1', category_key: 'menores_0_5', count: 20, official: 1 },
+    { site_id: 's1', category_key: 'menores_6_15', count: 30, official: 1 },
+    { site_id: 's1', category_key: 'lactantes', count: 8, official: 1 },   // subset, not double-counted
+    { site_id: 's2', category_key: 'menores_0_5', count: 10, official: 1 },
+    { site_id: 's2', category_key: 'menores_0_5', count: 99, official: 0 }, // estimate, excluded
+  ];
+  const needs: NeedRow[] = [
+    { site_id: 's1', need_key: 'panales', status: 'requerido', qty_required: 100, qty_received: 40, official: 1 },
+    { site_id: 's2', need_key: 'panales', status: 'parcial', qty_required: 50, qty_received: 25, official: 1 },
+    { site_id: 's1', need_key: 'agua', status: 'cubierto', qty_required: 200, qty_received: 200, official: 1 },
+    { site_id: 's2', need_key: 'vacunas', status: 'requerido', qty_required: 0, qty_received: 0, official: 0 }, // estimate, excluded
+  ];
+
+  it('counts minors only from non-overlapping age bands, official only', () => {
+    const s = summarizeNinez(sites, caps, pop, needs);
+    // 20 + 30 (s1 bands) + 10 (s2 band) = 60; lactantes & official=0 excluded
+    expect(s.totals.minors).toBe(60);
+    expect(s.totals.sheltersWithChildPopulation).toBe(2);
+  });
+
+  it('groups minors by region, sorted desc', () => {
+    const s = summarizeNinez(sites, caps, pop, needs);
+    expect(s.byRegion[0]).toEqual({ region: 'Catia La Mar', minors: 50, shelters: 1 });
+    expect(s.byRegion[1]).toEqual({ region: 'Caraballeda', minors: 10, shelters: 1 });
+  });
+
+  it('aggregates needs by key with status counts and resources delivered vs required', () => {
+    const s = summarizeNinez(sites, caps, pop, needs);
+    const panales = s.needs.find((n) => n.need_key === 'panales')!;
+    expect(panales).toMatchObject({ requerido: 1, parcial: 1, qty_required: 150, qty_received: 65 });
+    // official rows only: panales(150)+agua(200) required = 350; received 65+200 = 265
+    expect(s.resources.qty_required).toBe(350);
+    expect(s.resources.qty_received).toBe(265);
+    expect(s.resources.pct_cubierto).toBe(Math.round((265 / 350) * 100));
+  });
+
+  it('capability coverage counts distinct official sites per capability', () => {
+    const s = summarizeNinez(sites, caps, pop, needs);
+    const escolar = s.capabilities.find((c) => c.capability_key === 'escolar')!;
+    expect(escolar.sites).toBe(2);
+    // mascotas was official=0 → excluded from default (officialOnly) summary
+    expect(s.capabilities.find((c) => c.capability_key === 'mascotas')).toBeUndefined();
+  });
+
+  it('officialOnly=false includes planning estimates', () => {
+    const s = summarizeNinez(sites, caps, pop, needs, false);
+    expect(s.capabilities.find((c) => c.capability_key === 'mascotas')?.sites).toBe(1);
+    expect(s.totals.minors).toBe(60 + 99); // estimate now included
+  });
+
+  it('empty input → zeroed summary, never throws', () => {
+    const s = summarizeNinez([], [], [], []);
+    expect(s.totals.minors).toBe(0);
+    expect(s.byRegion).toEqual([]);
+    expect(s.resources.pct_cubierto).toBe(0);
   });
 });
