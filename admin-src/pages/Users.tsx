@@ -92,7 +92,7 @@ export function UsersPage() {
 // ---------- User detail drawer ----------
 function UserDrawer({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
   const r = useResource(() => rbac.user(id), [id]);
-  const [tab, setTab] = useState<'overview' | 'roles' | 'permissions' | 'sessions'>('overview');
+  const [tab, setTab] = useState<'overview' | 'roles' | 'permissions' | 'sessions' | 'audit'>('overview');
   const [busy, setBusy] = useState(false);
   const [confirmLock, setConfirmLock] = useState(false);
   const [impersonate, setImpersonate] = useState(false);
@@ -137,13 +137,14 @@ function UserDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
           <Tabs
             active={tab}
             onChange={(t) => setTab(t as any)}
-            tabs={[{ id: 'overview', label: 'Resumen' }, { id: 'permissions', label: 'Permisos' }, { id: 'roles', label: 'Roles' }, { id: 'sessions', label: 'Sesiones' }]}
+            tabs={[{ id: 'overview', label: 'Resumen' }, { id: 'permissions', label: 'Permisos' }, { id: 'roles', label: 'Roles' }, { id: 'sessions', label: 'Sesiones' }, { id: 'audit', label: 'Auditoría' }]}
           />
           <div class="p-5">
             {tab === 'overview' && <Overview r={r} />}
             {tab === 'roles' && <RolesTab r={r} busy={busy} act={act} />}
             {tab === 'permissions' && <PermsTab r={r} busy={busy} act={act} />}
             {tab === 'sessions' && (r.loading ? <div class="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} class="skeleton h-[58px] rounded-lg" />)}</div> : <UserSessions userId={id} />)}
+            {tab === 'audit' && <UserAudit userId={id} />}
           </div>
         </>
       )}
@@ -514,6 +515,32 @@ function EffectivePermsInspector({ userId }: { userId: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ---------- Audit tab: a user's audit trail, shown only when THEY opted in ----------
+function UserAudit({ userId }: { userId: string }) {
+  const r = useResource(() => rbac.userAudit(userId), [userId]);
+  if (r.loading) return <div class="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} class="skeleton h-[44px] rounded-lg" />)}</div>;
+  if (r.forbidden) return <ForbiddenInline />;
+  if (r.error) return <ErrorInline message={r.error} onRetry={r.reload} />;
+  if (!r.data?.opted_in) {
+    return <EmptyState icon="shield" title="Sin acceso a auditoría" hint="Este usuario no ha habilitado la visibilidad de su registro de auditoría en su configuración de privacidad." />;
+  }
+  const items = r.data.items || [];
+  if (!items.length) return <EmptyState icon="audit" title="Sin actividad registrada" hint="Aún no hay eventos de auditoría para este usuario." />;
+  return (
+    <ul class="divide-y" style={{ borderColor: 'rgb(var(--border))' }}>
+      {items.map((e) => (
+        <li key={e.id} class="flex items-center gap-3 py-2.5">
+          <span class="w-7 h-7 rounded-md surface-subtle bordered flex items-center justify-center text-faint shrink-0"><Icon.audit size={14} /></span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[13px] font-medium readout truncate">{e.action}</div>
+          </div>
+          <span class="text-[12px] text-faint shrink-0" title={fullTime(e.created_ms)}>{relTime(e.created_ms)}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

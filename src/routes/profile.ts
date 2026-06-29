@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
-import { getUserFromRequest } from '../lib/auth';
+import { getUserFromRequest, verifyPassword } from '../lib/auth';
 import { audit } from '../lib/audit';
 import { uid } from '../lib/db';
+import { markStepUpConfirmed, hasRecentStepUp, stepUpEnabled } from '../lib/stepup';
 import { x402Network, x402Asset } from '../lib/x402';
 import { scanFile } from '../security/file-scan';
 import { notify } from '../lib/notify';
@@ -150,6 +151,26 @@ profile.patch('/payment-settings', async (c) => {
     .bind(JSON.stringify(current), me.id).run();
   await audit(c, 'profile.settings.update', { keys: Object.keys(b).filter((k) => SETTING_KEYS.has(k)) });
   return c.json({ ok: true, settings: current });
+});
+
+// ── POST /api/profile/confirm — step-up re-authentication ─────────────────────
+// Verifies the caller's password and records a short-lived confirmation (KV) so
+// sensitive actions can proceed when the user has enabled sec_require_login.
+profile.post('/confirm', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const b = await c.req.json().catch(() => null);
+  const password = b && typeof b.password === 'string' ? b.password : '';
+  if (!password) return c.json({ error: 'password_required' }, 400);
+  const row: any = await c.env.DB.prepare(`SELECT pw_hash, pw_salt FROM users WHERE id = ?`).bind(me.id).first();
+  if (!row?.pw_hash || !row?.pw_salt) return c.json({ error: 'no_password_set' }, 400);
+  if (!(await verifyPassword(password, row.pw_hash, row.pw_salt))) {
+    await audit(c, 'profile.stepup.fail', {});
+    return c.json({ error: 'invalid_password' }, 401);
+  }
+  await markStepUpConfirmed(c.env, me.id);
+  await audit(c, 'profile.stepup.ok', {});
+  return c.json({ ok: true });
 });
 
 // ── Avatar upload rules ───────────────────────────────────────────────────────
@@ -623,6 +644,14 @@ profile.get('/withdrawals', async (c) => {
 profile.post('/withdrawals', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
+  // Step-up gate: a withdrawal moves money, so when the user has enabled
+  // sec_require_login they must have re-confirmed their password recently. The
+  // client catches 403 step_up_required, prompts for the password via /confirm,
+  // then retries.
+  const meRow: any = await c.env.DB.prepare(`SELECT settings_json FROM users WHERE id = ?`).bind(me.id).first();
+  if (stepUpEnabled(meRow?.settings_json) && !(await hasRecentStepUp(c.env, me.id))) {
+    return c.json({ error: 'step_up_required' }, 403);
+  }
   const b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
 
