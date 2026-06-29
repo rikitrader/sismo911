@@ -123,3 +123,17 @@ sumTablero.get('/movimientos-recientes', async (c) => {
   ).all();
   return c.json({ results: results ?? [] });
 });
+
+// ── GET /mapa — map markers: active sites with coords + total stock on hand ────
+// Returns exactly `[{ id, nombre, tipo, lat, lng, total_unidades }]`. NOTE: the
+// underlying column is `lon` (legacy); it is aliased to `lng` here for the map.
+sumTablero.get('/mapa', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT u.id, u.nombre, u.tipo, u.lat, u.lon AS lng,
+            COALESCE((SELECT SUM(e.cantidad) FROM sum_existencias e WHERE e.ubicacion_id = u.id), 0) AS total_unidades
+     FROM sum_ubicaciones u
+     WHERE u.activa = 1 AND u.lat IS NOT NULL AND u.lon IS NOT NULL
+     ORDER BY u.nombre`
+  ).all();
+  return c.json(results ?? []);
+});
