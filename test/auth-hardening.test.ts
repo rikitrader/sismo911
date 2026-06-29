@@ -8,11 +8,17 @@ import { adminRbac } from '../src/routes/admin-rbac';
 
 const J = { 'content-type': 'application/json', origin: 'https://sismo911.com' };
 
-// ── L3: versioned PBKDF2 hashing (600k) with transparent legacy verify ──────
+// ── L3: versioned PBKDF2 hashing with transparent legacy verify ─────────────
+// NOTE: iterations are capped at 100k — the Cloudflare Workers runtime throws
+// NotSupportedError for PBKDF2 above 100,000 (vitest's Node WebCrypto does NOT,
+// which let the broken 600k value pass CI while it 500'd register + reset in prod).
 describe('audit L3 — versioned password hashing', () => {
-  it('hashPassword emits the v2$600000$ format and round-trips', async () => {
+  it('hashPassword emits the v2$100000$ format and round-trips', async () => {
     const { hash, salt } = await hashPassword('s3cret');
-    expect(hash.startsWith('v2$600000$')).toBe(true);
+    expect(hash.startsWith('v2$100000$')).toBe(true);
+    // Workers cap: the recorded iteration count must never exceed 100k, or
+    // deriveBits() throws at runtime (regression guard for the prod 500).
+    expect(Number(hash.split('$')[1])).toBeLessThanOrEqual(100_000);
     expect(await verifyPassword('s3cret', hash, salt)).toBe(true);
     expect(await verifyPassword('wrong', hash, salt)).toBe(false);
   });
@@ -28,9 +34,9 @@ describe('audit L3 — versioned password hashing', () => {
     expect(passwordNeedsUpgrade(legacyHash)).toBe(true);
   });
   it('passwordNeedsUpgrade: legacy/under-cost → true, current → false', () => {
-    expect(passwordNeedsUpgrade('rawb64hash')).toBe(true);
-    expect(passwordNeedsUpgrade('v2$100000$x')).toBe(true);
-    expect(passwordNeedsUpgrade('v2$600000$x')).toBe(false);
+    expect(passwordNeedsUpgrade('rawb64hash')).toBe(true);   // legacy bare hash
+    expect(passwordNeedsUpgrade('v2$50000$x')).toBe(true);   // below current cost
+    expect(passwordNeedsUpgrade('v2$100000$x')).toBe(false); // current Workers cap
   });
 });
 
