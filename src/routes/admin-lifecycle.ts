@@ -23,6 +23,7 @@ import { bumpEpoch } from '../rbac/engine';
 import { assertGrantable } from '../rbac/grant-guard';
 import { isAllowedOrigin, requestIp, rateLimit } from '../lib/security';
 import { sendEmail, randomToken, sha256hex, type EmailMsg } from '../lib/email';
+import { operationalAlert } from '../lib/email-catalog';
 import { sendText } from '../lib/sms';
 import {
   createInvitation, findInvitationByToken, verifyInvitation, acceptInvitation,
@@ -230,6 +231,19 @@ adminLifecycle.post('/users/:id/approve', requirePermission('users:update'), asy
   await bumpEpoch(c.env, id);
   await audit(c, 'users.approve', { id });
   await logSecurity(c, 'user.approve', id, {});
+  // AUTH-11: tell the user their access was approved. Best-effort, non-blocking.
+  try {
+    const ue: any = await c.env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(id).first();
+    if (ue?.email) {
+      const p = sendEmail(c.env, ue.email, operationalAlert({
+        subject: 'Tu acceso a SISMO911 fue aprobado',
+        eyebrow: 'Acceso · Aprobación', heading: 'Tu acceso fue aprobado.', roleTag: 'ACCESO',
+        paras: ['Hola:', 'Tu acceso al Centro de Operaciones SISMO911 fue aprobado. Ya puedes ingresar con tu cuenta.'],
+        button: { label: 'Ingresar', url: 'https://sismo911.com/cuenta' },
+      }));
+      try { c.executionCtx.waitUntil(p); } catch { /* no ctx (tests) */ }
+    }
+  } catch { /* alerting never blocks approval */ }
   return c.json({ ok: true });
 });
 
