@@ -24,13 +24,15 @@ publicProfile.get('/:id', async (c) => {
   const id = c.req.param('id');
   if (!id || id.length > 64) return c.json({ ok: false, found: false }, 404);
 
+  // Resolve by vanity handle (username, lowercased) OR raw user id.
   const u: any = await c.env.DB.prepare(
-    `SELECT id, name, email, role, country, created_ms, settings_json,
+    `SELECT id, username, name, email, role, country, created_ms, settings_json,
             x402_enabled, wallet_address, avatar_r2
-       FROM users WHERE id = ?`
-  ).bind(id).first();
+       FROM users WHERE username = ? OR id = ? LIMIT 1`
+  ).bind(id.toLowerCase(), id).first();
 
   if (!u) return c.json({ ok: false, found: false }, 404);
+  const uid = u.id as string; // canonical id for all downstream lookups/URLs
 
   const settings = parseSettings(u.settings_json);
   // Public unless the owner turned the public page OFF via EITHER the payment
@@ -52,7 +54,7 @@ publicProfile.get('/:id', async (c) => {
        FROM x402_resources
       WHERE user_id = ? AND active = 1 AND archived_ms IS NULL
       ORDER BY created_ms DESC LIMIT 50`
-  ).bind(id).all();
+  ).bind(uid).all();
 
   const links = ((results ?? []) as any[]).map((r) => ({
     slug: r.slug,
@@ -62,7 +64,7 @@ publicProfile.get('/:id', async (c) => {
     currency: r.currency || 'USDC',
     kind: r.kind || 'x402',
     payUrl: (r.kind || 'x402') === 'x402'
-      ? new URL(`/api/x402/pay/${id}/${r.slug}`, c.req.url).toString()
+      ? new URL(`/api/x402/pay/${uid}/${r.slug}`, c.req.url).toString()
       : null,
   }));
 
@@ -73,13 +75,15 @@ publicProfile.get('/:id', async (c) => {
     receiving,
     profile: {
       id: u.id,
+      username: u.username || null,
+      handle: u.username || u.id,           // what the public link should display
       name: u.name || null,
       role_label: ROLE_LABEL[u.role] || 'Ciudadano',
       country: u.country || null,
       created_ms: u.created_ms || null,
       email: showEmail ? (u.email || null) : null,
       has_avatar: Boolean(u.avatar_r2),
-      avatar_url: u.avatar_r2 ? `/api/u/${encodeURIComponent(id)}/avatar` : null,
+      avatar_url: u.avatar_r2 ? `/api/u/${encodeURIComponent(u.username || u.id)}/avatar` : null,
     },
     links,
   });
@@ -91,8 +95,8 @@ publicProfile.get('/:id', async (c) => {
 // and the content-type is constrained to the image types the upload admits.
 publicProfile.get('/:id/avatar', async (c) => {
   const id = c.req.param('id');
-  const u: any = await c.env.DB.prepare(`SELECT avatar_r2 FROM users WHERE id = ?`)
-    .bind(id).first().catch(() => null);
+  const u: any = await c.env.DB.prepare(`SELECT avatar_r2 FROM users WHERE username = ? OR id = ? LIMIT 1`)
+    .bind(id.toLowerCase(), id).first().catch(() => null);
   if (!u || !u.avatar_r2) return c.notFound();
   const obj = await c.env.PHOTOS.getWithMetadata(u.avatar_r2 as string, 'arrayBuffer');
   if (!obj || !obj.value) return c.notFound();
