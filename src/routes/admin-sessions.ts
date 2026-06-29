@@ -29,6 +29,18 @@ import {
   hashBackupCode,
   matchBackupCode,
 } from '../lib/totp';
+import { sendEmail } from '../lib/email';
+import { mfaChangedEmail } from '../lib/email-catalog';
+
+const SEGURIDAD_URL = 'https://sismo911.com/cuenta/seguridad';
+// AUTH-07: notify the account owner that 2FA was turned on/off. Non-blocking.
+function fireMfaChanged(c: any, email: string | undefined, action: 'activada' | 'desactivada') {
+  if (!email) return;
+  const p = sendEmail(c.env, email, mfaChangedEmail({
+    action, when: new Date().toLocaleString('es-VE'), secureUrl: SEGURIDAD_URL,
+  }));
+  try { c.executionCtx.waitUntil(p); } catch { /* no ctx (tests) */ }
+}
 
 export const adminSessions = new Hono<{ Bindings: Env }>();
 
@@ -122,6 +134,7 @@ adminSessions.post('/mfa/verify', requireLogin, async (c) => {
   ).bind(now, JSON.stringify(hashes), step, me.id).run();
   await audit(c, 'mfa.enabled', { user_id: me.id });
   await logSecurity(c, 'mfa.enabled', me.id);
+  fireMfaChanged(c, me.email, 'activada');
   return c.json({ ok: true, backup_codes: codes });
 });
 
@@ -144,6 +157,7 @@ adminSessions.post('/mfa/disable', requireLogin, async (c) => {
   ).bind(me.id).run();
   await audit(c, 'mfa.disabled', { user_id: me.id });
   await logSecurity(c, 'mfa.disabled', me.id);
+  fireMfaChanged(c, me.email, 'desactivada');
   return c.json({ ok: true });
 });
 
