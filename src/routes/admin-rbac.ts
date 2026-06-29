@@ -16,8 +16,7 @@ import type { Context } from 'hono';
 import type { Env } from '../types';
 import { uid } from '../lib/db';
 import { audit } from '../lib/audit';
-import { hashPassword, getUserFromRequest } from '../lib/auth';
-import { enforceStepUp } from '../lib/stepup';
+import { hashPassword } from '../lib/auth';
 import { requirePermission, requireAnyPermission, currentUser } from '../rbac/middleware';
 import { getEffectivePermissions, bumpEpoch } from '../rbac/engine';
 import { assertGrantable } from '../rbac/grant-guard';
@@ -40,14 +39,9 @@ adminRbac.use('*', async (c, next) => {
     const originHdr = c.req.header('origin') || c.req.header('referer')?.split('/').slice(0, 3).join('/');
     const sameSite = originHdr ? isAllowedOrigin(c.env, originHdr) : false;
     if (!sameSite) return c.json({ error: 'bad_origin' }, 403);
-    // Step-up for the acting admin on every RBAC mutation when they enabled
-    // sec_require_login — EXCEPT emergency lock (/lock), which is break-glass and
-    // must stay fast under an active threat. The console catches 403
-    // step_up_required, prompts for the password, then retries.
-    if (!c.req.path.endsWith('/lock')) {
-      const actor = await getUserFromRequest(c.env, c).catch(() => null);
-      if (actor) { const su = await enforceStepUp(c, actor.id); if (su) return su; }
-    }
+    // Step-up is enforced once for the whole /api/rbac/* prefix in index.ts
+    // (a single guard with one /lock break-glass exemption), so it is NOT
+    // repeated here — repeating it per sub-app would gate cross-sub-app paths.
   }
   return next();
 });
