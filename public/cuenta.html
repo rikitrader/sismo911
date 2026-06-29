@@ -1086,6 +1086,9 @@ html body { padding-left:0 !important; padding-top:0 !important; }
   border-radius:100px; background:var(--brand-2); color:#fff; font-size:.66rem; font-weight:800;
   display:flex; align-items:center; justify-content:center; border:2px solid var(--bg);
 }
+/* The class sets display:flex, which would override the [hidden] attribute — so
+   hide explicitly when there are zero unread notifications. */
+.ac-bell-badge[hidden] { display:none !important; }
 .ac-user {
   display:flex; align-items:center; gap:10px; padding:5px 10px 5px 6px; cursor:pointer;
   border-radius:12px; border:1px solid var(--border); background:var(--surface);
