@@ -56,6 +56,10 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   // Profile Command Center — every endpoint self-authenticates via
   // getUserFromRequest and is scoped to the caller's own user id (like /api/x402).
   '/api/profile',
+  // Public payment profile (behind a citizen's "Enlace público"): returns only
+  // safe public fields (name/role/country/member-since) + active payment links +
+  // avatar image. No auth, no PII — public by design (like /api/e share view).
+  '/api/u',
   // Transactional-email preview/test — the public GET /preview index is harmless
   // metadata; the render + send routes self-gate on the NOTIFY_TOKEN secret
   // inside the handler (like /api/blog/run). Global gate just lets them reach it.
