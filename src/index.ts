@@ -501,9 +501,51 @@ app.get('/admin-evidencias', (c) => c.env.ASSETS.fetch(new Request(new URL('/adm
 // watermarked) composite via /api/e/:token. No PII, no original file.
 app.get('/e/:token', (c) => c.env.ASSETS.fetch(new Request(new URL('/compartir.html', c.req.url))));
 
-// PUBLIC payment profile: /u/:id is a citizen's "Enlace público" landing — their
-// display name + active payment links so anyone can pay them. Reads /api/u/:id.
-app.get('/u/:id', (c) => c.env.ASSETS.fetch(new Request(new URL('/u.html', c.req.url))));
+// PUBLIC payment profile: /u/:id (id OR vanity handle) is a citizen's "Enlace
+// público" landing. Serves u.html with per-user Open Graph / Twitter meta injected
+// so social shares show the citizen's name + avatar (the SPA still reads /api/u/:id).
+app.get('/u/:id', async (c) => {
+  const idOrHandle = c.req.param('id');
+  const assetResp = await c.env.ASSETS.fetch(new Request(new URL('/u.html', c.req.url)));
+  let html = await assetResp.text();
+
+  const u: any = await c.env.DB.prepare(
+    `SELECT id, username, name, avatar_r2, settings_json FROM users WHERE username = ? OR id = ? LIMIT 1`
+  ).bind(idOrHandle.toLowerCase(), idOrHandle).first().catch(() => null);
+
+  const esc = (s: string) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
+  const origin = new URL(c.req.url).origin;
+
+  // Honor the owner's "private profile" toggle for the social preview too.
+  let isPublic = true;
+  try { const st = u?.settings_json ? JSON.parse(u.settings_json) : {}; isPublic = st.public_profile !== false && st.sec_public_page !== false; } catch {}
+
+  const name = u && isPublic && u.name ? String(u.name) : null;
+  const handle = u?.username || u?.id || idOrHandle;
+  const title = name ? `Paga a ${name} — SISMO911` : 'Perfil de pago — SISMO911';
+  const desc = name
+    ? `Paga de forma segura en USDC a ${name} a través de SISMO911.`
+    : 'Paga de forma segura en USDC a través de SISMO911.';
+  const url = `${origin}/u/${encodeURIComponent(handle)}`;
+  const img = u && isPublic && u.avatar_r2 ? `${origin}/api/u/${encodeURIComponent(handle)}/avatar` : `${origin}/og/og-default.png`;
+
+  html = html
+    .replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(title)}</title>`)
+    .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${esc(desc)}">`)
+    .replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${esc(title)}">`)
+    .replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${esc(desc)}">`)
+    .replace('<!--OG_EXTRA-->', [
+      `<meta property="og:url" content="${esc(url)}">`,
+      `<meta property="og:image" content="${esc(img)}">`,
+      `<meta name="twitter:card" content="summary_large_image">`,
+      `<meta name="twitter:title" content="${esc(title)}">`,
+      `<meta name="twitter:description" content="${esc(desc)}">`,
+      `<meta name="twitter:image" content="${esc(img)}">`,
+      `<link rel="canonical" href="${esc(url)}">`,
+    ].join('\n'));
+
+  return c.html(html, 200, { 'Cache-Control': 'public, max-age=300' });
+});
 
 // Unit GPS WebSocket: verify token + unit active, then hand to the FleetLive DO
 // tagged as a unit. Public path (token-validated here); never log the token.

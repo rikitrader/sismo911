@@ -1587,6 +1587,18 @@ html body { padding-left:0 !important; padding-top:0 !important; }
       </div>
 
       <div class="form-group">
+        <label class="form-label" for="f-username">Usuario público (enlace)</label>
+        <div class="form-control" style="display:flex;align-items:center;gap:0;padding:0;overflow:hidden;">
+          <span style="padding:0 2px 0 12px;color:var(--muted);font-size:.85rem;white-space:nowrap;">sismo911.com/u/</span>
+          <input id="f-username" type="text" autocomplete="off" autocapitalize="none" spellcheck="false"
+                 placeholder="tu-usuario" maxlength="30"
+                 style="flex:1;border:none;outline:none;background:transparent;padding:11px 12px 11px 2px;font:inherit;color:inherit;min-width:0;">
+        </div>
+        <div class="form-err" id="err-username">3–30 caracteres: letras, números, guion o guion bajo.</div>
+        <div class="form-helper">Personaliza tu enlace de cobro. Déjalo vacío para usar tu ID.</div>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Correo electrónico</label>
         <div class="readonly-display">
           <span aria-hidden="true">🔒</span>
@@ -2480,6 +2492,7 @@ const editModal = document.getElementById('edit-modal');
 
 function openModal(profile) {
   document.getElementById('f-name').value       = profile.name     || '';
+  document.getElementById('f-username').value   = profile.username || '';
   document.getElementById('f-email-display').textContent = profile.email || '';
   document.getElementById('f-phone').value      = profile.phone    || '';
   document.getElementById('f-country').value    = profile.country  || '';
@@ -2628,11 +2641,14 @@ function buildHero(profile, wallet) {
   if (tbRole) tbRole.textContent = rl;
   document.getElementById('hero-av-dot').classList.add('show');
 
-  /* Public payment link */
+  /* Public payment link — use the vanity handle (username) when set, else the id. */
   const id = profile.id || '';
-  if (id) {
-    const url   = `https://sismo911.com/u/${encodeURIComponent(id)}`;
-    const short = `sismo911.com/u/${String(id).slice(0, 10)}`;
+  const handle = profile.username || id;
+  if (handle) {
+    const url   = `https://sismo911.com/u/${encodeURIComponent(handle)}`;
+    const short = profile.username
+      ? `sismo911.com/u/${profile.username}`
+      : `sismo911.com/u/${String(id).slice(0, 10)}`;
     const a = document.getElementById('hero-link-a');
     a.href = url;
     document.getElementById('hero-link-text').textContent = short;
@@ -3115,6 +3131,7 @@ document.getElementById('edit-form').addEventListener('submit', async e => {
   const country = document.getElementById('f-country').value.trim();
   const city    = document.getElementById('f-city').value.trim();
   const language= document.getElementById('f-language').value;
+  const username= document.getElementById('f-username').value.trim().toLowerCase();
 
   let valid = true;
   if (!name) {
@@ -3145,6 +3162,7 @@ document.getElementById('edit-form').addEventListener('submit', async e => {
       headers: {'content-type':'application/json'},
       body: JSON.stringify({
         name,
+        username: username,
         phone:    phone    || null,
         country:  country  || null,
         city:     city     || null,
@@ -3157,7 +3175,7 @@ document.getElementById('edit-form').addEventListener('submit', async e => {
     const d = await r.json().catch(() => ({}));
 
     if (r.ok && d.ok) {
-      _profile = {..._profile, ...(d.profile || {}), name, phone, country, city, language};
+      _profile = {..._profile, ...(d.profile || {}), name, phone, country, city, language, username: (d.profile && d.profile.username) ?? (username || null)};
       closeModal();
       buildHero(_profile, _wallet);
       buildOverview(_profile, _summary);
@@ -3167,6 +3185,9 @@ document.getElementById('edit-form').addEventListener('submit', async e => {
       const msgs = {
         name_required: 'El nombre es obligatorio.',
         phone_invalid:  'Formato de teléfono inválido.',
+        username_invalid: 'Usuario inválido: 3–30 caracteres (letras, números, guion).',
+        username_taken:   'Ese usuario ya está en uso. Prueba otro.',
+        username_reserved:'Ese usuario está reservado. Prueba otro.',
       };
       const errEl = document.getElementById('err-general');
       errEl.textContent = msgs[d && d.error] || d.error || 'No se pudo actualizar el perfil.';
@@ -5236,10 +5257,11 @@ async function fetchPaymentSummary() {
   wireRetModal();
 
   /* 5. Wire quick actions + top-bar (all real, no stubs) */
-  const publicLink = `https://sismo911.com/u/${encodeURIComponent(profile.id || u.id || '')}`;
+  /* Always reflect the current handle (username can change after editing). */
+  const publicLink = () => `https://sismo911.com/u/${encodeURIComponent((_profile && _profile.username) || profile.id || u.id || '')}`;
   const on = (id, fn, evt = 'click') => { const e = document.getElementById(id); if (e) e.addEventListener(evt, fn); };
   const copyLink = async () => {
-    const ok = await copyToClipboard(publicLink);
+    const ok = await copyToClipboard(publicLink());
     if (ok) toast('Enlace copiado al portapapeles ✓');
   };
   const goPay = () => switchTab('pagos');
@@ -5345,7 +5367,7 @@ async function fetchPaymentSummary() {
   const openProfile = () => { closeAllPops(null); openModal(_profile); };
   const goAjustes   = () => { closeAllPops(null); switchTab('ajustes'); };
   const exportCSV   = () => { closeAllPops(null); downloadCSV(); };
-  const viewPublic  = () => { closeAllPops(null); window.open(publicLink, '_blank', 'noopener'); };
+  const viewPublic  = () => { closeAllPops(null); window.open(publicLink(), '_blank', 'noopener'); };
   const logout = async () => {
     try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
     location.href = '/login';
