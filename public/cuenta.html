@@ -1402,6 +1402,61 @@ html body { padding-left:0 !important; padding-top:0 !important; }
 
 /* Softer hero card */
 .hero-card { border-radius:26px; box-shadow:0 18px 44px rgba(99,102,241,.10), var(--shadow-sm); }
+
+/* ── Soporte (support inbox) ───────────────────────────────────────────── */
+.sup-nav-badge { margin-left:auto; min-width:18px; height:18px; padding:0 5px; border-radius:9px;
+  background:var(--danger); color:#fff; font-size:.66rem; font-weight:800; line-height:18px; text-align:center; }
+.sup-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+.sup-title { font-family:var(--font-display); font-weight:800; font-size:1.2rem; color:var(--text); letter-spacing:-.02em; }
+.sup-sub { font-size:.82rem; color:var(--muted); margin-top:3px; max-width:46ch; }
+.sup-list { display:flex; flex-direction:column; gap:10px; }
+.sup-item { display:flex; align-items:center; gap:12px; width:100%; text-align:left; cursor:pointer;
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px; transition:border-color .15s, box-shadow .15s; }
+.sup-item:hover { border-color:var(--brand-2); box-shadow:var(--shadow-sm); }
+.sup-item-main { flex:1; min-width:0; }
+.sup-item-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.sup-ref { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:800; font-size:.74rem;
+  color:var(--brand-2); background:rgba(11,95,255,.08); padding:2px 7px; border-radius:6px; letter-spacing:.02em; }
+.sup-item-subject { font-weight:700; color:var(--text); font-size:.92rem; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sup-item-preview { font-size:.8rem; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sup-item-side { display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0; }
+.sup-item-time { font-size:.72rem; color:var(--muted); white-space:nowrap; }
+.sup-unread { min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--brand-2);
+  color:#fff; font-size:.66rem; font-weight:800; line-height:18px; text-align:center; }
+.sup-pill { display:inline-block; font-size:.68rem; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; white-space:nowrap; }
+.sup-pill.s-open      { background:rgba(11,95,255,.12);  color:var(--brand-2); }
+.sup-pill.s-pending   { background:rgba(245,158,11,.16); color:var(--warning); }
+.sup-pill.s-answered  { background:rgba(46,125,50,.14);  color:var(--success); }
+.sup-pill.s-resolved  { background:rgba(46,125,50,.14);  color:var(--success); }
+.sup-pill.s-closed    { background:rgba(107,114,128,.16); color:var(--muted); }
+.sup-empty { text-align:center; padding:40px 20px; color:var(--muted); }
+.sup-empty svg { width:42px; height:42px; opacity:.4; margin-bottom:10px; }
+.sup-back { background:none; border:none; color:var(--brand-2); font-weight:700; font-size:.85rem; cursor:pointer; padding:4px 0; margin-bottom:12px; }
+.sup-label { display:block; font-size:.78rem; font-weight:700; color:var(--text); margin:14px 0 6px; }
+.sup-input { width:100%; box-sizing:border-box; padding:11px 13px; border:1px solid var(--border); border-radius:10px;
+  background:var(--surface); color:var(--text); font-family:var(--font); font-size:.9rem; }
+.sup-input:focus { outline:none; border-color:var(--brand-2); box-shadow:0 0 0 3px rgba(11,95,255,.12); }
+.sup-textarea { resize:vertical; min-height:80px; line-height:1.5; }
+.sup-form-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; flex-wrap:wrap; }
+.sup-thread-head { border-bottom:1px solid var(--border); padding-bottom:14px; margin-bottom:16px; }
+.sup-thread-meta { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.sup-thread-subject { font-family:var(--font-display); font-weight:800; font-size:1.05rem; color:var(--text); margin-top:8px; }
+.sup-thread-sub { font-size:.78rem; color:var(--muted); margin-top:3px; }
+.sup-thread-msgs { display:flex; flex-direction:column; gap:14px; margin-bottom:18px; }
+.sup-msg { max-width:82%; }
+.sup-msg-bubble { padding:11px 14px; border-radius:14px; font-size:.88rem; line-height:1.55; color:var(--text); white-space:pre-wrap; word-wrap:break-word; }
+.sup-msg-who { font-size:.7rem; color:var(--muted); margin-top:4px; }
+.sup-msg.user  { align-self:flex-end; }
+.sup-msg.user  .sup-msg-bubble { background:var(--brand-2); color:#fff; border-bottom-right-radius:4px; }
+.sup-msg.user  .sup-msg-who { text-align:right; }
+.sup-msg.staff { align-self:flex-start; }
+.sup-msg.staff .sup-msg-bubble { background:var(--surface-2); border:1px solid var(--border); border-bottom-left-radius:4px; }
+.sup-msg.system { align-self:center; max-width:100%; }
+.sup-msg.system .sup-msg-bubble { background:transparent; color:var(--muted); font-size:.78rem; font-style:italic; padding:4px 8px; text-align:center; }
+.sup-msg-via { font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; opacity:.7; margin-left:6px; }
+.sup-reply { border-top:1px solid var(--border); padding-top:14px; }
+.sup-closed-note { border-top:1px solid var(--border); padding-top:14px; color:var(--muted); font-size:.82rem; text-align:center; }
 </style>
 </head>
 <body>
@@ -1432,6 +1487,7 @@ html body { padding-left:0 !important; padding-top:0 !important; }
       </div>
       <button class="side-link" role="tab" data-tab="seguridad" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Seguridad</span></button>
       <button class="side-link" role="tab" data-tab="ajustes" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></button>
+      <button class="side-link" role="tab" data-tab="soporte" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="14" width="4" height="6" rx="1.5"/><rect x="18" y="14" width="4" height="6" rx="1.5"/><path d="M20 18v1a3 3 0 0 1-3 3h-3"/></svg><span>Soporte</span><span class="sup-nav-badge" id="sup-nav-badge" hidden></span></button>
     </nav>
     <div class="ac-side-foot">
       <div class="ac-upsell">
@@ -1440,7 +1496,7 @@ html body { padding-left:0 !important; padding-top:0 !important; }
         <div class="ac-upsell-text">Accede a herramientas avanzadas y menores comisiones.</div>
         <button class="ac-upsell-btn" id="qa-plans" type="button">Ver planes</button>
       </div>
-      <a class="ac-support" href="/contacto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="14" width="4" height="6" rx="1.5"/><rect x="18" y="14" width="4" height="6" rx="1.5"/><path d="M20 18v1a3 3 0 0 1-3 3h-3"/></svg><span>Soporte</span></a>
+      <a class="ac-support" href="#soporte" data-act="switchTab" data-a1="soporte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="14" width="4" height="6" rx="1.5"/><rect x="18" y="14" width="4" height="6" rx="1.5"/><path d="M20 18v1a3 3 0 0 1-3 3h-3"/></svg><span>Soporte</span></a>
     </div>
   </aside>
 
@@ -2174,6 +2230,81 @@ html body { padding-left:0 !important; padding-top:0 !important; }
         </div>
       </div>
 
+    </div>
+
+    <!-- ── Soporte (support ticket inbox) ───────────────────────────── -->
+    <div class="panel" data-panel="soporte" role="tabpanel">
+      <div class="sup-wrap" id="sup-wrap">
+
+        <!-- LIST view -->
+        <section class="sup-view" id="sup-view-list">
+          <div class="sup-head">
+            <div>
+              <div class="sup-title">Centro de soporte</div>
+              <div class="sup-sub">Abre un ticket y sigue cada respuesta como un buzón de correo. Cada ticket tiene un número de seguimiento.</div>
+            </div>
+            <button class="btn btn-primary" type="button" id="sup-new-btn">Nuevo ticket</button>
+          </div>
+          <div id="sup-list" class="sup-list" aria-live="polite">
+            <div class="skeleton skel-line" style="margin-bottom:10px;"></div>
+            <div class="skeleton skel-line m" style="margin-bottom:10px;"></div>
+            <div class="skeleton skel-line s"></div>
+          </div>
+        </section>
+
+        <!-- NEW ticket view -->
+        <section class="sup-view" id="sup-view-new" hidden>
+          <button class="sup-back" type="button" id="sup-new-back">&larr; Volver</button>
+          <div class="card sup-form-card">
+            <div class="card-title">Nuevo ticket de soporte</div>
+            <div class="card-subtitle">Cuéntanos qué necesitas. Te responderemos aquí y por correo.</div>
+            <label class="sup-label" for="sup-f-subject">Asunto</label>
+            <input class="sup-input" id="sup-f-subject" type="text" maxlength="160" placeholder="Resumen breve del problema">
+            <label class="sup-label" for="sup-f-category">Categoría</label>
+            <select class="sup-input" id="sup-f-category">
+              <option value="cuenta">Cuenta</option>
+              <option value="pagos">Pagos</option>
+              <option value="retiros">Retiros</option>
+              <option value="tecnico">Problema técnico</option>
+              <option value="seguridad">Seguridad</option>
+              <option value="otro" selected>Otro</option>
+            </select>
+            <label class="sup-label" for="sup-f-body">Mensaje</label>
+            <textarea class="sup-input sup-textarea" id="sup-f-body" maxlength="8000" rows="6" placeholder="Describe tu solicitud con el mayor detalle posible…"></textarea>
+            <div class="sup-form-actions">
+              <button class="btn btn-secondary" type="button" id="sup-new-cancel">Cancelar</button>
+              <button class="btn btn-primary" type="button" id="sup-new-submit">Enviar ticket</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- THREAD view -->
+        <section class="sup-view" id="sup-view-thread" hidden>
+          <button class="sup-back" type="button" id="sup-thread-back">&larr; Volver a mis tickets</button>
+          <div class="card sup-thread-card">
+            <div class="sup-thread-head">
+              <div class="sup-thread-meta">
+                <span class="sup-ref" id="sup-th-ref"></span>
+                <span class="sup-pill" id="sup-th-status"></span>
+              </div>
+              <div class="sup-thread-subject" id="sup-th-subject"></div>
+              <div class="sup-thread-sub" id="sup-th-cat"></div>
+            </div>
+            <div class="sup-thread-msgs" id="sup-th-msgs"></div>
+            <div class="sup-reply" id="sup-reply-box">
+              <textarea class="sup-input sup-textarea" id="sup-reply-text" maxlength="8000" rows="3" placeholder="Escribe tu respuesta…"></textarea>
+              <div class="sup-form-actions">
+                <button class="btn btn-secondary btn-sm" type="button" id="sup-close-btn">Cerrar ticket</button>
+                <button class="btn btn-primary btn-sm" type="button" id="sup-reply-btn">Responder</button>
+              </div>
+            </div>
+            <div class="sup-closed-note" id="sup-closed-note" hidden>
+              Este ticket está cerrado. Responde para reabrirlo.
+            </div>
+          </div>
+        </section>
+
+      </div>
     </div>
 
   </div><!-- /#content -->
@@ -5270,6 +5401,174 @@ function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!
   var el=e.target.closest("[data-act]");if(!el)return;
   var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
   var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
+
+/* ── Soporte (support ticket inbox) ─────────────────────────────────────── */
+(function supportInbox() {
+  var STATUS_LABEL = { open:'Abierto', pending:'Esperando tu respuesta', answered:'Respondido', resolved:'Resuelto', closed:'Cerrado' };
+  var loaded = false;
+  var current = null; // currently open ticket id
+
+  function api(path, opts) {
+    opts = opts || {};
+    opts.credentials = 'same-origin';
+    opts.headers = Object.assign({ 'Accept':'application/json' }, opts.body ? { 'Content-Type':'application/json' } : {}, opts.headers || {});
+    return fetch('/api/support' + path, opts).then(function (r) {
+      if (r.status === 401) { location.href = '/login?next=/cuenta'; throw new Error('unauthorized'); }
+      return r.json().then(function (d) { if (!r.ok) throw new Error((d && d.error) || 'error'); return d; });
+    });
+  }
+
+  function relTime(ms) {
+    if (!ms) return '';
+    var d = Date.now() - ms, m = Math.floor(d/60000), h = Math.floor(d/3600000), days = Math.floor(d/86400000);
+    if (m < 1) return 'ahora'; if (m < 60) return 'hace ' + m + ' min'; if (h < 24) return 'hace ' + h + ' h';
+    if (days < 30) return 'hace ' + days + ' d';
+    return new Date(ms).toLocaleDateString('es-VE', { day:'2-digit', month:'short' });
+  }
+  function pill(status) {
+    return '<span class="sup-pill s-' + status + '">' + esc(STATUS_LABEL[status] || status) + '</span>';
+  }
+
+  function showView(name) {
+    ['list','new','thread'].forEach(function (v) {
+      var el = document.getElementById('sup-view-' + v); if (el) el.hidden = (v !== name);
+    });
+  }
+
+  function setNavBadge(n) {
+    var b = document.getElementById('sup-nav-badge'); if (!b) return;
+    if (n > 0) { b.textContent = n > 99 ? '99+' : String(n); b.hidden = false; } else { b.hidden = true; }
+  }
+
+  function renderList(tickets) {
+    var box = document.getElementById('sup-list'); if (!box) return;
+    if (!tickets.length) {
+      box.innerHTML = '<div class="sup-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="14" width="4" height="6" rx="1.5"/><rect x="18" y="14" width="4" height="6" rx="1.5"/></svg><div>Aún no tienes tickets de soporte.</div><div style="font-size:.8rem;margin-top:6px;">Abre uno y te ayudaremos.</div></div>';
+      return;
+    }
+    box.innerHTML = tickets.map(function (t) {
+      var unread = t.unread_user > 0;
+      return '<button class="sup-item" type="button" data-sup-open="' + esc(t.id) + '">' +
+        '<div class="sup-item-main">' +
+          '<div class="sup-item-top"><span class="sup-ref">' + esc(t.ref) + '</span>' + pill(t.status) + '</div>' +
+          '<div class="sup-item-subject"' + (unread ? ' style="color:var(--text);"' : '') + '>' + esc(t.subject) + '</div>' +
+          '<div class="sup-item-preview">' + esc(t.category_label) + ' · ' + (t.msg_count || 0) + ' mensaje' + ((t.msg_count===1)?'':'s') + '</div>' +
+        '</div>' +
+        '<div class="sup-item-side">' +
+          '<span class="sup-item-time">' + esc(relTime(t.last_message_ms || t.created_ms)) + '</span>' +
+          (unread ? '<span class="sup-unread">' + t.unread_user + '</span>' : '') +
+        '</div>' +
+      '</button>';
+    }).join('');
+  }
+
+  function renderThread(ticket, messages) {
+    current = ticket.id;
+    document.getElementById('sup-th-ref').textContent = ticket.ref;
+    document.getElementById('sup-th-status').className = 'sup-pill s-' + ticket.status;
+    document.getElementById('sup-th-status').textContent = STATUS_LABEL[ticket.status] || ticket.status;
+    document.getElementById('sup-th-subject').textContent = ticket.subject;
+    document.getElementById('sup-th-cat').textContent = ticket.category_label + ' · Ticket abierto el ' + new Date(ticket.created_ms).toLocaleDateString('es-VE');
+    var msgs = document.getElementById('sup-th-msgs');
+    msgs.innerHTML = messages.map(function (m) {
+      if (m.author_type === 'system') return '<div class="sup-msg system"><div class="sup-msg-bubble">' + esc(m.body) + '</div></div>';
+      var who = m.author_type === 'staff' ? (esc(m.author_name || 'Soporte SISMO911')) : 'Tú';
+      var via = m.via === 'email' ? '<span class="sup-msg-via">correo</span>' : '';
+      return '<div class="sup-msg ' + m.author_type + '"><div class="sup-msg-bubble">' + esc(m.body) + '</div>' +
+             '<div class="sup-msg-who">' + who + ' · ' + esc(relTime(m.created_ms)) + via + '</div></div>';
+    }).join('');
+    var closed = ticket.status === 'closed';
+    document.getElementById('sup-reply-box').hidden = closed;
+    document.getElementById('sup-closed-note').hidden = !closed;
+    showView('thread');
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function refreshList() {
+    return api('/tickets').then(function (d) {
+      renderList(d.tickets || []);
+      var unread = (d.tickets || []).reduce(function (a, t) { return a + (t.unread_user || 0); }, 0);
+      setNavBadge(unread);
+      return d.tickets || [];
+    }).catch(function () {});
+  }
+
+  function openTicket(id) {
+    api('/tickets/' + id).then(function (d) {
+      renderThread(d.ticket, d.messages || []);
+      setTimeout(refreshList, 300); // unread cleared server-side
+    }).catch(function () { toast('No se pudo abrir el ticket.', 'error'); });
+  }
+
+  function ensureLoaded() {
+    if (loaded) { refreshList(); return; }
+    loaded = true;
+    showView('list');
+    refreshList();
+  }
+
+  // Submit a new ticket.
+  function submitNew() {
+    var subject = (document.getElementById('sup-f-subject').value || '').trim();
+    var category = document.getElementById('sup-f-category').value;
+    var body = (document.getElementById('sup-f-body').value || '').trim();
+    if (!subject || !body) { toast('Completa el asunto y el mensaje.', 'error'); return; }
+    var btn = document.getElementById('sup-new-submit'); btn.disabled = true;
+    api('/tickets', { method:'POST', body: JSON.stringify({ subject:subject, category:category, body:body }) })
+      .then(function (d) {
+        document.getElementById('sup-f-subject').value = '';
+        document.getElementById('sup-f-body').value = '';
+        toast('Ticket ' + d.ticket.ref + ' creado. Te avisaremos por correo.', 'success');
+        refreshList();
+        renderThread(d.ticket, d.messages || []);
+      })
+      .catch(function () { toast('No se pudo crear el ticket.', 'error'); })
+      .finally(function () { btn.disabled = false; });
+  }
+
+  function sendReply() {
+    if (!current) return;
+    var ta = document.getElementById('sup-reply-text'); var body = (ta.value || '').trim();
+    if (!body) { toast('Escribe una respuesta.', 'error'); return; }
+    var btn = document.getElementById('sup-reply-btn'); btn.disabled = true;
+    api('/tickets/' + current + '/reply', { method:'POST', body: JSON.stringify({ body:body }) })
+      .then(function (d) { ta.value = ''; renderThread(d.ticket, d.messages || []); refreshList(); })
+      .catch(function () { toast('No se pudo enviar.', 'error'); })
+      .finally(function () { btn.disabled = false; });
+  }
+
+  function closeTicket() {
+    if (!current) return;
+    api('/tickets/' + current + '/close', { method:'POST' })
+      .then(function (d) { renderThread(d.ticket, d.messages || []); refreshList(); toast('Ticket cerrado.', 'success'); })
+      .catch(function () { toast('No se pudo cerrar.', 'error'); });
+  }
+
+  // ── Wiring ──
+  document.addEventListener('click', function (e) {
+    // Lazy-load when the citizen navigates to Soporte (nav button or footer link).
+    if (e.target.closest('[data-tab="soporte"], .ac-support')) { setTimeout(ensureLoaded, 0); return; }
+    var openBtn = e.target.closest('[data-sup-open]');
+    if (openBtn) { openTicket(openBtn.getAttribute('data-sup-open')); return; }
+  });
+  function on(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
+  on('sup-new-btn', function () { showView('new'); });
+  on('sup-new-back', function () { showView('list'); });
+  on('sup-new-cancel', function () { showView('list'); });
+  on('sup-new-submit', submitNew);
+  on('sup-thread-back', function () { current = null; showView('list'); refreshList(); });
+  on('sup-reply-btn', sendReply);
+  on('sup-close-btn', closeTicket);
+
+  // Deep-link: /cuenta#soporte (from email + notifications) opens the inbox.
+  function maybeOpenFromHash() {
+    if ((location.hash || '').replace(/^#/, '') === 'soporte') { if (typeof switchTab === 'function') switchTab('soporte'); ensureLoaded(); }
+  }
+  window.addEventListener('hashchange', maybeOpenFromHash);
+  // Warm the unread badge on load even if the panel isn't opened yet.
+  refreshList();
+  maybeOpenFromHash();
+})();
 </script>
 </body>
 </html>

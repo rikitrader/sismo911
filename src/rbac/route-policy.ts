@@ -64,6 +64,10 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   // metadata; the render + send routes self-gate on the NOTIFY_TOKEN secret
   // inside the handler (like /api/blog/run). Global gate just lets them reach it.
   '/api/notify',
+  // Support ticket inbox ("Soporte"). Citizen endpoints self-authenticate via
+  // getUserFromRequest and are scoped to the caller's own tickets; the
+  // /api/support/admin/* staff endpoints self-gate with requirePermission(ops:console).
+  '/api/support',
 ];
 
 /** True if `path` is on the public /api allow-list (prefix match on a path segment). */

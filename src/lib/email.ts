@@ -17,14 +17,23 @@ export async function sha256hex(s: string): Promise<string> {
 // No API keys: the `send_email` binding sends from an onboarded domain.
 // Returns false (and logs) if the binding is absent or the send fails, so a
 // missing email never breaks the request flow.
-export async function sendEmail(env: Env, to: string, msg: EmailMsg): Promise<boolean> {
-  const from = { email: (env.EMAIL_FROM || 'no-reply@sismo911.com'), name: 'SISMO911' };
+export interface SendOpts {
+  from?: { email: string; name?: string };
+  // Reply-To: used by the support inbox so a citizen's email reply threads back
+  // to the support address (and is matched to the ticket by its [#REF]).
+  replyTo?: { email: string; name?: string };
+}
+export async function sendEmail(env: Env, to: string, msg: EmailMsg, opts: SendOpts = {}): Promise<boolean> {
+  const from = opts.from || { email: (env.EMAIL_FROM || 'no-reply@sismo911.com'), name: 'SISMO911' };
   if (!env.EMAIL) {
     console.warn('[email] EMAIL binding missing — not sent:', msg.subject, '→', to);
     return false;
   }
   try {
-    await env.EMAIL.send({ to, from, subject: msg.subject, html: msg.html, text: msg.text });
+    await env.EMAIL.send({
+      to, from, subject: msg.subject, html: msg.html, text: msg.text,
+      ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
+    });
     return true;
   } catch (e: any) {
     console.error('[email] send failed:', e?.message ?? e);
@@ -264,4 +273,64 @@ export function reportReceivedEmail(opts: { name?: string; refId: string; catego
     p('Guarda tu número de referencia por si necesitas dar seguimiento. Tu ubicación exacta nunca se publica: se redondea a ~100 m.'));
   const text = `${hi}\n\nTu reporte ciudadano fue recibido y está en revisión por un operador de SISMO911.\n\nN.º de referencia: ${ref}\nTipo: ${opts.categoryLabel}${opts.place ? `\nUbicación: ${opts.place}` : ''}\nEstado: En revisión\n\n¿Vida en riesgo? Usa el botón SOS o llama al 911.\nMapa de emergencia: https://sismo911.com/mapa`;
   return { subject: `Reporte recibido (${ref}) — SISMO911`, html, text };
+}
+
+// ---- Support tickets (Soporte inbox) --------------------------------------
+// Every support email carries the ticket ref in the subject as [#SOP-XXXXXX] so
+// inbound replies thread back to the ticket (src/index.ts email() handler).
+
+const ticketRow = (label: string, value: string, strong = false) =>
+  `<tr><td style="padding:6px 14px;color:#6b7280">${label}</td><td style="padding:6px 14px;text-align:right;font-weight:${strong ? '800' : '600'};${strong ? 'color:#13284f;font-family:monospace' : ''}">${value}</td></tr>`;
+
+function ticketCard(rows: string): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;font-size:14px">
+     <tr><td colspan="2" style="background:#13284f;color:#fff;padding:10px 14px;font-weight:700;letter-spacing:.04em">TICKET DE SOPORTE</td></tr>
+     ${rows}
+   </table>`;
+}
+
+const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const quote = (body: string) =>
+  `<div style="margin:0 0 18px;padding:12px 16px;background:#f9fafb;border-left:3px solid #13284f;border-radius:4px;font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap">${escHtml(body)}</div>`;
+
+// Sent to the citizen right after they open a ticket from /cuenta → Soporte.
+export function supportTicketOpenedEmail(opts: { name?: string; ref: string; subject: string; body: string; manageUrl: string; categoryLabel: string }): EmailMsg {
+  const hi = opts.name ? `Hola ${opts.name},` : 'Hola,';
+  const html = layout(`Recibimos tu solicitud de soporte (${opts.ref})`,
+    h2('✓ Recibimos tu solicitud') +
+    p(hi) +
+    p('Tu solicitud de soporte fue registrada. Un miembro del equipo de SISMO911 la revisará y te responderá por aquí y en tu panel. Puedes seguir y responder en cualquier momento desde tu cuenta.') +
+    ticketCard(ticketRow('N.º de ticket', opts.ref, true) + ticketRow('Asunto', opts.subject) + ticketRow('Categoría', opts.categoryLabel) + ticketRow('Estado', 'Abierto')) +
+    quote(opts.body) +
+    `<p style="margin:0 0 20px">${button(opts.manageUrl, 'Ver mi ticket')}</p>` +
+    p(`Para dar seguimiento, <b>responde a este correo</b> (mantén ${opts.ref} en el asunto) o entra a tu panel.`));
+  const text = `${hi}\n\nRecibimos tu solicitud de soporte.\nN.º de ticket: ${opts.ref}\nAsunto: ${opts.subject}\nEstado: Abierto\n\nTu mensaje:\n${opts.body}\n\nSigue y responde aquí: ${opts.manageUrl}\nO responde a este correo (deja ${opts.ref} en el asunto).`;
+  return { subject: `[#${opts.ref}] ${opts.subject} — Soporte SISMO911`, html, text };
+}
+
+// Sent to the citizen when an operator replies to their ticket.
+export function supportStaffReplyEmail(opts: { name?: string; ref: string; subject: string; body: string; agentName?: string; manageUrl: string }): EmailMsg {
+  const hi = opts.name ? `Hola ${opts.name},` : 'Hola,';
+  const who = opts.agentName ? `<b>${opts.agentName}</b> (Soporte SISMO911)` : 'El equipo de Soporte SISMO911';
+  const html = layout(`Respuesta a tu ticket ${opts.ref}`,
+    h2('Tienes una respuesta de Soporte') +
+    p(hi) +
+    p(`${who} respondió a tu ticket <b>${opts.ref}</b>:`) +
+    quote(opts.body) +
+    `<p style="margin:0 0 20px">${button(opts.manageUrl, 'Responder en mi panel')}</p>` +
+    p(`También puedes <b>responder a este correo</b> y tu mensaje se agregará al ticket automáticamente (deja ${opts.ref} en el asunto).`));
+  const text = `${hi}\n\n${opts.agentName ? opts.agentName + ' (Soporte SISMO911)' : 'Soporte SISMO911'} respondió a tu ticket ${opts.ref}:\n\n${opts.body}\n\nResponde en tu panel: ${opts.manageUrl}\nO responde a este correo (deja ${opts.ref} en el asunto).`;
+  return { subject: `[#${opts.ref}] ${opts.subject} — Soporte SISMO911`, html, text };
+}
+
+// Sent to the citizen when their ticket is marked resolved/closed.
+export function supportTicketResolvedEmail(opts: { name?: string; ref: string; subject: string; manageUrl: string }): EmailMsg {
+  const hi = opts.name ? `Hola ${opts.name},` : 'Hola,';
+  const html = layout(`Tu ticket ${opts.ref} fue resuelto`,
+    h2('✓ Tu ticket fue resuelto') +
+    p(hi) +
+    p(`Marcamos tu ticket <b>${opts.ref}</b> («${opts.subject}») como resuelto. Si tu situación no quedó solucionada, <b>responde a este correo</b> o reabre el ticket desde tu panel y seguimos ayudándote.`) +
+    `<p style="margin:0 0 20px">${button(opts.manageUrl, 'Ver mi ticket')}</p>`);
+  const text = `${hi}\n\nTu ticket ${opts.ref} («${opts.subject}») fue marcado como resuelto.\nSi no quedó solucionado, responde a este correo o reábrelo en tu panel: ${opts.manageUrl}`;
+  return { subject: `[#${opts.ref}] ${opts.subject} — Resuelto — Soporte SISMO911`, html, text };
 }
