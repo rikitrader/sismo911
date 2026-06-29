@@ -39,6 +39,9 @@ export const NEED_KEYS = [
   'alimento_especial', 'alimento_infantil',
 ] as const;
 const NEED_STATUS = new Set(['requerido', 'parcial', 'cubierto']);
+// Life-critical pediatric needs: an unmet one is a CRITICAL child alert.
+const CRITICAL_NEEDS = new Set(['agua', 'formula_lactante', 'leche', 'vacunas', 'medicamento_pediatrico', 'atencion_medica']);
+const MINOR_POP_KEYS = new Set(['menores_0_5', 'menores_6_15', 'menores_16_17', 'recien_nacidos', 'lactantes']);
 
 const capSet = new Set<string>(CAPABILITY_KEYS);
 const popSet = new Set<string>(POPULATION_KEYS);
@@ -106,6 +109,50 @@ function assemble(sites: any[], caps: any[], pop: any[], needs: any[]) {
   out.sort((a, b) => (b.population.length - a.population.length) || a.nombre.localeCompare(b.nombre));
   return out;
 }
+
+/** Classify child-priority alerts from assembled shelter cards. Pure + deterministic.
+ *  Módulo 11: "Clasificación de alertas relacionadas con niños y adolescentes" +
+ *  "Alertas prioritarias relacionadas con la infancia". */
+export function deriveNinezAlerts(cards: any[]) {
+  const alerts: any[] = [];
+  for (const s of cards) {
+    const minors = (s.population || [])
+      .filter((p: any) => MINOR_POP_KEYS.has(p.category_key))
+      .reduce((a: number, p: any) => a + (p.count || 0), 0);
+    const hasChildCare = (s.capabilities || []).length > 0;
+
+    // Unmet needs → one alert each (critical for life-critical pediatric needs).
+    for (const n of s.needs || []) {
+      if (n.status !== 'requerido') continue;
+      alerts.push({
+        kind: 'necesidad', site_id: s.id, site_nombre: s.nombre, region: s.parroquia || s.municipio || null,
+        need_key: n.need_key, severity: CRITICAL_NEEDS.has(n.need_key) ? 'critica' : 'alerta', minors,
+      });
+    }
+    // Shelter with minors at/over capacity.
+    if (minors > 0 && s.status === 'lleno') {
+      alerts.push({ kind: 'capacidad', site_id: s.id, site_nombre: s.nombre, region: s.parroquia || s.municipio || null, severity: 'critica', minors });
+    } else if (minors > 0 && s.capacity > 0 && (s.current_occupancy || 0) / s.capacity >= 0.85) {
+      alerts.push({ kind: 'capacidad', site_id: s.id, site_nombre: s.nombre, region: s.parroquia || s.municipio || null, severity: 'alerta', minors });
+    }
+    // Child-capable shelter that has closed.
+    if (hasChildCare && s.status === 'cerrado') {
+      alerts.push({ kind: 'cierre', site_id: s.id, site_nombre: s.nombre, region: s.parroquia || s.municipio || null, severity: 'info', minors });
+    }
+  }
+  const rank: Record<string, number> = { critica: 0, alerta: 1, info: 2 };
+  alerts.sort((a, b) => (rank[a.severity] - rank[b.severity]) || b.minors - a.minors || a.site_nombre.localeCompare(b.site_nombre));
+  return alerts;
+}
+
+// ── GET /api/ninez/alertas — child-priority alerts, OFFICIAL only (public) ─────
+ninez.get('/alertas', async (c) => {
+  const { sites, caps, pop, needs } = await loadData(c.env, true);
+  const cards = assemble(sites, caps, pop, needs);
+  const alertas = deriveNinezAlerts(cards);
+  const counts = alertas.reduce((m: Record<string, number>, a) => ((m[a.severity] = (m[a.severity] ?? 0) + 1), m), {});
+  return c.json({ alertas, counts });
+});
 
 // ── GET /api/ninez/catalog — controlled vocabularies for the UI (public) ───────
 ninez.get('/catalog', (c) => c.json({
