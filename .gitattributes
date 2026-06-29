@@ -1,0 +1,5 @@
+# The CSP hash list is a generated, sorted, one-token-per-line array. Use git's
+# built-in `union` merge so two branches that each add a different inline-script
+# hash keep BOTH sides instead of conflicting. Re-running `node scripts/gen-csp.mjs
+# --write` afterwards re-sorts/dedupes. This kills the recurring rebase conflict.
+src/lib/csp.ts merge=union
