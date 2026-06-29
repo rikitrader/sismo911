@@ -3,6 +3,7 @@ import {
   makeRef, extractRef, stripQuotedReply, isCategory, isPriority, isStatus,
   CATEGORIES, STATUSES, CATEGORY_LABELS,
 } from '../src/lib/support';
+import { inboundEmailEnabled, INBOUND_FLAG } from '../src/routes/support';
 import {
   supportTicketOpenedEmail, supportStaffReplyEmail, supportTicketResolvedEmail,
 } from '../src/lib/email';
@@ -94,5 +95,36 @@ describe('support email templates — threading contract', () => {
     expect(m.subject).toContain(`[#${ref}]`);
     expect(m.subject.toLowerCase()).toContain('resuelto');
     expect(m.text).toContain(ref);
+  });
+});
+
+// Minimal D1 stub: only the feature_flags SELECT the toggle uses.
+function dbWithFlag(row: { enabled: number } | null) {
+  return {
+    prepare(_sql: string) {
+      return {
+        bind() { return this; },
+        async first() { return row; },
+      };
+    },
+  } as any;
+}
+
+describe('inbound-email toggle — persisted + fail-closed', () => {
+  it('module key is the documented flag', () => {
+    expect(INBOUND_FLAG).toBe('support_inbound_email');
+  });
+  it('OFF when no flag row exists (fail-closed default)', async () => {
+    expect(await inboundEmailEnabled({ DB: dbWithFlag(null) } as any)).toBe(false);
+  });
+  it('OFF when the row is explicitly disabled', async () => {
+    expect(await inboundEmailEnabled({ DB: dbWithFlag({ enabled: 0 }) } as any)).toBe(false);
+  });
+  it('ON only when the row is enabled=1', async () => {
+    expect(await inboundEmailEnabled({ DB: dbWithFlag({ enabled: 1 }) } as any)).toBe(true);
+  });
+  it('fail-closed if the query throws', async () => {
+    const env = { DB: { prepare() { return { bind() { return this; }, async first() { throw new Error('db down'); } }; } } } as any;
+    expect(await inboundEmailEnabled(env)).toBe(false);
   });
 });
