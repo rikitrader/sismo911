@@ -496,6 +496,20 @@ adminRbac.get('/security-events', requirePermission('security:read'), async (c) 
   return c.json({ events });
 });
 
+// CSP Report-Only violations captured during the observation window before we drop
+// script-src 'unsafe-inline'. Deduped by signature with a hit count (see migration 0066).
+adminRbac.get('/csp-violations', requirePermission('security:read'), async (c) => {
+  const violations = ((await c.env.DB.prepare(
+    `SELECT sig, document_uri, violated_directive, effective_directive, blocked_uri, source_file,
+            line_no, col_no, script_sample, user_agent, count, first_seen, last_seen
+       FROM csp_reports ORDER BY last_seen DESC LIMIT ?`,
+  ).bind(clampLimit(c)).all()).results ?? []);
+  const totals: any = (await c.env.DB.prepare(
+    `SELECT COUNT(*) AS distinct_violations, COALESCE(SUM(count), 0) AS total_hits FROM csp_reports`,
+  ).first()) ?? { distinct_violations: 0, total_hits: 0 };
+  return c.json({ totals, violations });
+});
+
 adminRbac.get('/login-history', requirePermission('login_history:read'), async (c) => {
   const okParam = c.req.query('ok');
   const where = okParam === '0' || okParam === '1' ? `WHERE ok = ${okParam}` : '';

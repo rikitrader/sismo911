@@ -210,15 +210,31 @@ app.post('/api/csp-report', async (c) => {
   if (limited) return new Response(null, { status: 429 });
   try {
     const body: any = await c.req.json().catch(() => null);
-    const r = body?.['csp-report'] || body?.body || body;
-    if (r && (r['violated-directive'] || r.violatedDirective || r.effectiveDirective)) {
-      console.log('[csp]', JSON.stringify({
-        d: r['violated-directive'] || r.violatedDirective || r.effectiveDirective,
-        blocked: String(r['blocked-uri'] || r.blockedURL || '').slice(0, 200),
-        doc: String(r['document-uri'] || r.documentURL || '').slice(0, 200),
-      }));
+    // Both the legacy `report-uri` shape ({ "csp-report": {...} }) and the newer
+    // Reporting-API `report-to` shape ([{ body: {...} }]) — normalize both.
+    const r = body?.['csp-report'] || body?.body || (Array.isArray(body) ? body[0]?.body : null) || body;
+    const directive = r && (r['violated-directive'] || r.violatedDirective || r.effectiveDirective);
+    if (r && directive) {
+      const doc = String(r['document-uri'] || r.documentURL || '').slice(0, 300);
+      const blocked = String(r['blocked-uri'] || r.blockedURL || '').slice(0, 300);
+      const source = String(r['source-file'] || r.sourceFile || '').slice(0, 300);
+      const line = Number(r['line-number'] ?? r.lineNumber ?? 0) || 0;
+      const col = Number(r['column-number'] ?? r.columnNumber ?? 0) || 0;
+      const eff = String(r['effective-directive'] || r.effectiveDirective || '').slice(0, 100);
+      const sample = String(r['script-sample'] || r.sample || '').slice(0, 200);
+      const disp = String(r.disposition || 'report').slice(0, 20);
+      const ua = String(c.req.header('user-agent') || '').slice(0, 200);
+      const sig = [doc, directive, blocked, source, line, col].join('|').slice(0, 512);
+      const now = Date.now();
+      console.log('[csp]', JSON.stringify({ d: String(directive).slice(0, 80), blocked: blocked.slice(0, 120), doc: doc.slice(0, 120) }));
+      // Persist (dedup by sig, bump count). DB errors must never break reporting.
+      await c.env.DB.prepare(
+        `INSERT INTO csp_reports (sig,document_uri,violated_directive,effective_directive,blocked_uri,source_file,line_no,col_no,script_sample,disposition,user_agent,count,first_seen,last_seen)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?)
+         ON CONFLICT(sig) DO UPDATE SET count = count + 1, last_seen = excluded.last_seen, user_agent = excluded.user_agent`,
+      ).bind(sig, doc, String(directive).slice(0, 100), eff, blocked, source, line, col, sample, disp, ua, now, now).run();
     }
-  } catch { /* ignore malformed report */ }
+  } catch { /* ignore malformed report / pre-migration DB */ }
   return new Response(null, { status: 204 });
 });
 app.get('/api/ready', async (c) => {

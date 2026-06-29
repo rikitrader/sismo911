@@ -79,6 +79,7 @@ run_worker_first = [
   "/admin",
   "/admin/*",
   "/admin-casos",
+  "/admin-csp",
   "/admin-emergencia",
   "/admin-evidencias",
   # These admin shells were served by the edge (bypassing the Worker auth gate)
