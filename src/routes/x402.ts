@@ -337,6 +337,7 @@ x402.all('/pay/:userId/:slug', async (c) => {
         title: 'Pago recibido',
         body: `Recibiste $${amountUsd.toFixed(2)} USDC${res.title ? ` por "${res.title}"` : ''}.`,
         link: '#pagos',
+        email: true,
       });
     }
     if (ps.sec_payment_emails === true && payee?.email) {

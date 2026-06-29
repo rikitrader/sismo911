@@ -49,7 +49,7 @@ async function transition(c: any, id: string, from: string[], to: string, extra:
 // Notify the request owner about a status change (best-effort, never blocks the op).
 async function notifyOwner(c: any, r: { userId: string; amount: number; currency: string }, title: string, body: string) {
   if (!r.userId) return;
-  await notify(c.env, r.userId, { type: 'withdrawal_update', title, body, link: '#retiros' });
+  await notify(c.env, r.userId, { type: 'withdrawal_update', title, body, link: '#retiros', email: true });
 }
 
 // PATCH /:id/approve — pending_review → processing.
