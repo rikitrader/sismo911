@@ -22,7 +22,7 @@ import { oauth } from './routes/oauth';
 import { x402, wellKnownX402 } from './routes/x402';
 import { profile } from './routes/profile';
 import { stepUpGuard } from './lib/stepup';
-import { support, appendInboundReply } from './routes/support';
+import { support, appendInboundReply, inboundEmailEnabled } from './routes/support';
 import { extractRef, stripQuotedReply } from './lib/support';
 import PostalMime from 'postal-mime';
 import { publicProfile } from './routes/public-profile';
@@ -821,6 +821,12 @@ export default {
   // the routing rule's fallback/forward) so this never throws into the queue.
   async email(message: any, env: Env, ctx: ExecutionContext) {
     try {
+      // Persisted, fail-closed gate: inbound threading only runs when an operator
+      // has switched it ON in the Soporte console (migration 0071 seeds it OFF).
+      if (!(await inboundEmailEnabled(env))) {
+        console.warn('[email] inbound disabled (support_inbound_email=off) — ignored');
+        return;
+      }
       const subject = message.headers?.get?.('subject') || '';
       const parsed = await PostalMime.parse(message.raw).catch(() => null);
       const text = parsed?.text || (parsed?.html ? parsed.html.replace(/<[^>]+>/g, ' ') : '') || '';
