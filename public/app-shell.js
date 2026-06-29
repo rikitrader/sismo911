@@ -87,7 +87,24 @@
 
   // Single standardized YELLOW for every yellow nav button (TERREMOTOS, MASCOTAS,
   // REFUGIOS, VOLUNTARIOS, TELEMEDICINA) — one source of truth so they never drift.
-  const NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0', YELLOW = '#f5c518', CTARED = '#d62828';
+  // Citizen palette (default). Operator pages — detected by the presence of the
+  // "Seismic Operations" stylesheet (/ops-theme.css), which ONLY operator pages
+  // link — get a graphite + seismic-amber variant so the global nav matches the
+  // rethemed operator content. Reds (SOS/Reportar/urgent) stay red = critical.
+  // Citizen pages never link ops-theme.css, so they keep navy/gold untouched.
+  // Tokens are read from the live ops-theme :root vars (single source of truth)
+  // with hardcoded fallbacks; the swap happens BEFORE any nav HTML is built.
+  let NAVY = '#00173a', SECONDARY = '#bb0027', VARIANT = '#44474f', LINE = '#c4c6d0', YELLOW = '#f5c518', CTARED = '#d62828';
+  if (document.querySelector('link[href="/ops-theme.css"]')) {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (name, fb) => (cs.getPropertyValue(name).trim() || fb);
+    NAVY = v('--ops-bar-1', '#14171b');          // graphite — solid blocks/brand/burger/avatar (white text, AA)
+    YELLOW = '#f59e0b';                          // light amber — keeps the existing DARK item text at AA (≈7.8:1)
+    SECONDARY = v('--ops-danger', '#dc2626');    // critical actions stay red, unified to the semantic danger
+    CTARED = v('--ops-danger', '#dc2626');
+    VARIANT = v('--ops-muted', '#525258');
+    LINE = v('--ops-border', '#e2e2dd');
+  }
   const path = (location.pathname.replace(/\.html$/, '') || '/');
   const active = (it) => it.m.some((x) => x === '/' ? path === '/' : (path === x || path.startsWith(x + '/')));
 
