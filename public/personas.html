@@ -131,6 +131,16 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
     <span id="pp-cron-val" class="font-mono font-extrabold tabular-nums text-xl sm:text-2xl text-critical">—</span>
   </section>
 
+  <!-- ===== Cronómetro del último sismo: tiempo transcurrido desde el evento más reciente ===== -->
+  <a id="pp-last-quake" href="/terremotos" class="flex items-center gap-3 bg-warning/10 border border-warning/30 rounded-xl p-4 hover:bg-warning/15 transition-colors">
+    <svg class="h-6 w-6 text-warning shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12h4l2 7 4-14 2 7h6"/></svg>
+    <div class="flex-1 min-w-0">
+      <div class="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">Tiempo desde el último sismo registrado</div>
+      <div id="pp-lq-detail" class="text-xs text-on-surface-variant truncate">Cargando último sismo… →</div>
+    </div>
+    <span id="pp-lq-val" class="font-mono font-extrabold tabular-nums text-xl sm:text-2xl text-warning">—</span>
+  </a>
+
   <!-- Buscas a un familiar CTA -->
   <a href="/familia?reportar=1&ref=https%3A%2F%2Fsismo911.com%2Fpersonas" class="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-xl p-3.5 hover:bg-secondary/15 transition-colors">
     <span class="text-2xl shrink-0">🔎</span>
@@ -209,6 +219,24 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch
 // Live cronómetro anchored to the canonical quake origin (quake-clock.js) — same
 // clock as the Alerta Roja banner on /terremotos, so both pages agree exactly.
 (function(){const el=document.getElementById('pp-cron-val');if(el&&window.sismoTick)window.sismoTick(p=>el.textContent=p.clock);})();
+// Live cronómetro anchored to the MOST RECENT earthquake (USGS feed) — timestamp
+// + seconds elapsed since the latest sismo. Links to /terremotos for the full list.
+(function(){
+  const val=document.getElementById('pp-lq-val'),det=document.getElementById('pp-lq-detail');
+  if(!val||!det||!window.sismoTick)return;
+  let stop=null;
+  fetch('/api/events?limit=1').then(r=>r.json()).then(d=>{
+    const ev=(d&&d.events&&d.events[0])||null;
+    if(!ev||!ev.time_ms){det.textContent='Sin datos de sismos recientes →';val.textContent='—';return;}
+    const place=ev.place_es||ev.place||'Sismo';
+    const mag=(ev.mag!=null)?('M'+Number(ev.mag).toFixed(1)+' · '):'';
+    const ts=new Date(Number(ev.time_ms)).toLocaleString('es-VE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});
+    det.textContent=mag+place+' — '+ts+' →';
+    det.title=mag+place+' · '+new Date(Number(ev.time_ms)).toLocaleString('es-VE');
+    if(stop)stop();
+    stop=window.sismoTick(p=>val.textContent=p.clock,Number(ev.time_ms));
+  }).catch(()=>{det.textContent='No se pudo cargar el último sismo →';val.textContent='—';});
+})();
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=id=>document.getElementById(id);
 const ST={missing:['Buscada','#c8102e'],found_safe:['A salvo','#1f8a4c'],aparecido:['Apareció','#1f8a4c'],hospitalizado:['Hospitalizada','#1d4ed8'],found_deceased:['Fallecida','#5a5f6a'],unknown:['Sin datos','#7a8096']};
