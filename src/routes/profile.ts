@@ -6,6 +6,7 @@ import { uid } from '../lib/db';
 import { markStepUpConfirmed, enforceStepUp } from '../lib/stepup';
 import { x402Network, x402Asset } from '../lib/x402';
 import { scanFile } from '../security/file-scan';
+import { stripImageMetadata } from '../security/image-metadata';
 import { notify } from '../lib/notify';
 import {
   WITHDRAWAL_METHODS, type WithdrawalMethod, computeBalance, withdrawnLast24h,
@@ -261,11 +262,15 @@ profile.post('/avatar', async (c) => {
   const scan = await scanFile(bytes, { maxSize: AVATAR_MAX_BYTES, declaredMime, filename, allowSvg: false });
   if (!scan.ok) return c.json({ error: 'invalid_image', reason: scan.reason }, 400);
 
+  // Strip EXIF/GPS/XMP/IPTC/text metadata before storing — the photo is public,
+  // so it must never leak the uploader's location, device, or timestamps.
+  const clean = stripImageMetadata(bytes, scan.detectedType);
+
   const contentType = `image/${scan.detectedType}`;
   const key = `avatar:${me.id}`;
-  await c.env.PHOTOS.put(key, bytes, { metadata: { contentType } });
+  await c.env.PHOTOS.put(key, clean, { metadata: { contentType } });
   await c.env.DB.prepare(`UPDATE users SET avatar_r2 = ? WHERE id = ?`).bind(key, me.id).run();
-  await audit(c, 'profile.avatar.upload', { type: scan.detectedType, size: scan.size });
+  await audit(c, 'profile.avatar.upload', { type: scan.detectedType, size: clean.length });
 
   // Cache-bust the public avatar URL so the new image shows immediately.
   return c.json({ ok: true, avatar_url: `/api/u/${encodeURIComponent(me.id)}/avatar?v=${Date.now()}` });
