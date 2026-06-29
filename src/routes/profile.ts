@@ -19,6 +19,12 @@ import {
 export const profile = new Hono<{ Bindings: Env }>();
 
 const LANGS = ['es', 'en', 'pt'];
+// Handles that must never be taken as a vanity username (collide with routes/brand).
+const RESERVED_HANDLES = new Set([
+  'admin', 'administrador', 'api', 'app', 'sismo911', 'sismo', 'soporte', 'support',
+  'cuenta', 'login', 'logout', 'registro', 'register', 'u', 'me', 'profile', 'perfil',
+  'pagos', 'pay', 'wallet', 'console', 'operaciones', 'null', 'undefined', 'root', 'sistema',
+]);
 const str = (v: unknown, max: number) =>
   v == null ? null : String(v).trim().slice(0, max) || null;
 
@@ -32,7 +38,7 @@ profile.get('/me', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
   const u: any = await c.env.DB.prepare(
-    `SELECT id, email, name, role, rank, unit, phone, country, city, language,
+    `SELECT id, email, name, role, rank, unit, phone, country, city, language, username,
             wallet_address, wallet_chain, wallet_created_ms,
             x402_enabled, x402_pay_to, x402_network, x402_asset, x402_enabled_ms,
             settings_json, created_ms, last_login_ms, avatar_r2
@@ -54,6 +60,7 @@ profile.get('/me', async (c) => {
     ok: true,
     profile: {
       id: u.id, email: u.email, name: u.name, role: u.role,
+      username: u.username ?? null,
       rank: u.rank ?? null, unit: u.unit ?? null,
       phone: u.phone ?? null, country: u.country ?? null, city: u.city ?? null,
       language: u.language ?? 'es',
@@ -109,13 +116,33 @@ profile.patch('/me', async (c) => {
     if (lang && !LANGS.includes(lang)) return c.json({ error: 'language_invalid' }, 400);
     sets.push('language = ?'); vals.push(lang ?? 'es');
   }
+  if (b.username !== undefined) {
+    const raw = str(b.username, 30);
+    if (raw) {
+      const un = raw.toLowerCase();
+      if (!/^[a-z0-9](?:[a-z0-9_-]{1,28}[a-z0-9])$/.test(un))
+        return c.json({ error: 'username_invalid', detail: '3–30 caracteres: letras, números, guion o guion bajo; empieza y termina en letra/número' }, 400);
+      if (RESERVED_HANDLES.has(un)) return c.json({ error: 'username_reserved' }, 409);
+      const taken: any = await c.env.DB.prepare(`SELECT id FROM users WHERE username = ? AND id != ?`).bind(un, me.id).first();
+      if (taken) return c.json({ error: 'username_taken' }, 409);
+      sets.push('username = ?'); vals.push(un);
+    } else {
+      sets.push('username = ?'); vals.push(null); // clear the handle
+    }
+  }
   if (!sets.length) return c.json({ error: 'nothing_to_update' }, 400);
   vals.push(me.id);
-  await c.env.DB.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();
+  try {
+    await c.env.DB.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();
+  } catch (e: any) {
+    // Unique-index race on username → surface as taken rather than a 500.
+    if (String(e?.message || '').includes('UNIQUE')) return c.json({ error: 'username_taken' }, 409);
+    throw e;
+  }
   await audit(c, 'profile.update', { fields: sets.map((s) => s.split(' ')[0]) });
 
   const u: any = await c.env.DB.prepare(
-    `SELECT name, phone, country, city, language FROM users WHERE id = ?`
+    `SELECT name, phone, country, city, language, username FROM users WHERE id = ?`
   ).bind(me.id).first();
   return c.json({ ok: true, profile: u });
 });
