@@ -56,6 +56,10 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   // Profile Command Center — every endpoint self-authenticates via
   // getUserFromRequest and is scoped to the caller's own user id (like /api/x402).
   '/api/profile',
+  // Transactional-email preview/test — the public GET /preview index is harmless
+  // metadata; the render + send routes self-gate on the NOTIFY_TOKEN secret
+  // inside the handler (like /api/blog/run). Global gate just lets them reach it.
+  '/api/notify',
 ];
 
 /** True if `path` is on the public /api allow-list (prefix match on a path segment). */

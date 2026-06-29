@@ -88,6 +88,9 @@ export interface Env {
     reply_to?: { email: string; name?: string };
   }): Promise<unknown> };
   EMAIL_FROM?: string;
+  // Gates the transactional-email preview/test route (/api/notify) — set as a
+  // Worker secret (wrangler secret put NOTIFY_TOKEN). Absent ⇒ route disabled.
+  NOTIFY_TOKEN?: string;
   // Twilio text messaging (SMS + WhatsApp) for appointment confirmations/reminders.
   // Optional: when absent, text sends no-op gracefully (see src/lib/sms.ts).
   TWILIO_ACCOUNT_SID?: string;
