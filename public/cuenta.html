@@ -1457,6 +1457,21 @@ html body { padding-left:0 !important; padding-top:0 !important; }
 .sup-msg-via { font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; opacity:.7; margin-left:6px; }
 .sup-reply { border-top:1px solid var(--border); padding-top:14px; }
 .sup-closed-note { border-top:1px solid var(--border); padding-top:14px; color:var(--muted); font-size:.82rem; text-align:center; }
+
+/* ── Print → PDF for the Contabilidad ledger ─────────────────────────────── */
+@media print {
+  body.printing-ledger .ac-side,
+  body.printing-ledger .ac-top,
+  body.printing-ledger .hero-card,
+  body.printing-ledger .ac-cta,
+  body.printing-ledger .ac-pop,
+  body.printing-ledger .panel:not([data-panel="contabilidad"]) { display:none !important; }
+  body.printing-ledger { background:#fff !important; }
+  body.printing-ledger .ac-shell,
+  body.printing-ledger .ac-main { display:block !important; }
+  body.printing-ledger .ac-content { max-width:none !important; padding:0 !important; }
+  body.printing-ledger .panel[data-panel="contabilidad"] { display:block !important; }
+}
 </style>
 </head>
 <body>
@@ -4144,7 +4159,15 @@ async function loadLedger() {
     const pdfBtn = document.getElementById('acct-pdf-btn');
     if (pdfBtn && !pdfBtn._wired) {
       pdfBtn._wired = true;
-      pdfBtn.addEventListener('click', () => toast('Exportación PDF — próximamente'));
+      pdfBtn.addEventListener('click', () => {
+        /* Real export: the print stylesheet isolates the Contabilidad panel, and
+           the browser's print dialog lets the user "Guardar como PDF". */
+        if (!document.querySelector('.side-link[data-tab="contabilidad"].active')) switchTab('contabilidad');
+        document.body.classList.add('printing-ledger');
+        const done = () => { document.body.classList.remove('printing-ledger'); window.removeEventListener('afterprint', done); };
+        window.addEventListener('afterprint', done);
+        setTimeout(() => window.print(), 60);
+      });
     }
   } catch(e) {
     document.getElementById('acct-kpi-skeleton').style.display = 'none';
