@@ -19,6 +19,7 @@ import { SessionsPage } from './pages/Sessions';
 import { OrganizationPage } from './pages/Organization';
 import { FeatureFlagsPage } from './pages/FeatureFlags';
 import { SecurityPage } from './pages/Security';
+import { SupportInboxPage } from './pages/SupportInbox';
 import { rbac } from './api';
 
 const COLLAPSE_KEY = 'sismo-admin-nav-collapsed';
@@ -36,6 +37,7 @@ function PageRouter({ route }: { route: string }) {
     case 'login-history': return <LoginHistoryPage />;
     case 'sessions': return <SessionsPage />;
     case 'security': return <SecurityPage />;
+    case 'support': return <SupportInboxPage />;
     case 'dashboard':
     default: return <DashboardPage />;
   }

@@ -21,6 +21,9 @@ import { auth } from './routes/auth';
 import { oauth } from './routes/oauth';
 import { x402, wellKnownX402 } from './routes/x402';
 import { profile } from './routes/profile';
+import { support, appendInboundReply } from './routes/support';
+import { extractRef, stripQuotedReply } from './lib/support';
+import PostalMime from 'postal-mime';
 import { publicProfile } from './routes/public-profile';
 import { familia } from './routes/familia';
 import { voluntarios } from './routes/voluntarios';
@@ -333,6 +336,7 @@ app.route('/api/auth', auth);
 app.route('/api/auth/oauth', oauth); // social login (Google OAuth) — public; under the /api/auth allowlist
 app.route('/api/x402', x402);        // x402 payment receiving: per-user wallet accepts USDC over HTTP (verify+settle via facilitator)
 app.route('/api/profile', profile);  // Profile Command Center: self-scoped profile/wallet/payments/accounting/withdrawals
+app.route('/api/support', support);   // Support ticket inbox ("Soporte"): citizen self-scoped + /admin/* ops:console-gated; inbound email threaded via email()
 app.route('/api/u', publicProfile);   // Public payment profile (behind a citizen's "Enlace público"): name + active links + avatar. Public, no PII.
 // x402 service discovery (public). Agents/clients read this to learn the network + pay-URL template.
 // Fix 1: when payments are not LIVE, 503 instead of advertising a protocol we can't settle.
@@ -760,5 +764,23 @@ export default {
   // exhausting the subrequest ceiling and starving the jobs at the tail.
   async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(runCronGroup(event.cron, env));
+  },
+  // Inbound email → support inbox. Cloudflare Email Routing forwards messages
+  // sent to the support address (e.g. soporte@sismo911.com) here. We pull the
+  // ticket ref from the subject, strip the quoted history, and append the
+  // citizen's reply to the matching ticket. Unmatched mail is ignored (left for
+  // the routing rule's fallback/forward) so this never throws into the queue.
+  async email(message: any, env: Env, ctx: ExecutionContext) {
+    try {
+      const subject = message.headers?.get?.('subject') || '';
+      const parsed = await PostalMime.parse(message.raw).catch(() => null);
+      const text = parsed?.text || (parsed?.html ? parsed.html.replace(/<[^>]+>/g, ' ') : '') || '';
+      const ref = extractRef(subject, parsed?.subject, text);
+      const body = stripQuotedReply(text);
+      const fromEmail = String(message.from || parsed?.from?.address || '').toLowerCase();
+      await appendInboundReply(env, { ref, fromEmail, body });
+    } catch (e: any) {
+      console.error('[email] inbound handler failed:', e?.message ?? e);
+    }
   },
 };

@@ -13,6 +13,7 @@ export const NAV: NavItem[] = [
   { id: 'users', label: 'Usuarios', icon: 'users', desc: 'Gestionar usuarios y accesos' },
   { id: 'invitations', label: 'Invitaciones', icon: 'mail', desc: 'Invitar usuarios por correo, SMS o QR' },
   { id: 'approvals', label: 'Aprobaciones', icon: 'userCheck', desc: 'Aprobar o rechazar usuarios pendientes' },
+  { id: 'support', label: 'Soporte', icon: 'inbox', desc: 'Tickets de soporte de los ciudadanos' },
   { id: 'roles', label: 'Roles', icon: 'roles', desc: 'Roles y herencia de permisos' },
   { id: 'permissions', label: 'Permisos', icon: 'permissions', desc: 'Catálogo de permisos' },
   { id: 'organization', label: 'Organización', icon: 'org', desc: 'Organizaciones, departamentos y equipos' },
