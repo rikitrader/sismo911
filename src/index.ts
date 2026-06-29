@@ -21,6 +21,7 @@ import { auth } from './routes/auth';
 import { oauth } from './routes/oauth';
 import { x402, wellKnownX402 } from './routes/x402';
 import { profile } from './routes/profile';
+import { stepUpGuard } from './lib/stepup';
 import { support, appendInboundReply } from './routes/support';
 import { extractRef, stripQuotedReply } from './lib/support';
 import PostalMime from 'postal-mime';
@@ -380,6 +381,12 @@ app.route('/api/acopio', acopio);    // /api/acopio/status — live status for a
 app.route('/api/acopio', logistica); // /api/acopio/{inventory,needs,shipments,match,dashboard} — FEMA-style logistics (GET public, writes operator-gated)
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
 app.route('/api/admin/withdrawals', adminWithdrawals); // operator review of payout requests (ops:console)
+// Step-up for the WHOLE /api/rbac/* admin surface in ONE place (all sub-apps share
+// this prefix, so a per-sub-app guard would gate cross-sub-app paths). The acting
+// admin must re-confirm their password for any RBAC mutation when they enabled
+// sec_require_login — EXCEPT emergency lock (/lock), kept break-glass-fast. Mounted
+// BEFORE the sub-apps so it runs for every matched route under the prefix.
+app.use('/api/rbac/*', stepUpGuard({ exclude: (p) => p.endsWith('/lock') }));
 app.route('/api/rbac', adminLifecycle); // Phase 2 W2: invitations/approvals/temp-roles — MOUNTED FIRST so its richer /invitations handlers win over adminRbac's
 app.route('/api/rbac', adminRbac);   // enterprise RBAC admin API (users/roles/permissions/audit/dashboard) — each route self-gates via requirePermission
 app.route('/api/rbac', adminSessions); // Phase 2: TOTP MFA + session mgmt + emergency lock
