@@ -435,6 +435,10 @@ app.get('/flota/track', (c) => c.env.ASSETS.fetch(new Request(new URL('/flota-tr
 
 // Refugios & Evacuación dashboard (public): map + scoring + assignment + logistics.
 app.get('/refugios', (c) => c.env.ASSETS.fetch(new Request(new URL('/refugios.html', c.req.url))));
+// Niñez y Protección (public): official-only aggregated child/vulnerable shelter data.
+app.get('/ninez', (c) => c.env.ASSETS.fetch(new Request(new URL('/ninez.html', c.req.url))));
+// Niñez operator editor (gated as an /admin page → login redirect; writes need ninez:manage).
+app.get('/admin-ninez', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin-ninez.html', c.req.url))));
 
 // Víctimas y Fallecidos dashboard (public): multi-source casualty ledger with a
 // RED-ALERT banner, per-source figures, computed range, confidence + citations.

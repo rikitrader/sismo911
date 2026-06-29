@@ -54,6 +54,7 @@
       { label: 'Centros de Acopio', href: '/acopio', m: ['/acopio'], d: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12' },
       { label: 'Comando Logístico', href: '/logistica', m: ['/logistica'], d: 'M3 13h2l2 5h10l2-5h2M5 13V7a2 2 0 012-2h7l4 4v4M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z' },
       { label: 'Refugios y Evacuación', href: '/refugios', m: ['/refugios', '/refugios.html'], d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
+      { label: 'Niñez y Protección', href: '/ninez', m: ['/ninez', '/ninez.html'], d: 'M12 11a3 3 0 100-6 3 3 0 000 6zm0 0c-3 0-5 2-5 5v3h10v-3c0-3-2-5-5-5zM5 8a2 2 0 100-4M19 8a2 2 0 100-4' },
       { label: 'Suministros Médicos', href: '/suministros-medicos', m: ['/suministros-medicos'], d: 'M12 8v8m-4-4h8M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2z' },
       { label: 'Telemedicina', href: '/telemedicina', m: ['/telemedicina'], d: 'M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M4 6h9a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z' },
       { label: 'Panel de Suministros', href: '/suministros-dashboard', m: ['/suministros-dashboard'], d: 'M3 3v18h18M7 16V10m5 6V6m5 10v-3' },

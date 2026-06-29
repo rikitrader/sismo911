@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Niñez — Editor operativo | SISMO911</title>
+<meta name="robots" content="noindex,nofollow" />
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<meta name="theme-color" content="#14171b" />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/app.css" />
+<link rel="stylesheet" href="/ops-theme.css" />
+<style>
+  body{background:var(--ops-bg);color:var(--ops-text);font-family:Inter,system-ui,sans-serif;margin:0}
+  main{max-width:980px;margin:0 auto;padding:18px 16px 60px}
+  .eyebrow{font:800 11px var(--ops-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ops-accent)}
+  h1{font:900 26px 'Public Sans';margin:4px 0 6px;color:var(--ops-text)}
+  h2{font:800 16px 'Public Sans';color:var(--ops-text);margin:0 0 10px}
+  .lede{color:var(--ops-muted);font-size:13.5px;line-height:1.5;max-width:720px}
+  .card{background:var(--ops-panel);border:1px solid var(--ops-border);border-radius:12px;padding:16px;margin-bottom:14px}
+  label{display:block;font:800 11px var(--ops-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ops-muted);margin-bottom:4px}
+  input,select{width:100%;border:1px solid var(--ops-border-strong);border-radius:8px;padding:8px 10px;font-size:14px;background:var(--ops-panel);color:var(--ops-text)}
+  .row{display:grid;gap:10px;margin-bottom:10px}
+  .btn{font:800 12px 'Public Sans';border-radius:8px;padding:9px 16px;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;border:1px solid transparent;background:var(--ops-accent-soft);color:var(--ops-accent-fg)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .chk{display:flex;align-items:center;gap:8px}
+  .chk input{width:auto}
+  .msg{font-size:12.5px;border-radius:8px;padding:8px 11px;margin-top:8px}
+  .msg.ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
+  .msg.err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+  .note{font-size:12.5px;color:var(--ops-warn);background:var(--ops-warn-bg);border:1px solid var(--ops-accent-soft);border-radius:8px;padding:9px 12px;line-height:1.5}
+  .cur{font-size:12.5px;color:var(--ops-muted)}
+  .pill{display:inline-block;font:700 11px 'Public Sans';padding:2px 8px;border-radius:9999px;background:var(--ops-panel-2);border:1px solid var(--ops-border);margin:2px 3px 0 0}
+</style>
+</head>
+<body>
+<header style="background:linear-gradient(180deg,var(--ops-bar-1),var(--ops-bar-2));color:var(--ops-bar-fg)">
+  <div style="max-width:980px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px">
+    <a href="/" style="display:flex;align-items:center;gap:8px;color:var(--ops-bar-fg);text-decoration:none;font:800 15px 'Public Sans'"><img src="/logo.svg" alt="" style="width:28px;height:28px"> SISMO911 · Operaciones</a>
+  </div>
+</header>
+
+<main>
+  <div class="eyebrow">Niñez y Poblaciones Vulnerables · Editor</div>
+  <h1>Registro oficial de atención a la niñez</h1>
+  <p class="lede">Registra, por refugio, la <b>capacidad de atención infantil/vulnerable</b>, el <b>número agregado de menores</b> atendidos y las <b>necesidades prioritarias</b>. Marca "Oficial" solo cuando la autoridad competente lo autorice — solo los datos oficiales se muestran al público.</p>
+  <div class="note" style="margin:12px 0">⚠️ Registra <b>cifras agregadas</b> (p. ej. "30 menores de 0-5"). <b>Nunca</b> ingreses nombres, cédulas, fotos ni direcciones de un menor en este formulario.</div>
+
+  <div class="card">
+    <label for="site">Refugio</label>
+    <select id="site"><option value="">— Selecciona un refugio —</option></select>
+    <div class="cur" id="curData" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Capacidad de atención</h2>
+    <div class="row" style="grid-template-columns:1fr 90px">
+      <select id="capKey"></select>
+      <input type="number" id="capValue" value="1" min="0" title="Valor (0/1 o cantidad)" />
+    </div>
+    <div class="chk" style="margin-bottom:10px"><input type="checkbox" id="capOfficial" /><label for="capOfficial" style="margin:0">Oficial (autorizado)</label></div>
+    <div class="row" style="grid-template-columns:1fr 120px"><input type="text" id="capSource" placeholder="Fuente (ej. PCNGRD)" /><button class="btn" id="capSave">Guardar</button></div>
+    <div id="capMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Población infantil (agregada)</h2>
+    <div class="row" style="grid-template-columns:1fr 110px"><select id="popKey"></select><input type="number" id="popCount" value="0" min="0" placeholder="Cantidad" /></div>
+    <div class="chk" style="margin-bottom:10px"><input type="checkbox" id="popOfficial" /><label for="popOfficial" style="margin:0">Oficial (autorizado)</label></div>
+    <div class="row" style="grid-template-columns:1fr 120px"><input type="text" id="popSource" placeholder="Fuente" /><button class="btn" id="popSave">Registrar</button></div>
+    <div id="popMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Necesidad prioritaria</h2>
+    <div class="row" style="grid-template-columns:1fr 1fr"><select id="needKey"></select><select id="needStatus"></select></div>
+    <div class="row" style="grid-template-columns:1fr 1fr 90px"><input type="number" id="needReq" placeholder="Requerido (cant.)" /><input type="number" id="needRec" placeholder="Recibido (cant.)" /><input type="text" id="needUnit" placeholder="Unidad" /></div>
+    <div class="chk" style="margin-bottom:10px"><input type="checkbox" id="needOfficial" /><label for="needOfficial" style="margin:0">Oficial (autorizado)</label></div>
+    <div class="row" style="grid-template-columns:1fr 120px"><input type="text" id="needSource" placeholder="Fuente" /><button class="btn" id="needSave">Registrar</button></div>
+    <div id="needMsg"></div>
+  </div>
+</main>
+
+<script src="/app-shell.js" defer></script>
+<script>
+const CAP_LABEL = {recien_nacido:'Recién nacidos',lactante:'Lactantes',nino_pequeno:'Niños pequeños',escolar:'Edad escolar',adolescente:'Adolescentes',discapacidad_infantil:'Niños con discapacidad',cronico_infantil:'Niños con enfermedad crónica',medico_especializado:'Atención médica especializada',espacio_lactancia:'Espacio de lactancia',personal_infantil:'Personal especializado en niñez',discapacidad:'Personas con discapacidad',movilidad_reducida:'Movilidad reducida',adulto_mayor:'Adultos mayores',embarazada:'Embarazadas',familia_ninos:'Familias con niños',cronico:'Enfermedad crónica',mascotas:'Admite mascotas'};
+const NEED_LABEL = {agua:'Agua potable',formula_lactante:'Fórmula para lactantes',panales:'Pañales',ropa:'Ropa',mantas:'Mantas',medicamento_pediatrico:'Medicamentos pediátricos',atencion_medica:'Atención médica',atencion_psicologica:'Atención psicológica',vacunas:'Vacunas',kit_higiene:'Kits de higiene',leche:'Leche',alimento_especial:'Alimentos especiales',alimento_infantil:'Alimentos infantiles'};
+const POP_LABEL = {menores_0_5:'0 a 5 años',menores_6_15:'6 a 15 años',menores_16_17:'16 a 17 años',recien_nacidos:'Recién nacidos',lactantes:'Lactantes',embarazadas:'Embarazadas',adultos_mayores:'Adultos mayores',discapacidad:'Discapacidad',total:'Total'};
+const esc = (s)=>(s||'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (n)=>(n==null?'—':Number(n).toLocaleString('es-VE'));
+const opt = (v,label,sel)=>`<option value="${v}"${sel?' selected':''}>${esc(label)}</option>`;
+function fillSelect(id, keys, labels){ document.getElementById(id).innerHTML = keys.map(k=>opt(k, labels[k]||k)).join(''); }
+function msg(id,ok,text){ document.getElementById(id).innerHTML = `<div class="msg ${ok?'ok':'err'}">${esc(text)}</div>`; }
+function siteId(){ return document.getElementById('site').value; }
+
+async function loadCatalog(){
+  const cat = await fetch('/api/ninez/catalog').then(r=>r.json());
+  fillSelect('capKey', cat.capabilities, CAP_LABEL);
+  fillSelect('popKey', cat.population, POP_LABEL);
+  fillSelect('needKey', cat.needs, NEED_LABEL);
+  document.getElementById('needStatus').innerHTML = cat.need_status.map(s=>opt(s, s)).join('');
+}
+async function loadSites(){
+  const r = await fetch('/api/refugios').then(r=>r.json()).catch(()=>({sites:[]}));
+  const sel = document.getElementById('site');
+  (r.sites||[]).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'')).forEach(s=>{
+    const o=document.createElement('option'); o.value=s.id; o.textContent=`${s.nombre} (${s.parroquia||''})`; sel.appendChild(o);
+  });
+}
+async function showCurrent(){
+  const id = siteId(); const host = document.getElementById('curData');
+  if(!id){ host.textContent=''; return; }
+  const r = await fetch('/api/ninez/admin/refugios').then(r=>r.json()).catch(()=>({refugios:[]}));
+  const card = (r.refugios||[]).find(x=>x.id===id);
+  if(!card){ host.innerHTML = '<span style="color:var(--ops-muted)">Sin datos de niñez registrados para este refugio.</span>'; return; }
+  const caps=(card.capabilities||[]).map(c=>`<span class="pill">${esc(CAP_LABEL[c.capability_key]||c.capability_key)}${c.official?' ✓':' (est.)'}</span>`).join('');
+  const pops=(card.population||[]).map(p=>`<span class="pill">${fmt(p.count)} ${esc(POP_LABEL[p.category_key]||p.category_key)}${p.official?' ✓':' (est.)'}</span>`).join('');
+  const needs=(card.needs||[]).map(n=>`<span class="pill">${esc(NEED_LABEL[n.need_key]||n.need_key)}: ${esc(n.status)}${n.official?' ✓':' (est.)'}</span>`).join('');
+  host.innerHTML = `<b>Registrado:</b><br>${caps||'<i>sin capacidades</i>'}<br>${pops||'<i>sin población</i>'}<br>${needs||'<i>sin necesidades</i>'}`;
+}
+
+async function post(path, body, msgId){
+  const id = siteId();
+  if(!id){ msg(msgId,false,'Selecciona un refugio primero.'); return; }
+  const r = await fetch(path.replace(':id',id), {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(r.status===401||r.status===403){ msg(msgId,false,'Sin permiso (requiere iniciar sesión con ninez:manage).'); return; }
+  const j = await r.json().catch(()=>({}));
+  if(r.ok){ msg(msgId,true,'Guardado.'); showCurrent(); } else { msg(msgId,false,'Error: '+(j.error||r.status)); }
+}
+
+document.getElementById('site').onchange = showCurrent;
+document.getElementById('capSave').onclick = ()=>post('/api/ninez/refugios/:id/capability',
+  {capability_key:capKey.value, value:+capValue.value, official:capOfficial.checked?1:0, source:capSource.value}, 'capMsg');
+document.getElementById('popSave').onclick = ()=>post('/api/ninez/refugios/:id/population',
+  {category_key:popKey.value, count:+popCount.value, official:popOfficial.checked?1:0, source:popSource.value}, 'popMsg');
+document.getElementById('needSave').onclick = ()=>post('/api/ninez/refugios/:id/need',
+  {need_key:needKey.value, status:needStatus.value, qty_required:needReq.value?+needReq.value:null, qty_received:needRec.value?+needRec.value:null, unit:needUnit.value||null, official:needOfficial.checked?1:0, source:needSource.value}, 'needMsg');
+
+Promise.all([loadCatalog(), loadSites()]);
+</script>
+</body>
+</html>
