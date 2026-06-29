@@ -32,6 +32,7 @@ import { telemedicina } from './routes/telemedicina';
 import { telemedScheduling } from './routes/telemedicina-scheduling';
 import { damageMap } from './routes/damage-map';
 import { reports } from './routes/reports';
+import { impact } from './routes/impact';
 import { notify } from './routes/notify';
 import { chat } from './routes/chat';
 import { acopio } from './routes/acopio';
@@ -373,6 +374,7 @@ app.route('/api/triage', triage);     // AI intake: free-text message → desapa
 app.route('/api/damage', damage);
 app.route('/api/sat', satellite);    // satellite/GIS damage analysis (imagery proxy + Workers AI vision)
 app.route('/api/reports', reports);  // citizen damage-report map + comments + reactions + moderation
+app.route('/api/impact', impact);    // public, auditable impact metrics (personas ayudadas) — counts only, no PII
 app.route('/api/notify', notify);    // transactional-email catalog preview + token-gated send test (NOTIFY_TOKEN)
 app.route('/api/chat', chat);        // community channel
 app.route('/api/layers', layers);    // COP layers catalog + public GeoJSON layers
