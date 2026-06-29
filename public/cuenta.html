@@ -2188,9 +2188,9 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
               <label class="form-label" for="pl-f-kind">Proveedor</label>
               <select class="form-control" id="pl-f-kind">
                 <option value="x402">x402 · USDC (en vivo)</option>
-                <option value="donation">Donación</option>
+                <option value="donation">Donación · USDC</option>
+                <option value="invoice">Factura</option>
                 <option value="stripe" disabled>Stripe (próximamente)</option>
-                <option value="invoice" disabled>Factura manual (próximamente)</option>
               </select>
             </div>
           </div>
@@ -2217,6 +2217,56 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
                       placeholder="Descripción del enlace de pago"
                       style="resize:vertical;min-height:66px;"></textarea>
           </div>
+
+          <!-- Donation campaign fields (shown only when Proveedor = Donación) -->
+          <div id="pl-don-fields" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
+            <div class="form-helper" style="margin-bottom:10px;">Deja el monto en <b>0</b> para que el donante elija cuánto dar (monto abierto).</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="pl-f-goal">Meta de recaudación (opcional)</label>
+                <input class="form-control" id="pl-f-goal" type="number" min="0" step="1" placeholder="ej. 1000">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pl-f-blurb">Historia de la campaña (opcional)</label>
+              <textarea class="form-control" id="pl-f-blurb" rows="2"
+                        placeholder="Cuenta para qué es la donación y por qué importa."
+                        style="resize:vertical;min-height:60px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pl-f-image">Imagen de portada (URL, opcional)</label>
+              <input class="form-control" id="pl-f-image" type="url" placeholder="https://…/foto.jpg">
+            </div>
+            <div class="toggle-row" style="padding:8px 0;">
+              <div class="toggle-label-wrap">
+                <div class="toggle-label-title">Página de campaña pública</div>
+                <div class="toggle-label-desc">Muestra una página /campana con barra de progreso.</div>
+              </div>
+              <label class="switch" aria-label="Campaña pública">
+                <input type="checkbox" id="pl-f-campaign-public" checked role="switch" aria-checked="true">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Invoice fields (shown only when Proveedor = Factura) -->
+          <div id="pl-inv-fields" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="pl-f-client">Cliente</label>
+                <input class="form-control" id="pl-f-client" type="text" placeholder="Nombre del cliente">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="pl-f-client-email">Correo del cliente (opcional)</label>
+                <input class="form-control" id="pl-f-client-email" type="email" placeholder="cliente@correo.com">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pl-f-due">Vence (opcional)</label>
+              <input class="form-control" id="pl-f-due" type="date">
+            </div>
+          </div>
+
           <div class="toggle-row" style="padding:10px 0;border-top:1px solid var(--border);margin-top:4px;">
             <div class="toggle-label-wrap">
               <div class="toggle-label-title">Activo</div>
@@ -3491,15 +3541,15 @@ function slugify(text) {
 const KIND_CFG = {
   x402:     { label:'x402 · USDC', cls:'pl-kind-x402',    live:true  },
   donation: { label:'Donación',    cls:'pl-kind-donation', live:true  },
+  invoice:  { label:'Factura',     cls:'pl-kind-invoice',  live:true  },
   stripe:   { label:'Stripe',      cls:'pl-kind-stripe',   live:false },
-  invoice:  { label:'Factura',     cls:'pl-kind-invoice',  live:false },
 };
 
 const SECTION_ORDER = [
   { kind:'x402',     title:'x402 · USDC' },
   { kind:'donation', title:'Donaciones'   },
-  { kind:'stripe',   title:'Stripe'       },
   { kind:'invoice',  title:'Facturas'     },
+  { kind:'stripe',   title:'Stripe'       },
 ];
 
 /* ── Load payment links ──────────────────────────────────────────────────── */
@@ -3583,9 +3633,50 @@ function renderPagosLinks() {
 function renderLinkCard(link) {
   const kind = link.kind || 'x402';
   const cfg  = KIND_CFG[kind] || KIND_CFG.x402;
-  const hUrl = !!link.payUrl;
+  const shareUrl = link.checkoutUrl || link.payUrl;
+  const hUrl = !!shareUrl;
   const act  = !!link.active;
   const paid = Number(link.paid_count) || 0;
+  const isDonation = kind === 'donation';
+  const isInvoice  = kind === 'invoice';
+  const openAmount = isDonation && (Number(link.price_usd) || 0) === 0;
+
+  // Price line: donations with open amount show "Monto abierto"; others show price.
+  const priceLine = openAmount
+    ? `<div class="pl-price" style="font-size:1rem;">Monto abierto
+        <span style="font-size:.75rem;font-weight:500;color:var(--muted);">el donante elige</span></div>`
+    : `<div class="pl-price">${fmtUSD(link.price_usd || 0)}
+        <span style="font-size:.75rem;font-weight:500;color:var(--muted);">${esc(link.currency || 'USDC')}</span></div>`;
+
+  // Donation campaign progress bar.
+  let campaignBlock = '';
+  if (isDonation && link.goal_usd) {
+    const pct = link.progress_pct != null ? link.progress_pct : 0;
+    campaignBlock = `
+      <div style="margin:10px 0 4px;">
+        <div style="height:8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--border);overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--brand-2),var(--success));border-radius:99px;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.78rem;margin-top:5px;color:var(--muted);">
+          <strong style="color:var(--text);">${fmtUSD(link.raised_usd || 0)}</strong>
+          <span>meta ${fmtUSD(link.goal_usd)} · ${pct}%</span>
+        </div>
+      </div>`;
+  }
+
+  // Invoice client + status badge.
+  let invoiceBlock = '';
+  if (isInvoice) {
+    const st = link.invoice_status || 'pendiente';
+    const stColor = st === 'pagada' ? 'var(--success)' : st === 'cancelada' ? 'var(--muted)' : 'var(--warning)';
+    const stLabel = st === 'pagada' ? '✓ Pagada' : st === 'cancelada' ? 'Cancelada' : '⏳ Pendiente';
+    invoiceBlock = `
+      <div style="font-size:.82rem;color:var(--muted);margin:4px 0;">
+        ${link.client_name ? `Cliente: <strong style="color:var(--text);">${esc(link.client_name)}</strong> · ` : ''}
+        <span style="color:${stColor};font-weight:700;">${stLabel}</span>
+        ${link.due_ms ? ` · vence ${esc(fmtRelDate(link.due_ms))}` : ''}
+      </div>`;
+  }
 
   return `
     <div class="pl-card" data-pl-id="${esc(link.id)}">
@@ -3595,14 +3686,14 @@ function renderLinkCard(link) {
         <span class="pl-active-pill ${act ? 'pl-active-on' : 'pl-active-off'}">${act ? '● Activo' : '○ Inactivo'}</span>
         ${!cfg.live ? '<span class="pl-coming-badge">Sin cobro en vivo</span>' : ''}
       </div>
-      <div class="pl-price">${fmtUSD(link.price_usd || 0)}
-        <span style="font-size:.75rem;font-weight:500;color:var(--muted);">${esc(link.currency || 'USDC')}</span>
-      </div>
+      ${priceLine}
+      ${invoiceBlock}
       <div class="pl-slug">/${esc(link.slug || link.id)}</div>
+      ${campaignBlock}
       <div class="pl-stats">
         <div class="pl-stat">Creado: <strong>${esc(fmtRelDate(link.created_ms))}</strong></div>
-        <div class="pl-stat">Pagos: <strong>${paid}</strong></div>
-        <div class="pl-stat">Ingresos: <strong>${fmtUSD(link.revenue_usd || 0)}</strong></div>
+        <div class="pl-stat">${isDonation ? 'Donaciones' : 'Pagos'}: <strong>${paid}</strong></div>
+        <div class="pl-stat">${isDonation ? 'Recaudado' : 'Ingresos'}: <strong>${fmtUSD(link.revenue_usd || 0)}</strong></div>
       </div>
       <div class="pl-actions">
         <button class="pl-icon-btn" data-action="copy" data-id="${esc(link.id)}"
@@ -3611,6 +3702,10 @@ function renderLinkCard(link) {
         <button class="pl-icon-btn" data-action="qr" data-id="${esc(link.id)}"
                 ${!hUrl ? 'disabled title="Sin URL de pago para QR"' : ''}
                 aria-label="Ver código QR">📲 QR</button>
+        ${isDonation && link.campaignUrl ? `<button class="pl-icon-btn" data-action="campaign" data-id="${esc(link.id)}"
+                aria-label="Ver página de campaña">📣 Campaña</button>` : ''}
+        ${isInvoice && (link.invoice_status || 'pendiente') !== 'pagada' ? `<button class="pl-icon-btn" data-action="mark-paid" data-id="${esc(link.id)}"
+                aria-label="Marcar como pagada">✓ Marcar pagada</button>` : ''}
         <button class="pl-icon-btn" data-action="edit" data-id="${esc(link.id)}"
                 aria-label="Editar enlace">✏️ Editar</button>
         <button class="pl-icon-btn" data-action="toggle" data-id="${esc(link.id)}"
@@ -3636,15 +3731,35 @@ function wireLinkCardEvents(listEl) {
     const link   = _payLinks.find(l => l.id === id);
 
     if (action === 'copy') {
-      if (!link || !link.payUrl) return;
-      const ok = await copyToClipboard(link.payUrl);
+      const url = link && (link.checkoutUrl || link.payUrl);
+      if (!url) return;
+      const ok = await copyToClipboard(url);
       if (ok) toast('Enlace copiado al portapapeles ✓');
 
     } else if (action === 'qr') {
-      if (!link || !link.payUrl) return;
+      if (!link || !(link.checkoutUrl || link.payUrl)) return;
       _selectedQRId = id;
       switchTab('qr');
       renderQRSelector();
+
+    } else if (action === 'campaign') {
+      if (!link || !link.campaignUrl) return;
+      window.open(link.campaignUrl, '_blank', 'noopener');
+
+    } else if (action === 'mark-paid') {
+      if (!link) return;
+      btn.disabled = true;
+      try {
+        const r = await fetch(`/api/profile/payment-links/${encodeURIComponent(id)}`, {
+          method:'PATCH', credentials:'same-origin',
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify({invoice_status:'pagada'}),
+        });
+        if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) { toast('Factura marcada como pagada ✓'); await loadPaymentLinks(true); }
+        else { toast(d.error || 'No se pudo marcar la factura.', 'error'); btn.disabled = false; }
+      } catch(e) { toast('Error de red.', 'error'); btn.disabled = false; }
 
     } else if (action === 'edit') {
       if (!link) return;
@@ -3714,11 +3829,23 @@ function openPLForm(link) {
   document.getElementById('pl-f-description').value          = link ? (link.description || '') : '';
   document.getElementById('pl-f-kind').value                 = link ? (link.kind        || 'x402') : 'x402';
   document.getElementById('pl-submit-btn').textContent       = link ? 'Guardar cambios' : 'Crear enlace';
+  // Donation campaign fields
+  document.getElementById('pl-f-goal').value                 = link && link.goal_usd != null ? link.goal_usd : '';
+  document.getElementById('pl-f-blurb').value                = link ? (link.campaign_blurb || '') : '';
+  document.getElementById('pl-f-image').value                = link ? (link.campaign_image || '') : '';
+  const campPub = document.getElementById('pl-f-campaign-public');
+  campPub.checked = link ? (link.campaign_public !== false) : true;
+  campPub.setAttribute('aria-checked', campPub.checked ? 'true' : 'false');
+  // Invoice fields
+  document.getElementById('pl-f-client').value               = link ? (link.client_name || '') : '';
+  document.getElementById('pl-f-client-email').value         = link ? (link.client_email || '') : '';
+  document.getElementById('pl-f-due').value                  = link && link.due_ms ? new Date(link.due_ms).toISOString().slice(0,10) : '';
   const activeSw = document.getElementById('pl-f-active');
   activeSw.checked = link ? !!link.active : true;
   activeSw.setAttribute('aria-checked', activeSw.checked ? 'true' : 'false');
   const hint = document.getElementById('pl-slug-hint');
   hint.textContent = link && link.slug ? `/${link.slug}` : '';
+  togglePLKindFields();
 
   clearPLFormErr();
   card.style.display = 'block';
@@ -3730,6 +3857,26 @@ function closePLForm() {
   document.getElementById('pl-form-card').style.display = 'none';
   _editingLinkId = null;
   clearPLFormErr();
+}
+
+/* Show/hide the donation + invoice field groups + adjust the amount label/help
+   based on the selected provider. */
+function togglePLKindFields() {
+  const kind = document.getElementById('pl-f-kind').value;
+  document.getElementById('pl-don-fields').style.display = kind === 'donation' ? 'block' : 'none';
+  document.getElementById('pl-inv-fields').style.display = kind === 'invoice'  ? 'block' : 'none';
+  const amtEl = document.getElementById('pl-f-amount');
+  const amtLabel = amtEl.closest('.form-group').querySelector('.form-label');
+  if (kind === 'donation') {
+    if (amtLabel) amtLabel.innerHTML = 'Monto fijo (0 = abierto)';
+    amtEl.placeholder = '0.00 (donante elige)';
+  } else if (kind === 'invoice') {
+    if (amtLabel) amtLabel.innerHTML = 'Monto a cobrar <span style="color:var(--danger)" aria-hidden="true">*</span>';
+    amtEl.placeholder = '0.00';
+  } else {
+    if (amtLabel) amtLabel.innerHTML = 'Monto <span style="color:var(--danger)" aria-hidden="true">*</span>';
+    amtEl.placeholder = '0.00';
+  }
 }
 
 function clearPLFormErr() {
@@ -3763,6 +3910,11 @@ function wirePagosForm() {
     this.setAttribute('aria-checked', this.checked ? 'true' : 'false');
   });
 
+  document.getElementById('pl-f-kind').addEventListener('change', togglePLKindFields);
+  document.getElementById('pl-f-campaign-public').addEventListener('change', function() {
+    this.setAttribute('aria-checked', this.checked ? 'true' : 'false');
+  });
+
   document.getElementById('pl-form').addEventListener('submit', async e => {
     e.preventDefault();
     clearPLFormErr();
@@ -3774,6 +3926,14 @@ function wirePagosForm() {
     const desc   = document.getElementById('pl-f-description').value.trim();
     const kind   = document.getElementById('pl-f-kind').value;
     const active = document.getElementById('pl-f-active').checked;
+    // Kind-specific fields
+    const goalStr   = document.getElementById('pl-f-goal').value;
+    const blurb     = document.getElementById('pl-f-blurb').value.trim();
+    const image     = document.getElementById('pl-f-image').value.trim();
+    const campPub   = document.getElementById('pl-f-campaign-public').checked;
+    const client    = document.getElementById('pl-f-client').value.trim();
+    const clientEml = document.getElementById('pl-f-client-email').value.trim();
+    const dueStr    = document.getElementById('pl-f-due').value;
 
     let valid = true;
     if (!title) {
@@ -3799,10 +3959,26 @@ function wirePagosForm() {
     btn.textContent = _editingLinkId ? 'Guardando…' : 'Creando…';
 
     try {
+      // Translate kind-specific UI fields into the API payload.
+      const dueMs = dueStr ? new Date(dueStr + 'T00:00:00').getTime() : null;
+      const applyKindFields = (body) => {
+        if (kind === 'donation') {
+          body.goal_usd = goalStr === '' ? null : parseFloat(goalStr);
+          body.campaign_blurb = blurb || null;
+          body.campaign_image = image || null;
+          body.campaign_public = campPub;
+        } else if (kind === 'invoice') {
+          body.client_name = client || null;
+          body.client_email = clientEml || null;
+          body.due_ms = dueMs;
+        }
+      };
+
       let r;
       if (_editingLinkId) {
         const body = {title, description:desc||null, currency:cur, kind, active};
         if (amtStr !== '') body.price_usd = isNaN(amtNum) ? 0 : amtNum;
+        applyKindFields(body);
         r = await fetch(`/api/profile/payment-links/${encodeURIComponent(_editingLinkId)}`, {
           method:'PATCH', credentials:'same-origin',
           headers:{'content-type':'application/json'},
@@ -3812,6 +3988,7 @@ function wirePagosForm() {
         const body = {title, currency:cur, description:desc||null, kind, active,
                       price_usd: isNaN(amtNum) ? 0 : amtNum};
         if (slug) body.slug = slug;
+        applyKindFields(body);
         r = await fetch('/api/profile/payment-links', {
           method:'POST', credentials:'same-origin',
           headers:{'content-type':'application/json'},
@@ -3846,7 +4023,7 @@ function renderQRSelector() {
   const wrap = document.getElementById('qr-card-wrap');
   if (!sel) return;
 
-  const liveLinks = _payLinks.filter(l => l.payUrl);
+  const liveLinks = _payLinks.filter(l => l.checkoutUrl || l.payUrl);
 
   if (!liveLinks.length) {
     sel.innerHTML = '';
@@ -3854,7 +4031,7 @@ function renderQRSelector() {
       <div class="empty-state" style="padding:40px 24px;">
         <span class="empty-icon" aria-hidden="true">📲</span>
         <div class="empty-title">Sin enlaces con URL de pago</div>
-        <div class="empty-text">Crea un enlace de pago x402 para generar su código QR.</div>
+        <div class="empty-text">Crea un enlace de pago para generar su código QR.</div>
         <button class="btn btn-secondary" data-act="switchTab" data-a1="pagos" style="margin-top:16px;">
           Ir a Pagos
         </button>
@@ -3893,8 +4070,10 @@ function renderQRCard() {
   const wrap = document.getElementById('qr-card-wrap');
   if (!wrap) return;
 
-  const link = _payLinks.find(l => l.id === _selectedQRId && l.payUrl);
+  const link = _payLinks.find(l => l.id === _selectedQRId && (l.checkoutUrl || l.payUrl));
   if (!link) return;
+  const qrUrl = link.checkoutUrl || link.payUrl;
+  const openAmt = (link.kind === 'donation') && (Number(link.price_usd) || 0) === 0;
 
   if (_qrInstance) { try { _qrInstance.clear(); } catch(e) {} _qrInstance = null; }
 
@@ -3905,13 +4084,13 @@ function renderQRCard() {
         <span class="qr-brand-name">SISMO911</span>
       </div>
       <div class="qr-link-title">${esc(link.title || 'Enlace de pago')}</div>
-      <div class="qr-amount">${fmtUSD(link.price_usd || 0)}</div>
+      <div class="qr-amount">${openAmt ? 'Donación' : fmtUSD(link.price_usd || 0)}</div>
       <div class="qr-currency">${esc(link.currency || 'USDC')} · Base</div>
       <div class="qr-canvas-wrap">
         <div id="qr-canvas-el" style="line-height:0;"></div>
       </div>
-      <div class="qr-url">${esc(link.payUrl)}</div>
-      <div class="qr-caption">Escanea para pagar</div>
+      <div class="qr-url">${esc(qrUrl)}</div>
+      <div class="qr-caption">${openAmt ? 'Escanea para donar' : 'Escanea para pagar'}</div>
     </div>
     <div class="qr-actions">
       <button class="btn btn-primary"   id="qr-dl-btn"      >⬇ Descargar PNG</button>
@@ -3921,7 +4100,7 @@ function renderQRCard() {
 
   if (typeof QRCode !== 'undefined') {
     _qrInstance = new QRCode(document.getElementById('qr-canvas-el'), {
-      text:         link.payUrl,
+      text:         qrUrl,
       width:        220,
       height:       220,
       correctLevel: QRCode.CorrectLevel.M,

@@ -460,8 +460,23 @@ const slugify = (s: string) =>
 const slugOk = (s: string) => /^[a-z0-9][a-z0-9-]{0,47}$/.test(s);
 
 function payUrlFor(reqUrl: string, userId: string, slug: string, kind: string): string | null {
-  if (kind !== 'x402') return null; // only x402 has a live pay endpoint
+  if (kind !== 'x402') return null; // only x402 has a live machine pay endpoint (agents)
   return new URL(`/api/x402/pay/${userId}/${slug}`, reqUrl).toString();
+}
+
+// Human-facing hosted checkout. Every payable kind (x402 USDC, open-amount
+// donation, invoice) shares one branded page at /pagar/:user/:slug; Stripe is
+// deferred so it has no checkout yet. This is the link a person clicks/shares —
+// distinct from payUrlFor (the raw 402 endpoint agents hit programmatically).
+function checkoutUrlFor(reqUrl: string, userId: string, slug: string, kind: string): string | null {
+  if (kind === 'stripe') return null;
+  return new URL(`/pagar/${userId}/${slug}`, reqUrl).toString();
+}
+
+// Public campaign page for a donation link (goal + progress bar).
+function campaignUrlFor(reqUrl: string, userId: string, slug: string, kind: string, isPublic: boolean): string | null {
+  if (kind !== 'donation' || !isPublic) return null;
+  return new URL(`/campana/${userId}/${slug}`, reqUrl).toString();
 }
 
 // GET /api/profile/payment-links — caller's links + per-link paid count + revenue.
@@ -471,6 +486,8 @@ profile.get('/payment-links', async (c) => {
   const includeArchived = c.req.query('archived') === '1';
   const { results } = await c.env.DB.prepare(
     `SELECT r.id, r.slug, r.title, r.description, r.price_usd, r.currency, r.kind, r.active,
+            r.goal_usd, r.campaign_blurb, r.campaign_image, r.campaign_public,
+            r.client_name, r.client_email, r.invoice_status, r.due_ms, r.paid_ms,
             r.archived_ms, r.created_ms, r.updated_ms,
             COUNT(p.id) AS paid_count, COALESCE(SUM(p.amount_usd),0) AS revenue_usd
        FROM x402_resources r
@@ -478,15 +495,31 @@ profile.get('/payment-links', async (c) => {
       WHERE r.user_id = ? ${includeArchived ? '' : 'AND r.archived_ms IS NULL'}
       GROUP BY r.id ORDER BY r.created_ms DESC`
   ).bind(me.id).all();
-  const links = ((results ?? []) as any[]).map((r) => ({
-    id: r.id, slug: r.slug, title: r.title, description: r.description ?? null,
-    price_usd: Number(r.price_usd) || 0, currency: r.currency || 'USDC', kind: r.kind || 'x402',
-    active: Boolean(r.active), archived: Boolean(r.archived_ms),
-    created_ms: r.created_ms, updated_ms: r.updated_ms,
-    paid_count: Number(r.paid_count) || 0, revenue_usd: Number(r.revenue_usd) || 0,
-    payUrl: payUrlFor(c.req.url, me.id, r.slug, r.kind || 'x402'),
-    live: (r.kind || 'x402') === 'x402',
-  }));
+  const links = ((results ?? []) as any[]).map((r) => {
+    const kind = r.kind || 'x402';
+    const goal = Number(r.goal_usd) || 0;
+    const raised = Number(r.revenue_usd) || 0;
+    return {
+      id: r.id, slug: r.slug, title: r.title, description: r.description ?? null,
+      price_usd: Number(r.price_usd) || 0, currency: r.currency || 'USDC', kind,
+      active: Boolean(r.active), archived: Boolean(r.archived_ms),
+      created_ms: r.created_ms, updated_ms: r.updated_ms,
+      paid_count: Number(r.paid_count) || 0, revenue_usd: raised,
+      // Donation campaign fields
+      goal_usd: goal || null, campaign_blurb: r.campaign_blurb ?? null,
+      campaign_image: r.campaign_image ?? null, campaign_public: Boolean(r.campaign_public),
+      raised_usd: raised, donor_count: Number(r.paid_count) || 0,
+      progress_pct: goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : null,
+      // Invoice fields
+      client_name: r.client_name ?? null, client_email: r.client_email ?? null,
+      invoice_status: r.invoice_status ?? null, due_ms: r.due_ms ?? null, paid_ms: r.paid_ms ?? null,
+      // URLs
+      payUrl: payUrlFor(c.req.url, me.id, r.slug, kind),
+      checkoutUrl: checkoutUrlFor(c.req.url, me.id, r.slug, kind),
+      campaignUrl: campaignUrlFor(c.req.url, me.id, r.slug, kind, Boolean(r.campaign_public)),
+      live: kind === 'x402' || kind === 'donation' || kind === 'invoice',
+    };
+  });
   return c.json({ ok: true, links });
 });
 
@@ -504,26 +537,48 @@ profile.post('/payment-links', async (c) => {
   const price = Number(b.price_usd ?? b.amount);
   if (!(price >= 0) || !isFinite(price)) return c.json({ error: 'price_invalid' }, 400);
   const kind = LINK_KINDS.includes(b.kind) ? b.kind : 'x402';
+  if (kind === 'stripe') return c.json({ error: 'kind_unavailable', detail: 'Stripe aún no está disponible.' }, 400);
   const currency = str(b.currency, 8) || (kind === 'x402' ? 'USDC' : 'USD');
   const active = b.active === false ? 0 : 1;
   const now = Date.now();
+
+  // Donation campaign fields (only meaningful for kind='donation').
+  const goalUsd = b.goal_usd != null && b.goal_usd !== '' && Number(b.goal_usd) > 0 ? Number(b.goal_usd) : null;
+  const campaignBlurb = kind === 'donation' ? str(b.campaign_blurb, 1000) : null;
+  const campaignImage = kind === 'donation' ? str(b.campaign_image, 500) : null;
+  const campaignPublic = kind === 'donation' && b.campaign_public !== false ? 1 : 0;
+  // Invoice fields (only meaningful for kind='invoice'). New invoices start pendiente.
+  const clientName = kind === 'invoice' ? str(b.client_name, 160) : null;
+  const clientEmail = kind === 'invoice' ? str(b.client_email, 200) : null;
+  const invoiceStatus = kind === 'invoice' ? 'pendiente' : null;
+  const dueMs = kind === 'invoice' && b.due_ms != null && Number(b.due_ms) > 0 ? Math.floor(Number(b.due_ms)) : null;
 
   // Unique (user, slug). On collision, append a short suffix rather than failing.
   const exists: any = await c.env.DB.prepare(`SELECT 1 FROM x402_resources WHERE user_id=? AND slug=?`).bind(me.id, slug).first();
   if (exists) slug = `${slug}-${Math.abs(now % 9000) + 1000}`.slice(0, 48);
   const id = uid('res');
   await c.env.DB.prepare(
-    `INSERT INTO x402_resources (id,user_id,slug,title,description,price_usd,price_version,mime_type,kind,currency,active,created_ms,updated_ms)
-     VALUES (?,?,?,?,?,?,1,'application/json',?,?,?,?,?)`
-  ).bind(id, me.id, slug, title, str(b.description, 500), price, kind, currency, active, now, now).run();
+    `INSERT INTO x402_resources (id,user_id,slug,title,description,price_usd,price_version,mime_type,kind,currency,active,
+            goal_usd,campaign_blurb,campaign_image,campaign_public,client_name,client_email,invoice_status,due_ms,created_ms,updated_ms)
+     VALUES (?,?,?,?,?,?,1,'application/json',?,?,?,?,?,?,?,?,?,?,?,?,?)`
+  ).bind(id, me.id, slug, title, str(b.description, 500), price, kind, currency, active,
+         goalUsd, campaignBlurb, campaignImage, campaignPublic, clientName, clientEmail, invoiceStatus, dueMs, now, now).run();
   await audit(c, 'profile.link.create', { id, slug, kind });
   await notify(c.env, me.id, {
     type: 'link_created',
-    title: 'Enlace de pago creado',
+    title: kind === 'invoice' ? 'Factura creada' : kind === 'donation' ? 'Campaña de donación creada' : 'Enlace de pago creado',
     body: `"${title}" ya está listo para compartir y recibir pagos.`,
     link: '#pagos',
   });
-  return c.json({ ok: true, link: { id, slug, title, price_usd: price, currency, kind, active: Boolean(active), payUrl: payUrlFor(c.req.url, me.id, slug, kind), live: kind === 'x402' } }, 201);
+  return c.json({ ok: true, link: {
+    id, slug, title, price_usd: price, currency, kind, active: Boolean(active),
+    goal_usd: goalUsd, campaign_public: Boolean(campaignPublic),
+    client_name: clientName, invoice_status: invoiceStatus,
+    payUrl: payUrlFor(c.req.url, me.id, slug, kind),
+    checkoutUrl: checkoutUrlFor(c.req.url, me.id, slug, kind),
+    campaignUrl: campaignUrlFor(c.req.url, me.id, slug, kind, Boolean(campaignPublic)),
+    live: kind === 'x402' || kind === 'donation' || kind === 'invoice',
+  } }, 201);
 });
 
 // PATCH /api/profile/payment-links/:id — update title/price/description/active/kind.
@@ -541,8 +596,24 @@ profile.patch('/payment-links/:id', async (c) => {
   if (b.description !== undefined) { sets.push('description=?'); vals.push(str(b.description, 500)); }
   if (b.price_usd !== undefined) { const p = Number(b.price_usd); if (!(p >= 0) || !isFinite(p)) return c.json({ error: 'price_invalid' }, 400); sets.push('price_usd=?'); vals.push(p); }
   if (b.currency !== undefined) { sets.push('currency=?'); vals.push(str(b.currency, 8) || 'USD'); }
-  if (b.kind !== undefined) { if (!LINK_KINDS.includes(b.kind)) return c.json({ error: 'kind_invalid' }, 400); sets.push('kind=?'); vals.push(b.kind); }
+  if (b.kind !== undefined) { if (!LINK_KINDS.includes(b.kind) || b.kind === 'stripe') return c.json({ error: 'kind_invalid' }, 400); sets.push('kind=?'); vals.push(b.kind); }
   if (b.active !== undefined) { if (typeof b.active !== 'boolean') return c.json({ error: 'active_must_be_boolean' }, 400); sets.push('active=?'); vals.push(b.active ? 1 : 0); }
+  // Donation campaign fields
+  if (b.goal_usd !== undefined) { const g = b.goal_usd === null || b.goal_usd === '' ? null : Number(b.goal_usd); if (g !== null && (!(g > 0) || !isFinite(g))) return c.json({ error: 'goal_invalid' }, 400); sets.push('goal_usd=?'); vals.push(g); }
+  if (b.campaign_blurb !== undefined) { sets.push('campaign_blurb=?'); vals.push(str(b.campaign_blurb, 1000)); }
+  if (b.campaign_image !== undefined) { sets.push('campaign_image=?'); vals.push(str(b.campaign_image, 500)); }
+  if (b.campaign_public !== undefined) { if (typeof b.campaign_public !== 'boolean') return c.json({ error: 'campaign_public_must_be_boolean' }, 400); sets.push('campaign_public=?'); vals.push(b.campaign_public ? 1 : 0); }
+  // Invoice fields
+  if (b.client_name !== undefined) { sets.push('client_name=?'); vals.push(str(b.client_name, 160)); }
+  if (b.client_email !== undefined) { sets.push('client_email=?'); vals.push(str(b.client_email, 200)); }
+  if (b.due_ms !== undefined) { const d = b.due_ms === null || b.due_ms === '' ? null : Math.floor(Number(b.due_ms)); if (d !== null && !(d > 0)) return c.json({ error: 'due_invalid' }, 400); sets.push('due_ms=?'); vals.push(d); }
+  if (b.invoice_status !== undefined) {
+    const INVOICE_STATES = ['pendiente', 'pagada', 'cancelada'];
+    if (!INVOICE_STATES.includes(b.invoice_status)) return c.json({ error: 'invoice_status_invalid' }, 400);
+    sets.push('invoice_status=?'); vals.push(b.invoice_status);
+    // Stamp paid_ms when marking pagada; clear it when reverting to unpaid.
+    sets.push('paid_ms=?'); vals.push(b.invoice_status === 'pagada' ? Date.now() : null);
+  }
   if (!sets.length) return c.json({ error: 'nothing_to_update' }, 400);
   sets.push('updated_ms=?'); vals.push(Date.now()); vals.push(id);
   await c.env.DB.prepare(`UPDATE x402_resources SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
