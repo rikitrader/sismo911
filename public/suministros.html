@@ -11,7 +11,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/app.css" />
   <link rel="stylesheet" href="/ops-theme.css" />
+  <link rel="stylesheet" href="/suministros-theme.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     body{background:var(--ops-bg)}
     .eoc-bar{background:linear-gradient(180deg,var(--ops-bar-1) 0%,var(--ops-bar-2) 100%)}
@@ -111,36 +114,59 @@
     </div>
   </div>
 
-  <!-- Nav groups -->
+  <!-- ════════════════════════════════════════════════════════════════════
+       NAV → PANEL MAP (every data-tab targets a REAL <section data-panel>):
+         Resumen        → tablero        Existencias    → inventario
+         Productos      → catalogo       Almacenes      → almacenes   (NEW)
+         Ubicaciones    → ubicaciones    Categorías     → categorias  (NEW)
+         Kits           → kits  (NEW)
+         Movimientos    → movimientos    Recepciones    → recepciones (NEW)
+         Transferencias → transferencias (NEW)  Requisiciones → requisiciones
+         Picklists      → picklists      Envíos         → envios
+         Proveedores    → proveedores    Órdenes        → ordenes
+         Pagos          → pagos (NEW)    Donaciones     → donaciones
+         Finanzas       → finanzas
+         Reportes       → reportes       Analíticas     → analiticas  (NEW)
+         Alertas        → alertas (NEW)
+         Conteos        → conteos        Etiquetas      → etiquetas
+         Ajustes        → ajustes (NEW)  Usuarios       → usuarios    (NEW)
+       ════════════════════════════════════════════════════════════════════ -->
   <nav class="sidebar-nav" aria-label="Módulos">
 
     <!-- GENERAL -->
     <div class="nav-section">
-      <span class="nav-section-label">General</span>
       <button class="seg on" data-tab="tablero">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        Tablero
+        Resumen
       </button>
     </div>
 
     <!-- INVENTARIO -->
     <div class="nav-section">
       <span class="nav-section-label">Inventario</span>
-      <button class="seg" data-tab="inventario">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/><rect x="3" y="8" width="18" height="13" rx="1"/><line x1="9" y1="8" x2="9" y2="21"/><line x1="15" y1="8" x2="15" y2="21"/></svg>
-        Inventario
-      </button>
       <button class="seg" data-tab="catalogo">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>
-        Catálogo
+        Productos
+      </button>
+      <button class="seg" data-tab="inventario">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/><rect x="3" y="8" width="18" height="13" rx="1"/><line x1="9" y1="8" x2="9" y2="21"/><line x1="15" y1="8" x2="15" y2="21"/></svg>
+        Existencias
+      </button>
+      <button class="seg" data-tab="almacenes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M3 21h18"/><rect x="7" y="13" width="4" height="8"/><rect x="13" y="13" width="4" height="4"/></svg>
+        Almacenes
       </button>
       <button class="seg" data-tab="ubicaciones">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
         Ubicaciones
       </button>
-      <button class="seg" data-tab="conteos">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        Conteos
+      <button class="seg" data-tab="categorias">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><circle cx="6.5" cy="17.5" r="3.5"/></svg>
+        Categorías
+      </button>
+      <button class="seg" data-tab="kits">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        Kits
       </button>
     </div>
 
@@ -150,6 +176,14 @@
       <button class="seg" data-tab="movimientos">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="16" x2="7" y2="4"/><polyline points="3 8 7 4 11 8"/><line x1="17" y1="8" x2="17" y2="20"/><polyline points="13 16 17 20 21 16"/></svg>
         Movimientos
+      </button>
+      <button class="seg" data-tab="recepciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="7.5 12 11 15.5 16.5 9"/></svg>
+        Recepciones
+      </button>
+      <button class="seg" data-tab="transferencias">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Transferencias
       </button>
       <button class="seg" data-tab="requisiciones">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -165,9 +199,9 @@
       </button>
     </div>
 
-    <!-- COMPRAS & FINANZAS -->
+    <!-- COMPRAS -->
     <div class="nav-section">
-      <span class="nav-section-label">Compras &amp; Finanzas</span>
+      <span class="nav-section-label">Compras</span>
       <button class="seg" data-tab="proveedores">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Proveedores
@@ -175,6 +209,10 @@
       <button class="seg" data-tab="ordenes">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9l-7-7z"/><polyline points="9 2 9 8 15 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
         Órdenes
+      </button>
+      <button class="seg" data-tab="pagos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Pagos
       </button>
       <button class="seg" data-tab="donaciones">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -193,9 +231,39 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Reportes
       </button>
+      <button class="seg" data-tab="analiticas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H3V3"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+        Analíticas
+      </button>
+      <button class="seg" data-tab="alertas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Alertas
+      </button>
+    </div>
+
+    <!-- HERRAMIENTAS -->
+    <div class="nav-section">
+      <span class="nav-section-label">Herramientas</span>
+      <button class="seg" data-tab="conteos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Conteos
+      </button>
       <button class="seg" data-tab="etiquetas">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
         Etiquetas
+      </button>
+    </div>
+
+    <!-- CONFIGURACIÓN -->
+    <div class="nav-section">
+      <span class="nav-section-label">Configuración</span>
+      <button class="seg" data-tab="ajustes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Ajustes
+      </button>
+      <button class="seg" data-tab="usuarios">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Usuarios y Roles
       </button>
     </div>
 
@@ -216,50 +284,125 @@
 <!-- ── MAIN AREA ── -->
 <div class="main-area">
 
-  <!-- Slim top bar -->
+  <!-- Top bar: breadcrumb · search · clock · export · +Nuevo · bell -->
   <header class="eoc-bar top-bar">
     <button class="menu-btn" id="menuBtn" aria-label="Abrir menú">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
+
+    <nav class="tb-breadcrumb" aria-label="Ruta">
+      <span class="crumb-root">Suministros y Almacén</span>
+      <span class="crumb-sep">›</span>
+      <span class="crumb-cur" id="crumbCur">Resumen</span>
+    </nav>
+
+    <div class="tb-search">
+      <svg class="tb-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="globalSearch" type="search" autocomplete="off" placeholder="Buscar productos, movimientos, ubicaciones…" aria-label="Buscar en la vista actual" />
+      <span class="kbd">⌘K</span>
+    </div>
+
     <div class="top-bar-right">
-      <span class="flex items-center gap-1.5" style="font-size:.7rem;color:rgba(255,255,255,.65)">
-        <span class="dot pulse" style="background:#15803d"></span> EN VIVO
+      <span class="tb-chip" title="Hora local">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+        <span id="clockChip" class="mono">—</span>
       </span>
-      <span id="lastUpdate" class="text-[11px] mono" style="color:rgba(255,255,255,.45)">—</span>
-      <button id="refreshBtn" class="bg-primary text-white font-semibold rounded-md px-3 py-2 text-xs">↻ Actualizar</button>
+      <span id="lastUpdate" class="hidden"></span>
+
+      <button id="refreshBtn" class="tb-bell-btn" title="Actualizar vista" aria-label="Actualizar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+
+      <button id="exportBtn" class="tb-btn" title="Exportar la tabla de esta vista a CSV">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span class="hidden sm:inline">Exportar</span>
+      </button>
+
+      <div class="tb-bell" id="nuevoWrap">
+        <button class="tb-btn tb-btn-primary" id="nuevoBtn" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span class="hidden sm:inline">Nuevo</span>
+        </button>
+        <div class="tb-menu hidden" id="nuevoMenu" role="menu"></div>
+      </div>
+
+      <div class="tb-bell" id="bellWrap">
+        <button class="tb-bell-btn" id="bellBtn" title="Alertas" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+        <span class="tb-bell-badge hidden" id="bellBadge">0</span>
+        <div class="tb-menu hidden" id="bellMenu" role="menu"></div>
+      </div>
     </div>
   </header>
 
   <!-- Page content -->
   <main class="page-content">
-    <div class="flex items-end justify-between flex-wrap gap-3">
-      <div>
-        <div class="eyebrow">Inventario y cadena de suministro de emergencia</div>
-        <h1 class="font-display font-extrabold text-2xl leading-tight">Suministros y Almacén</h1>
-      </div>
-    </div>
-
     <div id="authBanner" class="hidden card p-3 text-sm" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c"></div>
     <div id="toastEl" class="hidden card p-3 text-sm"></div>
 
-  <!-- ═══ TABLERO ═══ -->
+  <!-- ═══ RESUMEN (tablero) ═══ -->
   <section data-panel="tablero">
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-      <div class="card p-3"><div id="k_prod" class="font-display font-black text-2xl text-primary">—</div><div class="eyebrow">Productos</div></div>
-      <div class="card p-3"><div id="k_ubic" class="font-display font-black text-2xl text-primary">—</div><div class="eyebrow">Ubicaciones</div></div>
-      <div class="card p-3"><div id="k_units" class="font-display font-black text-2xl" style="color:#15803d">—</div><div class="eyebrow">Unid. en stock</div></div>
-      <div class="card p-3"><div id="k_bajo" class="font-display font-black text-2xl" style="color:#b45309">—</div><div class="eyebrow">Bajo stock</div></div>
-      <div class="card p-3"><div id="k_pven" class="font-display font-black text-2xl" style="color:#d97706">—</div><div class="eyebrow">Por vencer ≤30d</div></div>
-      <div class="card p-3"><div id="k_venc" class="font-display font-black text-2xl" style="color:#b91c1c">—</div><div class="eyebrow">Vencidos</div></div>
+    <!-- Greeting -->
+    <div class="mb-1">
+      <h1 class="greet-title" id="greetTitle">Hola 👋</h1>
+      <p class="greet-sub">Aquí tienes el estado general de tu cadena de suministro.</p>
     </div>
 
+    <!-- Six colored stat cards -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="icon-tile it-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+        </div>
+        <div class="sc-val" id="k_prod">—</div><div class="sc-label">Productos</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="icon-tile it-indigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg></div>
+        </div>
+        <div class="sc-val" id="k_ubic">—</div><div class="sc-label">Ubicaciones</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="icon-tile it-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg></div>
+        </div>
+        <div class="sc-val" id="k_units" style="color:var(--sum-green)">—</div><div class="sc-label">Unidades en stock</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="icon-tile it-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17l-5-5-3 3-3-3"/></svg></div>
+        </div>
+        <div class="sc-val" id="k_bajo" style="color:var(--sum-amber)">—</div><div class="sc-label">Bajo stock</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="icon-tile it-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+        </div>
+        <div class="sc-val" id="k_pven" style="color:var(--sum-red)">—</div><div class="sc-label">Por vencer ≤30d</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="icon-tile it-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+        </div>
+        <div class="sc-val" id="k_venc" style="color:var(--sum-pink)">—</div><div class="sc-label">Vencidos</div>
+      </div>
+    </div>
+
+    <!-- Alertas + Movimientos recientes -->
     <div class="grid lg:grid-cols-3 gap-4">
       <div class="card overflow-hidden">
-        <div class="px-4 pt-3 pb-2 eyebrow">Alertas</div>
+        <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+          <div class="eyebrow">Alertas</div>
+          <button class="text-[11px] font-bold" style="color:var(--ops-accent)" data-act="gotoTab" data-a1="alertas">Ver todas →</button>
+        </div>
         <div id="alertasPanel" class="text-sm text-on-surface-variant p-3">Cargando…</div>
       </div>
       <div class="lg:col-span-2 card overflow-hidden">
-        <div class="px-4 pt-3 pb-2 eyebrow">Movimientos recientes</div>
+        <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+          <div class="eyebrow">Movimientos recientes</div>
+          <button class="text-[11px] font-bold" style="color:var(--ops-accent)" data-act="gotoTab" data-a1="movimientos">Ver historial →</button>
+        </div>
         <div class="overflow-x-auto" style="max-height:300px">
           <table class="dt">
             <thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Ref.</th><th>Líneas</th><th>Fecha</th></tr></thead>
@@ -269,10 +412,40 @@
       </div>
     </div>
 
-    <div class="card p-4">
-      <div class="eyebrow mb-2">Unidades por categoría</div>
-      <div id="catBreakdown" class="flex flex-wrap gap-3">—</div>
+    <!-- Charts row -->
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="card p-4">
+        <div class="eyebrow mb-3">Stock por categoría</div>
+        <div id="catDonut" class="flex flex-col sm:flex-row items-center gap-4"><div class="text-sm text-on-surface-variant py-6">Cargando…</div></div>
+      </div>
+      <div class="card p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="eyebrow">Entradas vs Salidas <span class="text-on-surface-variant normal-case font-normal">(30 días)</span></div>
+          <div class="flex items-center gap-2 text-[11px] font-semibold">
+            <span style="color:var(--sum-green)">● Entradas</span><span style="color:var(--sum-red)">● Salidas</span>
+          </div>
+        </div>
+        <div id="flowChart"><div class="text-sm text-on-surface-variant py-6 text-center">Cargando…</div></div>
+      </div>
+      <div class="card p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="eyebrow">Distribución por ubicación</div>
+          <button class="text-[11px] font-bold" style="color:var(--ops-accent)" data-act="scrollToMap">Ver mapa →</button>
+        </div>
+        <div id="ubicBars"><div class="text-sm text-on-surface-variant py-6 text-center">Cargando…</div></div>
+      </div>
     </div>
+
+    <!-- Map -->
+    <div class="card overflow-hidden" id="mapCard">
+      <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+        <div class="eyebrow">Mapa de ubicaciones</div>
+        <span class="text-[11px] text-on-surface-variant" id="mapHint">—</span>
+      </div>
+      <div class="p-3 pt-0"><div id="sumMap" class="sum-map"></div></div>
+    </div>
+
+    <p class="text-[11px] text-on-surface-variant">Actualización manual · las acciones de escritura requieren sesión de operador.</p>
   </section>
 
   <!-- ═══ INVENTARIO ═══ -->
@@ -294,11 +467,43 @@
     </div>
   </section>
 
-  <!-- ═══ CATÁLOGO ═══ -->
+  <!-- ═══ PRODUCTOS (catalogo) ═══ -->
   <section data-panel="catalogo" class="hidden">
+    <div class="card overflow-hidden">
+      <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+        <div class="eyebrow">Productos</div>
+        <button id="btnNuevoProd" class="bg-primary text-white font-semibold rounded px-2.5 py-1 text-xs">+ Nuevo</button>
+      </div>
+      <form id="fProd" class="hidden px-4 pb-3 space-y-2 border-b border-gray-100">
+        <input name="nombre" placeholder="Nombre del producto*" required />
+        <div class="grid grid-cols-2 gap-2">
+          <select name="categoria_id"><option value="">-- Categoría --</option></select>
+          <select name="unidad">
+            <option value="unidad">Unidad</option><option value="caja">Caja</option><option value="kg">kg</option>
+            <option value="litro">Litro</option><option value="paquete">Paquete</option><option value="saco">Saco</option><option value="blister">Blister</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2 items-center">
+          <input name="stock_min" type="number" min="0" placeholder="Stock mínimo">
+          <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer"><input name="perecedero" type="checkbox"> Perecedero</label>
+        </div>
+        <div class="flex gap-2">
+          <button class="flex-1 bg-secondary text-white font-bold rounded py-1.5 text-xs">Guardar</button>
+          <button type="button" id="btnCancelProd" class="flex-1 border border-gray-200 rounded py-1.5 text-xs font-semibold">Cancelar</button>
+        </div>
+        <p id="prodMsg" class="text-xs text-center"></p>
+      </form>
+      <div class="overflow-x-auto" style="max-height:62vh">
+        <table class="dt"><thead><tr><th>Nombre</th><th>Categoría</th><th>Unidad</th><th>Stock mín.</th><th>On Hand</th></tr></thead>
+        <tbody id="prodRows"><tr><td colspan="5" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CATEGORÍAS ═══ -->
+  <section data-panel="categorias" class="hidden">
     <div class="grid lg:grid-cols-2 gap-4">
-      <!-- Categorías -->
-      <div class="card overflow-hidden">
+      <div class="card overflow-hidden h-fit">
         <div class="px-4 pt-3 pb-2 flex items-center justify-between">
           <div class="eyebrow">Categorías</div>
           <button id="btnNuevaCat" class="bg-primary text-white font-semibold rounded px-2.5 py-1 text-xs">+ Nueva</button>
@@ -306,7 +511,7 @@
         <form id="fCat" class="hidden px-4 pb-3 space-y-2 border-b border-gray-100">
           <div class="grid grid-cols-[1fr_auto] gap-2 items-end">
             <input name="nombre" placeholder="Nombre de categoría*" required />
-            <input name="color" type="color" value="#14171b" style="width:2.5rem;padding:.2rem;height:2.2rem;border-radius:.4rem;border:1px solid var(--ops-border-strong)">
+            <input name="color" type="color" value="#2563eb" style="width:2.5rem;padding:.2rem;height:2.2rem;border-radius:.4rem;border:1px solid var(--ops-border-strong)">
           </div>
           <div class="flex gap-2">
             <button class="flex-1 bg-secondary text-white font-bold rounded py-1.5 text-xs">Guardar</button>
@@ -314,42 +519,42 @@
           </div>
           <p id="catMsg" class="text-xs text-center"></p>
         </form>
-        <div class="overflow-x-auto" style="max-height:45vh">
+        <div class="overflow-x-auto" style="max-height:60vh">
           <table class="dt"><thead><tr><th>Nombre</th><th>Color</th><th></th></tr></thead>
           <tbody id="catRows"><tr><td colspan="3" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody></table>
         </div>
       </div>
-      <!-- Productos -->
-      <div class="card overflow-hidden">
-        <div class="px-4 pt-3 pb-2 flex items-center justify-between">
-          <div class="eyebrow">Productos</div>
-          <button id="btnNuevoProd" class="bg-primary text-white font-semibold rounded px-2.5 py-1 text-xs">+ Nuevo</button>
-        </div>
-        <form id="fProd" class="hidden px-4 pb-3 space-y-2 border-b border-gray-100">
-          <input name="nombre" placeholder="Nombre del producto*" required />
-          <div class="grid grid-cols-2 gap-2">
-            <select name="categoria_id"><option value="">-- Categoría --</option></select>
-            <select name="unidad">
-              <option value="unidad">Unidad</option><option value="caja">Caja</option><option value="kg">kg</option>
-              <option value="litro">Litro</option><option value="paquete">Paquete</option><option value="saco">Saco</option><option value="blister">Blister</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-2 items-center">
-            <input name="stock_min" type="number" min="0" placeholder="Stock mínimo">
-            <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer"><input name="perecedero" type="checkbox"> Perecedero</label>
-          </div>
-          <div class="flex gap-2">
-            <button class="flex-1 bg-secondary text-white font-bold rounded py-1.5 text-xs">Guardar</button>
-            <button type="button" id="btnCancelProd" class="flex-1 border border-gray-200 rounded py-1.5 text-xs font-semibold">Cancelar</button>
-          </div>
-          <p id="prodMsg" class="text-xs text-center"></p>
-        </form>
-        <div class="overflow-x-auto" style="max-height:45vh">
-          <table class="dt"><thead><tr><th>Nombre</th><th>Categoría</th><th>Unidad</th><th>Stock mín.</th><th>On Hand</th></tr></thead>
-          <tbody id="prodRows"><tr><td colspan="5" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody></table>
-        </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Unidades por categoría</div>
+        <div id="catBreakdown" class="space-y-1.5"><div class="text-sm text-on-surface-variant">—</div></div>
       </div>
     </div>
+  </section>
+
+  <!-- ═══ ALMACENES ═══ -->
+  <section data-panel="almacenes" class="hidden">
+    <div class="card overflow-hidden">
+      <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+        <div class="eyebrow">Almacenes y depósitos</div>
+        <span class="text-[11px] text-on-surface-variant">Ubicaciones tipo almacén / depósito</span>
+      </div>
+      <div class="overflow-x-auto" style="max-height:62vh">
+        <table class="dt">
+          <thead><tr><th>Nombre</th><th>Tipo</th><th>Código</th><th>Estado/Región</th><th>Responsable</th><th>Teléfono</th><th>Estado</th></tr></thead>
+          <tbody id="almRows"><tr><td colspan="7" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ KITS ═══ -->
+  <section data-panel="kits" class="hidden space-y-4">
+    <div class="card p-3 flex flex-wrap items-center gap-3">
+      <div class="eyebrow">Kits / bundles por categoría</div>
+      <input id="kitSearch" placeholder="Filtrar kits o productos…" class="inp-sm" style="width:220px">
+      <a href="/suministros-medicos" class="ml-auto text-xs font-bold rounded px-3 py-1.5" style="background:var(--sum-blue-bg);color:var(--ops-accent)">💊 Botiquín médico completo →</a>
+    </div>
+    <div id="kitGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-3"><div class="text-sm text-on-surface-variant py-8 text-center">Cargando…</div></div>
   </section>
 
   <!-- ═══ UBICACIONES ═══ -->
@@ -1137,6 +1342,180 @@
     </div>
   </section>
 
+  <!-- ═══ RECEPCIONES ═══ -->
+  <section data-panel="recepciones" class="hidden space-y-4">
+    <div class="grid md:grid-cols-3 gap-3">
+      <div class="stat-card"><div class="sc-top"><div class="icon-tile it-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div><div class="sc-val" id="rc_don">—</div><div class="sc-label">Donaciones por recibir</div></div>
+      <div class="stat-card"><div class="sc-top"><div class="icon-tile it-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9l-7-7z"/><polyline points="9 2 9 8 15 8"/></svg></div></div><div class="sc-val" id="rc_oc">—</div><div class="sc-label">Órdenes por recibir</div></div>
+      <div class="stat-card"><div class="sc-top"><div class="icon-tile it-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div></div><div class="sc-val" id="rc_total">—</div><div class="sc-label">Total pendiente</div></div>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="px-4 pt-3 pb-2 eyebrow">Pendiente de recepción</div>
+      <div class="overflow-x-auto" style="max-height:55vh">
+        <table class="dt">
+          <thead><tr><th>Origen</th><th>Código</th><th>Tipo</th><th>Referencia</th><th>Ubicación</th><th>Estado</th><th>Líneas</th><th>Fecha</th><th>Acción</th></tr></thead>
+          <tbody id="rcRows"><tr><td colspan="9" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <p class="text-[11px] text-on-surface-variant">Donaciones registradas y órdenes de compra aprobadas/parciales esperando recepción en almacén. Abrir cada una para confirmar la entrada de stock.</p>
+  </section>
+
+  <!-- ═══ TRANSFERENCIAS ═══ -->
+  <section data-panel="transferencias" class="hidden space-y-4">
+    <div class="card p-3 flex flex-wrap items-center gap-3">
+      <div class="eyebrow">Transferencias entre ubicaciones</div>
+      <button class="ml-auto bg-primary text-white font-semibold rounded px-3 py-1.5 text-xs" data-act="nuevoTransfer">+ Nuevo traslado</button>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto" style="max-height:60vh">
+        <table class="dt">
+          <thead><tr><th>Código</th><th>Origen</th><th>Destino</th><th>Referencia</th><th>Líneas</th><th>Fecha</th></tr></thead>
+          <tbody id="tfRows"><tr><td colspan="6" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <p class="text-[11px] text-on-surface-variant">Movimientos de tipo traslado (origen → destino). Para registrar un nuevo traslado se usa el formulario de Movimientos › Trasladar.</p>
+  </section>
+
+  <!-- ═══ PAGOS ═══ -->
+  <section data-panel="pagos" class="hidden space-y-4">
+    <div id="pagosBanner"></div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="stat-card"><div class="sc-top"><div class="icon-tile it-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div></div><div class="sc-val" id="pg_total">—</div><div class="sc-label">Facturas</div></div>
+      <div class="stat-card"><div class="sc-top"><div class="icon-tile it-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div></div><div class="sc-val" id="pg_pend" style="color:var(--sum-amber)">—</div><div class="sc-label">Pendientes</div></div>
+      <div class="stat-card"><div class="sc-top"><div class="icon-tile it-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div><div class="sc-val" id="pg_pagadas" style="color:var(--sum-green)">—</div><div class="sc-label">Pagadas</div></div>
+      <div class="stat-card"><div class="sc-top"><div class="icon-tile it-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div></div><div class="sc-val" id="pg_monto">—</div><div class="sc-label">Monto pendiente USD</div></div>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+        <div class="eyebrow">Ledger de pagos a proveedores</div>
+        <a href="/campana" class="text-[11px] font-bold" style="color:var(--ops-accent)">Campañas de donación →</a>
+      </div>
+      <div class="overflow-x-auto" style="max-height:55vh">
+        <table class="dt">
+          <thead><tr><th>Código</th><th>Proveedor</th><th>Monto</th><th>Estado</th><th>Enlace de pago</th><th>Acción</th></tr></thead>
+          <tbody id="pgRows"><tr><td colspan="6" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <p id="pgMsg" class="text-xs text-center"></p>
+    <p class="text-[11px] text-on-surface-variant">Cobro de facturas vía x402 (USDC, EIP-3009). Genera un enlace de pago por factura pendiente y compártelo con el proveedor/donante.</p>
+  </section>
+
+  <!-- ═══ ANALÍTICAS ═══ -->
+  <section data-panel="analiticas" class="hidden space-y-4">
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="card p-4">
+        <div class="eyebrow mb-1">Valor de inventario por categoría</div>
+        <div class="text-xs text-on-surface-variant mb-3">Valuación USD según precio de proveedor preferido.</div>
+        <div id="anaValDonut" class="flex flex-col sm:flex-row items-center gap-4"><div class="text-sm text-on-surface-variant py-6">Cargando…</div></div>
+      </div>
+      <div class="card p-4">
+        <div class="eyebrow mb-1">Valor por ubicación</div>
+        <div class="text-xs text-on-surface-variant mb-3">Distribución del valor del stock entre depósitos.</div>
+        <div id="anaUbicBars"><div class="text-sm text-on-surface-variant py-6">Cargando…</div></div>
+      </div>
+      <div class="card p-4">
+        <div class="eyebrow mb-1">Top rotación de inventario <span class="normal-case font-normal text-on-surface-variant">(90 días)</span></div>
+        <div class="text-xs text-on-surface-variant mb-3">Productos con mayor consumo en la ventana.</div>
+        <div id="anaRotBars"><div class="text-sm text-on-surface-variant py-6">Cargando…</div></div>
+      </div>
+      <div class="card p-4">
+        <div class="eyebrow mb-1">Caducidad por bucket</div>
+        <div class="text-xs text-on-surface-variant mb-3">Ítems con existencias agrupados por días a vencimiento.</div>
+        <div id="anaCadBars"><div class="text-sm text-on-surface-variant py-6">Cargando…</div></div>
+      </div>
+    </div>
+    <p class="text-[11px] text-on-surface-variant">Construido en vivo desde <span class="mono">/api/suministros/reportes</span> (valuación · rotación · caducidad).</p>
+  </section>
+
+  <!-- ═══ ALERTAS ═══ -->
+  <section data-panel="alertas" class="hidden space-y-4">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div class="stat-card"><div class="sc-top"><div class="icon-tile it-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div></div><div class="sc-val" id="al_venc" style="color:var(--sum-pink)">—</div><div class="sc-label">Vencidos</div></div>
+      <div class="stat-card"><div class="sc-top"><div class="icon-tile it-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div></div><div class="sc-val" id="al_pven" style="color:var(--sum-red)">—</div><div class="sc-label">Por vencer ≤30d</div></div>
+      <div class="stat-card"><div class="sc-top"><div class="icon-tile it-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17l-5-5-3 3-3-3"/></svg></div></div><div class="sc-val" id="al_bajo" style="color:var(--sum-amber)">—</div><div class="sc-label">Bajo stock</div></div>
+    </div>
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="card overflow-hidden">
+        <div class="px-4 pt-3 pb-2 eyebrow" style="color:var(--ops-danger)">Vencidos</div>
+        <div id="alVencList" class="overflow-y-auto" style="max-height:48vh"><div class="text-sm text-on-surface-variant p-3">Cargando…</div></div>
+      </div>
+      <div class="card overflow-hidden">
+        <div class="px-4 pt-3 pb-2 eyebrow" style="color:var(--ops-warn)">Por vencer ≤30 días</div>
+        <div id="alPvenList" class="overflow-y-auto" style="max-height:48vh"><div class="text-sm text-on-surface-variant p-3">Cargando…</div></div>
+      </div>
+      <div class="card overflow-hidden">
+        <div class="px-4 pt-3 pb-2 eyebrow" style="color:var(--ops-warn)">Bajo stock</div>
+        <div id="alBajoList" class="overflow-y-auto" style="max-height:48vh"><div class="text-sm text-on-surface-variant p-3">Cargando…</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ AJUSTES ═══ -->
+  <section data-panel="ajustes" class="hidden">
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Perfil del operador</div>
+        <div id="ajIdentity" class="mb-3 text-sm text-on-surface-variant">Cargando…</div>
+        <form id="fAjustes" class="space-y-2">
+          <div><label class="lbl">Nombre</label><input name="name" placeholder="Nombre completo"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="lbl">Teléfono</label><input name="phone" placeholder="+58…"></div>
+            <div><label class="lbl">Idioma</label><select name="language"><option value="es">Español</option><option value="en">English</option></select></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="lbl">País</label><input name="country" placeholder="Venezuela"></div>
+            <div><label class="lbl">Ciudad</label><input name="city" placeholder="La Guaira"></div>
+          </div>
+          <button class="w-full bg-secondary text-white font-bold rounded py-2 text-sm">Guardar perfil</button>
+          <p id="ajMsg" class="text-xs text-center"></p>
+        </form>
+      </div>
+      <div class="card p-4 h-fit">
+        <div class="eyebrow mb-3">Cuenta &amp; wallet</div>
+        <div id="ajAccount" class="text-sm space-y-2 text-on-surface-variant">Cargando…</div>
+        <div class="mt-4 pt-3 border-t border-gray-100">
+          <div class="eyebrow mb-2">Accesos</div>
+          <div class="flex flex-wrap gap-2">
+            <a href="/console" class="text-xs font-bold rounded px-3 py-1.5" style="background:var(--sum-blue-bg);color:var(--ops-accent)">Consola admin →</a>
+            <a href="/cuenta" class="text-xs font-bold rounded px-3 py-1.5" style="background:var(--ops-panel-2);color:var(--ops-text)">Mi cuenta →</a>
+            <a href="/operaciones" class="text-xs font-bold rounded px-3 py-1.5" style="background:var(--ops-panel-2);color:var(--ops-text)">Operaciones →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ USUARIOS Y ROLES ═══ -->
+  <section data-panel="usuarios" class="hidden space-y-4">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 card overflow-hidden">
+        <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+          <div class="eyebrow">Usuarios</div>
+          <a href="/console" class="text-[11px] font-bold" style="color:var(--ops-accent)">Gestionar en consola →</a>
+        </div>
+        <div class="overflow-x-auto" style="max-height:60vh">
+          <table class="dt">
+            <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Roles asignados</th><th>Estado</th></tr></thead>
+            <tbody id="usrRows"><tr><td colspan="5" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card overflow-hidden h-fit">
+        <div class="px-4 pt-3 pb-2 eyebrow">Roles</div>
+        <div class="overflow-x-auto" style="max-height:60vh">
+          <table class="dt">
+            <thead><tr><th>Rol</th><th>Permisos</th><th>Usuarios</th></tr></thead>
+            <tbody id="roleRows"><tr><td colspan="3" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <p class="text-[11px] text-on-surface-variant">Vista de solo lectura del RBAC (<span class="mono">/api/rbac</span>). La gestión de altas, roles e impersonación se realiza en la consola.</p>
+  </section>
+
     <p class="text-[11px] text-on-surface-variant">Actualización manual · las acciones de escritura requieren sesión de operador.</p>
   </main><!-- end page-content -->
 
@@ -1198,23 +1577,40 @@ $$('[data-fin-stab]').forEach(b=>b.addEventListener('click',()=>{
   if(b.dataset.finStab==='facturas'){if(!CUENTAS.length)loadCuentas().then(()=>{fillCtaSels();loadFacturas();});else{fillCtaSels();loadFacturas();}}
   else loadCuentas();
 }));
+// Breadcrumb + per-tab labels (also used by search placeholder / export filename).
+const TAB_LABEL={tablero:'Resumen',inventario:'Existencias',catalogo:'Productos',almacenes:'Almacenes',ubicaciones:'Ubicaciones',categorias:'Categorías',kits:'Kits',movimientos:'Movimientos',recepciones:'Recepciones',transferencias:'Transferencias',requisiciones:'Requisiciones',picklists:'Picklists',envios:'Envíos',proveedores:'Proveedores',ordenes:'Órdenes',pagos:'Pagos',donaciones:'Donaciones',finanzas:'Finanzas',reportes:'Reportes',analiticas:'Analíticas',alertas:'Alertas',conteos:'Conteos',etiquetas:'Etiquetas',ajustes:'Ajustes',usuarios:'Usuarios y Roles'};
+function setBreadcrumb(t){const el=$('#crumbCur');if(el)el.textContent=TAB_LABEL[t]||'Suministros';}
 function onTab(t){
+  setBreadcrumb(t);
+  const gs=$('#globalSearch');if(gs)gs.value='';
   if(t==='tablero')loadTablero();
   else if(t==='inventario'){ensureUbic();loadInv();}
   else if(t==='catalogo'){loadCats();loadProds();}
+  else if(t==='categorias'){loadCats();}
+  else if(t==='almacenes'){loadAlmacenes();}
+  else if(t==='kits'){loadKits();}
   else if(t==='ubicaciones')loadUbic();
   else if(t==='movimientos'){ensureUbic();ensureProds();loadMovs();}
+  else if(t==='recepciones'){ensureUbic();ensureProds();loadRecepciones();}
+  else if(t==='transferencias'){loadTransferencias();}
   else if(t==='requisiciones'){ensureUbic();ensureProds();loadReqs();}
   else if(t==='proveedores'){ensureUbic();ensureProds();loadProveedores();}
   else if(t==='donaciones'){ensureUbic();ensureProds();loadDonaciones();}
   else if(t==='ordenes'){ensureUbic();ensureProds();ensureProvs();loadOrdenes();}
+  else if(t==='pagos'){loadPagos();}
   else if(t==='finanzas'){ensureProvs();loadCuentas();}
   else if(t==='picklists'){ensureUbic();loadPicklists();}
   else if(t==='envios'){ensureUbic();loadEnvios();loadMetodosEnvio();}
   else if(t==='conteos'){ensureUbic();ensureProds();loadConteos();}
   else if(t==='reportes'){ensureUbic();ensureProds();renderRepFilters('valuacion');loadReporte('valuacion');}
+  else if(t==='analiticas'){loadAnaliticas();}
+  else if(t==='alertas'){loadAlertasPage();}
   else if(t==='etiquetas'){loadEtqCatalogo();}
+  else if(t==='ajustes'){loadAjustes();}
+  else if(t==='usuarios'){loadUsuarios();}
 }
+// Programmatic tab switch (used by "Ver todas →" links + the +Nuevo menu).
+function gotoTab(tab){const b=$$('.seg').find(x=>x.dataset.tab===tab);if(b)b.click();}
 
 // ── Ubicaciones ──
 async function loadUbic(){
@@ -1366,6 +1762,106 @@ async function loadTablero(){
   if(aR&&aR.ok){const d=await j(aR).catch(()=>({}));renderAlertas(d);}
   if(mR&&mR.ok){const d=await j(mR).catch(()=>({}));renderMovRec(d.results||[]);}
   $('#lastUpdate').textContent='Act. '+new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  loadGreeting();
+  loadTableroExtras();
+}
+
+// ── Greeting (name from /api/profile/me; neutral fallback, never a literal token) ──
+let _greetDone=false;
+async function loadGreeting(){
+  if(_greetDone)return; _greetDone=true;
+  const el=$('#greetTitle');if(!el)return;
+  try{
+    const r=await fetch('/api/profile/me',{credentials:'same-origin'});
+    if(r.ok){const d=await r.json().catch(()=>({}));const nm=(d.profile&&d.profile.name)?String(d.profile.name).trim().split(/\s+/)[0]:'';
+      el.textContent=nm?`Hola, ${nm} 👋`:'Hola 👋';return;}
+  }catch{}
+  el.textContent='Hola 👋';
+}
+
+// ── Dashboard charts + map ──
+const CAT_PALETTE=['#3b82f6','#6366f1','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#0ea5e9','#84cc16'];
+function svgDonut(data,unit){
+  const total=data.reduce((a,b)=>a+b.v,0)||1, R=64, r=46, c=2*Math.PI*r; let off=0, seg='';
+  data.forEach(d=>{const len=d.v/total*c;
+    seg+=`<circle cx="${R}" cy="${R}" r="${r}" fill="none" stroke="${d.c}" stroke-width="20" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${R} ${R})"/>`;off+=len;});
+  const center=unit==='$'?('$'+(total>=1000?(total/1000).toFixed(1)+'K':Math.round(total))):total.toLocaleString('es-VE');
+  const leg='<div class="chart-legend">'+data.map(d=>`<div class="cl-row"><span class="cl-dot" style="background:${d.c}"></span><span class="cl-name">${esc(d.l)}</span><span class="cl-val">${Math.round(d.v/total*100)}%</span></div>`).join('')+'</div>';
+  return `<svg width="${2*R}" height="${2*R}" viewBox="0 0 ${2*R} ${2*R}" style="flex:0 0 auto">${seg}<text x="${R}" y="${R-2}" text-anchor="middle" font-family="Public Sans" font-weight="900" font-size="22" fill="#0f172a">${center}</text><text x="${R}" y="${R+16}" text-anchor="middle" font-family="Inter" font-size="10" fill="#64748b">total</text></svg>`+leg;
+}
+function hbars(data,fmt){
+  const max=Math.max(1,...data.map(d=>d.v));
+  return data.map(d=>`<div class="hbar-row"><div class="hbar-lab" title="${esc(d.l)}">${esc(d.l)}</div><div class="hbar-track"><div class="hbar-fill" style="width:${Math.max(2,d.v/max*100)}%${d.c?`;background:${d.c}`:''}"></div></div><div class="hbar-val">${fmt?fmt(d.v):d.v}</div></div>`).join('');
+}
+function renderCatDonut(cat){
+  const el=$('#catDonut');if(!el)return;
+  const entries=Object.entries(cat||{}).filter(([,v])=>Number(v)>0).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length){el.innerHTML='<div class="text-sm text-on-surface-variant py-6">Sin existencias todavía.</div>';return;}
+  const top=entries.slice(0,7).map(([l,v],i)=>({l,v:Number(v),c:CAT_PALETTE[i%CAT_PALETTE.length]}));
+  const rest=entries.slice(7).reduce((s,[,v])=>s+Number(v),0);
+  if(rest>0)top.push({l:'Otros',v:rest,c:'#94a3b8'});
+  el.innerHTML=svgDonut(top);
+}
+function renderUbicBars(){
+  const el=$('#ubicBars');if(!el)return;
+  api('inventario').then(r=>r&&r.ok?r.json():null).then(d=>{
+    const rows=(d&&d.results)||[];const agg={};
+    rows.forEach(row=>{const k=row.ubicacion_nombre||'—';agg[k]=(agg[k]||0)+(Number(row.cantidad)||0);});
+    const entries=Object.entries(agg).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([l,v])=>({l,v}));
+    el.innerHTML=entries.length?hbars(entries,v=>v.toLocaleString('es-VE')):'<div class="text-sm text-on-surface-variant py-6 text-center">Sin existencias por ubicación.</div>';
+  }).catch(()=>{el.innerHTML='<div class="text-sm text-on-surface-variant py-6 text-center">Sin datos.</div>';});
+}
+function renderFlowChart(){
+  const el=$('#flowChart');if(!el)return;
+  const from=Date.now()-30*86400000;
+  api('reportes/ledger?from='+from+'&limit=2000').then(r=>r&&r.ok?r.json():null).then(d=>{
+    const rows=(d&&d.results)||[];
+    const days=14, buckets=[]; const dayMs=86400000;
+    for(let i=days-1;i>=0;i--){const start=new Date();start.setHours(0,0,0,0);start.setTime(start.getTime()-i*dayMs);buckets.push({t:start.getTime(),inn:0,out:0});}
+    const first=buckets[0].t;
+    rows.forEach(r2=>{const f=Number(r2.fecha_ms);if(!f||f<first)return;const idx=Math.floor((f-first)/dayMs);if(idx<0||idx>=buckets.length)return;const q=Number(r2.cantidad)||0;if(q>=0)buckets[idx].inn+=q;else buckets[idx].out+=-q;});
+    const maxV=Math.max(1,...buckets.map(b=>Math.max(b.inn,b.out)));
+    const W=300,H=120,pad=6,n=buckets.length;const xx=i=>pad+(W-2*pad)*(n<=1?0:i/(n-1));const yy=v=>H-pad-(H-2*pad)*(v/maxV);
+    const line=key=>buckets.map((b,i)=>`${i?'L':'M'}${xx(i).toFixed(1)} ${yy(b[key]).toFixed(1)}`).join(' ');
+    const area=key=>`M${xx(0)} ${H-pad} `+buckets.map((b,i)=>`L${xx(i).toFixed(1)} ${yy(b[key]).toFixed(1)}`).join(' ')+` L${xx(n-1)} ${H-pad} Z`;
+    const totalIn=buckets.reduce((s,b)=>s+b.inn,0),totalOut=buckets.reduce((s,b)=>s+b.out,0);
+    el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="140" preserveAspectRatio="none">
+      <path d="${area('inn')}" fill="rgba(16,185,129,.12)"/><path d="${line('inn')}" fill="none" stroke="#10b981" stroke-width="2"/>
+      <path d="${area('out')}" fill="rgba(239,68,68,.10)"/><path d="${line('out')}" fill="none" stroke="#ef4444" stroke-width="2"/>
+    </svg>
+    <div class="flex justify-between mt-2 text-[11px]"><span style="color:var(--sum-green);font-weight:700">Entradas <span class="mono">${totalIn.toLocaleString('es-VE')}</span></span><span style="color:var(--sum-red);font-weight:700">Salidas <span class="mono">${totalOut.toLocaleString('es-VE')}</span></span></div>`;
+    if(!rows.length)el.innerHTML='<div class="text-sm text-on-surface-variant py-6 text-center">Sin movimientos en 30 días.</div>';
+  }).catch(()=>{el.innerHTML='<div class="text-sm text-on-surface-variant py-6 text-center">Sin datos.</div>';});
+}
+let _sumMap=null,_mapMarkers=null;
+function renderMap(){
+  const wrap=$('#sumMap');if(!wrap||typeof L==='undefined')return;
+  if(!_sumMap){
+    _sumMap=L.map('sumMap',{attributionControl:false,scrollWheelZoom:false}).setView([10.60,-66.93],8);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18,subdomains:'abcd'}).addTo(_sumMap);
+    _mapMarkers=L.layerGroup().addTo(_sumMap);
+  }
+  // Backend contract: GET /tablero/mapa → [{id,nombre,tipo,lat,lng,total_unidades}]
+  api('tablero/mapa').then(r=>r&&r.ok?r.json():null).then(d=>{
+    const list=Array.isArray(d)?d:((d&&d.results)||[]);
+    _mapMarkers.clearLayers();const pts=[];const hint=$('#mapHint');
+    list.forEach(u=>{const la=Number(u.lat),lo=Number(u.lng);if(!isFinite(la)||!isFinite(lo)||(la===0&&lo===0))return;
+      const stock=Number(u.total_unidades)||0;
+      const m=L.circleMarker([la,lo],{radius:8,color:'#2563eb',weight:2,fillColor:'#3b82f6',fillOpacity:.7});
+      m.bindPopup(`<b>${esc(u.nombre)}</b><br>${esc(UTIPO[u.tipo]||u.tipo||'')}<br>Stock: <b>${stock.toLocaleString('es-VE')}</b> unid.`);
+      _mapMarkers.addLayer(m);pts.push([la,lo]);});
+    if(pts.length){_sumMap.fitBounds(pts,{padding:[30,30],maxZoom:11});if(hint)hint.textContent=pts.length+' ubicación'+(pts.length===1?'':'es')+' georreferenciada'+(pts.length===1?'':'s');}
+    else if(hint)hint.textContent='Sin coordenadas — añade lat/lng a las ubicaciones';
+    setTimeout(()=>_sumMap&&_sumMap.invalidateSize(),120);
+  }).catch(()=>{});
+}
+let _extrasTimer=null;
+function loadTableroExtras(){
+  // donut uses the resumen por_categoria already on the cards; re-fetch lightweight for freshness
+  api('tablero/resumen').then(r=>r&&r.ok?r.json():null).then(d=>{if(d)renderCatDonut(d.por_categoria||{});}).catch(()=>{});
+  renderUbicBars();
+  renderFlowChart();
+  clearTimeout(_extrasTimer);_extrasTimer=setTimeout(renderMap,80);
 }
 function renderAlertas(d){
   const el=$('#alertasPanel');if(!el)return;
@@ -2447,51 +2943,53 @@ async function loadReporte(rep){
   }
 }
 function renderValuacion(d,el){
-  const total=d.total_usd!=null?'$'+Number(d.total_usd).toLocaleString('es-VE',{minimumFractionDigits:2})+' USD':'—';
-  const cats=d.por_categoria||[];const ubics=d.por_ubicacion||[];const items=d.top_items||[];
+  const total=d.total!=null?'$'+Number(d.total).toLocaleString('es-VE',{minimumFractionDigits:2})+' USD':'—';
+  const cats=Object.entries(d.por_categoria||{}).sort((a,b)=>b[1]-a[1]);
+  const ubics=Object.entries(d.por_ubicacion||{}).sort((a,b)=>b[1]-a[1]);
+  const items=(d.items||[]).slice().sort((a,b)=>(b.valor||0)-(a.valor||0)).slice(0,25);
   el.innerHTML=`<div class="card p-4"><div class="eyebrow">Valor total del inventario</div><div class="font-display font-black text-3xl text-primary">${esc(total)}</div></div>
   <div class="grid lg:grid-cols-2 gap-4">
-    <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Por categoría</div><table class="dt"><thead><tr><th>Categoría</th><th>Valor USD</th></tr></thead><tbody>${cats.length?cats.map(c=>`<tr class="row"><td class="text-[12px]">${esc(c.categoria||'—')}</td><td class="mono text-[12px]">$${Number(c.valor_usd||0).toLocaleString('es-VE',{minimumFractionDigits:2})}</td></tr>`).join(''):'<tr><td colspan="2" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div>
-    <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Por ubicación</div><table class="dt"><thead><tr><th>Ubicación</th><th>Valor USD</th></tr></thead><tbody>${ubics.length?ubics.map(u=>`<tr class="row"><td class="text-[12px]">${esc(u.ubicacion||'—')}</td><td class="mono text-[12px]">$${Number(u.valor_usd||0).toLocaleString('es-VE',{minimumFractionDigits:2})}</td></tr>`).join(''):'<tr><td colspan="2" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div>
+    <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Por categoría</div><table class="dt"><thead><tr><th>Categoría</th><th>Valor USD</th></tr></thead><tbody>${cats.length?cats.map(([k,v])=>`<tr class="row"><td class="text-[12px]">${esc(k||'—')}</td><td class="mono text-[12px]">$${Number(v||0).toLocaleString('es-VE',{minimumFractionDigits:2})}</td></tr>`).join(''):'<tr><td colspan="2" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div>
+    <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Por ubicación</div><table class="dt"><thead><tr><th>Ubicación</th><th>Valor USD</th></tr></thead><tbody>${ubics.length?ubics.map(([k,v])=>`<tr class="row"><td class="text-[12px]">${esc(k||'—')}</td><td class="mono text-[12px]">$${Number(v||0).toLocaleString('es-VE',{minimumFractionDigits:2})}</td></tr>`).join(''):'<tr><td colspan="2" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div>
   </div>
-  <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Top ítems por valor</div><div class="overflow-x-auto"><table class="dt"><thead><tr><th>Producto</th><th>Cantidad</th><th>Costo unit.</th><th>Valor</th></tr></thead><tbody>${items.length?items.map(i=>`<tr class="row"><td class="font-semibold text-[12px]">${esc(i.producto||'—')}</td><td class="mono text-[12px]">${i.cantidad??'—'}</td><td class="mono text-[12px]">${i.costo_unit!=null?'$'+Number(i.costo_unit).toLocaleString('es-VE',{minimumFractionDigits:2}):'—'}</td><td class="mono text-[12px] font-semibold">$${Number(i.valor_usd||0).toLocaleString('es-VE',{minimumFractionDigits:2})}</td></tr>`).join(''):'<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">Sin ítems.</td></tr>'}</tbody></table></div></div>`;
+  <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Top ítems por valor</div><div class="overflow-x-auto"><table class="dt"><thead><tr><th>Producto</th><th>Cantidad</th><th>Costo unit.</th><th>Valor</th></tr></thead><tbody>${items.length?items.map(i=>`<tr class="row"><td class="font-semibold text-[12px]">${esc(i.nombre||'—')}</td><td class="mono text-[12px]">${i.cantidad??'—'}</td><td class="mono text-[12px]">${i.costo_unit!=null?'$'+Number(i.costo_unit).toLocaleString('es-VE',{minimumFractionDigits:2}):'—'}</td><td class="mono text-[12px] font-semibold">$${Number(i.valor||0).toLocaleString('es-VE',{minimumFractionDigits:2})}</td></tr>`).join(''):'<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">Sin ítems.</td></tr>'}</tbody></table></div></div>`;
 }
 function renderRotacion(d,el){
-  const rows=d.results||[];
-  el.innerHTML=`<div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Rotación de inventario</div><div class="overflow-x-auto"><table class="dt"><thead><tr><th>Producto</th><th>Consumo</th><th>Existencia</th><th>Rotación</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr class="row"><td class="font-semibold text-[12px]">${esc(r.producto||'—')}</td><td class="mono text-[12px]">${r.consumo??'—'}</td><td class="mono text-[12px]">${r.existencia??'—'}</td><td class="mono text-[12px]">${r.rotacion!=null?Number(r.rotacion).toFixed(2):'—'}</td></tr>`).join(''):'<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div></div>`;
+  const rows=d.productos||[];
+  el.innerHTML=`<div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Rotación de inventario (${d.dias||90}d)</div><div class="overflow-x-auto"><table class="dt"><thead><tr><th>Producto</th><th>Consumo</th><th>Existencia</th><th>Rotación</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr class="row"><td class="font-semibold text-[12px]">${esc(r.nombre||'—')}</td><td class="mono text-[12px]">${r.consumo??'—'}</td><td class="mono text-[12px]">${r.existencia_actual??'—'}</td><td class="mono text-[12px]">${r.rotacion!=null?Number(r.rotacion).toFixed(2):'—'}</td></tr>`).join(''):'<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div></div>`;
 }
 function renderCaducidad(d,el){
-  const bk=k=>d[k]||{items:0,cantidad:0};
-  const detalles=d.detalles||[];
+  const bk=k=>(d.buckets&&d.buckets[k])||{items:0,cantidad:0};
+  const detalles=d.detalle||[];
   el.innerHTML=`<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="card p-3"><div class="eyebrow mb-1" style="color:#b91c1c">Vencido</div><div class="font-display font-black text-xl" style="color:#b91c1c">${bk('vencido').items}</div><div class="text-xs text-on-surface-variant">${bk('vencido').cantidad} unid.</div></div>
-    <div class="card p-3"><div class="eyebrow mb-1" style="color:#b45309">0–30 días</div><div class="font-display font-black text-xl" style="color:#b45309">${bk('0_30').items}</div><div class="text-xs text-on-surface-variant">${bk('0_30').cantidad} unid.</div></div>
-    <div class="card p-3"><div class="eyebrow mb-1" style="color:#d97706">31–90 días</div><div class="font-display font-black text-xl" style="color:#d97706">${bk('31_90').items}</div><div class="text-xs text-on-surface-variant">${bk('31_90').cantidad} unid.</div></div>
-    <div class="card p-3"><div class="eyebrow mb-1" style="color:#475569">91+ días</div><div class="font-display font-black text-xl" style="color:#475569">${bk('91_plus').items}</div><div class="text-xs text-on-surface-variant">${bk('91_plus').cantidad} unid.</div></div>
+    <div class="card p-3"><div class="eyebrow mb-1" style="color:#b45309">0–30 días</div><div class="font-display font-black text-xl" style="color:#b45309">${bk('d0_30').items}</div><div class="text-xs text-on-surface-variant">${bk('d0_30').cantidad} unid.</div></div>
+    <div class="card p-3"><div class="eyebrow mb-1" style="color:#d97706">31–90 días</div><div class="font-display font-black text-xl" style="color:#d97706">${bk('d31_90').items}</div><div class="text-xs text-on-surface-variant">${bk('d31_90').cantidad} unid.</div></div>
+    <div class="card p-3"><div class="eyebrow mb-1" style="color:#475569">91+ días</div><div class="font-display font-black text-xl" style="color:#475569">${bk('d91_mas').items}</div><div class="text-xs text-on-surface-variant">${bk('d91_mas').cantidad} unid.</div></div>
   </div>
-  <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Detalle</div><div class="overflow-x-auto" style="max-height:50vh"><table class="dt"><thead><tr><th>Producto</th><th>Lote</th><th>Caducidad</th><th>Cantidad</th><th>Ubicación</th><th>Días</th></tr></thead><tbody>${detalles.length?detalles.map(item=>{const dias=item.dias??null;const cls=dias==null?'':dias<0?'vencido':dias<=30?'por-vencer':'';const ds=dias==null?'':dias<0?'color:#b91c1c;font-weight:700':dias<=30?'color:#b45309;font-weight:600':'';return`<tr class="row ${cls}"><td class="font-semibold text-[12px]">${esc(item.producto||'—')}</td><td class="mono text-[11px]">${esc(item.lote||'—')}</td><td class="text-[12px]">${fdate(item.caducidad_ms)}</td><td class="mono text-[12px]">${item.cantidad??'—'}</td><td class="text-[12px]">${esc(item.ubicacion||'—')}</td><td class="mono text-[12px]" style="${ds}">${dias!=null?dias:'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div></div>`;
+  <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Detalle</div><div class="overflow-x-auto" style="max-height:50vh"><table class="dt"><thead><tr><th>Producto</th><th>Lote</th><th>Caducidad</th><th>Cantidad</th><th>Ubicación</th><th>Días</th></tr></thead><tbody>${detalles.length?detalles.map(item=>{const dias=item.dias??null;const cls=dias==null?'':dias<0?'vencido':dias<=30?'por-vencer':'';const ds=dias==null?'':dias<0?'color:#b91c1c;font-weight:700':dias<=30?'color:#b45309;font-weight:600':'';return`<tr class="row ${cls}"><td class="font-semibold text-[12px]">${esc(item.producto_nombre||'—')}</td><td class="mono text-[11px]">${esc(item.lote||'—')}</td><td class="text-[12px]">${fdate(item.caducidad_ms)}</td><td class="mono text-[12px]">${item.cantidad??'—'}</td><td class="text-[12px]">${esc(item.ubicacion_nombre||'—')}</td><td class="mono text-[12px]" style="${ds}">${dias!=null?dias:'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div></div>`;
 }
 function renderLedger(d,el){
   _ledgerRows=d.results||[];
-  el.innerHTML=`<div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Ledger de movimientos</div><div class="overflow-x-auto" style="max-height:60vh"><table class="dt"><thead><tr><th>Fecha</th><th>Tx</th><th>Tipo</th><th>Producto</th><th>Lote</th><th>Cantidad</th><th>Ubicación</th></tr></thead><tbody>${_ledgerRows.length?_ledgerRows.map(r=>{const qty=r.cantidad??null;const qs=qty==null?'':qty<0?'color:#b91c1c;font-weight:700':'color:#15803d;font-weight:700';return`<tr class="row"><td class="text-[11px]">${fdate(r.fecha_ms)}</td><td class="mono text-[11px]">${esc(r.tx||r.movimiento_codigo||'—')}</td><td>${chipOf(r.tipo,TXTIPO)}</td><td class="font-semibold text-[12px]">${esc(r.producto||'—')}</td><td class="mono text-[11px]">${esc(r.lote||'—')}</td><td class="mono text-[12px]" style="${qs}">${qty!=null?(qty>=0?'+':'')+qty:'—'}</td><td class="text-[12px]">${esc(r.ubicacion||'—')}</td></tr>`;}).join(''):'<tr><td colspan="7" class="py-4 text-center text-on-surface-variant">Sin movimientos.</td></tr>'}</tbody></table></div></div>`;
+  el.innerHTML=`<div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Ledger de movimientos</div><div class="overflow-x-auto" style="max-height:60vh"><table class="dt"><thead><tr><th>Fecha</th><th>Tx</th><th>Tipo</th><th>Producto</th><th>Lote</th><th>Cantidad</th><th>Ubicación</th></tr></thead><tbody>${_ledgerRows.length?_ledgerRows.map(r=>{const qty=r.cantidad??null;const qs=qty==null?'':qty<0?'color:#b91c1c;font-weight:700':'color:#15803d;font-weight:700';return`<tr class="row"><td class="text-[11px]">${fdate(r.fecha_ms)}</td><td class="mono text-[11px]">${esc(r.tx_codigo||'—')}</td><td>${chipOf(r.tipo,TXTIPO)}</td><td class="font-semibold text-[12px]">${esc(r.producto_nombre||'—')}</td><td class="mono text-[11px]">${esc(r.lote||'—')}</td><td class="mono text-[12px]" style="${qs}">${qty!=null?(qty>=0?'+':'')+qty:'—'}</td><td class="text-[12px]">${esc(r.ubicacion_nombre||'—')}</td></tr>`;}).join(''):'<tr><td colspan="7" class="py-4 text-center text-on-surface-variant">Sin movimientos.</td></tr>'}</tbody></table></div></div>`;
   const btn=$('#ledExportBtn');if(btn)btn.classList.toggle('hidden',!_ledgerRows.length);
 }
 function exportLedgerCSV(){
   if(!_ledgerRows.length)return;
   const hdr='Fecha,Tx,Tipo,Producto,Lote,Cantidad,Ubicación';
-  const csv=[hdr,..._ledgerRows.map(r=>[r.fecha_ms?new Date(Number(r.fecha_ms)).toISOString():'',r.tx||r.movimiento_codigo||'',r.tipo||'',r.producto||'',r.lote||'',r.cantidad??'',r.ubicacion||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','))].join('\n');
+  const csv=[hdr,..._ledgerRows.map(r=>[r.fecha_ms?new Date(Number(r.fecha_ms)).toISOString():'',r.tx_codigo||'',r.tipo||'',r.producto_nombre||'',r.lote||'',r.cantidad??'',r.ubicacion_nombre||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='ledger-suministros.csv';a.click();URL.revokeObjectURL(a.href);
 }
 function renderFillRate(d,el){
-  const pct=d.fill_rate_pct!=null?Number(d.fill_rate_pct).toFixed(1)+'%':'—';
-  const rows=d.por_requisicion||[];const estados=d.por_estado||{};
+  const pct=d.overall_fill_rate!=null?(Number(d.overall_fill_rate)*100).toFixed(1)+'%':'—';
+  const rows=d.detalle||[];const estados=d.requisiciones_por_estado||{};
   el.innerHTML=`<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="card p-3"><div class="eyebrow mb-1">Fill-rate global</div><div class="font-display font-black text-2xl text-primary">${esc(pct)}</div></div>
     <div class="card p-3"><div class="eyebrow mb-1">Total solicitado</div><div class="font-display font-black text-2xl">${d.total_solicitado??'—'}</div></div>
     <div class="card p-3"><div class="eyebrow mb-1">Total surtido</div><div class="font-display font-black text-2xl" style="color:#15803d">${d.total_surtido??'—'}</div></div>
     <div class="card p-3"><div class="eyebrow mb-1">Por estado</div><div class="flex flex-wrap gap-1 mt-1">${Object.entries(estados).map(([k,v])=>chipOf(k,RQEST)+`<span class="mono text-xs">${v}</span>`).join(' ')||'—'}</div></div>
   </div>
-  <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Por requisición</div><div class="overflow-x-auto"><table class="dt"><thead><tr><th>Código</th><th>Solicitado</th><th>Surtido</th><th>Fill-rate</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr class="row"><td class="mono text-[11px] font-bold">${esc(r.codigo||r.id||'—')}</td><td class="mono text-[12px]">${r.solicitado??'—'}</td><td class="mono text-[12px]">${r.surtido??'—'}</td><td class="mono text-[12px] font-semibold">${r.fill_rate!=null?Number(r.fill_rate).toFixed(1)+'%':'—'}</td></tr>`).join(''):'<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div></div>`;
+  <div class="card overflow-hidden"><div class="px-4 pt-3 pb-2 eyebrow">Por requisición</div><div class="overflow-x-auto"><table class="dt"><thead><tr><th>Código</th><th>Solicitado</th><th>Surtido</th><th>Fill-rate</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr class="row"><td class="mono text-[11px] font-bold">${esc(r.codigo||r.id||'—')}</td><td class="mono text-[12px]">${r.solicitado??'—'}</td><td class="mono text-[12px]">${r.surtido??'—'}</td><td class="mono text-[12px] font-semibold">${r.fill_rate!=null?(Number(r.fill_rate)*100).toFixed(1)+'%':'—'}</td></tr>`).join(''):'<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">Sin datos.</td></tr>'}</tbody></table></div></div>`;
 }
 
 // ── Etiquetas ──
@@ -2566,6 +3064,352 @@ function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!
 
 // ── Boot ──
 loadTablero();
+</script>
+<script>
+// ════════════════════════════════════════════════════════════════════════
+//  SUMINISTROS — new views, top-bar behaviors, charts wiring (CSP-safe:
+//  every handler is JS-attached or routed through the data-act dispatcher;
+//  zero inline on* attributes). Reuses globals from the main script.
+// ════════════════════════════════════════════════════════════════════════
+const money=v=>'$'+Number(v||0).toLocaleString('es-VE',{minimumFractionDigits:2});
+
+// ── ALMACENES (ubicaciones tipo almacén/depósito) ──
+async function loadAlmacenes(){
+  const tb=$('#almRows');if(!tb)return;
+  if(!UBICACIONES.length)await loadUbic();
+  const list=UBICACIONES.filter(u=>u.tipo==='almacen'||u.tipo==='deposito');
+  if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin almacenes ni depósitos todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(u=>`<tr class="row">
+    <td><div class="font-semibold text-[12px]">${esc(u.nombre)}</div>${u.direccion?`<div class="text-[11px] text-on-surface-variant">${esc(u.direccion)}</div>`:''}</td>
+    <td class="text-[12px]">${esc(UTIPO[u.tipo]||u.tipo||'—')}</td>
+    <td class="mono text-[11px]">${esc(u.codigo||'—')}</td>
+    <td class="text-[12px]">${esc(u.estado_region||'—')}</td>
+    <td class="text-[12px]">${esc(u.responsable||'—')}</td>
+    <td class="text-[12px]">${esc(u.telefono||'—')}</td>
+    <td>${u.activa!==false?'<span class="chip" style="color:#15803d;background:#dcfce7">Activa</span>':'<span class="chip" style="color:#b91c1c;background:#fee2e2">Inactiva</span>'}</td>
+  </tr>`).join('');
+}
+
+// ── KITS (real bundles: products grouped by category) ──
+let _kitData=[];
+async function loadKits(){
+  const grid=$('#kitGrid');if(!grid)return;
+  const r=await api('productos').catch(()=>null);
+  if(!r||!r.ok){grid.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Sin datos.</div>';return;}
+  const d=await j(r).catch(()=>({}));const prods=d.results||[];
+  const groups={};
+  prods.forEach(p=>{const k=p.categoria_nombre||'Sin categoría';(groups[k]=groups[k]||[]).push(p);});
+  _kitData=Object.entries(groups).map(([cat,items])=>({cat,items,total:items.reduce((s,x)=>s+(Number(x.on_hand)||0),0)})).sort((a,b)=>b.items.length-a.items.length);
+  renderKits('');
+}
+function renderKits(q){
+  const grid=$('#kitGrid');if(!grid)return;
+  q=(q||'').toLowerCase();
+  const data=_kitData.map(g=>({...g,items:q?g.items.filter(p=>(p.nombre||'').toLowerCase().includes(q)||(g.cat||'').toLowerCase().includes(q)):g.items})).filter(g=>g.items.length);
+  if(!data.length){grid.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Sin kits que coincidan.</div>';return;}
+  const pal=['it-blue','it-indigo','it-purple','it-green','it-amber','it-cyan','it-pink','it-red'];
+  grid.innerHTML=data.map((g,gi)=>`<div class="card p-4">
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="icon-tile ${pal[gi%pal.length]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+      <div><div class="font-display font-extrabold text-[15px] leading-tight">${esc(g.cat)}</div><div class="text-[11px] text-on-surface-variant">${g.items.length} producto${g.items.length===1?'':'s'} · ${g.total.toLocaleString('es-VE')} unid. en stock</div></div>
+    </div>
+    <div class="space-y-1" style="max-height:180px;overflow-y:auto">${g.items.slice(0,40).map(p=>`<div class="flex items-center justify-between text-[12px] py-0.5"><span class="truncate">${esc(p.nombre||'—')}</span><span class="mono font-semibold ${(Number(p.on_hand)||0)<=(Number(p.stock_min)||0)&&p.stock_min?'text-[color:var(--sum-amber)]':''}">${p.on_hand??0}</span></div>`).join('')}</div>
+  </div>`).join('');
+}
+
+// ── RECEPCIONES (incoming donaciones + órdenes awaiting receipt) ──
+async function loadRecepciones(){
+  const tb=$('#rcRows');if(!tb)return;
+  const [dR,oR]=await Promise.all([api('donaciones?estado=registrada').catch(()=>null),api('ordenes').catch(()=>null)]);
+  let dons=[],ords=[];
+  if(dR&&dR.ok){const d=await j(dR).catch(()=>({}));dons=(d.results||[]);}
+  if(oR&&oR.ok){const d=await j(oR).catch(()=>({}));ords=(d.results||[]).filter(o=>o.estado==='aprobada'||o.estado==='recibida_parcial');}
+  const rows=[
+    ...dons.map(x=>({k:'don',id:x.id,origen:'Donación',codigo:x.codigo||x.id,tipo:'donacion',ref:x.donante||'—',ubic:x.ubicacion_nombre||'—',estado:x.estado,n:x.n_lineas,fecha:x.created_ms})),
+    ...ords.map(x=>({k:'oc',id:x.id,origen:'Orden de compra',codigo:x.codigo||x.id,tipo:'orden',ref:x.proveedor_nombre||'—',ubic:x.ubicacion_nombre||'—',estado:x.estado,n:x.n_lineas,fecha:x.fecha_esperada_ms||x.created_ms})),
+  ].sort((a,b)=>(b.fecha||0)-(a.fecha||0));
+  $('#rc_don').textContent=dons.length; $('#rc_oc').textContent=ords.length; $('#rc_total').textContent=rows.length;
+  if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="text-center text-on-surface-variant py-8">Nada pendiente de recepción.</td></tr>';return;}
+  tb.innerHTML=rows.map(r=>`<tr class="row">
+    <td class="text-[12px] font-semibold">${esc(r.origen)}</td>
+    <td class="mono text-[11px] font-bold">${esc(r.codigo)}</td>
+    <td class="text-[12px]">${r.k==='don'?chipOf(r.estado,DONEST):chipOf(r.estado,OCEST)}</td>
+    <td class="text-[12px]">${esc(r.ref)}</td>
+    <td class="text-[12px]">${esc(r.ubic)}</td>
+    <td class="text-[12px]">${r.k==='don'?'Donación':'Compra'}</td>
+    <td class="mono text-[12px]">${r.n??'—'}</td>
+    <td class="text-[11px]">${fdate(r.fecha)}</td>
+    <td><button class="btn-add" data-act="abrirRecepcion" data-a1="${esc(r.k)}" data-a2="${esc(r.id)}">Abrir →</button></td>
+  </tr>`).join('');
+}
+function abrirRecepcion(k,id){
+  if(k==='don'){gotoTab('donaciones');setTimeout(()=>openDonacion(id),120);}
+  else{gotoTab('ordenes');setTimeout(()=>openOrden(id),120);}
+}
+
+// ── TRANSFERENCIAS (movimientos tipo traslado) ──
+async function loadTransferencias(){
+  const tb=$('#tfRows');if(!tb)return;
+  const r=await api('movimientos').catch(()=>null);
+  if(!r||!r.ok){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin datos.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));const rows=(d.results||[]).filter(m=>m.tipo==='traslado');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin traslados registrados.</td></tr>';return;}
+  tb.innerHTML=rows.map(m=>`<tr class="row">
+    <td class="mono text-[11px] font-bold">${esc(m.codigo||m.id||'—')}</td>
+    <td class="text-[12px]">${esc(m.ubicacion_nombre||'—')}</td>
+    <td class="text-[12px]">${esc(m.ubicacion_dest_nombre||'—')}</td>
+    <td class="text-[12px]">${esc(m.referencia||'—')}</td>
+    <td class="mono text-[12px]">${m.n_lineas??'—'}</td>
+    <td class="text-[11px]">${fdate(m.created_ms)}</td>
+  </tr>`).join('');
+}
+function nuevoTransfer(){gotoTab('movimientos');setTimeout(()=>{const b=$$('.subtab').find(x=>x.dataset.stab==='trasladar');if(b)b.click();},120);}
+
+// ── PAGOS (x402 factura ledger + pay-link generation; defensive contract) ──
+async function loadPagos(){
+  const tb=$('#pgRows');if(!tb)return;
+  const banner=$('#pagosBanner');if(banner)banner.innerHTML='';
+  setMsg('#pgMsg','',true);
+  const r=await api('pagos').catch(()=>null);
+  if(!r){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Error de red.</td></tr>';return;}
+  if(r.status===404||r.status===501){
+    if(banner)banner.innerHTML='<div class="inline-note inline-note-info">El módulo de pagos se está cargando. Vuelve a intentar en unos momentos.</div>';
+    tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Módulo de pagos cargando…</td></tr>';
+    return;
+  }
+  if(r.status===401||r.status===403){showAuth('Inicia sesión como operador en /admin');tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin autorización.</td></tr>';return;}
+  const d=await j(r).catch(()=>({}));const s=d.summary||{};
+  $('#pg_total').textContent=s.facturas_total??(d.facturas||[]).length;
+  $('#pg_pend').textContent=s.pendientes??'—';
+  $('#pg_pagadas').textContent=s.pagadas??'—';
+  $('#pg_monto').textContent=s.monto_pendiente_usd!=null?money(s.monto_pendiente_usd):'—';
+  if(banner&&d.x402_live===false)banner.innerHTML='<div class="inline-note inline-note-warn">x402 aún no está activo en producción — los enlaces se generan en modo de prueba (testnet).</div>';
+  const facturas=d.facturas||[];
+  if(!facturas.length){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin facturas todavía.</td></tr>';return;}
+  tb.innerHTML=facturas.map(f=>{
+    const pend=f.estado!=='pagada'&&f.estado!=='anulada';
+    // payUrl = /api/x402/pay/{payeeUserId}/{slug} once an x402 resource exists for the factura.
+    const payUrl=f.payUrl||(f.x402_slug&&f.payee_user_id?`/api/x402/pay/${encodeURIComponent(f.payee_user_id)}/${encodeURIComponent(f.x402_slug)}`:'');
+    const link=payUrl?`<div class="pay-link-box"><code>${esc(payUrl)}</code><button class="btn-add" data-act="copyPay" data-a1="${esc(payUrl)}">Copiar</button><a href="${esc(payUrl)}" target="_blank" rel="noopener" class="btn-add" style="text-decoration:none">Cobrar (x402)</a></div>`:'<span class="text-on-surface-variant text-[12px]">—</span>';
+    const settled=(f.last_tx_hash||f.settled_count>0)?`<span class="chip" style="color:#15803d;background:#dcfce7">✓ liquidada</span>`:'';
+    const act=pend&&!payUrl?`<button class="btn-add" data-act="genEnlacePago" data-a1="${esc(f.id)}">Generar enlace</button>`:settled||'—';
+    return `<tr class="row">
+      <td class="mono text-[11px] font-bold">${esc(f.codigo||f.id||'—')}</td>
+      <td class="text-[12px] font-semibold">${esc(f.proveedor_nombre||f.payee_name||'—')}</td>
+      <td class="mono text-[12px]">${f.monto_total!=null?money(f.monto_total):'—'}</td>
+      <td>${chipOf(f.estado,FACEST)}</td>
+      <td>${link}</td>
+      <td>${act}</td>
+    </tr>`;
+  }).join('');
+}
+async function genEnlacePago(id){
+  setMsg('#pgMsg','Generando enlace…',true);
+  const r=await api('facturas/'+id+'/generar-enlace-pago',{method:'POST',body:JSON.stringify({})}).catch(()=>null);
+  if(!r){setMsg('#pgMsg','Error de red.',false);return;}
+  if(r.status===404||r.status===501){setMsg('#pgMsg','El módulo de pagos se está cargando.',false);return;}
+  const d=await r.json().catch(()=>({}));
+  if(r.ok&&(d.payUrl||d.ok)){toast('Enlace de pago generado');loadPagos();}
+  else setMsg('#pgMsg',d.error||'No se pudo generar el enlace.',false);
+}
+function copyPay(url){navigator.clipboard&&navigator.clipboard.writeText(url).then(()=>toast('Enlace copiado')).catch(()=>{});}
+
+// ── ANALÍTICAS (charts from /reportes) ──
+async function loadAnaliticas(){
+  const [vR,roR,caR]=await Promise.all([api('reportes/valuacion').catch(()=>null),api('reportes/rotacion?dias=90').catch(()=>null),api('reportes/caducidad').catch(()=>null)]);
+  const valD=$('#anaValDonut'),ubD=$('#anaUbicBars'),roD=$('#anaRotBars'),caD=$('#anaCadBars');
+  if(vR&&vR.ok){const d=await j(vR).catch(()=>({}));
+    const cats=Object.entries(d.por_categoria||{}).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+    if(valD)valD.innerHTML=cats.length?svgDonut(cats.slice(0,7).map(([l,v],i)=>({l,v:Number(v),c:CAT_PALETTE[i%CAT_PALETTE.length]})),'$'):'<div class="text-sm text-on-surface-variant py-6">Sin valuación todavía.</div>';
+    const ubs=Object.entries(d.por_ubicacion||{}).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([l,v])=>({l,v:Number(v)}));
+    if(ubD)ubD.innerHTML=ubs.length?hbars(ubs,v=>money(v)):'<div class="text-sm text-on-surface-variant py-6">Sin datos.</div>';
+  }else{if(valD)valD.innerHTML='<div class="text-sm text-on-surface-variant py-6">Sin datos.</div>';if(ubD)ubD.innerHTML='<div class="text-sm text-on-surface-variant py-6">Sin datos.</div>';}
+  if(roR&&roR.ok){const d=await j(roR).catch(()=>({}));const rows=(d.productos||[]).filter(p=>p.consumo>0).slice(0,8).map(p=>({l:p.nombre||'—',v:Number(p.consumo)}));
+    if(roD)roD.innerHTML=rows.length?hbars(rows,v=>v.toLocaleString('es-VE')):'<div class="text-sm text-on-surface-variant py-6">Sin consumo en la ventana.</div>';
+  }else if(roD)roD.innerHTML='<div class="text-sm text-on-surface-variant py-6">Sin datos.</div>';
+  if(caR&&caR.ok){const d=await j(caR).catch(()=>({}));const b=d.buckets||{};
+    const rows=[{l:'Vencido',v:(b.vencido||{}).items||0,c:'#ef4444'},{l:'0–30 días',v:(b.d0_30||{}).items||0,c:'#f59e0b'},{l:'31–90 días',v:(b.d31_90||{}).items||0,c:'#3b82f6'},{l:'91+ días',v:(b.d91_mas||{}).items||0,c:'#10b981'}];
+    if(caD)caD.innerHTML=rows.some(x=>x.v>0)?hbars(rows,v=>v+' ítems'):'<div class="text-sm text-on-surface-variant py-6">Sin ítems perecederos con stock.</div>';
+  }else if(caD)caD.innerHTML='<div class="text-sm text-on-surface-variant py-6">Sin datos.</div>';
+}
+
+// ── ALERTAS (full-page) ──
+function alertList(items,kind){
+  if(!items||!items.length)return '<div class="text-sm p-3" style="color:#15803d">✓ Nada por aquí.</div>';
+  return items.map(a=>{
+    if(kind==='bajo')return `<div class="tb-alert-row"><div class="font-semibold text-[12px]">${esc(a.nombre||'—')}</div><div class="text-[11px] text-on-surface-variant mono">${a.total}/${a.stock_min} · stock mínimo</div></div>`;
+    if(kind==='pven')return `<div class="tb-alert-row"><div class="font-semibold text-[12px]">${esc(a.producto_nombre||'—')}</div><div class="text-[11px] text-on-surface-variant">${esc(a.ubicacion_nombre||'—')} · <span class="mono">${a.dias}d</span></div></div>`;
+    return `<div class="tb-alert-row"><div class="font-semibold text-[12px]">${esc(a.producto_nombre||a.nombre||'—')}</div><div class="text-[11px] text-on-surface-variant">${esc(a.ubicacion_nombre||'—')} · <span class="mono">${a.cantidad??''}</span></div></div>`;
+  }).join('');
+}
+async function loadAlertasPage(){
+  const r=await api('tablero/alertas').catch(()=>null);
+  const d=(r&&r.ok)?await j(r).catch(()=>({})):{};
+  const venc=d.vencidos||[],pven=d.por_vencer||[],bajo=d.bajo_stock||[];
+  $('#al_venc').textContent=venc.length;$('#al_pven').textContent=pven.length;$('#al_bajo').textContent=bajo.length;
+  $('#alVencList').innerHTML=alertList(venc,'venc');
+  $('#alPvenList').innerHTML=alertList(pven,'pven');
+  $('#alBajoList').innerHTML=alertList(bajo,'bajo');
+}
+
+// ── AJUSTES (profile) ──
+async function loadAjustes(){
+  const idEl=$('#ajIdentity'),acEl=$('#ajAccount');
+  const r=await fetch('/api/profile/me',{credentials:'same-origin'}).catch(()=>null);
+  if(!r||!r.ok){if(idEl)idEl.textContent='Inicia sesión como operador para ver y editar tu perfil.';if(acEl)acEl.textContent='—';return;}
+  const d=await r.json().catch(()=>({}));const p=d.profile||{},w=d.wallet||{},x=d.x402||{};
+  if(idEl)idEl.innerHTML=`<b>${esc(p.name||p.email||'Operador')}</b> · ${esc(p.role||'—')}${p.username?` · @${esc(p.username)}`:''}<div class="text-[11px] mt-0.5">${esc(p.email||'')} · perfil ${p.completion??0}% completo</div>`;
+  const f=$('#fAjustes');if(f){f.name.value=p.name||'';f.phone.value=p.phone||'';f.country.value=p.country||'';f.city.value=p.city||'';if(p.language)f.language.value=p.language;}
+  if(acEl)acEl.innerHTML=`
+    <div class="flex justify-between"><span>Wallet</span><span class="mono">${w.has_wallet?esc((w.address||'').slice(0,6)+'…'+(w.address||'').slice(-4)):'—'}</span></div>
+    <div class="flex justify-between"><span>Custodia</span><span>${esc(w.custody||'—')}</span></div>
+    <div class="flex justify-between"><span>x402</span><span>${x.registered?'<span class="chip" style="color:#15803d;background:#dcfce7">activo</span>':'<span class="chip" style="color:#64748b;background:#eef1f7">inactivo</span>'}</span></div>
+    <div class="flex justify-between"><span>Recibido</span><span class="mono">${money((d.received||{}).usd||0)}</span></div>`;
+}
+async function submitAjustes(e){
+  e.preventDefault();const f=e.target;
+  setMsg('#ajMsg','Guardando…',true);
+  const r=await fetch('/api/profile/me',{method:'PATCH',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({name:f.name.value||undefined,phone:f.phone.value||'',country:f.country.value||'',city:f.city.value||'',language:f.language.value})}).catch(()=>null);
+  if(!r){setMsg('#ajMsg','Error de red.',false);return;}
+  if(r.status===401){setMsg('#ajMsg','Inicia sesión como operador.',false);return;}
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){setMsg('#ajMsg','✓ Perfil actualizado',true);toast('Perfil actualizado');_greetDone=false;loadGreeting();}
+  else setMsg('#ajMsg',d.error||'No se pudo guardar.',false);
+}
+
+// ── USUARIOS Y ROLES (read-only RBAC) ──
+async function loadUsuarios(){
+  const ut=$('#usrRows'),rt=$('#roleRows');
+  const [uR,rR]=await Promise.all([fetch('/api/rbac/users?limit=200',{credentials:'same-origin'}).catch(()=>null),fetch('/api/rbac/roles',{credentials:'same-origin'}).catch(()=>null)]);
+  if(uR&&(uR.status===401||uR.status===403)){if(ut)ut.innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-8">Requiere permiso <span class="mono">users:read</span>. Gestiona en la consola.</td></tr>';}
+  else if(uR&&uR.ok){const d=await uR.json().catch(()=>({}));const users=d.users||[];
+    if(ut)ut.innerHTML=users.length?users.map(u=>`<tr class="row">
+      <td class="font-semibold text-[12px]">${esc(u.name||u.preferred_name||'—')}</td>
+      <td class="text-[12px]">${esc(u.email||'—')}</td>
+      <td class="text-[12px]">${esc(u.job_title||'—')}</td>
+      <td class="text-[11px]">${(u.roles||[]).length?(u.roles||[]).map(rk=>`<span class="chip" style="color:#1d4ed8;background:#dbeafe">${esc(rk)}</span>`).join(' '):'—'}</td>
+      <td>${u.status==='active'||!u.status?'<span class="chip" style="color:#15803d;background:#dcfce7">Activo</span>':`<span class="chip" style="color:#64748b;background:#eef1f7">${esc(u.status)}</span>`}</td>
+    </tr>`).join(''):'<tr><td colspan="5" class="text-center text-on-surface-variant py-8">Sin usuarios.</td></tr>';
+  }else if(ut)ut.innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-8">Sin datos.</td></tr>';
+  if(rR&&(rR.status===401||rR.status===403)){if(rt)rt.innerHTML='<tr><td colspan="3" class="text-center text-on-surface-variant py-8">Requiere permiso <span class="mono">roles:read</span>.</td></tr>';}
+  else if(rR&&rR.ok){const d=await rR.json().catch(()=>({}));const roles=d.roles||[];
+    if(rt)rt.innerHTML=roles.length?roles.map(r=>`<tr class="row">
+      <td><div class="font-semibold text-[12px]">${esc(r.name||r.key||'—')}</div><div class="mono text-[11px] text-on-surface-variant">${esc(r.key||'')}</div></td>
+      <td class="mono text-[12px]">${(r.perms||[]).length}</td>
+      <td class="mono text-[12px]">—</td>
+    </tr>`).join(''):'<tr><td colspan="3" class="text-center text-on-surface-variant py-8">Sin roles.</td></tr>';
+  }else if(rt)rt.innerHTML='<tr><td colspan="3" class="text-center text-on-surface-variant py-8">Sin datos.</td></tr>';
+}
+
+// ── Map scroll helper ──
+function scrollToMap(){const c=$('#mapCard');if(c){c.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>_sumMap&&_sumMap.invalidateSize(),350);}}
+
+// ── Live local clock ──
+function tickClock(){const el=$('#clockChip');if(!el)return;const now=new Date();el.textContent=now.toLocaleDateString('es-VE',{day:'2-digit',month:'short'})+' '+now.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+
+// ── Notification bell ──
+let _alertsTotal=0;
+async function refreshBell(){
+  const r=await api('tablero/alertas').catch(()=>null);
+  const badge=$('#bellBadge'),menu=$('#bellMenu');
+  const d=(r&&r.ok)?await j(r).catch(()=>({})):{};
+  const venc=d.vencidos||[],pven=d.por_vencer||[],bajo=d.bajo_stock||[];
+  _alertsTotal=venc.length+pven.length+bajo.length;
+  if(badge){badge.textContent=_alertsTotal>99?'99+':String(_alertsTotal);badge.classList.toggle('hidden',_alertsTotal===0);}
+  if(menu){
+    let html='<div class="tb-menu-head"><span>Alertas ('+_alertsTotal+')</span><button class="text-[11px] font-bold" style="color:var(--ops-accent);background:none;border:none;cursor:pointer" data-act="bellSeeAll">Ver todas</button></div>';
+    if(!_alertsTotal)html+='<div class="text-sm p-3" style="color:#15803d">✓ Sin alertas activas.</div>';
+    else{
+      if(venc.length)html+='<div class="tb-menu-head" style="color:var(--ops-danger)">Vencidos</div>'+alertList(venc.slice(0,4),'venc');
+      if(pven.length)html+='<div class="tb-menu-head" style="color:var(--ops-warn)">Por vencer</div>'+alertList(pven.slice(0,4),'pven');
+      if(bajo.length)html+='<div class="tb-menu-head" style="color:var(--ops-warn)">Bajo stock</div>'+alertList(bajo.slice(0,4),'bajo');
+    }
+    menu.innerHTML=html;
+  }
+}
+function bellSeeAll(){closeMenus();gotoTab('alertas');}
+
+// ── +Nuevo menu ──
+const NUEVO_ITEMS=[
+  {l:'Producto',s:'Catálogo',ico:'it-blue',tab:'catalogo',form:'fProd'},
+  {l:'Categoría',s:'Inventario',ico:'it-indigo',tab:'categorias',form:'fCat'},
+  {l:'Ubicación',s:'Inventario',ico:'it-purple',tab:'ubicaciones'},
+  {l:'Movimiento',s:'Operaciones',ico:'it-cyan',tab:'movimientos'},
+  {l:'Requisición',s:'Operaciones',ico:'it-green',tab:'requisiciones'},
+  {l:'Envío',s:'Operaciones',ico:'it-blue',tab:'envios'},
+  {l:'Conteo físico',s:'Herramientas',ico:'it-amber',tab:'conteos'},
+  {l:'Proveedor',s:'Compras',ico:'it-indigo',tab:'proveedores'},
+  {l:'Orden de compra',s:'Compras',ico:'it-purple',tab:'ordenes'},
+  {l:'Donación',s:'Compras',ico:'it-pink',tab:'donaciones'},
+  {l:'Factura',s:'Compras',ico:'it-green',tab:'finanzas',fin:'facturas'},
+];
+function buildNuevoMenu(){
+  const m=$('#nuevoMenu');if(!m)return;
+  m.innerHTML='<div class="tb-menu-head">Crear nuevo</div>'+NUEVO_ITEMS.map((it,i)=>`<button class="tb-menu-item" data-act="nuevoCreate" data-a1="${i}"><span class="tmi-ico ${it.ico}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span>${esc(it.l)}<small>${esc(it.s)}</small></span></button>`).join('');
+}
+function nuevoCreate(i){
+  const it=NUEVO_ITEMS[Number(i)];if(!it)return;closeMenus();gotoTab(it.tab);
+  setTimeout(()=>{
+    if(it.fin==='facturas'){const b=$$('[data-fin-stab]').find(x=>x.dataset.finStab==='facturas');if(b)b.click();}
+    if(it.form){const fm=$('#'+it.form);if(fm&&fm.classList.contains('hidden')){const btn=it.form==='fProd'?$('#btnNuevoProd'):it.form==='fCat'?$('#btnNuevaCat'):null;if(btn)btn.click();}}
+    const sec=$$('[data-panel]').find(p=>p.dataset.panel===it.tab);
+    if(sec){const inp=sec.querySelector('form input,form select');if(inp)inp.focus();}
+  },160);
+}
+
+// ── Dropdown open/close ──
+function closeMenus(){['nuevoMenu','bellMenu'].forEach(id=>{const m=$('#'+id);if(m)m.classList.add('hidden');});$('#nuevoBtn')&&$('#nuevoBtn').setAttribute('aria-expanded','false');$('#bellBtn')&&$('#bellBtn').setAttribute('aria-expanded','false');}
+function toggleMenu(id,btn){const m=$('#'+id);if(!m)return;const open=m.classList.contains('hidden');closeMenus();if(open){m.classList.remove('hidden');btn&&btn.setAttribute('aria-expanded','true');if(id==='bellMenu')refreshBell();}}
+
+// ── Search (filters the active view's tables client-side) ──
+function activePanel(){return $$('[data-panel]').find(p=>!p.classList.contains('hidden'));}
+function applySearch(q){
+  const sec=activePanel();if(!sec)return;q=(q||'').trim().toLowerCase();
+  if(sec.dataset.panel==='kits'){renderKits(q);return;}
+  sec.querySelectorAll('table.dt tbody tr').forEach(tr=>{
+    if(tr.querySelector('td[colspan]')){tr.style.display='';return;}
+    tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+
+// ── Export active view's table to CSV ──
+function exportCSV(){
+  const sec=activePanel();if(!sec){toast('Nada que exportar',false);return;}
+  const table=[...sec.querySelectorAll('table.dt')].find(t=>t.offsetParent!==null)||sec.querySelector('table.dt');
+  if(!table){toast('Esta vista no tiene una tabla exportable',false);return;}
+  const headEls=[...table.querySelectorAll('thead th')];
+  const head=headEls.map(th=>th.textContent.trim());
+  const rows=[...table.querySelectorAll('tbody tr')].filter(tr=>tr.style.display!=='none'&&!tr.querySelector('td[colspan]'));
+  if(!rows.length){toast('No hay filas para exportar',false);return;}
+  const data=rows.map(tr=>[...tr.querySelectorAll('td')].map(td=>td.textContent.replace(/\s+/g,' ').trim()));
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const csv=[head.map(q).join(','),...data.map(r=>r.map(q).join(','))].join('\n');
+  const name='suministros-'+(activePanel().dataset.panel||'vista')+'.csv';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=name;a.click();URL.revokeObjectURL(a.href);
+  toast('Exportado: '+name);
+}
+
+// ── Register new dispatcher actions (ACTIONS read at event-time) ──
+Object.assign(ACTIONS,{gotoTab:gotoTab,scrollToMap:scrollToMap,abrirRecepcion:abrirRecepcion,nuevoTransfer:nuevoTransfer,genEnlacePago:genEnlacePago,copyPay:copyPay,bellSeeAll:bellSeeAll,nuevoCreate:nuevoCreate});
+
+// ── Wire top-bar controls ──
+(function(){
+  buildNuevoMenu();
+  tickClock();setInterval(tickClock,1000);
+  refreshBell();setInterval(refreshBell,120000);
+  const nb=$('#nuevoBtn');if(nb)nb.addEventListener('click',e=>{e.stopPropagation();toggleMenu('nuevoMenu',nb);});
+  const bb=$('#bellBtn');if(bb)bb.addEventListener('click',e=>{e.stopPropagation();toggleMenu('bellMenu',bb);});
+  $$('#nuevoMenu,#bellMenu').forEach(m=>m.addEventListener('click',e=>e.stopPropagation()));
+  document.addEventListener('click',closeMenus);
+  document.addEventListener('keydown',e=>{
+    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();const s=$('#globalSearch');if(s)s.focus();}
+    if(e.key==='Escape')closeMenus();
+  });
+  const gs=$('#globalSearch');if(gs)gs.addEventListener('input',function(){applySearch(this.value);});
+  const ex=$('#exportBtn');if(ex)ex.addEventListener('click',exportCSV);
+  const fa=$('#fAjustes');if(fa)fa.addEventListener('submit',submitAjustes);
+  const ks=$('#kitSearch');if(ks)ks.addEventListener('input',function(){renderKits(this.value);});
+})();
 </script>
 <script>
 // ── Mobile sidebar toggle ──
