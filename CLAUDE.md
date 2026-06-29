@@ -26,6 +26,15 @@ wt=$(./scripts/agent-worktree.sh <branch-name>) && cd "$wt"
 
 **Hard prohibitions:** do NOT commit in the canonical checkout (a `pre-commit` guard blocks it — do **not** bypass with `ALLOW_MAIN_COMMIT=1` just to avoid making a worktree); do NOT run `npm install` / `wrangler deploy` in the shared checkout while others may be working it (deploy from your worktree, or via `~/.claude/scripts/ship-deploy.sh`). The canonical checkout is coordination/read-only. Full rule: `~/CLAUDE.md` → **Per-Agent Git Worktrees**.
 
+## Canonical Checkout Hygiene & Deploy Preconditions (HARD RULE — never violate)
+
+**The canonical checkout (`~/projects/sismo911`) is for synchronization ONLY — never a concurrent work or deploy area. Develop and deploy ONLY from a clean worktree.** A real incident here shipped stale code: a deploy from the canonical checkout failed with `Could not resolve "postal-mime"` (a new dep added by merged PRs #461/#464 was never installed in the canonical `node_modules`), and syncing `main` required stashing another agent's uncommitted WIP. Both are now forbidden.
+
+- **Verify ALL deploy preconditions first** — (1) git tree clean (ignore `.gstack/`); (2) `git fetch origin` and the checkout is at `origin/main`, 0 behind; (3) deps installed & current (after ANY dependency change on `main`, `node_modules` must be reinstalled so it never lags `package.json`); (4) no foreign WIP. **If ANY fails → deploy from a fresh clean worktree and leave the canonical checkout UNTOUCHED until its owner resolves it.**
+- **NEVER touch another agent's work** — never modify, move, `git stash`, reset, or clean uncommitted/untracked changes you did not create. Foreign WIP (or stale deps, behind-main, dirty tree) ⇒ **ABORT the canonical operation**; continue from `wt=$(./scripts/agent-worktree.sh <branch>) && cd "$wt" && npm install`, then deploy via `~/.claude/scripts/ship-deploy.sh "$wt"`. The worktree carries the correct merged tree + its own `node_modules`, so it is the safe deploy source even when the canonical checkout is degraded.
+- **Corruption signal:** `node_modules/node_modules` nesting or `.<pkg>-XXXX` temp dirs mean a prior `npm install` was interrupted; only clean-reinstall (`rm -rf node_modules && npm install`) when the tree is clean, no foreign WIP, and no install is racing (`ps aux | grep -i sismo911`). Otherwise leave it for the owner and record a follow-up.
+- **Bottom line:** a degraded canonical checkout is NEVER a reason to ship stale code and NEVER an excuse to clobber someone else's work — switch to a clean worktree. Full rule: `~/CLAUDE.md` → **Canonical Checkout Hygiene & Deploy Preconditions**.
+
 ## Vault Recording (Enforce-Rule — imperative, never ask)
 
 - **Record EVERY change + its full history to the project vault, automatically, AFTER deploy — never asking.**
