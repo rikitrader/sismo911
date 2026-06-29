@@ -326,7 +326,10 @@
   const isDonarLink = (a) => { try { return DONAR_RE.test(new URL(a.getAttribute('href'), location.origin).pathname); } catch (e) { return false; } };
   const scan = (root) => {
     const els = root && root.querySelectorAll ? root.querySelectorAll('a[href]') : [];
-    els.forEach((a) => { if (isDonarLink(a)) { a.setAttribute('data-donar-gate', '1'); a.style.display = DONAR_VISIBLE ? '' : 'none'; } });
+    // The /cuenta dashboard's division cards (.ov-card-btn) are the citizen's own
+    // toolset and lead to a real, reachable page — never gate those even when the
+    // public donation zone is hidden (else the "Campañas" card loses its button).
+    els.forEach((a) => { if (!a.classList.contains('ov-card-btn') && isDonarLink(a)) { a.setAttribute('data-donar-gate', '1'); a.style.display = DONAR_VISIBLE ? '' : 'none'; } });
   };
   scan(document);
   // Catch donar links injected later (e.g. the dashboard's dynamically-built cards).
