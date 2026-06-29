@@ -25,15 +25,36 @@ sumProveedores.get('/', async (c) => {
 
   const where: string[] = [];
   const vals: unknown[] = [];
-  if (tipo && TIPOS.includes(tipo)) { where.push('tipo = ?'); vals.push(tipo); }
-  if (activo === '0' || activo === '1') { where.push('activo = ?'); vals.push(Number(activo)); }
-  if (q) { where.push('(nombre LIKE ? OR rif LIKE ?)'); vals.push(`%${q}%`, `%${q}%`); }
+  if (tipo && TIPOS.includes(tipo)) { where.push('prv.tipo = ?'); vals.push(tipo); }
+  if (activo === '0' || activo === '1') { where.push('prv.activo = ?'); vals.push(Number(activo)); }
+  if (q) { where.push('(prv.nombre LIKE ? OR prv.rif LIKE ?)'); vals.push(`%${q}%`, `%${q}%`); }
 
-  const sql = `SELECT * FROM sum_proveedores${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY nombre LIMIT ?`;
+  // LEFT JOIN users surfaces the payee's name + x402 receive status so the UI can
+  // show, per supplier, whether a real payment link can be generated for it.
+  const sql = `
+    SELECT prv.*,
+           u.name         AS payee_name,
+           u.x402_enabled AS payee_x402_enabled,
+           COALESCE(u.x402_pay_to, u.wallet_address) AS payee_wallet
+    FROM sum_proveedores prv
+    LEFT JOIN users u ON u.id = prv.payee_user_id
+    ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+    ORDER BY prv.nombre LIMIT ?`;
   vals.push(limit);
   const { results } = await c.env.DB.prepare(sql).bind(...vals).all();
   return c.json({ results: results ?? [] });
 });
+
+/** Validate an optional payee_user_id points at a real user. Returns
+ *  { ok:true, value } (value may be null when not provided/cleared) or
+ *  { ok:false }. */
+async function resolvePayee(c: any, raw: unknown): Promise<{ ok: boolean; value?: string | null }> {
+  if (raw === undefined) return { ok: true, value: undefined };
+  const id = str(raw, 40);
+  if (!id) return { ok: true, value: null };
+  const u = await c.env.DB.prepare(`SELECT id FROM users WHERE id = ?`).bind(id).first();
+  return u ? { ok: true, value: id } : { ok: false };
+}
 
 // POST / → create (nombre required; tipo validated against enum).
 sumProveedores.post('/', async (c) => {
@@ -43,17 +64,20 @@ sumProveedores.post('/', async (c) => {
   const tipo = str(b?.tipo, 40) ?? 'proveedor';
   if (!TIPOS.includes(tipo)) return c.json({ error: 'tipo inválido' }, 400);
 
+  const payee = await resolvePayee(c, b?.payee_user_id);
+  if (!payee.ok) return c.json({ error: 'payee_user_id no encontrado' }, 404);
+
   const id = uid('prv');
   const now = Date.now();
   await c.env.DB.prepare(
     `INSERT INTO sum_proveedores
-       (id, nombre, tipo, rif, contacto, telefono, email, direccion, estado_region, activo, notas, created_ms, updated_ms)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       (id, nombre, tipo, rif, contacto, telefono, email, direccion, estado_region, activo, notas, payee_user_id, created_ms, updated_ms)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id, nombre, tipo, str(b?.rif, 20), str(b?.contacto, 160), str(b?.telefono, 40),
     str(b?.email, 160), str(b?.direccion, 400), str(b?.estado_region, 80),
     b?.activo === undefined ? 1 : (b.activo ? 1 : 0),
-    str(b?.notas, 1000), now, now
+    str(b?.notas, 1000), payee.value ?? null, now, now
   ).run();
 
   const row = await c.env.DB.prepare(`SELECT * FROM sum_proveedores WHERE id = ?`).bind(id).first();
@@ -112,9 +136,17 @@ sumProveedores.delete('/precios/:linkId', async (c) => {
   return c.json({ ok: true, id: linkId });
 });
 
-// GET /:id → one proveedor or 404.
+// GET /:id → one proveedor (+ payee_name / payee_x402_enabled / payee_wallet) or 404.
 sumProveedores.get('/:id', async (c) => {
-  const row = await c.env.DB.prepare(`SELECT * FROM sum_proveedores WHERE id = ?`).bind(c.req.param('id')).first();
+  const row = await c.env.DB.prepare(
+    `SELECT prv.*,
+            u.name         AS payee_name,
+            u.x402_enabled AS payee_x402_enabled,
+            COALESCE(u.x402_pay_to, u.wallet_address) AS payee_wallet
+     FROM sum_proveedores prv
+     LEFT JOIN users u ON u.id = prv.payee_user_id
+     WHERE prv.id = ?`
+  ).bind(c.req.param('id')).first();
   if (!row) return c.json({ error: 'no encontrado' }, 404);
   return c.json(row);
 });
@@ -143,6 +175,11 @@ sumProveedores.patch('/:id', async (c) => {
   if (b?.estado_region !== undefined) { sets.push('estado_region = ?'); vals.push(str(b.estado_region, 80)); }
   if (b?.activo !== undefined) { sets.push('activo = ?'); vals.push(b.activo ? 1 : 0); }
   if (b?.notas !== undefined) { sets.push('notas = ?'); vals.push(str(b.notas, 1000)); }
+  if (b?.payee_user_id !== undefined) {
+    const payee = await resolvePayee(c, b.payee_user_id);
+    if (!payee.ok) return c.json({ error: 'payee_user_id no encontrado' }, 404);
+    sets.push('payee_user_id = ?'); vals.push(payee.value ?? null);
+  }
 
   if (!sets.length) return c.json({ error: 'nada que actualizar' }, 400);
   sets.push('updated_ms = ?'); vals.push(Date.now());

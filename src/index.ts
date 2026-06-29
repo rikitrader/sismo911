@@ -88,6 +88,7 @@ import { sumDonaciones } from './routes/suministros-donaciones';
 import { sumOrdenes } from './routes/suministros-ordenes';
 import { sumCuentas } from './routes/suministros-cuentas';
 import { sumFacturas } from './routes/suministros-facturas';
+import { sumPagos } from './routes/suministros-pagos';
 import { sumPicklists } from './routes/suministros-picklists';
 import { sumMetodosEnvio } from './routes/suministros-metodos-envio';
 import { sumEnvios } from './routes/suministros-envios';
@@ -604,7 +605,8 @@ app.route('/api/suministros/proveedores', sumProveedores);     // suppliers + pr
 app.route('/api/suministros/donaciones', sumDonaciones);       // donations intake → recepción into stock
 app.route('/api/suministros/ordenes', sumOrdenes);             // purchase orders: crear→aprobar→recibir vs OC
 app.route('/api/suministros/cuentas', sumCuentas);             // GL accounts / budget codes
-app.route('/api/suministros/facturas', sumFacturas);           // supplier invoices (+ líneas, pagar)
+app.route('/api/suministros/facturas', sumFacturas);           // supplier invoices (+ líneas, x402 pay-links)
+app.route('/api/suministros/pagos', sumPagos);                 // invoice payment ledger (x402 links + settlements)
 app.route('/api/suministros/picklists', sumPicklists);         // pick sheets → despacho on completar
 app.route('/api/suministros/metodos-envio', sumMetodosEnvio);  // shipment methods (carriers/modes)
 app.route('/api/suministros/envios', sumEnvios);               // multi-step shipments: despachar→en_tránsito→recibir
