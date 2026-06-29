@@ -535,7 +535,7 @@ function totals(){
 function renderTiles(){
   const t=totals();
   const tiles=[
-    ['Ítems totales',fmt(D.length),'líneas de producto','#13284f'],
+    ['Ítems totales',fmt(D.length),'líneas de producto','#17171a'],
     ['Unidades / dosis',fmtK(t.units),'incl. sueros en litros','#0d9488'],
     ['Fluidos IV',fmtK(t.iv)+' L','~'+fmtK(Math.round(t.iv*1.05))+' kg de carga','#2563eb'],
     ['Categorías',Object.keys(CATS).length,'grupos terapéuticos','#7c3aed'],
@@ -556,7 +556,7 @@ function donut(el,segs){
   const total=segs.reduce((a,s)=>a+s.v,0)||1, R=52,C=2*Math.PI*R; let off=0;
   const arcs=segs.map(s=>{const len=s.v/total*C;const a=`<circle r="${R}" cx="60" cy="60" fill="none" stroke="${s.c}" stroke-width="16" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"><title>${esc(s.l)}: ${s.v}</title></circle>`;off+=len;return a;}).join('');
   const legend=segs.map(s=>`<div class="flex items-center gap-1.5 text-xs"><span class="inline-block w-3 h-3 rounded-sm" style="background:${s.c}"></span><span class="flex-1">${esc(s.l)}</span><b class="tnum">${s.v}</b></div>`).join('');
-  el.innerHTML=`<svg viewBox="0 0 120 120" class="w-32 h-32 shrink-0">${arcs}<text x="60" y="58" text-anchor="middle" class="font-display" font-size="20" font-weight="800" fill="#13284f">${total}</text><text x="60" y="72" text-anchor="middle" font-size="8" fill="#666">ítems</text></svg><div class="grid grid-cols-1 gap-1 w-full">${legend}</div>`;
+  el.innerHTML=`<svg viewBox="0 0 120 120" class="w-32 h-32 shrink-0">${arcs}<text x="60" y="58" text-anchor="middle" class="font-display" font-size="20" font-weight="800" fill="#17171a">${total}</text><text x="60" y="72" text-anchor="middle" font-size="8" fill="#666">ítems</text></svg><div class="grid grid-cols-1 gap-1 w-full">${legend}</div>`;
 }
 function bars(el,rows,unitLabel){
   const max=Math.max(...rows.map(r=>r.v),1);

@@ -242,7 +242,7 @@ async function load(){
     <td class="text-[12px]">${esc(incidentLbl(c.incident_type))}</td>
     <td class="text-[12px]">${esc(c.last_seen)||'—'}</td>
     <td class="text-center"><span class="chip" style="color:#0369a1;background:#e0f2fe">${c.evidence_count||0}</span></td>
-    <td class="text-center"><span class="chip" style="color:#13284f;background:#e5e9f2">${c.docket_count||0}</span></td>
+    <td class="text-center"><span class="chip" style="color:var(--ops-text);background:var(--ops-neutral-bg)">${c.docket_count||0}</span></td>
     <td class="text-[12px]">${esc(c.assigned_to)||'<span class="text-on-surface-variant">sin asignar</span>'}</td>
     <td class="text-[12px]">${fmtD(c.created_ms)}<div class="text-[11px] text-on-surface-variant">${days(c.created_ms)} d</div></td>
   </tr>`).join('');
@@ -369,7 +369,7 @@ function renderOverview(){
               <div class="mono text-[12px] text-on-surface-variant">${esc(p.case_number||p.id)}</div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;background:rgba(229,114,0,.12);border:1px solid rgba(229,114,0,.4);border-radius:10px;padding:6px 11px">
                 <span style="font:800 9px Inter;letter-spacing:.1em;text-transform:uppercase;color:#b45309">⏱ Tiempo desde el sismo</span>
-                <span class="mono" id="adm_chrono" style="font:900 26px/1 'JetBrains Mono';color:#0b1b3a;font-variant-numeric:tabular-nums">—</span>
+                <span class="mono" id="adm_chrono" style="font:900 26px/1 'JetBrains Mono';color:var(--ops-text);font-variant-numeric:tabular-nums">—</span>
               </div>
             </div>
             <h2 class="font-display font-extrabold text-xl leading-tight">${esc(p.full_name)}</h2>
@@ -453,7 +453,7 @@ async function loadDocketTab(){
   }
   d.forEach(x=>nodes.push(Object.assign({ts:x.created_ms},x)));
   nodes.sort((a,b)=>a.ts-b.ts);
-  const KC={sismo:'#b3261e',opened:'#13284f',status_change:'#7a5b00'};
+  const KC={sismo:'#b3261e',opened:'#525258',status_change:'#7a5b00'};
   const tl=nodes.map(n=>{const col=KC[n.kind]||'#1b6e3c';let title=KIND[n.kind]||n.kind;if(n.kind==='status_change'&&n.status_to)title+=`: ${(ST[n.status_from]||{}).es||n.status_from||'—'} → ${(ST[n.status_to]||{}).es||n.status_to}`;
     const pend=n.review==='pending';
     return `<div class="tl pb-4" data-eid="${esc(n.id||'')}"><span class="tl-dot" style="background:${pend?'#d97706':col}"></span>
@@ -623,8 +623,8 @@ $('#d_export').onclick=async()=>{
   const row=(k,v)=>`<tr><td style="padding:3px 8px;color:#555;font-weight:600">${k}</td><td style="padding:3px 8px">${v||'—'}</td></tr>`;
   $('#packet').innerHTML=`
     <div style="font-family:'Public Sans',Arial,sans-serif;color:#111;padding:24px;max-width:760px;margin:0 auto">
-      <div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid #13284f;padding-bottom:10px">
-        <img src="/logo.svg" style="width:48px;height:48px"><div><div style="font-weight:900;font-size:20px;color:#13284f">SISMO911 — Expediente de Emergencia</div><div style="font-size:11px;letter-spacing:.1em;color:#666">CENTRO NACIONAL DE COORDINACIÓN DE RESPUESTA</div></div>
+      <div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--ops-text);padding-bottom:10px">
+        <img src="/logo.svg" style="width:48px;height:48px"><div><div style="font-weight:900;font-size:20px;color:var(--ops-text)">SISMO911 — Expediente de Emergencia</div><div style="font-size:11px;letter-spacing:.1em;color:#666">CENTRO NACIONAL DE COORDINACIÓN DE RESPUESTA</div></div>
         <div style="margin-left:auto;text-align:right;font-family:monospace"><div style="font-weight:700">${esc(p.case_number||p.id)}</div><div style="font-size:11px;color:#666">${fmtD(Date.now())}</div></div>
       </div>
       <h1 style="font-size:22px;margin:14px 0 4px">${esc(p.full_name)}</h1>
