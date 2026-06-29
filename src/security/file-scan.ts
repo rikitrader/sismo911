@@ -151,9 +151,9 @@ export async function scanFile(bytes: Uint8Array, opts: ScanOpts = {}): Promise<
 }
 
 // NOTE on EXIF: the Workers runtime has no native image re-encoder, so we cannot
-// strip an EXIF block in-Worker without a WASM codec (heavy). The safe posture
-// taken here: we store the raw bytes under a hash key and DO NOT persist any
-// client-supplied metadata (geotags, camera, timestamps) into D1 — only the
-// gate's own validated fields are written. If full EXIF scrubbing is required,
-// route the object through Cloudflare Images (which re-encodes + drops EXIF) and
-// store that variant instead. TODO: wire env.IMAGES when/if Images is enabled.
+// RE-COMPRESS to drop metadata. Instead, callers that store user images publicly
+// (e.g. the avatar upload) run `stripImageMetadata()` from ./image-metadata, which
+// LOSSLESSLY removes the EXIF/GPS/XMP/IPTC/text segments (no re-encode) before
+// storing — so geotags, device, and timestamps never leave the upload. We also
+// DO NOT persist any client-supplied metadata into D1. (A full re-encode via
+// Cloudflare Images remains an option if pixel-level scrubbing is ever required.)
