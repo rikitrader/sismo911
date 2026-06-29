@@ -646,6 +646,19 @@ async function openCase(id,fromPop){
   setTab('resumen');
 }
 
+// Operator-only: flag/unflag a case as PROTEGIDO (responder-only). want='1' to
+// protect, '0' to lift. Reloads the case so the badge + button reflect the new
+// state. Backend: POST /api/persons/:id/protect {protected:boolean}.
+async function toggleProtect(id,want){
+  if(!OP||!id)return;
+  const makeP = want==='1'||want===true;
+  try{
+    const r=await api('persons/'+encodeURIComponent(id)+'/protect',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({protected:makeP})});
+    if(r.ok)openCase(id);
+    else alert('No se pudo actualizar la protección del caso.');
+  }catch{alert('Error de red al actualizar la protección.');}
+}
+
 function buildTimeline(d){
   const {person:p,event:e,docket=[]}=d; const nodes=[];
   if(e&&e.time_ms)nodes.push({ts:e.time_ms,kind:'sismo',detail:`${e.place_es||e.place||'Sismo'} — M${e.mag||'?'}${e.depth_km?`, ${e.depth_km} km de profundidad`:''}${e.alert?` · PAGER ${String(e.alert).toUpperCase()}`:''}`});
@@ -727,6 +740,7 @@ function renderCase(d){
       <h2 class="disp" style="font-weight:900;font-size:24px;letter-spacing:-.02em;margin:8px 0 4px;color:#fff">${esc(p.full_name||'Sin nombre')}</h2>
       <div style="font:500 13px Inter;color:#bcd0f4">${p.age?p.age+' años':''}${p.sex?(p.age?' · ':'')+esc(p.sex):''}${(p.age||p.sex)?' · ':''}<span class="mono">${esc(typeLbl(p.incident_type))}</span></div>
       ${d.identity_verified?`<div style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 10px;border-radius:999px;background:rgba(34,197,94,.16);border:1px solid rgba(34,197,94,.5);font:700 11.5px Inter;color:#86efac"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Identidad verificada</div>`:''}
+      ${(OP&&p.protected)?`<div style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;margin-left:6px;padding:4px 10px;border-radius:999px;background:rgba(229,114,0,.16);border:1px solid rgba(229,114,0,.55);font:700 11.5px Inter;color:#f0a35a"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/></svg>PROTEGIDO · solo responders</div>`:''}
     </div>`;
   const meta=[
     ['Estado',(ST[p.status]||ST.unknown).es],
@@ -780,6 +794,7 @@ function renderCase(d){
         <div style="display:flex;flex-direction:column;gap:9px">
           <button class="btn-navy" data-act="setTab" data-a1="cronologia" style="border:none;width:100%">Ver cronología completa →</button>
           <button class="btn-navy" data-act="setTab" data-a1="aportar" style="background:var(--red);border:none;width:100%">Aportar información</button>
+          ${(OP&&!String(p.id).startsWith('hosp-'))?`<button class="btn-navy" data-act="toggleProtect" data-a1="${esc(p.id)}" data-a2="${p.protected?'0':'1'}" style="border:none;width:100%;background:${p.protected?'#6b7280':'var(--amber,#e57200)'}" title="${p.protected?'Quitar la protección: el caso vuelve a las reglas públicas':'Proteger un menor o caso sensible: lo retira de las superficies públicas (lista, galería, foto, expediente, artículo, sitemap); solo responders'}">🛡 ${p.protected?'Quitar protección':'Proteger (solo responders)'}</button>`:''}
         </div>
       </div>
     </div>
@@ -1178,6 +1193,7 @@ document.addEventListener('keydown',e=>{
 // ---- Delegated event dispatcher (replaces inline handlers for CSP) ----
 var ACTIONS={
   setTab:function(t){setTab(t);},
+  toggleProtect:function(id,want){toggleProtect(id,want);},
   __rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
 };
 function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
