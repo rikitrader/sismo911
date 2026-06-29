@@ -16,7 +16,8 @@ beforeEach(() => {
   db.raw.exec(
     `CREATE TABLE IF NOT EXISTS personas (id TEXT PRIMARY KEY, nombre TEXT, edad INTEGER,
        ubicacion TEXT, fecha TEXT, descripcion TEXT, contacto TEXT, estado TEXT, foto TEXT,
-       foto_r2 TEXT, localizado_por TEXT, updated_at INTEGER, moderation TEXT)`,
+       foto_r2 TEXT, localizado_por TEXT, updated_at INTEGER, moderation TEXT,
+       protected INTEGER NOT NULL DEFAULT 0)`,
   );
   db.raw.prepare(
     `INSERT INTO personas (id, nombre, edad, ubicacion, descripcion, contacto, estado, moderation)

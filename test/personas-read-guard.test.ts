@@ -7,12 +7,12 @@ import { readFileSync } from 'node:fs';
 // counters and search. Each entry below is the literal filter on one public read
 // path — this test FAILS if any of them is removed.
 const GUARDS: Array<[file: string, marker: string, where: string]> = [
-  ['src/routes/persons.ts', `if (!op) fWhere.push("moderation = 'approved'")`, '/casos federation (public)'],
+  ['src/routes/persons.ts', `if (!op) { fWhere.push("moderation = 'approved'");`, '/casos federation (public)'],
   ['src/routes/persons.ts', `hospitalized, COUNT(*) AS total FROM personas WHERE moderation = 'approved'`, '/api/persons/stats counters'],
   ['src/routes/persons.ts', `deceased, COUNT(*) AS total FROM personas WHERE moderation = 'approved'`, '/casos summary counters'],
   ['src/routes/persons.ts', `FROM personas WHERE moderation = 'approved' AND nombre LIKE ?`, 'federated name search'],
-  ['src/routes/familia.ts', `if (!op) base.push("moderation = 'approved'")`, '/api/familia/persons list'],
-  ['src/routes/familia.ts', `['foto_r2 IS NOT NULL', "moderation = 'approved'"]`, '/api/familia/gallery'],
+  ['src/routes/familia.ts', `if (!op) { base.push("moderation = 'approved'");`, '/api/familia/persons list'],
+  ['src/routes/familia.ts', `['foto_r2 IS NOT NULL', "moderation = 'approved'"`, '/api/familia/gallery'],
   ['src/routes/desaparecidos.ts', `moderation = 'approved'`, '/desaparecidos public list + single'],
 ];
 
