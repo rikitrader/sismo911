@@ -1,3 +1,4 @@
+import type { Context } from 'hono';
 import type { Env } from '../types';
 
 // Step-up (re-confirmation) for sensitive actions. When a user enables
@@ -23,4 +24,30 @@ export function stepUpEnabled(settingsJson: unknown): boolean {
   if (typeof settingsJson !== 'string' || !settingsJson) return false;
   try { const s = JSON.parse(settingsJson); return !!(s && typeof s === 'object' && s.sec_require_login === true); }
   catch { return false; }
+}
+
+// Reusable gate for any sensitive mutating endpoint. Returns a 403 step_up_required
+// Response when `userId` has enabled sec_require_login and has NOT re-confirmed
+// recently; otherwise null (the caller proceeds). The client catches the 403,
+// prompts for the password via POST /api/profile/confirm, then retries.
+// `userId` is the ACTING user — for admin mutations pass the admin's id.
+export async function enforceStepUp(
+  c: Context<{ Bindings: Env }>,
+  userId: string,
+): Promise<Response | null> {
+  if (!userId) return null;
+  let settingsJson: unknown;
+  try {
+    const row: any = await c.env.DB.prepare(`SELECT settings_json FROM users WHERE id = ?`).bind(userId).first();
+    settingsJson = row?.settings_json;
+  } catch {
+    // Cannot read the setting → do not block. Step-up is a defense-in-depth layer
+    // (the action still requires auth + permissions); failing open keeps legit
+    // actions working on any DB hiccup rather than hard-failing the request.
+    return null;
+  }
+  if (stepUpEnabled(settingsJson) && !(await hasRecentStepUp(c.env, userId))) {
+    return c.json({ error: 'step_up_required' }, 403);
+  }
+  return null;
 }

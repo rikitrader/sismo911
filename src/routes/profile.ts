@@ -3,7 +3,7 @@ import type { Env } from '../types';
 import { getUserFromRequest, verifyPassword } from '../lib/auth';
 import { audit } from '../lib/audit';
 import { uid } from '../lib/db';
-import { markStepUpConfirmed, hasRecentStepUp, stepUpEnabled } from '../lib/stepup';
+import { markStepUpConfirmed, enforceStepUp } from '../lib/stepup';
 import { x402Network, x402Asset } from '../lib/x402';
 import { scanFile } from '../security/file-scan';
 import { notify } from '../lib/notify';
@@ -135,6 +135,10 @@ const SETTING_KEYS = new Set([
 profile.patch('/payment-settings', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
+  // Changing security/privacy settings is itself sensitive — a hijacked session
+  // must not be able to silently disable sec_require_login. (Enabling it the first
+  // time is allowed because the gate reads the CURRENT, not-yet-set, value.)
+  const stepUp = await enforceStepUp(c, me.id); if (stepUp) return stepUp;
   const b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
 
@@ -458,6 +462,7 @@ profile.get('/payment-links', async (c) => {
 profile.post('/payment-links', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const stepUp = await enforceStepUp(c, me.id); if (stepUp) return stepUp;
   const b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
   const title = str(b.title, 120);
@@ -493,6 +498,7 @@ profile.post('/payment-links', async (c) => {
 profile.patch('/payment-links/:id', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const stepUp = await enforceStepUp(c, me.id); if (stepUp) return stepUp;
   const id = c.req.param('id');
   const owns: any = await c.env.DB.prepare(`SELECT id FROM x402_resources WHERE id=? AND user_id=?`).bind(id, me.id).first();
   if (!owns) return c.json({ error: 'not_found' }, 404);
@@ -516,6 +522,7 @@ profile.patch('/payment-links/:id', async (c) => {
 profile.delete('/payment-links/:id', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const stepUp = await enforceStepUp(c, me.id); if (stepUp) return stepUp;
   const id = c.req.param('id');
   const owns: any = await c.env.DB.prepare(`SELECT id FROM x402_resources WHERE id=? AND user_id=?`).bind(id, me.id).first();
   if (!owns) return c.json({ error: 'not_found' }, 404);
@@ -644,14 +651,7 @@ profile.get('/withdrawals', async (c) => {
 profile.post('/withdrawals', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
-  // Step-up gate: a withdrawal moves money, so when the user has enabled
-  // sec_require_login they must have re-confirmed their password recently. The
-  // client catches 403 step_up_required, prompts for the password via /confirm,
-  // then retries.
-  const meRow: any = await c.env.DB.prepare(`SELECT settings_json FROM users WHERE id = ?`).bind(me.id).first();
-  if (stepUpEnabled(meRow?.settings_json) && !(await hasRecentStepUp(c.env, me.id))) {
-    return c.json({ error: 'step_up_required' }, 403);
-  }
+  const stepUp = await enforceStepUp(c, me.id); if (stepUp) return stepUp;
   const b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
 
@@ -711,6 +711,7 @@ profile.post('/withdrawals', async (c) => {
 profile.patch('/withdrawals/:id/cancel', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const stepUp = await enforceStepUp(c, me.id); if (stepUp) return stepUp;
   const id = c.req.param('id');
   const row: any = await c.env.DB.prepare(`SELECT id, status FROM withdrawal_requests WHERE id=? AND user_id=?`).bind(id, me.id).first();
   if (!row) return c.json({ error: 'not_found' }, 404);
@@ -730,6 +731,7 @@ profile.patch('/withdrawals/:id/cancel', async (c) => {
 profile.post('/withdrawal-methods', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const stepUp = await enforceStepUp(c, me.id); if (stepUp) return stepUp;
   const b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
   const type = String(b.type || '') as WithdrawalMethod;
@@ -748,6 +750,7 @@ profile.post('/withdrawal-methods', async (c) => {
 profile.delete('/withdrawal-methods/:id', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const stepUp = await enforceStepUp(c, me.id); if (stepUp) return stepUp;
   const id = c.req.param('id');
   const owns: any = await c.env.DB.prepare(`SELECT id FROM withdrawal_methods WHERE id=? AND user_id=?`).bind(id, me.id).first();
   if (!owns) return c.json({ error: 'not_found' }, 404);
