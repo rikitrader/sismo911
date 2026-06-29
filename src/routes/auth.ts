@@ -4,6 +4,7 @@ import { uid } from '../lib/db';
 import { hashPassword, verifyPassword, passwordNeedsUpgrade, createSession, setSessionCookie, clearSession, getUserFromRequest, getSessionToken, IDLE_TTL_MS, isPrivilegedRole } from '../lib/auth';
 import { rateLimit } from '../lib/security';
 import { audit } from '../lib/audit';
+import { notify } from '../lib/notify';
 import { sendEmail, randomToken, sha256hex, resetEmail, passwordChangedEmail, type EmailMsg } from '../lib/email';
 // Rich branded catalog templates (AUTH-01 verify, AUTH-02 welcome) — the
 // transactional-email source of truth. Aliased to avoid clashing with email.ts.
@@ -125,6 +126,12 @@ auth.get('/verify', async (c) => {
   await c.env.DB.prepare(`UPDATE users SET email_verified = 1 WHERE id = ?`).bind(row.user_id).run();
   const base = c.env.PUBLIC_BASE_URL || 'https://sismo911.com';
   fireEmail(c, row.email, welcomeEmailTpl({ name: row.name, url: `${base}/cuenta` }));
+  await notify(c.env, row.user_id, {
+    type: 'welcome',
+    title: '¡Bienvenido a SISMO911!',
+    body: 'Tu cuenta está activa. Crea tu primer enlace de pago para empezar a recibir USDC.',
+    link: '#pagos',
+  });
   await audit(c, 'auth.verify', { user_id: row.user_id });
   return c.redirect(`${base}/cuenta?verificado=1`, 302);
 });

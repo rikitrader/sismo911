@@ -984,11 +984,25 @@ html body { padding-left:0 !important; padding-top:0 !important; }
   display:flex; flex-direction:column; padding:18px 16px;
 }
 .ac-side-head { display:flex; align-items:center; justify-content:space-between; padding:2px 4px 18px; }
-.ac-logo {
-  width:40px; height:40px; border-radius:11px; flex-shrink:0; text-decoration:none;
-  display:flex; align-items:center; justify-content:center; overflow:hidden;
+.ac-brand { display:flex; align-items:center; gap:9px; text-decoration:none; min-width:0; }
+.ac-brand img { width:34px; height:34px; object-fit:contain; flex-shrink:0; display:block; }
+.ac-brand-name {
+  font-family:var(--font-display); font-weight:800; font-size:1.08rem;
+  color:var(--text); letter-spacing:-.01em; white-space:nowrap;
 }
-.ac-logo img { width:100%; height:100%; object-fit:contain; display:block; }
+/* Collapsed (icon-rail) sidebar — desktop toggle via « button, persisted. */
+.ac-side.collapsed { width:74px; flex-basis:74px; padding-left:10px; padding-right:10px; }
+.ac-side.collapsed .ac-side-head { flex-direction:column; gap:10px; }
+.ac-side.collapsed .ac-brand-name,
+.ac-side.collapsed .side-link span,
+.ac-side.collapsed .ac-upsell-title,
+.ac-side.collapsed .ac-upsell-text,
+.ac-side.collapsed .ac-upsell-btn,
+.ac-side.collapsed .ac-support span { display:none; }
+.ac-side.collapsed .side-link { justify-content:center; padding-left:0; padding-right:0; }
+.ac-side.collapsed .ac-support { justify-content:center; }
+.ac-side.collapsed .ac-upsell { padding:12px 8px; text-align:center; }
+.ac-side.collapsed .ac-collapse { transform:rotate(180deg); }
 .ac-collapse {
   border:none; background:transparent; color:var(--muted); cursor:pointer;
   width:32px; height:32px; border-radius:8px; font-size:1.05rem;
@@ -1068,6 +1082,82 @@ html body { padding-left:0 !important; padding-top:0 !important; }
 .ac-user > svg { width:16px; height:16px; color:var(--muted); }
 .ac-content { flex:1; width:100%; max-width:1320px; padding:6px 28px 60px; }
 
+/* ── Popovers (bell panel + menus) ───────────────────────────────────────── */
+.ac-pop-wrap { position:relative; }
+.ac-pop {
+  position:absolute; top:calc(100% + 8px); right:0; z-index:60;
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  box-shadow:var(--shadow-md); overflow:hidden;
+  opacity:0; transform:translateY(-6px) scale(.98); pointer-events:none;
+  transition:opacity .14s ease, transform .14s ease;
+}
+.ac-pop.open { opacity:1; transform:none; pointer-events:auto; }
+.ac-pop[hidden] { display:none; }
+
+/* Notifications panel */
+.ac-notif-pop { width:360px; max-width:calc(100vw - 32px); }
+.ac-notif-head {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:14px 16px; border-bottom:1px solid var(--border);
+}
+.ac-notif-head .t { font-family:var(--font-display); font-weight:800; font-size:.95rem; color:var(--text); }
+.ac-notif-markall { border:none; background:transparent; color:var(--brand-2); font-size:.78rem; font-weight:700; cursor:pointer; padding:4px 6px; border-radius:6px; }
+.ac-notif-markall:hover { background:rgba(11,95,255,.07); }
+.ac-notif-markall:disabled { color:var(--muted); cursor:default; background:none; }
+.ac-notif-list { max-height:420px; overflow-y:auto; }
+.ac-notif-item {
+  display:flex; gap:12px; align-items:flex-start; width:100%; text-align:left;
+  padding:13px 16px; border:none; background:transparent; cursor:pointer;
+  border-bottom:1px solid var(--border); transition:background .12s;
+}
+.ac-notif-item:last-child { border-bottom:none; }
+.ac-notif-item:hover { background:var(--surface-2); }
+.ac-notif-item.unread { background:rgba(11,95,255,.04); }
+.ac-notif-ic { width:34px; height:34px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.ac-notif-ic svg { width:17px; height:17px; }
+.ac-notif-ic.t-payment_received { background:rgba(46,125,50,.13); color:var(--success); }
+.ac-notif-ic.t-withdrawal_update { background:rgba(245,158,11,.15); color:#d97706; }
+.ac-notif-ic.t-link_created { background:rgba(11,95,255,.12); color:var(--brand-2); }
+.ac-notif-ic.t-welcome { background:rgba(124,58,237,.12); color:#7c3aed; }
+.ac-notif-ic.t-plan_interest { background:rgba(234,179,8,.16); color:#ca8a04; }
+.ac-notif-ic.t-system { background:rgba(107,114,128,.13); color:var(--muted); }
+.ac-notif-body { flex:1; min-width:0; }
+.ac-notif-title { font-size:.86rem; font-weight:700; color:var(--text); display:flex; align-items:center; gap:6px; }
+.ac-notif-dot { width:7px; height:7px; border-radius:50%; background:var(--brand-2); flex-shrink:0; }
+.ac-notif-text { font-size:.8rem; color:var(--muted); line-height:1.45; margin-top:2px; }
+.ac-notif-time { font-size:.72rem; color:var(--muted); margin-top:4px; }
+.ac-notif-empty { padding:34px 20px; text-align:center; }
+.ac-notif-empty svg { width:30px; height:30px; color:var(--muted); opacity:.6; margin-bottom:10px; }
+.ac-notif-empty .t { font-weight:700; color:var(--text); font-size:.9rem; margin-bottom:4px; }
+.ac-notif-empty .s { font-size:.8rem; color:var(--muted); }
+
+/* Dropdown menu (user chip + Más acciones) */
+.ac-menu-pop { width:220px; padding:6px; }
+.ac-menu-pop.left { right:auto; left:0; }
+.ac-menu-item {
+  display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+  padding:10px 12px; border:none; background:transparent; cursor:pointer;
+  border-radius:9px; font-size:.86rem; font-weight:600; color:var(--text); transition:background .12s;
+}
+.ac-menu-item:hover { background:var(--surface-2); }
+.ac-menu-item svg { width:17px; height:17px; color:var(--muted); flex-shrink:0; }
+.ac-menu-item.danger { color:var(--danger); }
+.ac-menu-item.danger svg { color:var(--danger); }
+.ac-menu-sep { height:1px; background:var(--border); margin:6px 4px; }
+
+/* Plans modal content */
+.plan-grid { display:grid; gap:14px; margin:4px 0 2px; }
+.plan-card { border:1px solid var(--border); border-radius:14px; padding:18px; }
+.plan-card.current { border-color:var(--brand-2); box-shadow:0 0 0 1px var(--brand-2) inset; }
+.plan-name { font-family:var(--font-display); font-weight:800; font-size:1.05rem; color:var(--text); display:flex; align-items:center; gap:8px; }
+.plan-tag { font-size:.68rem; font-weight:800; padding:2px 8px; border-radius:100px; background:rgba(11,95,255,.1); color:var(--brand-2); }
+.plan-tag.soon { background:var(--surface-2); color:var(--muted); }
+.plan-price { font-family:var(--font-display); font-weight:800; font-size:1.3rem; color:var(--text); margin:6px 0 2px; }
+.plan-price small { font-size:.78rem; font-weight:600; color:var(--muted); }
+.plan-feats { list-style:none; margin:10px 0 0; padding:0; }
+.plan-feats li { font-size:.83rem; color:var(--muted); padding:4px 0 4px 22px; position:relative; }
+.plan-feats li::before { content:'✓'; position:absolute; left:0; color:var(--success); font-weight:800; }
+
 /* ── Profile header (hero) redesign ──────────────────────────────────────── */
 .hero-card { padding:26px 28px 20px; }
 .hero-grid { display:flex; gap:24px; align-items:flex-start; }
@@ -1127,15 +1217,25 @@ html body { padding-left:0 !important; padding-top:0 !important; }
 .qa-btn.featured:hover { background:rgba(11,95,255,.13); color:var(--brand-2); }
 
 /* ── KPI strip (8 cells, pastel chips, deltas) ───────────────────────────── */
+/* KPI cards — separated cards, each with a colored bottom accent (ref Image #11) */
 .kpi-strip {
-  display:grid; grid-template-columns:repeat(8,1fr); gap:1px;
-  background:var(--border); border:1px solid var(--border);
-  border-radius:var(--radius-md); box-shadow:var(--shadow-sm);
-  overflow:hidden; margin-bottom:18px;
+  display:grid; grid-template-columns:repeat(8,1fr); gap:14px;
+  background:linear-gradient(180deg,rgba(99,102,241,.04) 0%,rgba(99,102,241,0) 100%);
+  border:none; border-radius:20px; box-shadow:none;
+  overflow:visible; margin-bottom:18px; padding:6px;
 }
-.kpi-cell { background:var(--surface); padding:18px 16px; }
-.kpi-chip { width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; margin-bottom:12px; }
-.kpi-chip svg, .kpi-chip .kpi-svg { width:20px; height:20px; margin:0; color:inherit; }
+.kpi-cell {
+  background:var(--surface); padding:20px 18px 18px; position:relative; overflow:hidden;
+  border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-sm);
+  transition:transform .16s ease, box-shadow .16s ease;
+}
+.kpi-cell:hover { transform:translateY(-3px); box-shadow:var(--shadow-md); }
+.kpi-cell::after {
+  content:''; position:absolute; left:0; right:0; bottom:0; height:3px;
+  background:var(--kac, transparent);
+}
+.kpi-chip { width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
+.kpi-chip svg, .kpi-chip .kpi-svg { width:22px; height:22px; margin:0; color:inherit; }
 .kpi-chip.c-blue   { background:rgba(11,95,255,.12);  color:var(--brand-2); }
 .kpi-chip.c-green  { background:rgba(46,125,50,.13);  color:var(--success); }
 .kpi-chip.c-purple { background:rgba(124,58,237,.12); color:#7c3aed; }
@@ -1228,6 +1328,58 @@ html body { padding-left:0 !important; padding-top:0 !important; }
   }
   .ac-burger svg { width:20px; height:20px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Hero refinement (reference Image #9) — indigo→violet gradient accent,
+   boxed public-link + member-since, percentage-above-bar, badge with icon.
+   ═════════════════════════════════════════════════════════════════════════ */
+:root { --violet:#6366f1; --violet-2:#8b5cf6; --grad:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%); }
+@media (prefers-color-scheme:dark){ :root { --violet:#818cf8; --violet-2:#a78bfa; --grad:linear-gradient(135deg,#818cf8 0%,#a78bfa 100%); } }
+
+/* Avatar — larger, indigo→violet gradient (hero + top-bar chip) */
+.avatar-lg { width:96px; height:96px; background:var(--grad); font-size:2rem; }
+.ac-user-av { background:var(--grad); }
+.hero-av-dot { width:20px; height:20px; border-width:3px; background:#22c55e; }
+
+/* Role badge — softer, indigo, with a person icon */
+.hero-badges .badge { padding:7px 14px; font-size:.82rem; gap:7px; border-radius:12px; }
+.badge-citizen { background:rgba(99,102,241,.10); color:var(--violet); }
+.badge-ic { width:15px; height:15px; flex-shrink:0; }
+
+/* Progress — label on top, big black % beside the bar */
+.hero-card .progress-row { display:block; margin-top:22px; }
+.hero-card .progress-row .progress-label { display:block; margin:0 0 8px; font-size:.85rem; color:var(--muted); }
+.hero-card .progress-line { display:flex; align-items:center; gap:16px; }
+.hero-card .progress-pct-end { flex-shrink:0; font-family:var(--font-display); font-weight:800; font-size:1.15rem; color:var(--text); min-width:48px; }
+.hero-card .progress-track { flex:1; height:8px; }
+.hero-card .progress-fill { background:var(--grad); height:8px; }
+
+/* Boxed "Enlace público" + "Miembro desde" (input-style fields) */
+.hero-aside { gap:16px; }
+.hero-aside-label { font-size:.82rem; color:var(--muted); margin-bottom:8px; }
+.hero-link {
+  border:1px solid var(--border); border-radius:12px; padding:10px 8px 10px 13px;
+  background:var(--surface); gap:6px;
+}
+.hero-link a { color:var(--violet); }
+.hero-link a svg { color:var(--violet); }
+.hero-link-copy:hover { color:var(--violet); }
+.hero-since {
+  border:1px solid var(--border); border-radius:12px; padding:11px 14px;
+  background:var(--surface); justify-content:flex-start; gap:11px; font-size:1rem;
+}
+.hero-since svg { color:var(--violet); width:18px; height:18px; }
+
+/* Primary "Crear enlace de pago" — filled gradient (was outline) */
+.qa-btn.featured {
+  background:var(--grad); border-color:transparent; color:#fff;
+  box-shadow:0 6px 16px rgba(99,102,241,.32);
+}
+.qa-btn.featured svg { color:#fff; }
+.qa-btn.featured:hover { filter:brightness(1.05); color:#fff; background:var(--grad); }
+
+/* Softer hero card */
+.hero-card { border-radius:26px; box-shadow:0 18px 44px rgba(99,102,241,.10), var(--shadow-sm); }
 </style>
 </head>
 <body>
@@ -1238,8 +1390,11 @@ html body { padding-left:0 !important; padding-top:0 !important; }
   <!-- Sidebar -->
   <aside class="ac-side" id="ac-side">
     <div class="ac-side-head">
-      <a href="/" class="ac-logo" id="tb-logo" aria-label="SISMO911 inicio"><img src="/logo.svg" alt="SISMO911"></a>
-      <button class="ac-collapse" id="ac-collapse" type="button" aria-label="Cerrar menú">«</button>
+      <a href="/" class="ac-brand" id="tb-logo" aria-label="SISMO911 inicio">
+        <img src="/logo.svg" alt="">
+        <span class="ac-brand-name">SISMO911</span>
+      </a>
+      <button class="ac-collapse" id="ac-collapse" type="button" aria-label="Colapsar menú" title="Colapsar menú">«</button>
     </div>
     <nav class="ac-nav" role="tablist" aria-label="Secciones de cuenta">
       <button class="side-link active" role="tab" data-tab="overview" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Overview</span></button>
@@ -1270,19 +1425,67 @@ html body { padding-left:0 !important; padding-top:0 !important; }
     <button class="ac-burger" id="ac-burger" type="button" aria-label="Abrir menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <button class="ac-tbtn" id="tb-export" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Exportar reporte</button>
     <button class="ac-tbtn" id="tb-qr" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7M21 21h-4"/></svg> Descargar QR</button>
-    <button class="ac-bell" id="tb-bell" type="button" aria-label="Notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="ac-bell-badge">3</span></button>
-    <button class="ac-user" id="tb-user" type="button">
-      <span class="ac-user-av" id="tb-avatar" aria-hidden="true">…</span>
-      <span class="ac-user-meta">
-        <span class="ac-user-name" id="tb-name"></span>
-        <span class="ac-user-role" id="tb-role">Ciudadano</span>
-      </span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-    </button>
+    <div class="ac-pop-wrap">
+      <button class="ac-bell" id="tb-bell" type="button" aria-label="Notificaciones" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="ac-bell-badge" id="bell-badge" hidden>0</span></button>
+      <div class="ac-pop ac-notif-pop" id="notif-pop" hidden role="dialog" aria-label="Notificaciones">
+        <div class="ac-notif-head">
+          <span class="t">Notificaciones</span>
+          <button class="ac-notif-markall" id="notif-markall" type="button">Marcar todas como leídas</button>
+        </div>
+        <div class="ac-notif-list" id="notif-list"></div>
+      </div>
+    </div>
+    <div class="ac-pop-wrap">
+      <button class="ac-user" id="tb-user" type="button" aria-haspopup="true" aria-expanded="false">
+        <span class="ac-user-av" id="tb-avatar" aria-hidden="true">…</span>
+        <span class="ac-user-meta">
+          <span class="ac-user-name" id="tb-name"></span>
+          <span class="ac-user-role" id="tb-role">Ciudadano</span>
+        </span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="ac-pop ac-menu-pop" id="user-menu" hidden role="menu">
+        <button class="ac-menu-item" id="menu-profile" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Editar perfil</button>
+        <button class="ac-menu-item" id="menu-settings" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Ajustes</button>
+        <button class="ac-menu-item" id="menu-export" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Exportar pagos (CSV)</button>
+        <div class="ac-menu-sep"></div>
+        <button class="ac-menu-item danger" id="menu-logout" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Cerrar sesión</button>
+      </div>
+    </div>
   </header>
 
 <!-- ── Toast container ────────────────────────────────────────────────── -->
 <div class="toast-wrap" id="toast-wrap" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ── Plans Modal (honest: current free tier + waitlist, no fake prices) ── -->
+<div class="modal-overlay" id="plans-modal" role="dialog" aria-modal="true" aria-labelledby="plans-modal-title">
+  <div class="modal-card">
+    <button class="modal-close-btn" id="plans-close" aria-label="Cerrar">✕</button>
+    <h2 class="modal-title" id="plans-modal-title">Planes</h2>
+    <p style="font-size:.86rem;color:var(--muted);margin:-6px 0 16px;">Tu cuenta y lo que viene. Los precios del plan Pro aún no están definidos — sin sorpresas.</p>
+    <div class="plan-grid">
+      <div class="plan-card current">
+        <div class="plan-name">Ciudadano <span class="plan-tag">Tu plan actual</span></div>
+        <div class="plan-price">Gratis</div>
+        <ul class="plan-feats">
+          <li>Recibe pagos en USDC con enlaces de pago</li>
+          <li>Perfil público de cobro y código QR</li>
+          <li>Panel de ingresos, retiros y contabilidad</li>
+        </ul>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Pro <span class="plan-tag soon">Próximamente</span></div>
+        <div class="plan-price">Por anunciar</div>
+        <ul class="plan-feats">
+          <li>Comisiones más bajas por transacción</li>
+          <li>Herramientas avanzadas de facturación</li>
+          <li>Prioridad en retiros y soporte</li>
+        </ul>
+        <button class="btn btn-primary" id="plans-notify" type="button" style="width:100%;margin-top:14px;">Avísame cuando esté disponible</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ── Edit Profile Modal ─────────────────────────────────────────────── -->
 <div class="modal-overlay" id="edit-modal"
@@ -1515,10 +1718,12 @@ html body { padding-left:0 !important; padding-top:0 !important; }
           </div>
           <div class="progress-row">
             <span class="progress-label">Perfil completado</span>
-            <div class="progress-track">
-              <div class="progress-fill" id="progress-fill"></div>
+            <div class="progress-line">
+              <strong class="progress-pct-end" id="progress-pct">0%</strong>
+              <div class="progress-track">
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
             </div>
-            <strong class="progress-pct-end" id="progress-pct">0%</strong>
           </div>
         </div>
 
@@ -1538,8 +1743,8 @@ html body { padding-left:0 !important; padding-top:0 !important; }
           <div class="hero-aside-block">
             <div class="hero-aside-label">Miembro desde</div>
             <div class="hero-since">
-              <span id="hero-since">—</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span id="hero-since">—</span>
             </div>
           </div>
         </div>
@@ -1551,7 +1756,15 @@ html body { padding-left:0 !important; padding-top:0 !important; }
         <button class="qa-btn featured" id="qa-payment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Crear enlace de pago</button>
         <button class="qa-btn" id="qa-export"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="12" y="7" width="3" height="11"/><rect x="17" y="13" width="3" height="5"/></svg> Exportar reporte</button>
         <button class="qa-btn" id="qa-qr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7M21 21h-4"/></svg> Descargar QR</button>
-        <button class="qa-btn" id="qa-more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg> Más acciones</button>
+        <div class="ac-pop-wrap" style="display:inline-block;">
+          <button class="qa-btn" id="qa-more" type="button" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg> Más acciones</button>
+          <div class="ac-pop ac-menu-pop left" id="more-menu" hidden role="menu">
+            <button class="ac-menu-item" id="more-profile" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Editar perfil</button>
+            <button class="ac-menu-item" id="more-public" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a3 3 0 1 0-2.6-4.5M6 8a3 3 0 1 1 2.6-4.5M12 21a9 9 0 0 0 0-18 9 9 0 0 0 0 18z"/></svg> Ver perfil público</button>
+            <button class="ac-menu-item" id="more-export" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Exportar pagos (CSV)</button>
+            <button class="ac-menu-item" id="more-settings" role="menuitem" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Ajustes</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -2051,8 +2264,28 @@ document.querySelectorAll('.side-link').forEach(pill => {
   const side = document.getElementById('ac-side');
   const burger = document.getElementById('ac-burger');
   const collapse = document.getElementById('ac-collapse');
-  if (burger && side) burger.addEventListener('click', () => side.classList.toggle('open'));
-  if (collapse && side) collapse.addEventListener('click', () => side.classList.remove('open'));
+  if (!side) return;
+  const isMobile = () => window.matchMedia('(max-width:900px)').matches;
+
+  /* Restore the persisted desktop collapse state. */
+  try { if (localStorage.getItem('ac-collapsed') === '1') side.classList.add('collapsed'); } catch (e) {}
+
+  /* Mobile burger → open/close the slide-in drawer. */
+  if (burger) burger.addEventListener('click', (e) => { e.stopPropagation(); side.classList.toggle('open'); });
+
+  /* « button → on mobile, close the drawer; on desktop, collapse to the icon rail. */
+  if (collapse) collapse.addEventListener('click', () => {
+    if (isMobile()) { side.classList.remove('open'); return; }
+    const collapsed = side.classList.toggle('collapsed');
+    try { localStorage.setItem('ac-collapsed', collapsed ? '1' : '0'); } catch (e) {}
+  });
+
+  /* Click outside the drawer (mobile) closes it. */
+  document.addEventListener('click', (e) => {
+    if (!side.classList.contains('open')) return;
+    if (side.contains(e.target) || (burger && burger.contains(e.target))) return;
+    side.classList.remove('open');
+  });
 })();
 
 /* ── Modal ──────────────────────────────────────────────────────────────── */
@@ -2198,7 +2431,8 @@ function buildHero(profile, wallet) {
   document.getElementById('hero-email').textContent  = profile.email || '';
 
   const [rl, rc] = roleInfo(profile.role);
-  let bHtml = `<span class="${rc}">${esc(rl)}</span>`;
+  const roleIcon = '<svg class="badge-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+  let bHtml = `<span class="${rc}">${roleIcon}${esc(rl)}</span>`;
   if (wallet && wallet.has_wallet) bHtml += ` <span class="badge badge-verified">Verificado</span>`;
   document.getElementById('hero-badges').innerHTML = bHtml;
 
@@ -2292,8 +2526,12 @@ function buildOverview(profile, summary) {
       { icon:svgClock,    chip:'c-gray',   value:fmtRelDate(s.last_payment_ms), label:'Último pago',         delta:s.last_payment_ms ? flat('') : flat('Sin transacciones') },
     ];
 
+    const KAC = {
+      'c-blue':'var(--brand-2)', 'c-green':'var(--success)', 'c-purple':'#7c3aed',
+      'c-orange':'#d97706', 'c-red':'var(--danger)', 'c-yellow':'#ca8a04', 'c-gray':'var(--muted)',
+    };
     document.getElementById('kpi-grid').innerHTML = kpis.map(k => `
-      <div class="kpi-cell">
+      <div class="kpi-cell" style="--kac:${KAC[k.chip] || 'transparent'};">
         <div class="kpi-chip ${k.chip}">${k.icon}</div>
         <div class="kpi-value">${esc(k.value)}</div>
         <div class="kpi-label">${esc(k.label)}</div>
@@ -4742,32 +4980,155 @@ async function fetchPaymentSummary() {
   });
   wireRetModal();
 
-  /* 5. Wire quick actions */
+  /* 5. Wire quick actions + top-bar (all real, no stubs) */
   const publicLink = `https://sismo911.com/u/${encodeURIComponent(profile.id || u.id || '')}`;
   const on = (id, fn, evt = 'click') => { const e = document.getElementById(id); if (e) e.addEventListener(evt, fn); };
   const copyLink = async () => {
     const ok = await copyToClipboard(publicLink);
     if (ok) toast('Enlace copiado al portapapeles ✓');
   };
-  const goPay  = () => switchTab('pagos');
-  const goQR   = () => switchTab('qr');
-  const expRpt = () => toast('Exportación de reporte — próximamente');
-  const soon   = (what) => () => toast(what + ' — próximamente');
+  const goPay = () => switchTab('pagos');
+  const goQR  = () => switchTab('qr');
 
+  /* ── Report export — real CSV download ── */
+  const downloadCSV = async () => {
+    try {
+      const r = await fetch('/api/profile/payments/export.csv', { credentials: 'same-origin' });
+      if (r.status === 401) { location.href = '/login?next=/cuenta'; return; }
+      if (!r.ok) { toast('No se pudo exportar el reporte.', 'error'); return; }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'sismo911-pagos.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      toast('Reporte exportado ✓');
+    } catch (e) { toast('Error de red al exportar.', 'error'); }
+  };
+
+  /* ── Popover controller (bell panel + menus) ── */
+  const POPS = [{ btn: 'tb-bell', pop: 'notif-pop' }, { btn: 'tb-user', pop: 'user-menu' }, { btn: 'qa-more', pop: 'more-menu' }];
+  const closeAllPops = (except) => {
+    POPS.forEach((p) => {
+      if (p.pop === except) return;
+      const pop = document.getElementById(p.pop), btn = document.getElementById(p.btn);
+      if (pop && !pop.hidden) { pop.classList.remove('open'); pop.hidden = true; }
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    });
+  };
+  const togglePop = (btnId, popId, onOpen) => {
+    const pop = document.getElementById(popId), btn = document.getElementById(btnId);
+    if (!pop || !btn) return;
+    const willOpen = pop.hidden;
+    closeAllPops(willOpen ? popId : null);
+    if (willOpen) { pop.hidden = false; requestAnimationFrame(() => pop.classList.add('open')); btn.setAttribute('aria-expanded', 'true'); if (onOpen) onOpen(); }
+    else { pop.classList.remove('open'); pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+  };
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.ac-pop') || e.target.closest('#tb-bell') || e.target.closest('#tb-user') || e.target.closest('#qa-more')) return;
+    closeAllPops(null);
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllPops(null); });
+
+  /* ── Notifications (real, from DB) ── */
+  const NTF_ICON = {
+    payment_received: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    withdrawal_update: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/></svg>',
+    link_created: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+    welcome: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-3.5L6 21l1.5-7L2 9.5 9 9z"/></svg>',
+    plan_interest: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 7l4.5 3.5L12 4l4.5 6.5L21 7l-1.8 11.2a1 1 0 0 1-1 .8H5.8a1 1 0 0 1-1-.8L3 7z"/></svg>',
+    system: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  };
+  function renderNotifs(list, unread) {
+    const badge = document.getElementById('bell-badge');
+    if (badge) { if (unread > 0) { badge.textContent = unread > 99 ? '99+' : String(unread); badge.hidden = false; } else { badge.hidden = true; } }
+    const markall = document.getElementById('notif-markall');
+    if (markall) markall.disabled = !unread;
+    const el = document.getElementById('notif-list');
+    if (!el) return;
+    if (!list.length) {
+      el.innerHTML = '<div class="ac-notif-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><div class="t">Sin notificaciones</div><div class="s">Cuando recibas pagos o haya novedades, aparecerán aquí.</div></div>';
+      return;
+    }
+    el.innerHTML = list.map((n) => `
+      <button class="ac-notif-item${n.read ? '' : ' unread'}" data-ntf="${esc(n.id)}" data-link="${esc(n.link || '')}" type="button">
+        <span class="ac-notif-ic t-${esc(n.type)}">${NTF_ICON[n.type] || NTF_ICON.system}</span>
+        <span class="ac-notif-body">
+          <span class="ac-notif-title">${esc(n.title)}${n.read ? '' : '<span class="ac-notif-dot"></span>'}</span>
+          ${n.body ? `<span class="ac-notif-text">${esc(n.body)}</span>` : ''}
+          <span class="ac-notif-time">${esc(fmtRelDate(n.created_ms))}</span>
+        </span>
+      </button>`).join('');
+    el.querySelectorAll('[data-ntf]').forEach((it) => it.addEventListener('click', () => onNotifClick(it.dataset.ntf, it.dataset.link)));
+  }
+  async function loadNotifs() {
+    try {
+      const r = await fetch('/api/profile/notifications?limit=20', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      const d = await r.json();
+      renderNotifs(d.notifications || [], d.unread || 0);
+    } catch (e) {}
+  }
+  async function markRead(body) {
+    try {
+      const r = await fetch('/api/profile/notifications/read', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      const d = await r.json().catch(() => ({}));
+      return d.ok ? d.unread : null;
+    } catch (e) { return null; }
+  }
+  async function onNotifClick(id, link) {
+    await markRead({ id });
+    await loadNotifs();
+    if (link) { closeAllPops(null); if (link.charAt(0) === '#') switchTab(link.slice(1)); else window.location.href = link; }
+  }
+  on('notif-markall', async () => { await markRead({ all: true }); await loadNotifs(); });
+  on('tb-bell', () => togglePop('tb-bell', 'notif-pop', loadNotifs));
+  loadNotifs();                                  // initial badge
+  setInterval(loadNotifs, 60000);                // keep the badge fresh
+
+  /* ── User menu + Más acciones menu ── */
+  const openProfile = () => { closeAllPops(null); openModal(_profile); };
+  const goAjustes   = () => { closeAllPops(null); switchTab('ajustes'); };
+  const exportCSV   = () => { closeAllPops(null); downloadCSV(); };
+  const viewPublic  = () => { closeAllPops(null); window.open(publicLink, '_blank', 'noopener'); };
+  const logout = async () => {
+    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
+    location.href = '/login';
+  };
+  on('tb-user', () => togglePop('tb-user', 'user-menu'));
+  on('qa-more', () => togglePop('qa-more', 'more-menu'));
+  on('menu-profile', openProfile);  on('menu-settings', goAjustes);  on('menu-export', exportCSV);  on('menu-logout', logout);
+  on('more-profile', openProfile);  on('more-public', viewPublic);   on('more-export', exportCSV);   on('more-settings', goAjustes);
+
+  /* ── Plans modal (honest) ── */
+  const plansModal = document.getElementById('plans-modal');
+  const openPlans  = () => { closeAllPops(null); plansModal.classList.add('open'); };
+  const closePlans = () => plansModal.classList.remove('open');
+  on('qa-plans', openPlans);
+  on('plans-close', closePlans);
+  if (plansModal) plansModal.addEventListener('click', (e) => { if (e.target === plansModal) closePlans(); });
+  on('plans-notify', async () => {
+    const btn = document.getElementById('plans-notify');
+    if (btn) { btn.disabled = true; btn.textContent = 'Registrando…'; }
+    try {
+      const r = await fetch('/api/profile/plan-interest', { method: 'POST', credentials: 'same-origin' });
+      if (r.ok) { toast('Te avisaremos cuando el plan Pro esté disponible ✓'); closePlans(); loadNotifs(); }
+      else { toast('No se pudo registrar. Intenta de nuevo.', 'error'); }
+    } catch (e) { toast('Error de red.', 'error'); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = 'Avísame cuando esté disponible'; } }
+  });
+
+  /* ── Existing actions ── */
   on('qa-edit',    () => openModal(_profile));
   on('qa-copy',    copyLink);
   on('hero-link-copy', copyLink);
   on('qa-payment', goPay);
   on('cta-payment', goPay);
-  on('qa-export',  expRpt);
-  on('tb-export',  expRpt);
+  on('qa-export',  downloadCSV);
+  on('tb-export',  downloadCSV);
   on('qa-qr',      goQR);
   on('tb-qr',      goQR);
   on('cta-qr',     goQR);
-  on('qa-more',    soon('Más acciones'));
-  on('qa-plans',   soon('Planes'));
-  on('tb-bell',    soon('Notificaciones'));
-  on('tb-user',    () => openModal(_profile));
 })();
 
 /* ── CSP-safe delegated dispatcher (replaces inline on* handler attributes) ── */

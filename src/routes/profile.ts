@@ -5,6 +5,7 @@ import { audit } from '../lib/audit';
 import { uid } from '../lib/db';
 import { x402Network, x402Asset } from '../lib/x402';
 import { scanFile } from '../security/file-scan';
+import { notify } from '../lib/notify';
 import {
   WITHDRAWAL_METHODS, type WithdrawalMethod, computeBalance, withdrawnLast24h,
   maskDestination, riskScore, PER_TX_MAX_USD, DAILY_MAX_USD, MIN_WITHDRAWAL_USD,
@@ -228,6 +229,124 @@ profile.delete('/avatar', async (c) => {
   return c.json({ ok: true });
 });
 
+// ── Notifications (in-app bell) ───────────────────────────────────────────────
+// Self-scoped to the caller. Rows are produced by real events via src/lib/notify.
+
+// GET /api/profile/notifications?limit=&before= — newest-first list + unread count.
+profile.get('/notifications', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const limit = Math.min(50, Math.max(1, Number(c.req.query('limit')) || 20));
+  const before = Number(c.req.query('before')) || 0;
+
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, type, title, body, link, read_ms, created_ms
+       FROM notifications
+      WHERE user_id = ? ${before ? 'AND created_ms < ?' : ''}
+      ORDER BY created_ms DESC LIMIT ?`
+  ).bind(...(before ? [me.id, before, limit] : [me.id, limit])).all();
+
+  const unreadRow: any = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read_ms IS NULL`
+  ).bind(me.id).first();
+
+  const notifications = ((results ?? []) as any[]).map((r) => ({
+    id: r.id, type: r.type, title: r.title, body: r.body ?? null,
+    link: r.link ?? null, read: r.read_ms != null, created_ms: r.created_ms,
+  }));
+  return c.json({ ok: true, notifications, unread: Number(unreadRow?.n) || 0 });
+});
+
+// GET /api/profile/notifications/count — lightweight unread badge count.
+profile.get('/notifications/count', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const row: any = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read_ms IS NULL`
+  ).bind(me.id).first();
+  return c.json({ ok: true, unread: Number(row?.n) || 0 });
+});
+
+// POST /api/profile/notifications/read — mark one ({id}) or all ({all:true}) read.
+profile.post('/notifications/read', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const b = await c.req.json().catch(() => ({}));
+  const now = Date.now();
+  if (b && b.all === true) {
+    await c.env.DB.prepare(
+      `UPDATE notifications SET read_ms = ? WHERE user_id = ? AND read_ms IS NULL`
+    ).bind(now, me.id).run();
+  } else if (b && typeof b.id === 'string') {
+    await c.env.DB.prepare(
+      `UPDATE notifications SET read_ms = ? WHERE id = ? AND user_id = ? AND read_ms IS NULL`
+    ).bind(now, b.id, me.id).run();
+  } else {
+    return c.json({ error: 'bad_body', detail: 'envía {id} o {all:true}' }, 400);
+  }
+  const row: any = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read_ms IS NULL`
+  ).bind(me.id).first();
+  return c.json({ ok: true, unread: Number(row?.n) || 0 });
+});
+
+// ── POST /api/profile/plan-interest — register interest in the Pro plan ─────────
+// Honest waitlist: records the interest (audit) and drops a confirmation
+// notification. No fake billing — there is no charge and no fake price.
+profile.post('/plan-interest', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  await audit(c, 'profile.plan.interest', { plan: 'pro' });
+  await notify(c.env, me.id, {
+    type: 'plan_interest',
+    title: 'Te avisaremos sobre el plan Pro',
+    body: 'Gracias por tu interés. Te notificaremos aquí cuando el plan Pro esté disponible.',
+    link: null,
+  });
+  return c.json({ ok: true });
+});
+
+// ── GET /api/profile/payments/export.csv — download the caller's payment ledger ─
+// Real CSV (not a stub). Self-scoped: only the caller's received payments.
+profile.get('/payments/export.csv', async (c) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  const { results } = await c.env.DB.prepare(
+    `SELECT p.created_ms, p.settled_ms, p.status, p.amount_usd, p.asset, p.network,
+            p.payer, p.tx_hash, r.title AS resource_title, r.slug
+       FROM x402_payments p
+       LEFT JOIN x402_resources r ON r.id = p.resource_id
+      WHERE p.payee_user_id = ?
+      ORDER BY p.created_ms DESC LIMIT 5000`
+  ).bind(me.id).all();
+
+  // CSV-escape: wrap in quotes, double internal quotes; guard against formula injection.
+  const cell = (v: unknown) => {
+    let s = v == null ? '' : String(v);
+    if (/^[=+\-@]/.test(s)) s = `'${s}`;
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+  const iso = (ms: unknown) => {
+    const n = Number(ms);
+    return n ? new Date(n).toISOString() : '';
+  };
+  const header = ['fecha_creado', 'fecha_liquidado', 'estado', 'monto_usd', 'activo', 'red', 'pagador', 'tx_hash', 'enlace', 'slug'];
+  const rows = ((results ?? []) as any[]).map((r) => [
+    iso(r.created_ms), iso(r.settled_ms), r.status, r.amount_usd, r.asset, r.network,
+    r.payer, r.tx_hash, r.resource_title, r.slug,
+  ].map(cell).join(','));
+  const csv = [header.map(cell).join(','), ...rows].join('\r\n') + '\r\n';
+
+  const fname = `sismo911-pagos-${new Date().toISOString().slice(0, 10)}.csv`;
+  return new Response('﻿' + csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${fname}"`,
+      'Cache-Control': 'no-store',
+    },
+  });
+});
+
 // ── GET /api/profile/payments/summary — KPI + chart data from the x402 ledger ──
 profile.get('/payments/summary', async (c) => {
   const me = await getUserFromRequest(c.env, c);
@@ -340,6 +459,12 @@ profile.post('/payment-links', async (c) => {
      VALUES (?,?,?,?,?,?,1,'application/json',?,?,?,?,?)`
   ).bind(id, me.id, slug, title, str(b.description, 500), price, kind, currency, active, now, now).run();
   await audit(c, 'profile.link.create', { id, slug, kind });
+  await notify(c.env, me.id, {
+    type: 'link_created',
+    title: 'Enlace de pago creado',
+    body: `"${title}" ya está listo para compartir y recibir pagos.`,
+    link: '#pagos',
+  });
   return c.json({ ok: true, link: { id, slug, title, price_usd: price, currency, kind, active: Boolean(active), payUrl: payUrlFor(c.req.url, me.id, slug, kind), live: kind === 'x402' } }, 201);
 });
 
@@ -543,6 +668,12 @@ profile.post('/withdrawals', async (c) => {
     throw e;
   }
   await audit(c, 'withdrawal.create', { id, method, amount, risk, status });
+  await notify(c.env, me.id, {
+    type: 'withdrawal_update',
+    title: 'Solicitud de retiro recibida',
+    body: `Tu retiro de $${Number(amount).toFixed(2)} está en revisión. Te avisaremos cuando cambie de estado.`,
+    link: '#retiros',
+  });
   const row: any = await c.env.DB.prepare(`SELECT * FROM withdrawal_requests WHERE id=?`).bind(id).first();
   return c.json({ ok: true, request: publicRequest(row) }, 201);
 });
@@ -557,6 +688,12 @@ profile.patch('/withdrawals/:id/cancel', async (c) => {
   if (!['draft', 'pending_review'].includes(row.status)) return c.json({ error: 'not_cancellable', status: row.status }, 409);
   await c.env.DB.prepare(`UPDATE withdrawal_requests SET status='cancelled', updated_ms=? WHERE id=?`).bind(Date.now(), id).run();
   await audit(c, 'withdrawal.cancel', { id });
+  await notify(c.env, me.id, {
+    type: 'withdrawal_update',
+    title: 'Retiro cancelado',
+    body: 'Cancelaste tu solicitud de retiro.',
+    link: '#retiros',
+  });
   return c.json({ ok: true, status: 'cancelled' });
 });
 
