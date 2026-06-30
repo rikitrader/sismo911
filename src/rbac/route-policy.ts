@@ -77,6 +77,12 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   // getUserFromRequest and are scoped to the caller's own tickets; the
   // /api/support/admin/* staff endpoints self-gate with requirePermission(ops:console).
   '/api/support',
+  // Telegram case-status bot. POST /api/telegram/webhook self-authenticates on
+  // the Telegram secret-token header (constant-time, fail-closed) inside the
+  // handler — a payer/Telegram has no SISMO911 session — and GET /api/telegram/health
+  // is non-secret status metadata. Both are public from the RBAC middleware's view
+  // (the route does its own auth + per-user rate limiting), like /api/stripe/webhook.
+  '/api/telegram',
   // SUMINISTROS citizen enrollment + requests. Citizen endpoints self-auth via
   // getUserFromRequest (scoped to the caller's user_id); /admin/* self-gate with
   // ops:console — like /api/support. Distinct from /api/suministros (the operator

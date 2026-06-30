@@ -1,0 +1,30 @@
+# SISMO911 — Telegram case-status bot: wrangler config EXAMPLE.
+# ---------------------------------------------------------------------------
+# These are the NON-SECRET allow-lists. Append them to the existing [vars] block
+# in wrangler.toml (do NOT create a second [vars] table). Replace the example ids
+# with your real Telegram chat/user ids.
+#
+# SECRETS (TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET) are NEVER placed here —
+# set them with `wrangler secret put` (see docs/telegram-bot.md). No token,
+# key, or credential belongs in this file or in git.
+
+[vars]
+# ... your existing vars stay here ...
+
+# Comma-separated approved group/supergroup chat ids. Group ids are NEGATIVE
+# (e.g. -1001234567890). The bot answers ONLY in these chats. Empty ⇒ no group
+# is allowed (fail closed).
+ALLOWED_TELEGRAM_GROUP_IDS = "-1001234567890,-1009876543210"
+
+# Comma-separated admin Telegram user ids. Admins may DM the bot and (in a DM)
+# receive un-redacted, sensitive case detail. They also get scraping alerts.
+ADMIN_TELEGRAM_USER_IDS = "111111111"
+
+# OPTIONAL: extra authorized (non-admin) user ids who may also see sensitive
+# detail in a DM. Leave empty if not needed.
+ALLOWED_TELEGRAM_USER_IDS = ""
+
+# OPTIONAL: override the Workers-AI model used for free-text intent parsing.
+# Defaults to @cf/meta/llama-3.3-70b-instruct-fp8-fast. The AI layer ONLY
+# normalizes text into a structured query — it never determines a status.
+# TELEGRAM_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
