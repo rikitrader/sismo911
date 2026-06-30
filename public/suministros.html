@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow" />
   <link rel="canonical" href="https://suministros.sismo911.com/" />
   <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-  <meta name="theme-color" content="#14171b" />
+  <meta name="theme-color" content="#101a3d" />
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/app.css" />
   <link rel="stylesheet" href="/ops-theme.css" />
@@ -16,6 +16,7 @@
   <script src="https://unpkg.com/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
+    :root{--hdr-h:64px}
     body{background:var(--ops-bg)}
     .eoc-bar{background:linear-gradient(180deg,var(--ops-bar-1) 0%,var(--ops-bar-2) 100%)}
     input,select,textarea{width:100%;border:1px solid var(--ops-border-strong);border-radius:.5rem;padding:.5rem .65rem;font-size:.875rem;background:var(--ops-panel)}
@@ -60,8 +61,8 @@
     @media print{body *{visibility:hidden}#etq-print,#etq-print *{visibility:visible}#etq-print{position:absolute;top:0;left:0;width:100%}.etq-grid{display:grid!important;grid-template-columns:repeat(3,1fr);gap:8mm;padding:8mm}.etq-label{break-inside:avoid}}
     /* ── App Shell ── */
     .app-shell{display:flex;min-height:100vh}
-    .sidebar{width:248px;flex-shrink:0;background:linear-gradient(180deg,var(--ops-bar-1) 0%,var(--ops-bar-2) 100%);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto;z-index:40}
-    .sidebar-brand{padding:1.1rem 1rem .9rem;display:flex;align-items:center;gap:.7rem;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0}
+    .sidebar{width:248px;flex-shrink:0;background:var(--ops-bar-1);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto;z-index:40}
+    .sidebar-brand{height:var(--hdr-h);box-sizing:border-box;padding:0 1rem;display:flex;align-items:center;gap:.7rem;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0}
     .brand-name{font-weight:800;font-size:.95rem;color:var(--ops-bar-fg);line-height:1;letter-spacing:.01em}
     .brand-sub{font-family:var(--ops-mono),monospace;font-size:.58rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--ops-bar-faint);margin-top:3px}
     .sidebar-nav{flex:1;padding:.55rem .45rem;overflow-y:auto}
@@ -72,7 +73,7 @@
     .sidebar-footer a{color:var(--ops-bar-faint);text-decoration:none;font-weight:600}
     .sidebar-footer a:hover{color:var(--ops-bar-fg)}
     .main-area{flex:1;min-width:0;display:flex;flex-direction:column;overflow:auto;background:var(--ops-bg)}
-    .top-bar{background:linear-gradient(180deg,var(--ops-bar-1) 0%,var(--ops-bar-2) 100%);padding:.6rem 1.25rem;display:flex;align-items:center;gap:.6rem;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.06)}
+    .top-bar{background:var(--ops-bar-1);height:var(--hdr-h);box-sizing:border-box;padding:0 1.25rem;display:flex;align-items:center;gap:.6rem;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.08)}
     .top-bar-right{margin-left:auto;display:flex;align-items:center;gap:.75rem}
     .page-content{flex:1;padding:1.25rem 1.5rem;overflow-y:auto}
     .page-content>*+*{margin-top:1rem}
