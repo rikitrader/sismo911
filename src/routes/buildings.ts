@@ -3,7 +3,8 @@ import type { Env } from '../types';
 import { rateLimit } from '../lib/security';
 import { edgeCached } from '../lib/edge-cache';
 import {
-  scoreCurated, scoreOsm, computeSar, type Sector, type Curated, type Osm, type Scored, type Sar, PRIOR_BLEND,
+  scoreCurated, scoreOsm, computeSar, linkLiveMissing,
+  type Sector, type Curated, type Osm, type Scored, type Sar, type MissingReport, PRIOR_BLEND,
 } from '../lib/building-score';
 import sectorsRaw from '../data/buildings/sectors.json';
 import curatedRaw from '../data/buildings/curated.json';
@@ -34,20 +35,49 @@ const SCORED_OSM: Scored[] = OSM
   .sort((a, z) => z.score - a.score);
 const DPM_OBSERVED = SCORED_OSM.filter((r) => r.dpmProb != null).length;
 
-// SAR triage list — damaged buildings ranked for search & rescue, with estimated
-// occupants and any reported missing-person names (deep-linkable to /personas).
+// SAR triage. Candidates = damaged buildings that pass the SAR filter, scored once.
+// At request time we LINK the live missing-persons DB (persons.last_seen /
+// personas.ubicacion) by building name, merge with curated names, and re-rank.
 interface SarRow extends Sar { name: string; addr: string; sector: string; state: string;
-  status: string; dq: string; lat: number; lon: number; caseQuery: string; }
-const SAR: SarRow[] = [...SCORED_CURATED, ...SCORED_OSM]
-  .map((b) => {
-    const sar = computeSar(b, b.missing ?? []);
-    if (!sar) return null;
-    return { ...sar, name: b.name, addr: b.addr, sector: b.sector, state: b.state,
+  status: string; dq: string; lat: number; lon: number; caseQuery: string;
+  liveMatched: number; sectorReports: number; missingSource: string; }
+const SAR_CANDIDATES: Scored[] = [...SCORED_CURATED, ...SCORED_OSM]
+  .filter((b) => computeSar(b, b.missing ?? []) !== null);
+
+// Pull approved, still-missing reports for this event from both registries (one D1
+// batch). Returns lowercased {name, loc} for in-memory name matching. Fail-soft: on
+// any DB error the SAR list still works off curated names.
+async function fetchMissingReports(env: Env): Promise<MissingReport[]> {
+  try {
+    const [a, b] = await env.DB.batch([
+      env.DB.prepare(
+        `SELECT full_name AS name, last_seen AS loc FROM persons
+         WHERE review='approved' AND status='missing' AND COALESCE(last_seen,'')<>'' LIMIT 8000`),
+      env.DB.prepare(
+        `SELECT nombre AS name, ubicacion AS loc FROM personas
+         WHERE moderation='approved' AND COALESCE(ubicacion,'')<>''
+           AND estado NOT IN ('localizado','aparecido','hospitalizado','fallecido') LIMIT 8000`),
+    ]);
+    const rows = [...(a.results ?? []), ...(b.results ?? [])] as { name: string; loc: string }[];
+    return rows.filter((r) => r.name && r.loc).map((r) => ({ name: r.name, loc: r.loc.toLowerCase() }));
+  } catch { return []; }
+}
+
+function buildSarRows(reports: MissingReport[]): SarRow[] {
+  return SAR_CANDIDATES.map((b) => {
+    const curated = b.missing ?? [];
+    const live = linkLiveMissing(b.name, reports);
+    const merged = [...new Set([...curated, ...live])];
+    const sectorReports = reports.filter((r) => r.loc.includes(b.sector.toLowerCase())).length;
+    const sar = computeSar(b, merged)!;
+    const missingSource = live.length && curated.length ? 'live+curated' : live.length ? 'live' : curated.length ? 'curated' : 'none';
+    return {
+      ...sar, name: b.name, addr: b.addr, sector: b.sector, state: b.state,
       status: b.status, dq: b.dq, lat: b.lat, lon: b.lon,
-      caseQuery: (b.missing && b.missing[0]) ? b.missing[0] : b.name };
-  })
-  .filter((x): x is SarRow => x !== null)
-  .sort((a, z) => z.sarScore - a.sarScore || z.occupantsEst - a.occupantsEst);
+      caseQuery: merged[0] ?? b.name, liveMatched: live.length, sectorReports, missingSource,
+    };
+  }).sort((a, z) => z.sarScore - a.sarScore || z.occupantsEst - a.occupantsEst);
+}
 
 const COLLAPSED_STATUSES = new Set(['COLAPSO_TOTAL', 'COLAPSO_PARCIAL', 'CONDENADO', 'DANADO']);
 
@@ -151,16 +181,19 @@ buildings.get('/sar', async (c) => {
   const priority = c.req.query('priority');
   const limit = Math.min(Math.max(Number(c.req.query('limit')) || 300, 1), 2000);
   return edgeCached(c, 300, async () => {
-    let rows = SAR;
+    const reports = await fetchMissingReports(c.env);
+    let rows = buildSarRows(reports);
     if (state) rows = rows.filter((r) => r.state.toLowerCase() === state.toLowerCase());
     if (priority) rows = rows.filter((r) => r.priority === priority.toUpperCase());
     return {
       event: METHODOLOGY.event,
       count: rows.length,
-      note: 'Triage de rescate: prioridad = severidad × ocupantes estimados (ocupación nocturna; sismo 18:04 VET), realzado por desaparecidos reportados. "Ocupantes estimados" = personas probablemente dentro, NO un conteo de atrapados. Estimación, no censo de campo.',
+      live_reports_indexed: reports.length,
+      note: 'Triage de rescate: prioridad = severidad × ocupantes estimados (ocupación nocturna; sismo 18:04 VET), realzado por desaparecidos reportados. Los desaparecidos provienen EN VIVO de /api/persons (last_seen) + Familia (ubicacion), cruzados por nombre del edificio. "Ocupantes estimados" = personas probablemente dentro, NO un conteo de atrapados. Estimación, no censo de campo.',
       methodology: {
         priority: 'sarScore≥70 INMEDIATA · ≥45 ALTA · ≥25 MEDIA · resto BAJA',
         occupants: 'área construida ÷ densidad (RESIDENCIAL 30 m²/persona; HAZUS occupancy)',
+        missing: 'missingSource: live = del DB de desaparecidos · curated = de prensa · liveMatched = nº enlazados en vivo · sectorReports = desaparecidos del sector',
         cases: 'caseQuery → /personas?q= (buscar desaparecidos vinculados)',
       },
       buildings: rows.slice(0, limit),
@@ -171,18 +204,22 @@ buildings.get('/sar', async (c) => {
 // ── GET /api/buildings/sar/summary — SAR aggregate ────────────────────────────
 buildings.get('/sar/summary', async (c) => {
   return edgeCached(c, 300, async () => {
+    const reports = await fetchMissingReports(c.env);
+    const rows = buildSarRows(reports);
     const byPriority: Record<string, number> = {};
-    let occupants = 0; const missingNames = new Set<string>(); let withMissing = 0;
-    for (const r of SAR) {
+    let occupants = 0; const missingNames = new Set<string>(); let withMissing = 0; let liveLinked = 0;
+    for (const r of rows) {
       byPriority[r.priority] = (byPriority[r.priority] || 0) + 1;
       occupants += r.occupantsEst;
+      if (r.liveMatched) liveLinked++;
       if (r.missingCount) { withMissing++; r.missing.forEach((n) => missingNames.add(n)); }
     }
     return {
-      event: METHODOLOGY.event, sar_buildings: SAR.length, by_priority: byPriority,
+      event: METHODOLOGY.event, sar_buildings: rows.length, by_priority: byPriority,
       estimated_occupants: occupants, buildings_with_reported_missing: withMissing,
-      reported_missing_names: [...missingNames],
-      note: 'Ocupantes = estimación de personas dentro (ocupación nocturna), NO atrapados. Desaparecidos = nombres reportados por prensa/DBs ciudadanas, no verificados.',
+      buildings_with_live_links: liveLinked, live_reports_indexed: reports.length,
+      reported_missing_names: [...missingNames].slice(0, 200),
+      note: 'Ocupantes = estimación de personas dentro (ocupación nocturna), NO atrapados. Desaparecidos enlazados EN VIVO desde /api/persons (last_seen) + Familia (ubicacion); nombres no verificados.',
     };
   });
 });
