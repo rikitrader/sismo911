@@ -173,3 +173,45 @@ async function reviewEnrollment(c: any, status: 'aprobada' | 'rechazada') {
   const row: any = await c.env.DB.prepare(`SELECT * FROM sum_citizen_enrollments WHERE id = ?`).bind(id).first();
   return c.json({ ok: true, solicitud: adminEnrollmentDTO(row) });
 }
+
+// ── Supply-request lifecycle (operator) ──────────────────────────────────────
+// Operators move a citizen's pedido through pendiente → aprobada → en_camino →
+// entregada (or rechazada); the citizen sees each change on their /estado feed.
+const PEDIDO_STATUSES = ['pendiente', 'aprobada', 'en_camino', 'entregada', 'rechazada'] as const;
+function adminRequestDTO(r: any) {
+  return { ...requestDTO(r), user_id: r.user_id, nombre: r.nombre ?? null };
+}
+
+// GET /admin/pedidos?status= — supply requests across all citizens, newest first.
+suministrosCiudadano.get('/admin/pedidos', requirePermission('ops:console'), async (c) => {
+  const status = c.req.query('status');
+  const where: string[] = []; const binds: unknown[] = [];
+  if (status && (PEDIDO_STATUSES as readonly string[]).includes(status)) {
+    where.push('r.status = ?'); binds.push(status);
+  }
+  const sql = `SELECT r.*, e.nombre AS nombre
+                 FROM sum_citizen_requests r
+                 LEFT JOIN sum_citizen_enrollments e ON e.user_id = r.user_id
+                ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+                ORDER BY r.created_ms DESC LIMIT 200`;
+  const { results } = await c.env.DB.prepare(sql).bind(...binds).all();
+  return c.json({ ok: true, pedidos: ((results ?? []) as any[]).map(adminRequestDTO) });
+});
+
+// POST /admin/pedidos/:id/estado — advance a supply request's status.
+suministrosCiudadano.post('/admin/pedidos/:id/estado', requirePermission('ops:console'), async (c) => {
+  const id = c.req.param('id');
+  const b = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const status = str(b.status, 20);
+  if (!(PEDIDO_STATUSES as readonly string[]).includes(status)) {
+    return c.json({ error: 'invalid_status', allowed: PEDIDO_STATUSES }, 400);
+  }
+  const existing: any = await c.env.DB.prepare(`SELECT id FROM sum_citizen_requests WHERE id = ?`).bind(id).first();
+  if (!existing) return c.json({ error: 'not_found' }, 404);
+  const note = str(b.note, 500) || null;
+  await c.env.DB.prepare(
+    `UPDATE sum_citizen_requests SET status = ?, note = ?, updated_ms = ? WHERE id = ?`
+  ).bind(status, note, Date.now(), id).run();
+  const row: any = await c.env.DB.prepare(`SELECT * FROM sum_citizen_requests WHERE id = ?`).bind(id).first();
+  return c.json({ ok: true, pedido: requestDTO(row) });
+});

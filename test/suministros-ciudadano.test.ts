@@ -196,3 +196,46 @@ describe('suministros-ciudadano — admin review (ops:console / super_admin)', (
     expect(r.status).toBe(404);
   });
 });
+
+describe('suministros-ciudadano — pedido lifecycle (operator tracking)', () => {
+  // helper: an approved citizen with one pendiente pedido; returns its id
+  async function seedPedido(app: Hono, env: any, db: D1Mock): Promise<string> {
+    await req(app, env, 'POST', '/api/suministros-ciudadano/solicitud', cit, { nombre: 'Carlos' });
+    db.raw.prepare(`UPDATE sum_citizen_enrollments SET status='aprobada' WHERE user_id=?`).run('usr_c');
+    const pr = await (await req(app, env, 'POST', '/api/suministros-ciudadano/pedido', cit, { tipo: 'agua', cantidad: 5 })).json() as any;
+    return pr.request.id;
+  }
+
+  it('admin /pedidos lists the request with the requester name; citizen is forbidden', async () => {
+    const { app, env, db } = setup();
+    await seedPedido(app, env, db);
+    const denied = await req(app, env, 'GET', '/api/suministros-ciudadano/admin/pedidos', cit);
+    expect(denied.status).toBe(403);
+    const r = await req(app, env, 'GET', '/api/suministros-ciudadano/admin/pedidos?status=pendiente', adm);
+    expect(r.status).toBe(200);
+    const j = await r.json() as any;
+    expect(j.pedidos).toHaveLength(1);
+    expect(j.pedidos[0].tipo).toBe('agua');
+    expect(j.pedidos[0].nombre).toBe('Carlos'); // joined from the enrollment
+  });
+
+  it('operator advances status; the citizen sees it in /estado', async () => {
+    const { app, env, db } = setup();
+    const id = await seedPedido(app, env, db);
+    for (const status of ['aprobada', 'en_camino', 'entregada']) {
+      const r = await req(app, env, 'POST', `/api/suministros-ciudadano/admin/pedidos/${id}/estado`, adm, { status });
+      expect(r.status).toBe(200);
+      expect((await r.json() as any).pedido.status).toBe(status);
+    }
+    const est = await (await req(app, env, 'GET', '/api/suministros-ciudadano/estado', cit)).json() as any;
+    expect(est.requests[0].status).toBe('entregada');
+  });
+
+  it('invalid status → 400, missing id → 404, and citizen cannot set estado', async () => {
+    const { app, env, db } = setup();
+    const id = await seedPedido(app, env, db);
+    expect((await req(app, env, 'POST', `/api/suministros-ciudadano/admin/pedidos/${id}/estado`, adm, { status: 'volando' })).status).toBe(400);
+    expect((await req(app, env, 'POST', '/api/suministros-ciudadano/admin/pedidos/req_nope/estado', adm, { status: 'entregada' })).status).toBe(404);
+    expect((await req(app, env, 'POST', `/api/suministros-ciudadano/admin/pedidos/${id}/estado`, cit, { status: 'entregada' })).status).toBe(403);
+  });
+});
