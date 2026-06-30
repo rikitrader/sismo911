@@ -14,9 +14,12 @@
 <meta name="theme-color" content="#14171b" />
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 <link rel="stylesheet" href="/app.css" />
 <link rel="stylesheet" href="/ops-theme.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
   body{background:var(--ops-bg);color:var(--ops-text);font-family:Inter,system-ui,sans-serif}
   main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
@@ -86,7 +89,9 @@
       <span><i class="dot" style="background:#a6d96a"></i>Bajo 20-39</span>
       <span><i class="dot" style="background:#22c55e"></i>Mínimo 0-19</span>
       <span id="f_count" class="tag" style="margin-left:auto"></span>
+      <button id="f_csv" class="tag" style="cursor:pointer;border-color:var(--ops-accent-soft);color:var(--ops-accent-fg);background:var(--ops-accent-soft);padding:5px 12px">⬇ Exportar CSV</button>
     </div>
+    <div id="costNote" style="font-size:11px;color:var(--ops-muted);margin-top:8px"></div>
   </div>
 
   <!-- map -->
@@ -127,6 +132,7 @@
     document.getElementById('s_rep').textContent=fmtN(s.reported_damaged||0);
     document.getElementById('s_repair').textContent=fmtUsd(c.osm_repair);
     document.getElementById('s_repl').textContent=fmtUsd(c.osm_replacement);
+    if(c.note) document.getElementById('costNote').textContent='💲 '+c.note;
   }
   function fillSelect(id,vals,label){
     var el=document.getElementById(id); var o='<option value="">'+label+'</option>';
@@ -169,7 +175,7 @@
     }).join('');
     document.getElementById('tbody').innerHTML=html||'<tr><td colspan="8" style="padding:18px;color:var(--ops-muted)">Sin resultados.</td></tr>';
     document.querySelectorAll('#tbody tr.row').forEach(function(tr){
-      tr.addEventListener('click',function(){ var la=+tr.getAttribute('data-lat'),lo=+tr.getAttribute('data-lon'); document.getElementById('mapa').scrollIntoView({behavior:'smooth'}); map.setView([la,lo],17); });
+      tr.addEventListener('click',function(){ focusBuilding(+tr.getAttribute('data-lat'),+tr.getAttribute('data-lon')); });
     });
   }
   function renderMap(rows){
@@ -191,7 +197,33 @@
   function initMap(){
     map=L.map('map',{attributionControl:false}).setView([10.55,-66.90],10);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-    layer=L.layerGroup().addTo(map);
+    // Cluster at low zoom for 3.5k+ markers; fall back to a plain group if the plugin failed to load.
+    layer = (typeof L.markerClusterGroup==='function')
+      ? L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:48,disableClusteringAtZoom:16,spiderfyOnMaxZoom:false})
+      : L.layerGroup();
+    layer.addTo(map);
+  }
+  function toCsv(rows){
+    var head=['score','banda','edificio','direccion','sector','estado','daño','dpm','reparacion_usd','reemplazo_usd','area_m2','pisos','costo_confianza','lat','lon'];
+    var lines=[head.join(',')];
+    function q(v){ v=(v==null?'':String(v)); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+    rows.forEach(function(b){ var c=b.cost||{};
+      lines.push([b.score,b.band,b.name,b.addr,b.sector,b.state,damageLabel(b),(b.dpmProb!=null?b.dpmProb:''),c.repairUsd||'',c.replacementUsd||'',c.areaM2||'',c.levels||'',c.costConf||'',b.lat,b.lon].map(q).join(','));
+    });
+    return lines.join('\n');
+  }
+  function exportCsv(){
+    var rows=filtered();
+    var blob=new Blob([toCsv(rows)],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='sismo911-edificios-'+rows.length+'.csv'; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1000);
+  }
+  function focusBuilding(la,lo){ document.getElementById('mapa').scrollIntoView({behavior:'smooth'}); map.setView([la,lo],17); location.hash='b='+la.toFixed(5)+','+lo.toFixed(5); }
+  function applyHash(){
+    var h=new URLSearchParams((location.hash||'').replace(/^#/,''));
+    if(h.get('q')){ document.getElementById('f_q').value=h.get('q'); refresh(); }
+    var b=h.get('b'); if(b){ var p=b.split(',').map(Number); if(p.length===2&&!isNaN(p[0])) map.setView([p[0],p[1]],17); }
   }
   async function boot(){
     initMap();
@@ -202,7 +234,10 @@
     fillSelect('f_sector',[...new Set(ALL.map(function(b){return b.sector;}))],'Todos');
     ['f_q','f_state','f_sector','f_band','f_min'].forEach(function(id){ document.getElementById(id).addEventListener('input',refresh); });
     document.querySelectorAll('th[data-k]').forEach(function(th){ th.addEventListener('click',function(){ var k=th.getAttribute('data-k'); if(sortK===k) sortDir*=-1; else {sortK=k; sortDir=(k==='name'||k==='addr'||k==='state')?1:-1;} refresh(); }); });
+    document.getElementById('f_csv').addEventListener('click',exportCsv);
+    window.addEventListener('hashchange',applyHash);
     refresh();
+    applyHash();
   }
   boot();
 })();
