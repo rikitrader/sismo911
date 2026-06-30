@@ -334,3 +334,68 @@ export function supportTicketResolvedEmail(opts: { name?: string; ref: string; s
   const text = `${hi}\n\nTu ticket ${opts.ref} («${opts.subject}») fue marcado como resuelto.\nSi no quedó solucionado, responde a este correo o reábrelo en tu panel: ${opts.manageUrl}`;
   return { subject: `[#${opts.ref}] ${opts.subject} — Resuelto — Soporte SISMO911`, html, text };
 }
+
+// ---- Case alert subscriptions (seguir un caso por correo) ------------------
+// Double opt-in: a citizen subscribes to a missing-person case; we email a
+// confirmation link FIRST (subscribeVerifyEmail). Once confirmed, the
+// `case-alerts` cron emails a change summary (caseChangeAlertEmail) whenever the
+// watched fields move. Every alert + confirmation carries a one-click unsubscribe.
+
+const unsubFooter = (unsubUrl: string) =>
+  p(`¿Ya no quieres estos avisos? <a href="${unsubUrl}" style="color:#13284f">Cancelar la suscripción</a> con un clic.`);
+
+// Sent immediately after a subscribe request — confirms the email is real.
+export function subscribeVerifyEmail(opts: { caseName: string; verifyUrl: string; caseUrl: string }): EmailMsg {
+  const who = opts.caseName ? `el caso de <b>${escHtml(opts.caseName)}</b>` : 'este caso';
+  const html = layout('Confirma tu suscripción de avisos — SISMO911',
+    h2('Confirma para recibir avisos') +
+    p('Hola,') +
+    p(`Pediste recibir avisos por correo cuando haya novedades en ${who}. Confirma tu correo para activar los avisos:`) +
+    `<p style="margin:0 0 20px">${button(opts.verifyUrl, 'Confirmar mis avisos')}</p>` +
+    p('Si el botón no funciona, copia y pega este enlace:<br>' +
+      `<span style="color:#13284f;word-break:break-all">${opts.verifyUrl}</span>`) +
+    p('Si no solicitaste esto, ignora este correo — no se enviará ningún aviso sin tu confirmación.'));
+  const text = `Hola,\n\nPediste recibir avisos cuando haya novedades en ${opts.caseName || 'este caso'}.\nConfirma tu correo para activarlos:\n${opts.verifyUrl}\n\nSi no fuiste tú, ignora este correo: no se enviará ningún aviso sin confirmación.\nCaso: ${opts.caseUrl}`;
+  return { subject: `Confirma tus avisos del caso — SISMO911`, html, text };
+}
+
+// Sent once the subscriber confirms — sets expectations + unsubscribe link.
+export function subscribeConfirmedEmail(opts: { caseName: string; caseUrl: string; unsubUrl: string }): EmailMsg {
+  const who = opts.caseName ? `<b>${escHtml(opts.caseName)}</b>` : 'este caso';
+  const html = layout('Avisos activados — SISMO911',
+    h2('✓ Avisos activados') +
+    p('Hola,') +
+    p(`Listo. Te avisaremos por correo cuando haya una novedad en el caso de ${who}: un cambio de estado (p. ej. <i>localizado</i> o <i>a salvo</i>), una nueva pista verificada o un cambio en los datos del caso.`) +
+    `<p style="margin:0 0 20px">${button(opts.caseUrl, 'Ver el caso')}</p>` +
+    unsubFooter(opts.unsubUrl));
+  const text = `Hola,\n\nTus avisos para el caso de ${opts.caseName || 'este caso'} están activados.\nTe escribiremos cuando cambie el estado, aparezca una pista verificada o se actualicen los datos.\n\nVer el caso: ${opts.caseUrl}\nCancelar avisos: ${opts.unsubUrl}`;
+  return { subject: `Avisos activados — SISMO911`, html, text };
+}
+
+// Sent by the cron when a watched case changes. `summary` is the AI-written
+// human paragraph; `changes` are the raw field deltas (label · de → a).
+export function caseChangeAlertEmail(opts: {
+  caseName: string; statusLabel: string; summary: string; changes: { label: string; from: string; to: string }[]; caseUrl: string; unsubUrl: string;
+}): EmailMsg {
+  const who = opts.caseName ? `<b>${escHtml(opts.caseName)}</b>` : 'un caso que sigues';
+  const rows = opts.changes.map((ch) =>
+    `<tr><td style="padding:6px 14px;color:#6b7280">${escHtml(ch.label)}</td>` +
+    `<td style="padding:6px 14px;text-align:right;font-weight:600">${ch.from ? `<span style="color:#9ca3af;text-decoration:line-through">${escHtml(ch.from)}</span> → ` : ''}${escHtml(ch.to) || '—'}</td></tr>`
+  ).join('');
+  const card = rows
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;font-size:14px">
+         <tr><td colspan="2" style="background:#13284f;color:#fff;padding:10px 14px;font-weight:700;letter-spacing:.04em">QUÉ CAMBIÓ</td></tr>
+         ${rows}
+       </table>`
+    : '';
+  const html = layout(`Novedad en el caso de ${escHtml(opts.caseName)} — SISMO911`,
+    h2('🔔 Novedad en un caso que sigues') +
+    p('Hola,') +
+    p(`Hay una novedad en el caso de ${who}. ${escHtml(opts.summary)}`) +
+    card +
+    `<p style="margin:0 0 20px">${button(opts.caseUrl, 'Ver el caso completo')}</p>` +
+    unsubFooter(opts.unsubUrl));
+  const changeLines = opts.changes.map((ch) => `• ${ch.label}: ${ch.from ? ch.from + ' → ' : ''}${ch.to || '—'}`).join('\n');
+  const text = `Hola,\n\nNovedad en el caso de ${opts.caseName || 'un caso que sigues'}.\n${opts.summary}\n\n${changeLines}\n\nVer el caso: ${opts.caseUrl}\nCancelar avisos: ${opts.unsubUrl}`;
+  return { subject: `🔔 Novedad: ${opts.caseName || 'caso seguido'} — ${opts.statusLabel} — SISMO911`, html, text };
+}

@@ -30,6 +30,7 @@ import { extractRef, stripQuotedReply } from './lib/support';
 import PostalMime from 'postal-mime';
 import { publicProfile } from './routes/public-profile';
 import { familia } from './routes/familia';
+import { caseSubscribePages } from './routes/case-subscribe-pages';
 import { voluntarios } from './routes/voluntarios';
 import { telemedicina } from './routes/telemedicina';
 import { telemedScheduling } from './routes/telemedicina-scheduling';
@@ -368,6 +369,7 @@ app.get('/.well-known/security.txt', (c) => {
 });
 app.get('/security.txt', (c) => c.redirect('/.well-known/security.txt', 301));
 app.route('/api/familia', familia);
+app.route('/s', caseSubscribePages); // public confirm/unsubscribe landing pages for case email alerts (non-/api ⇒ open)
 app.route('/api/voluntarios', voluntarios);
 app.route('/api/telemedicina', telemedicina); // doctors worldwide ↔ patient help-requests for VE (intake, claim, schedule, video, calendar/ics)
 app.route('/api/telemedicina', telemedScheduling); // v2 self-service booking: catalog/slots/appointments + 7-state lifecycle + availability

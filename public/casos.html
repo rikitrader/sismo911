@@ -789,6 +789,16 @@ function renderCase(d){
     <div style="display:flex;flex-direction:column;gap:14px">
       ${triagePanel(p)}
       ${sismoCard}
+      <div class="card" id="subscribeCard">
+        <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke-linecap="round" stroke-linejoin="round"/></svg>Seguir este caso por correo</h3>
+        <p style="font:500 12.5px Inter;color:var(--muted);margin:0 0 10px;line-height:1.5">Te avisamos cuando haya una novedad: cambio de estado, nueva pista verificada o actualización de los datos.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="subEmail" type="email" inputmode="email" autocomplete="email" placeholder="tu@correo.com" aria-label="Tu correo" style="flex:1;min-width:160px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font:500 14px Inter;color:var(--ink)">
+          <button class="btn-navy" data-act="subscribe" data-a1="${esc(p.id)}" style="border:none">Activar avisos</button>
+        </div>
+        <div id="subMsg" role="status" style="display:none;margin-top:10px;font:600 12.5px Inter;padding:9px 12px;border-radius:8px"></div>
+        <p style="font:500 11px Inter;color:var(--muted);margin:9px 0 0">Doble confirmación: te enviamos un correo para activar. Cancela cuando quieras con un clic.</p>
+      </div>
       <div class="card">
         <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" stroke-linecap="round" stroke-linejoin="round"/></svg>Acciones</h3>
         <div style="display:flex;flex-direction:column;gap:9px">
@@ -1194,8 +1204,23 @@ document.addEventListener('keydown',e=>{
 var ACTIONS={
   setTab:function(t){setTab(t);},
   toggleProtect:function(id,want){toggleProtect(id,want);},
+  subscribe:function(caseId){subscribeCase(caseId);},
   __rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
 };
+async function subscribeCase(caseId){
+  var inp=document.getElementById('subEmail'),box=document.getElementById('subMsg');
+  if(!inp||!box)return;
+  var email=(inp.value||'').trim();
+  var show=function(text,ok){box.style.display='block';box.textContent=text;box.style.background=ok?'#e3f6ea':'#fdeaea';box.style.color=ok?'#166534':'#9a1b1b';};
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){show('Introduce un correo válido.',false);inp.focus();return;}
+  show('Enviando…',true);box.style.color='#13284f';box.style.background='#eef2fb';
+  try{
+    var r=await fetch('/api/persons/'+encodeURIComponent(caseId)+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:email})});
+    var d=await r.json().catch(function(){return{};});
+    if(r.ok){show(d.message||'Revisa tu correo y confirma para activar los avisos.',true);inp.value='';}
+    else show(d.hint||(r.status===404?'Este caso no existe.':'No se pudo suscribir. Inténtalo de nuevo.'),false);
+  }catch(e){show('Error de red. Inténtalo de nuevo.',false);}
+}
 function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
 ["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
   var el=e.target.closest("[data-act]");if(!el)return;
