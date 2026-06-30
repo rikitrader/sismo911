@@ -12,6 +12,7 @@ export interface BuildOpts {
   lang: 'es' | 'en';
   role: ViewerRole;
   canSeeSensitive: boolean;
+  baseUrl?: string;
 }
 
 function fmtDate(ms: number | null): string {
@@ -34,29 +35,35 @@ const NEXT_ACTION: Record<PublicStatus, { es: string; en: string }> = {
 };
 
 const HELP_ES = [
-  'SISMO911 — consultas de casos (solo datos verificados):',
-  '/buscar cedula V12345678',
-  '/buscar nombre "Maria Perez" nacimiento 1980-05-12',
-  '/caso EXP-2026-0123',
-  '/status EXP-2026-0123',
-  '/hospitalizados nombre "Jose Garcia"',
-  '/missing nombre "Ana Rodriguez"',
-  '/ayuda',
+  '👋 ¡Hola! Soy el bot de SISMO911. Consulto el estado de casos con datos verificados.',
   '',
-  'El bot solo responde en grupos aprobados y nunca expone datos personales sensibles.',
+  'Comandos disponibles:',
+  '• /buscar nombre "Moisés Carpio" — buscar por nombre (sin/with acentos, mayús o minús)',
+  '• /buscar cedula V12345678 — buscar por cédula',
+  '• /buscar nombre "Maria Perez" nacimiento 1980-05-12 — nombre + fecha de nacimiento',
+  '• /caso EXP-2026-0123 — ver un caso por su ID',
+  '• /status EXP-2026-0123 — estado de un caso',
+  '• /hospitalizados nombre "Jose Garcia" — buscar en el registro de hospitales',
+  '• /missing nombre "Ana Rodriguez" — buscar personas desaparecidas',
+  '• /ayuda — mostrar esta ayuda',
+  '',
+  'Solo respondo con registros verificados. En grupos oculto los datos sensibles; para el detalle completo, escríbeme en privado (solo operadores autorizados).',
 ].join('\n');
 
 const HELP_EN = [
-  'SISMO911 — case lookups (verified data only):',
-  '/search id V12345678',
-  '/search name "Maria Perez" dob 1980-05-12',
-  '/case EXP-2026-0123',
-  '/status EXP-2026-0123',
-  '/hospitalized name "Jose Garcia"',
-  '/missing name "Ana Rodriguez"',
-  '/help',
+  "👋 Hi! I'm the SISMO911 bot. I look up case status using verified data only.",
   '',
-  'The bot only replies in approved groups and never exposes sensitive personal data.',
+  'Available commands:',
+  '• /search name "Moises Carpio" — search by name (accents/case-insensitive)',
+  '• /search id V12345678 — search by national ID',
+  '• /search name "Maria Perez" dob 1980-05-12 — name + date of birth',
+  '• /case EXP-2026-0123 — view a case by its ID',
+  '• /status EXP-2026-0123 — case status',
+  '• /hospitalized name "Jose Garcia" — search the hospital registry',
+  '• /missing name "Ana Rodriguez" — search missing persons',
+  '• /help — show this help',
+  '',
+  'I only reply with verified records. In groups sensitive data is hidden; for full detail, DM me (authorized operators only).',
 ].join('\n');
 
 /** Build the final chat text for a resolved query. Pure + total over QueryResult. */
@@ -109,12 +116,12 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
         : 'I could not complete the query safely. Try again or contact an operator.';
 
     case 'match': {
-      const view = toPublicView(result.record, opts.role, opts.canSeeSensitive);
-      // Unverified record → never assert a final status.
+      const view = toPublicView(result.record, opts.role, opts.canSeeSensitive, opts.baseUrl);
+      // Unverified record → never assert a final status (but still link the case).
       if (view.status === 'PENDING_VERIFICATION') {
         return es
-          ? `Existe un registro pendiente, pero aún no está verificado.\nCaso: ${view.caseId}\nEstado público: PENDING_VERIFICATION.`
-          : `A record exists but is not yet verified.\nCase: ${view.caseId}\nPublic status: PENDING_VERIFICATION.`;
+          ? `Existe un registro pendiente, pero aún no está verificado.\nCaso: ${view.caseId}\nEstado público: PENDING_VERIFICATION.\nFicha: ${view.profileUrl}`
+          : `A record exists but is not yet verified.\nCase: ${view.caseId}\nPublic status: PENDING_VERIFICATION.\nProfile: ${view.profileUrl}`;
       }
       const next = NEXT_ACTION[view.status][opts.lang];
       const lines = es
@@ -125,6 +132,7 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
             `Ubicación general: ${view.generalLocation ?? 'no disponible'}`,
             `Última verificación: ${fmtDate(view.lastVerifiedMs)}`,
             `Nivel: ${view.verification}`,
+            `Ficha: ${view.profileUrl}`,
             `Nota: ${next}`,
           ]
         : [
@@ -134,6 +142,7 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
             `General location: ${view.generalLocation ?? 'not available'}`,
             `Last verified: ${fmtDate(view.lastVerifiedMs)}`,
             `Level: ${view.verification}`,
+            `Profile: ${view.profileUrl}`,
             `Note: ${next}`,
           ];
       if (view.privileged) {

@@ -4,6 +4,12 @@
 // PURE and deterministic — no DB, no AI. It extracts identifiers (cédula, name,
 // DOB, case id, phone, city); it NEVER decides a status. Quoted phrases are
 // honored so multi-word names survive ("Maria Perez").
+//
+// Forgiving by design (people type many ways): it tolerates a leading
+// @bot-mention ("@Vzla911bot /caso X"), command words WITHOUT a slash
+// ("caso EXP-2026-1"), and bare names without quotes ("/buscar Maria Perez").
+// A greeting or a bare mention ("hola", "@Vzla911bot") resolves to the welcome
+// (kind 'ayuda') so the bot can greet + list its commands.
 
 import type { CommandKind, ParsedCommand } from './types';
 
@@ -17,6 +23,7 @@ const COMMANDS: Record<string, CommandKind> = {
   status: 'status',
   estado: 'status',
   hospitalizados: 'hospitalizados',
+  hospitalizado: 'hospitalizados',
   hospitalized: 'hospitalizados',
   hospital: 'hospitalizados',
   missing: 'missing',
@@ -25,11 +32,22 @@ const COMMANDS: Record<string, CommandKind> = {
   ayuda: 'ayuda',
   help: 'ayuda',
   start: 'ayuda',
+  menu: 'ayuda',
+  comandos: 'ayuda',
+  commands: 'ayuda',
 };
 
 // English command words / keywords that flip the reply language to English.
-const EN_COMMANDS = new Set(['search', 'find', 'case', 'hospitalized', 'missing', 'help', 'status']);
+const EN_COMMANDS = new Set(['search', 'find', 'case', 'hospitalized', 'missing', 'help', 'status', 'commands']);
 const EN_KEYWORDS = new Set(['name', 'birth', 'dob', 'phone', 'city', 'id']);
+const EN_GREETINGS = new Set(['hi', 'hello', 'hey', 'help', 'commands', 'menu', 'start']);
+
+// Greeting / "just saying hi or @-mentioning the bot" tokens → welcome.
+const GREETINGS = new Set([
+  'hola', 'holaa', 'holaaa', 'ola', 'buenas', 'buenos', 'dias', 'tardes', 'noches',
+  'saludos', 'hey', 'hi', 'hello', 'hallo', 'start', 'menu', 'comandos', 'commands',
+  'info', 'ayuda', 'help', 'bot', 'epa', 'klk',
+]);
 
 // Field keyword → canonical field. Used by the key/value walker below.
 const FIELD: Record<string, 'cedula' | 'name' | 'dob' | 'phone' | 'city'> = {
@@ -81,15 +99,49 @@ function toIsoDob(v: string): string | undefined {
   return undefined;
 }
 
+/** Strip punctuation/emoji/accents for greeting comparison. */
+function bare(tok: string): string {
+  return tok.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');
+}
+
+/** True when the only meaningful content is a greeting or a bare @-mention. */
+function isGreetingOnly(tokens: string[]): boolean {
+  const meaningful = tokens.filter((t) => !t.startsWith('@'));
+  if (meaningful.length === 0) return true; // just an @-mention
+  if (meaningful.length > 3) return false; // a real sentence/query, not a greeting
+  return meaningful.every((t) => {
+    const b = bare(t);
+    return b === '' || GREETINGS.has(b);
+  });
+}
+
+function detectLang(raw: string, extraEn: boolean): 'es' | 'en' {
+  const lower = raw.toLowerCase();
+  if (extraEn) return 'en';
+  if ([...EN_KEYWORDS].some((k) => new RegExp(`\\b${k}\\b`).test(lower))) return 'en';
+  for (const t of tokenize(lower)) if (EN_GREETINGS.has(bare(t))) return 'en';
+  return 'es';
+}
+
 /**
- * Parse a chat message into a ParsedCommand. Non-command text (no leading "/")
- * is treated as a free-text "buscar" so the AI intent layer can normalize it;
- * the bot still only answers from DB rows.
+ * Parse a chat message into a ParsedCommand.
  */
 export function parseCommand(text: string): ParsedCommand {
   const raw = (text ?? '').trim();
-  const tokens = tokenize(raw);
+  let tokens = tokenize(raw);
   if (tokens.length === 0) return { kind: 'unknown', lang: 'es', raw };
+
+  // Drop a leading @bot-mention so "@Vzla911bot /caso X" or "@Vzla911bot hola"
+  // parse like the same message without the mention.
+  let mentioned = false;
+  while (tokens.length && tokens[0].startsWith('@')) {
+    mentioned = true;
+    tokens = tokens.slice(1);
+  }
+  if (tokens.length === 0) {
+    // Bare @-mention → welcome.
+    return { kind: 'ayuda', lang: detectLang(raw, false), raw };
+  }
 
   // Command word: strip leading "/" and any "@botname" suffix.
   let head = tokens[0];
@@ -99,25 +151,33 @@ export function parseCommand(text: string): ParsedCommand {
     head = head.slice(1).split('@')[0];
   }
   const cmdWord = head.toLowerCase();
-  const kind: CommandKind = isSlash ? COMMANDS[cmdWord] ?? 'unknown' : 'buscar';
+  const known = COMMANDS[cmdWord];
 
-  // Language: English command word or any English field keyword present.
-  const lower = raw.toLowerCase();
-  const lang: 'es' | 'en' =
-    (isSlash && EN_COMMANDS.has(cmdWord)) ||
-    [...EN_KEYWORDS].some((k) => new RegExp(`\\b${k}\\b`).test(lower))
-      ? 'en'
-      : 'es';
-
-  if (kind === 'ayuda' || kind === 'unknown') {
-    return { kind, lang, raw };
+  let kind: CommandKind;
+  let args: string[];
+  if (known) {
+    kind = known;
+    args = tokens.slice(1);
+  } else if (isSlash) {
+    // Unknown slash command → show the welcome/help rather than erroring.
+    return { kind: 'ayuda', lang: detectLang(raw, EN_COMMANDS.has(cmdWord)), raw };
+  } else {
+    kind = 'buscar';
+    args = tokens; // free text — the whole thing is the query (or a greeting)
   }
 
-  const args = isSlash ? tokens.slice(1) : tokens;
+  const lang = detectLang(raw, isSlash && EN_COMMANDS.has(cmdWord));
+
+  if (kind === 'ayuda' || kind === 'unknown') return { kind, lang, raw };
+
+  // Free-text (no slash) or a mention that is just a greeting → welcome.
+  if (kind === 'buscar' && (mentioned || !isSlash) && isGreetingOnly(args)) {
+    return { kind: 'ayuda', lang, raw };
+  }
 
   // /caso and /status take a single case-id argument (the rest of the line).
   if (kind === 'caso' || kind === 'status') {
-    const caseId = args.join(' ').trim();
+    const caseId = args.filter((t) => !t.startsWith('@')).join(' ').trim();
     return { kind, lang, caseId: caseId || undefined, raw };
   }
 
@@ -126,6 +186,7 @@ export function parseCommand(text: string): ParsedCommand {
   const nameParts: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const tok = args[i];
+    if (tok.startsWith('@')) continue; // ignore stray mentions
     const key = FIELD[tok.toLowerCase()];
     if (key) {
       const val = args[i + 1];
@@ -146,10 +207,11 @@ export function parseCommand(text: string): ParsedCommand {
   }
   if (!out.name && nameParts.length) out.name = nameParts.join(' ').trim();
 
-  // Partial-name detection: one short token is not enough to identify a person.
+  // Partial-name detection: only a too-short fragment (< 3 letters) is rejected.
+  // A single full name ("Maria") is allowed to search — it just returns "varios
+  // posibles registros" when broad, which is more useful than refusing outright.
   if (out.name) {
-    const words = out.name.split(/\s+/).filter(Boolean);
-    out.partialName = words.length < 2 || out.name.replace(/\s+/g, '').length < 3;
+    out.partialName = out.name.replace(/\s+/g, '').length < 3;
   }
   return out;
 }

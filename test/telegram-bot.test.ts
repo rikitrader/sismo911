@@ -109,8 +109,31 @@ describe('parseCommand', () => {
     expect(c.lang).toBe('en');
     expect(c.name).toBe('Jose Garcia');
   });
-  it('flags a partial (single-token) name', () => {
-    expect(parseCommand('/missing nombre Ana').partialName).toBe(true);
+  it('flags only too-short fragments as partial (a full single name is OK)', () => {
+    expect(parseCommand('/missing nombre Jo').partialName).toBe(true);
+    expect(parseCommand('/missing nombre Ana').partialName).toBe(false);
+  });
+  it('greetings and bare @-mentions resolve to the welcome', () => {
+    expect(parseCommand('hola').kind).toBe('ayuda');
+    expect(parseCommand('Hola!').kind).toBe('ayuda');
+    expect(parseCommand('buenas').kind).toBe('ayuda');
+    expect(parseCommand('@Vzla911bot').kind).toBe('ayuda');
+    expect(parseCommand('@Vzla911bot hola').kind).toBe('ayuda');
+    expect(parseCommand('hi').kind).toBe('ayuda');
+    expect(parseCommand('hi').lang).toBe('en');
+  });
+  it('tolerates a leading mention before a real command', () => {
+    expect(parseCommand('@Vzla911bot /caso EXP-2026-1').caseId).toBe('EXP-2026-1');
+    const c = parseCommand('@Vzla911bot Moises Carpio');
+    expect(c.kind).toBe('buscar');
+    expect(c.name).toBe('Moises Carpio');
+  });
+  it('accepts command words without a slash, and names without quotes', () => {
+    expect(parseCommand('caso EXP-2026-1').kind).toBe('caso');
+    expect(parseCommand('buscar Maria Perez').name).toBe('Maria Perez');
+  });
+  it('unknown slash command falls back to the welcome', () => {
+    expect(parseCommand('/wat').kind).toBe('ayuda');
   });
   it('/ayuda and /help', () => {
     expect(parseCommand('/ayuda').kind).toBe('ayuda');
@@ -138,10 +161,16 @@ describe('buildTelegramResponse', () => {
   it('need_more phone_requires_admin', () => {
     expect(buildTelegramResponse({ kind: 'need_more', reason: 'phone_requires_admin' }, base)).toMatch(/operadores autorizados/);
   });
-  it('unauthorized + rate_limited + help', () => {
+  it('unauthorized + rate_limited', () => {
     expect(buildTelegramResponse({ kind: 'unauthorized' }, base)).toMatch(/No autorizado/);
     expect(buildTelegramResponse({ kind: 'rate_limited', retryAfterSec: 12 }, base)).toMatch(/12s/);
-    expect(buildTelegramResponse({ kind: 'help' }, base)).toMatch(/\/buscar/);
+  });
+  it('welcome (help) greets and lists every command', () => {
+    const w = buildTelegramResponse({ kind: 'help' }, base);
+    expect(w).toMatch(/Hola/);
+    for (const cmd of ['/buscar', '/caso', '/status', '/hospitalizados', '/missing', '/ayuda']) {
+      expect(w).toContain(cmd);
+    }
   });
 
   const rec: CaseRecord = {
@@ -152,14 +181,19 @@ describe('buildTelegramResponse', () => {
     sensitive: { cedula: '12345678', phone: '+584141234567', hospital: 'Hospital Vargas', medicalNotes: 'reservado' },
   };
 
-  it('verified match (public) shows status but NO sensitive data', () => {
+  it('verified match (public) shows status + profile link but NO sensitive data', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, base);
     expect(out).toMatch(/Registro verificado/);
     expect(out).toMatch(/Estado: HOSPITALIZED/);
     expect(out).toMatch(/Nivel: VERIFIED/);
+    expect(out).toMatch(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_1/);
     expect(out).not.toContain('12345678');
     expect(out).not.toContain('Vargas');
     expect(out).not.toContain('Jose Garcia'); // name is not a public field
+  });
+  it('respects a custom baseUrl for the profile link', () => {
+    const out = buildTelegramResponse({ kind: 'match', record: rec }, { ...base, baseUrl: 'https://sismo911.com' });
+    expect(out).toContain('https://sismo911.com/casos#caso=HOSP-hp_1');
   });
 
   it('admin match (DM) includes the restricted detail block', () => {

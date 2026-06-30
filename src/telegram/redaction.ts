@@ -14,12 +14,26 @@
 import { coarsenLocation } from '../lib/minor-protect';
 import type { CaseRecord, PublicStatus, VerificationLevel, ViewerRole } from './types';
 
+const DEFAULT_BASE_URL = 'https://sismo911.com';
+
+/** Public, shareable URL for a case/profile page on sismo911.com. Familia
+ *  (personas) records open on /familia?persona=<id>; everything else uses the
+ *  unified case view /casos#caso=<caseId> (mirrors lib/case-subscribe.caseUrlFor). */
+export function profileUrlFor(record: CaseRecord, baseUrl: string = DEFAULT_BASE_URL): string {
+  const base = baseUrl.replace(/\/+$/, '');
+  if (record.registry === 'personas') {
+    return `${base}/familia?persona=${encodeURIComponent(record.internalId)}`;
+  }
+  return `${base}/casos#caso=${encodeURIComponent(record.caseId)}`;
+}
+
 export interface PublicView {
   caseId: string;
   status: PublicStatus;
   verification: VerificationLevel;
   generalLocation: string | null;
   lastVerifiedMs: number | null;
+  profileUrl: string;
   // Privileged extras — populated ONLY for an admin/authorized viewer in a DM.
   privileged?: {
     fullName: string;
@@ -37,7 +51,12 @@ export interface PublicView {
  * gate (admin/authorized AND a private DM — see auth.canViewSensitiveData);
  * pass false for any group or unauthorized requester.
  */
-export function toPublicView(record: CaseRecord, role: ViewerRole, canSeeSensitive: boolean): PublicView {
+export function toPublicView(
+  record: CaseRecord,
+  role: ViewerRole,
+  canSeeSensitive: boolean,
+  baseUrl: string = DEFAULT_BASE_URL,
+): PublicView {
   const view: PublicView = {
     caseId: record.caseId,
     status: record.publicStatus,
@@ -45,6 +64,7 @@ export function toPublicView(record: CaseRecord, role: ViewerRole, canSeeSensiti
     // General location is already coarsened in the adapter; re-coarsen defensively.
     generalLocation: coarsenLocation(record.generalLocation),
     lastVerifiedMs: record.lastVerifiedMs,
+    profileUrl: profileUrlFor(record, baseUrl),
   };
   if (canSeeSensitive) {
     view.privileged = {

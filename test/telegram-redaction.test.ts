@@ -51,6 +51,21 @@ describe('toPublicView — public viewer', () => {
   });
 });
 
+describe('toPublicView — profile link', () => {
+  it('hospital/native cases link to /casos#caso=<caseId>', () => {
+    const v = toPublicView(record({ registry: 'hospital', caseId: 'HOSP-hp_1' }), 'public', false);
+    expect(v.profileUrl).toBe('https://sismo911.com/casos#caso=HOSP-hp_1');
+  });
+  it('Familia (personas) cases link to /familia?persona=<id>', () => {
+    const v = toPublicView(record({ registry: 'personas', internalId: '555', caseId: 'FAM-555' }), 'public', false);
+    expect(v.profileUrl).toBe('https://sismo911.com/familia?persona=555');
+  });
+  it('honors a custom base url', () => {
+    const v = toPublicView(record(), 'public', false, 'https://sismo911.com/');
+    expect(v.profileUrl).toBe('https://sismo911.com/casos#caso=HOSP-hp_1');
+  });
+});
+
 describe('toPublicView — privileged viewer (DM admin)', () => {
   const view = toPublicView(record(), 'admin', true);
   it('includes the restricted detail block', () => {
