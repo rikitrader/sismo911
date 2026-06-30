@@ -27,9 +27,12 @@ describe('hospital-registry parsers', () => {
     expect(cleanCedula('123')).toBe('');
   });
 
-  it('dedupeKey prefers cédula, else hospital|norm-name', () => {
+  it('dedupeKey prefers cédula, else the normalized name (hospital ignored)', () => {
     expect(dedupeKey('18134813', 'Hosp', 'perez ana')).toBe('c:18134813');
-    expect(dedupeKey('', 'Hospital Vargas', 'perez ana')).toBe('n:hospital vargas|perez ana');
+    expect(dedupeKey('', 'Hospital Vargas', 'perez ana')).toBe('n:perez ana');
+    // The same person under a hospital-name variant must collapse to ONE key.
+    expect(dedupeKey('', 'Hospital Ana Francisca Pérez de León', 'abarca neiulan'))
+      .toBe(dedupeKey('', 'Hospital Ana Francisca Pérez de León 2', 'abarca neiulan'));
   });
 
   it('patientToRow builds a clean row + parses estado', () => {

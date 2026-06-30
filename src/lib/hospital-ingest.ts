@@ -34,6 +34,99 @@ export async function upsertHospitalRows(env: Env, rawRows: RawPatient[], source
 }
 
 /**
+ * Collapse duplicate hospital_patients rows created before the dedupe-key fix
+ * (and any that future syncs re-create for the same person listed both with and
+ * without a cédula). REVERSIBLE: losing rows are archived into
+ * `hospital_patients_dupes` (with `merged_into` = winner id) BEFORE deletion.
+ *
+ * Safety: rows are grouped by `norm_name`. A group is collapsed ONLY when it
+ * contains 0-or-1 distinct cédulas — i.e. it is unambiguously ONE person. Groups
+ * where two+ distinct cédulas share a normalized name (different real people with
+ * the same name) are left completely untouched. Within a collapsed group the
+ * winner is chosen cédula-first, then richest contact info, then oldest — and it
+ * inherits the best status in the group (a hospitalizado loser is never lost to a
+ * desconocido winner). Set-based SQL (a handful of statements, no per-row fan-out)
+ * so it stays well inside the Worker subrequest budget.
+ */
+export async function collapseHospitalDupes(env: Env): Promise<{ collapsed: number; reason?: string }> {
+  const now = Date.now();
+  try {
+    // Self-healing: tolerate an un-migrated DB (mirrors migration 0084).
+    await env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS hospital_patients_dupes (
+         id TEXT PRIMARY KEY, dedupe_key TEXT, hospital TEXT, full_name TEXT, name_variants TEXT,
+         norm_name TEXT, edad TEXT, cedula TEXT, telefono TEXT, direccion TEXT, estado TEXT,
+         conflict INTEGER, observaciones TEXT, source TEXT, source_updated TEXT,
+         matched_person_id TEXT, matched_persona_id TEXT, match_kind TEXT, match_confidence REAL,
+         matched_ms INTEGER, created_ms INTEGER, updated_ms INTEGER, merged_into TEXT, archived_ms INTEGER)`
+    ).run();
+
+    // Estado-independent winner ranking, reused by archive + delete so they pick
+    // the SAME losers. n_ced<=1 ⇒ unambiguous single identity.
+    const grpRanked =
+      `WITH grp AS (
+         SELECT norm_name, COUNT(DISTINCT NULLIF(cedula,'')) AS n_ced
+         FROM hospital_patients GROUP BY norm_name
+       ),
+       ranked AS (
+         SELECT h.id,
+           FIRST_VALUE(h.id) OVER w AS winner_id,
+           ROW_NUMBER()      OVER w AS rn
+         FROM hospital_patients h JOIN grp g ON g.norm_name = h.norm_name
+         WHERE g.n_ced <= 1
+         WINDOW w AS (PARTITION BY h.norm_name
+           ORDER BY (h.cedula<>'') DESC, (h.telefono<>'') DESC, (h.direccion<>'') DESC,
+                    h.created_ms ASC, h.id ASC)
+       )`;
+
+    // 1. Promote the best status in each unambiguous group onto every row in it
+    //    (the winner survives carrying it; losers are about to be archived). Done
+    //    first BECAUSE the ranking above is intentionally status-independent.
+    await env.DB.prepare(
+      `WITH grp AS (
+         SELECT norm_name, COUNT(DISTINCT NULLIF(cedula,'')) AS n_ced
+         FROM hospital_patients GROUP BY norm_name
+       ),
+       best AS (
+         SELECT norm_name, MIN(CASE estado WHEN 'hospitalizado' THEN 0 WHEN 'fallecido' THEN 1
+                                           WHEN 'alta' THEN 2 ELSE 3 END) AS bp
+         FROM hospital_patients GROUP BY norm_name
+       )
+       UPDATE hospital_patients
+         SET estado = CASE (SELECT bp FROM best b WHERE b.norm_name = hospital_patients.norm_name)
+                        WHEN 0 THEN 'hospitalizado' WHEN 1 THEN 'fallecido'
+                        WHEN 2 THEN 'alta' ELSE 'desconocido' END,
+             updated_ms = ?
+       WHERE norm_name IN (SELECT norm_name FROM grp WHERE n_ced <= 1)`
+    ).bind(now).run();
+
+    // 2. Archive losers (reversible) — copy each onto its winner's id.
+    await env.DB.prepare(
+      `${grpRanked}
+       INSERT OR IGNORE INTO hospital_patients_dupes
+         (id,dedupe_key,hospital,full_name,name_variants,norm_name,edad,cedula,telefono,direccion,
+          estado,conflict,observaciones,source,source_updated,matched_person_id,matched_persona_id,
+          match_kind,match_confidence,matched_ms,created_ms,updated_ms,merged_into,archived_ms)
+       SELECT h.id,h.dedupe_key,h.hospital,h.full_name,h.name_variants,h.norm_name,h.edad,h.cedula,
+              h.telefono,h.direccion,h.estado,h.conflict,h.observaciones,h.source,h.source_updated,
+              h.matched_person_id,h.matched_persona_id,h.match_kind,h.match_confidence,h.matched_ms,
+              h.created_ms,h.updated_ms, r.winner_id, ?
+       FROM hospital_patients h JOIN ranked r ON r.id = h.id
+       WHERE r.rn > 1`
+    ).bind(now).run();
+
+    // 3. Delete losers from the live table.
+    const del: any = await env.DB.prepare(
+      `${grpRanked} DELETE FROM hospital_patients WHERE id IN (SELECT id FROM ranked WHERE rn > 1)`
+    ).run();
+    const collapsed = Number(del?.meta?.changes ?? del?.changes ?? 0);
+    return { collapsed };
+  } catch (e: any) {
+    return { collapsed: 0, reason: String(e?.message || e).slice(0, 120) };
+  }
+}
+
+/**
  * Map raw xlsx rows (cell-text matrix) → RawPatient[]. Finds the header row
  * dynamically (the one whose cells include HOSPITAL + OBSERVACIONES) and reads the
  * data rows after it by column position, so a layout shift doesn't silently break.
