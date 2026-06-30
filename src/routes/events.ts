@@ -47,9 +47,10 @@ events.get('/history', async (c) => {
   return edgeCached(c, 60, async () => {
   const page = Math.max(1, Number(c.req.query('page') ?? 1));
   const pageSize = Math.min(100, Math.max(1, Number(c.req.query('pageSize') ?? 30)));
-  // Always hide cross-source duplicates from the public archive (canonical view).
-  const w: string[] = ['dup_of IS NULL'];
-  const b: unknown[] = [];
+  // Always hide cross-source duplicates from the public archive (canonical view),
+  // and never surface physically-impossible future-dated rows (bad timestamps).
+  const w: string[] = ['dup_of IS NULL', 'time_ms <= ?'];
+  const b: unknown[] = [Date.now() + 5 * 60 * 1000];
   const minMag = c.req.query('minMag');
   const from = c.req.query('from');
   const to = c.req.query('to');

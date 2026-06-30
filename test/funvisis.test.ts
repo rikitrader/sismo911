@@ -45,6 +45,12 @@ describe('normalizeFunvisisFeature', () => {
     expect(e.time_ms).toBe(Date.UTC(2026, 5, 27, 19, 20)); // 15:20 VET -> 19:20 UTC
   });
 
+  it('drops physically-impossible future-dated events (bad feed timestamp)', () => {
+    // A quake can never originate in the future; such a row would otherwise sort
+    // as "el último sismo" and freeze the elapsed-time cronómetro at 00:00:00.
+    expect(normalizeFunvisisFeature(feature({ postalCode: '01-01-2099', city: '12:00' }))).toBeNull();
+  });
+
   it('synthesizes a STABLE id (same event re-polls to the same key)', () => {
     expect(normalizeFunvisisFeature(feature())!.id)
       .toBe(normalizeFunvisisFeature(feature())!.id);
