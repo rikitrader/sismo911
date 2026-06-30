@@ -21,6 +21,7 @@ sumReportes.get('/valuacion', async (c) => {
          SELECT p.id AS producto_id, p.nombre, p.codigo,
            COALESCE(SUM(e.cantidad), 0) AS cantidad,
            COALESCE(
+             NULLIF(p.costo_unit, 0),
              (SELECT precio FROM sum_producto_proveedor WHERE producto_id = p.id AND preferido = 1 LIMIT 1),
              (SELECT MIN(precio) FROM sum_producto_proveedor WHERE producto_id = p.id),
              0
@@ -36,6 +37,7 @@ sumReportes.get('/valuacion', async (c) => {
     c.env.DB.prepare(
       `SELECT COALESCE(cat.nombre, 'Sin categoría') AS k,
          COALESCE(SUM(e.cantidad * COALESCE(
+           NULLIF(p.costo_unit, 0),
            (SELECT precio FROM sum_producto_proveedor WHERE producto_id = p.id AND preferido = 1 LIMIT 1),
            (SELECT MIN(precio) FROM sum_producto_proveedor WHERE producto_id = p.id),
            0
@@ -49,6 +51,7 @@ sumReportes.get('/valuacion', async (c) => {
     c.env.DB.prepare(
       `SELECT u.nombre AS k,
          COALESCE(SUM(e.cantidad * COALESCE(
+           NULLIF(p.costo_unit, 0),
            (SELECT precio FROM sum_producto_proveedor WHERE producto_id = p.id AND preferido = 1 LIMIT 1),
            (SELECT MIN(precio) FROM sum_producto_proveedor WHERE producto_id = p.id),
            0

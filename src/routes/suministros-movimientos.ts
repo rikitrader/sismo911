@@ -50,6 +50,7 @@ async function ubicacionExists(env: Env, id: string): Promise<boolean> {
 sumMovimientos.get('/', async (c) => {
   const tipo = c.req.query('tipo');
   const ubicacion = c.req.query('ubicacion_id');
+  const producto = c.req.query('producto_id');
   let limit = Number(c.req.query('limit'));
   if (!Number.isFinite(limit) || limit <= 0) limit = 100;
   limit = Math.min(limit, 500);
@@ -58,6 +59,12 @@ sumMovimientos.get('/', async (c) => {
   const vals: unknown[] = [];
   if (tipo) { where.push('t.tipo = ?'); vals.push(tipo); }
   if (ubicacion) { where.push('(t.ubicacion_id = ? OR t.ubicacion_dest_id = ?)'); vals.push(ubicacion, ubicacion); }
+  if (producto) {
+    where.push(`EXISTS (SELECT 1 FROM sum_transaccion_lineas l2
+      JOIN sum_items i2 ON i2.id = l2.item_id
+      WHERE l2.transaccion_id = t.id AND i2.producto_id = ?)`);
+    vals.push(producto);
+  }
 
   const sql = `SELECT t.*, u.nombre AS ubicacion_nombre, ud.nombre AS ubicacion_dest_nombre,
       (SELECT COUNT(*) FROM sum_transaccion_lineas l WHERE l.transaccion_id = t.id) AS n_lineas
