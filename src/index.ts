@@ -13,6 +13,7 @@ import { shelters } from './routes/shelters';
 import { refugios } from './routes/refugios';
 import { ninez } from './routes/ninez';
 import { casualties } from './routes/casualties';
+import { buildings } from './routes/buildings';
 import { triage } from './routes/triage';
 import { ops } from './routes/ops';
 import { misc } from './routes/misc';
@@ -375,6 +376,7 @@ app.route('/api/shelters', shelters);
 app.route('/api/refugios', refugios); // shelter siting + evacuation logistics engine (La Guaira); GET public, writes refugios:manage
 app.route('/api/ninez', ninez); // niñez/vulnerables shelter classification + needs board; public reads OFFICIAL-only aggregated, /admin reads + writes ninez:manage
 app.route('/api/casualties', casualties); // multi-source casualty ledger (fallecidos/heridos/desaparecidos); GET public, POST /manual admin:maintenance
+app.route('/api/buildings', buildings); // building damage-scoring engine (motor): fragility model anclado a NASA DPM/MSFT, alineado al tier/confianza de casualties; GET público, sin PII
 app.route('/api/triage', triage);     // AI intake: free-text message → desaparecidos/mascotas/daños as pending (public, burst-limited)
 app.route('/api/damage', damage);
 app.route('/api/sat', satellite);    // satellite/GIS damage analysis (imagery proxy + Workers AI vision)
