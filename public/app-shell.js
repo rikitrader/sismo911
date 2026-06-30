@@ -322,40 +322,54 @@
       #s911-deskbar{ display:block !important }
       .s911-fullmap{ left:0 !important; top:68px !important }
     }
+    /* White / off-white header theme. */
     #s911-deskbar{position:fixed;top:0;left:0;right:0;z-index:1150;font-family:'Public Sans',Inter,sans-serif}
-    #s911-deskbar .s911-dbar{height:68px;display:flex;align-items:center;gap:10px;padding:0 22px;background:linear-gradient(180deg,#0c1531,#0a0f23);border-bottom:1px solid rgba(255,255,255,.07);box-shadow:0 2px 14px rgba(0,0,0,.35)}
+    #s911-deskbar .s911-dbar{height:68px;display:flex;align-items:center;gap:10px;padding:0 22px;background:#f8f9fb;border-bottom:1px solid #e5e7eb;box-shadow:0 1px 0 #e5e7eb,0 3px 12px rgba(15,23,42,.05)}
     #s911-deskbar .s911-dbrand{display:flex;align-items:center;gap:11px;text-decoration:none;flex:0 0 auto}
     #s911-deskbar .s911-dbrand img{width:42px;height:42px}
-    #s911-deskbar .s911-dbrand b{display:block;font:800 22px 'Public Sans',sans-serif;color:#fff;letter-spacing:.01em;line-height:1}
-    #s911-deskbar .s911-dbrand small{display:block;font:700 9.5px Inter,sans-serif;color:#8b96b5;letter-spacing:.12em;margin-top:3px}
+    #s911-deskbar .s911-dbrand b{display:block;font:800 22px 'Public Sans',sans-serif;color:#0a1733;letter-spacing:.01em;line-height:1}
+    #s911-deskbar .s911-dbrand small{display:block;font:700 9.5px Inter,sans-serif;color:#6b7280;letter-spacing:.12em;margin-top:3px}
     #s911-deskbar .s911-dnav{display:flex;align-items:center;gap:2px;margin:0 6px;flex:1 1 auto;justify-content:center;min-width:0}
-    #s911-deskbar .s911-dnav-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 12px;border-radius:12px;text-decoration:none;color:#c7cee2;font:700 11.5px Inter,sans-serif;position:relative;white-space:nowrap;transition:background .12s,color .12s}
-    #s911-deskbar .s911-dnav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+    #s911-deskbar .s911-dnav-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 12px;border-radius:12px;text-decoration:none;color:#374151;font:700 11.5px Inter,sans-serif;position:relative;white-space:nowrap;transition:background .12s,color .12s}
+    #s911-deskbar .s911-dnav-item:hover{background:#eef0f4;color:#0a1733}
     #s911-deskbar .s911-dnav-item .s911-dico{width:34px;height:34px;display:grid;place-items:center;border-radius:10px}
     #s911-deskbar .s911-dnav-item svg{width:20px;height:20px}
-    #s911-deskbar .s911-dnav-item.active{color:#fff}
-    #s911-deskbar .s911-dnav-item.active .s911-dico{background:#c0152b;color:#fff;box-shadow:0 2px 8px rgba(192,21,43,.5)}
+    #s911-deskbar .s911-dnav-item.active{color:#0a1733}
+    #s911-deskbar .s911-dnav-item.active .s911-dico{background:#c0152b;color:#fff;box-shadow:0 2px 8px rgba(192,21,43,.4)}
     #s911-deskbar .s911-dnav-item.active::after{content:'';position:absolute;left:18px;right:18px;bottom:-1px;height:3px;border-radius:3px;background:#e23147}
     #s911-deskbar .s911-dright{display:flex;align-items:center;gap:12px;flex:0 0 auto}
-    #s911-deskbar .s911-dsearch{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;color:#c7cee2;text-decoration:none;transition:background .12s}
-    #s911-deskbar .s911-dsearch:hover{background:rgba(255,255,255,.09);color:#fff}
+    #s911-deskbar .s911-dsearch{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;color:#374151;text-decoration:none;transition:background .12s}
+    #s911-deskbar .s911-dsearch:hover{background:#eef0f4;color:#0a1733}
     #s911-deskbar .s911-dsearch svg{width:20px;height:20px}
-    #s911-deskbar .s911-dsos{display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:11px;background:linear-gradient(180deg,#e0394c,#c41f33);color:#fff;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;box-shadow:0 2px 10px rgba(196,31,51,.5);white-space:nowrap}
+    #s911-deskbar .s911-dsos{display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:11px;background:linear-gradient(180deg,#e0394c,#c41f33);color:#fff;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;box-shadow:0 2px 10px rgba(196,31,51,.4);white-space:nowrap}
     #s911-deskbar .s911-dsos:hover{filter:brightness(1.07)}
     #s911-deskbar .s911-dsos svg{width:17px;height:17px}
     #s911-deskbar .s911-pop{position:relative}
-    #s911-deskbar .s911-pop-btn{display:flex;align-items:center;gap:7px;background:transparent;border:none;cursor:pointer;color:#c7cee2;font:700 11.5px Inter,sans-serif;padding:7px 10px;border-radius:12px}
-    #s911-deskbar .s911-pop-btn:hover{background:rgba(255,255,255,.07);color:#fff}
-    #s911-deskbar .s911-pop-menu{position:absolute;top:calc(100% + 10px);right:0;min-width:240px;background:#0e1733;border:1px solid rgba(255,255,255,.1);border-radius:14px;box-shadow:0 16px 44px rgba(0,0,0,.5);padding:8px;display:none;max-height:72vh;overflow:auto}
+    #s911-deskbar .s911-pop-btn{display:flex;align-items:center;gap:7px;background:transparent;border:none;cursor:pointer;color:#374151;font:700 11.5px Inter,sans-serif;padding:7px 10px;border-radius:12px}
+    #s911-deskbar .s911-pop-btn:hover{background:#eef0f4;color:#0a1733}
+    #s911-deskbar .s911-pop-menu{position:absolute;top:calc(100% + 10px);right:0;min-width:240px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 16px 44px rgba(15,23,42,.16);padding:8px;display:none;max-height:72vh;overflow:auto}
     #s911-deskbar .s911-pop.open .s911-pop-menu{display:block}
-    #s911-deskbar .s911-pop-menu a{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;text-decoration:none;color:#c7cee2;font:600 13px Inter,sans-serif}
-    #s911-deskbar .s911-pop-menu a:hover{background:rgba(255,255,255,.08);color:#fff}
-    #s911-deskbar .s911-pop-menu a svg{width:17px;height:17px;flex:0 0 auto;color:#8b96b5}
-    #s911-deskbar .s911-pop-sec{font:800 10px Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#6b76a0;padding:11px 11px 4px}
-    #s911-deskbar .s911-avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:800 13px 'Public Sans';color:#fff;background:#27345c;border:1px solid rgba(255,255,255,.25)}
-    #s911-deskbar .s911-pop-uname{font:700 13px Inter;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    #s911-deskbar .s911-pop-urole{font:500 11px Inter;color:#8b96b5}
+    #s911-deskbar .s911-pop-menu a{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;text-decoration:none;color:#374151;font:600 13px Inter,sans-serif}
+    #s911-deskbar .s911-pop-menu a:hover{background:#f3f4f6;color:#0a1733}
+    #s911-deskbar .s911-pop-menu a svg{width:17px;height:17px;flex:0 0 auto;color:#9aa3b2}
+    #s911-deskbar .s911-pop-sec{font:800 10px Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#9aa3b2;padding:11px 11px 4px}
+    #s911-deskbar .s911-avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:800 13px 'Public Sans';color:#fff;background:#27345c;border:1px solid #d7dbe3}
+    #s911-deskbar .s911-pop-uname{font:700 13px Inter;color:#0a1733;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #s911-deskbar .s911-pop-urole{font:500 11px Inter;color:#6b7280}
     @media(max-width:1180px){ #s911-deskbar .s911-dnav-item .s911-dnav-lbl{display:none} #s911-deskbar .s911-dnav-item{padding:7px} }
+
+    /* Slim site footer with the rest of the pages (desktop only — mobile keeps the drawer). */
+    #s911-footer{display:none}
+    @media(min-width:1024px){ #s911-footer{display:block} }
+    #s911-footer{background:#0c1531;color:#aab2c8;border-top:3px solid #c0152b;margin-top:44px;font-family:Inter,sans-serif}
+    #s911-footer .s911-fwrap{max-width:1280px;margin:0 auto;padding:28px 28px 16px;display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:24px}
+    #s911-footer .s911-fbrand p{margin:10px 0 0;font:500 12px Inter;color:#8b94ad;max-width:240px;line-height:1.5}
+    #s911-footer .s911-fcol h4{font:800 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:#fff;margin:0 0 9px}
+    #s911-footer .s911-fcol a{display:block;color:#aab2c8;text-decoration:none;font:500 12.5px Inter;padding:3px 0}
+    #s911-footer .s911-fcol a:hover{color:#fff}
+    #s911-footer .s911-fbar{border-top:1px solid rgba(255,255,255,.08);margin-top:14px;padding:13px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:11.5px;color:#7f8aa6;flex-wrap:wrap}
+    #s911-footer .s911-fbar a{color:#7f8aa6;text-decoration:none}
+    #s911-footer .s911-fbar a:hover{color:#fff}
   `;
   const dstyle = document.createElement('style'); dstyle.textContent = deskCss; document.head.appendChild(dstyle);
 
@@ -365,7 +379,7 @@
   deskbar.id = 's911-deskbar';
   deskbar.innerHTML = `
     <div class="s911-dbar">
-      <a href="/" class="s911-dbrand" title="Inicio · SISMO911" aria-label="Inicio"><img src="/logo.svg" alt="SISMO911"><span><b>SISMO911</b><small>REGISTRO NACIONAL · COMANDO SÍSMICO</small></span></a>
+      <a href="/" class="s911-dbrand" title="Inicio · SISMO911" aria-label="Inicio"><img src="/logo-mark.svg" alt="SISMO911"><span><b>SISMO911</b><small>REGISTRO NACIONAL · COMANDO SÍSMICO</small></span></a>
       <nav class="s911-dnav">
         ${DESKTOP_NAV.map(deskItem).join('')}
       </nav>
@@ -388,6 +402,26 @@
   });
   document.addEventListener('click', (e) => { if (!e.target.closest('#s911-deskbar .s911-pop')) closePops(null); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePops(null); });
+
+  // ── Slim site footer (desktop only) — the "rest of the pages" the condensed top
+  // bar doesn't show. Mobile keeps the burger drawer (which already lists them all). ─
+  const fcol = (title, items) => `<div class="s911-fcol"><h4>${title}</h4>${items.map((it) => `<a href="${it.href}">${it.label}</a>`).join('')}</div>`;
+  const footer = document.createElement('footer');
+  footer.id = 's911-footer';
+  footer.innerHTML = `
+    <div class="s911-fwrap">
+      <div class="s911-fbrand">
+        <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none"><img src="/logo-mark.svg" alt="SISMO911" style="width:40px;height:40px"><span style="font:800 18px 'Public Sans',sans-serif;color:#fff">SISMO911</span></a>
+        <p>Plataforma humanitaria de respuesta sísmica. Registro Nacional · Comando Sísmico.</p>
+      </div>
+      ${fcol('Principal', DESKTOP_NAV)}
+      ${NAV_GROUPS.map((g) => fcol(g.label, g.items)).join('')}
+    </div>
+    <div class="s911-fbar">
+      <span>© SISMO911 · Plataforma Humanitaria</span>
+      <span style="display:flex;gap:16px;flex-wrap:wrap">${[NAV_CONTACTO, { label: 'Privacidad', href: '/privacidad' }, { label: 'Seguridad', href: '/seguridad' }, NAV_ADMIN].map((it) => `<a href="${it.href}">${it.label}</a>`).join('')}</span>
+    </div>`;
+  document.body.appendChild(footer);
 
   // Auth-aware account block
   const ROLE = { citizen: 'Ciudadano', operator: 'Operador', admin: 'Administrador' };
