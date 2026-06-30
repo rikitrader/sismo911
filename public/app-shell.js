@@ -381,7 +381,7 @@
   deskbar.id = 's911-deskbar';
   deskbar.innerHTML = `
     <div class="s911-dbar">
-      <a href="/" class="s911-dbrand" title="Inicio · SISMO911" aria-label="Inicio"><img src="/logo-mark.svg" alt="SISMO911"><span><b>SISMO911</b><small>REGISTRO NACIONAL · COMANDO SÍSMICO</small></span></a>
+      <a href="/" class="s911-dbrand" title="Inicio · SISMO911" aria-label="Inicio"><img src="/logo-mark.svg" alt="SISMO911"><span><b>SISMO911</b><small>COMANDO SÍSMICO</small></span></a>
       <nav class="s911-dnav">
         ${DESKTOP_NAV.map(deskItem).join('')}
       </nav>
@@ -414,7 +414,7 @@
     <div class="s911-fwrap">
       <div class="s911-fbrand">
         <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none"><img src="/logo-mark.svg" alt="SISMO911" style="width:40px;height:40px"><span style="font:800 18px 'Public Sans',sans-serif;color:#fff">SISMO911</span></a>
-        <p>Plataforma humanitaria de respuesta sísmica. Registro Nacional · Comando Sísmico.</p>
+        <p>Plataforma humanitaria de respuesta sísmica. Comando Sísmico.</p>
       </div>
       ${fcol('Principal', DESKTOP_NAV)}
       ${NAV_GROUPS.map((g) => fcol(g.label, g.items)).join('')}
