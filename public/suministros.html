@@ -1782,7 +1782,6 @@ function fillProdSels(){
   const opts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
   $$('.row-prod-sel').forEach(s=>{const c=s.value;s.innerHTML='<option value="">-- Producto --</option>'+opts;if(c)s.value=c;});
 }
-const money=n=>(n==null||n===''||isNaN(n))?'—':'$'+Number(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
 function renderProds(list){
   const tb=$('#prodRows');if(!tb)return;
   if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin productos todavía.</td></tr>';return;}
@@ -3258,7 +3257,7 @@ loadTablero();
 //  every handler is JS-attached or routed through the data-act dispatcher;
 //  zero inline on* attributes). Reuses globals from the main script.
 // ════════════════════════════════════════════════════════════════════════
-const money=v=>'$'+Number(v||0).toLocaleString('es-VE',{minimumFractionDigits:2});
+const money=v=>(v==null||v===''||isNaN(v))?'—':'$'+Number(v).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 // ── ALMACENES (ubicaciones tipo almacén/depósito) ──
 async function loadAlmacenes(){
