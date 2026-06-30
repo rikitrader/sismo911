@@ -32,7 +32,14 @@ export async function upsertHospitalRows(env: Env, rawRows: RawPatient[], source
            WHEN excluded.estado='hospitalizado'  OR hospital_patients.estado='hospitalizado'  THEN 'hospitalizado'
            ELSE excluded.estado END,
          conflict=CASE WHEN excluded.conflict=1 OR hospital_patients.conflict=1 THEN 1 ELSE 0 END,
-         observaciones=excluded.observaciones, source_updated=excluded.source_updated, updated_ms=excluded.updated_ms`
+         -- Keep the evidence that justifies the status: a blank re-ingest of the same
+         -- person (name-key collision) must NOT erase the observación that the status
+         -- was derived from. Prefer the non-blank / longer text.
+         observaciones=CASE
+           WHEN excluded.observaciones IS NULL OR TRIM(excluded.observaciones)='' THEN hospital_patients.observaciones
+           WHEN LENGTH(excluded.observaciones) >= LENGTH(COALESCE(hospital_patients.observaciones,'')) THEN excluded.observaciones
+           ELSE hospital_patients.observaciones END,
+         source_updated=excluded.source_updated, updated_ms=excluded.updated_ms`
     ).bind(uid('hp'), r.dedupe_key, r.hospital, r.full_name, r.name_variants, r.norm_name, r.edad, r.cedula,
            r.telefono, r.direccion, r.estado, r.conflict, r.observaciones, 'registro-maestro', src, now, now));
   }
