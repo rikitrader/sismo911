@@ -87,6 +87,23 @@
   // Admin console stays pinned at the bottom of the nav list.
   const NAV_ADMIN = { label: 'Consola', href: '/admin', m: ['/admin'], d: 'M12 3l8 3.5v5c0 4-3 7-8 9-5-2-8-5-8-9v-5z M9.5 12l2 2 3.5-4' };
 
+  // ── DESKTOP top-bar primary items (>=1024px only) ───────────────────────────
+  // A condensed horizontal row (icon over label) shown ONLY on desktop. Mobile
+  // keeps the existing burger + slide-in drawer, byte-for-byte unchanged. Every
+  // other destination (the NAV_GROUPS, Contacto, Consola) lives in the "Más ▾"
+  // overflow dropdown so nothing is orphaned by the condensed look.
+  const DESKTOP_NAV = [
+    { label: 'Inicio',        href: '/',          m: ['/'],          d: 'M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z' },
+    { label: 'Desaparecidos', href: '/personas',  m: ['/personas'],  d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8z' },
+    { label: 'Expedientes',   href: '/casos',     m: ['/casos'],     d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
+    { label: 'Mascotas',      href: '/mascotas',  m: ['/mascotas'],  d: 'M4.5 12a2 2 0 100-4 2 2 0 000 4zm15 0a2 2 0 100-4 2 2 0 000 4zM9 8a2 2 0 100-4 2 2 0 000 4zm6 0a2 2 0 100-4 2 2 0 000 4zm-3 3c-2.5 0-4.5 2-4.5 4.5 0 1.5 1.5 2.5 4.5 2.5s4.5-1 4.5-2.5C16.5 13 14.5 11 12 11z' },
+    { label: 'Terremotos',    href: '/terremotos',m: ['/terremotos'],d: 'M3 12h4l2 7 4-14 2 7h6' },
+    { label: 'Refugios',      href: '/refugios',  m: ['/refugios', '/refugios.html'], d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
+    { label: 'Ayuda Cerca',   href: '/cerca',     m: ['/cerca', '/cerca.html'], d: 'M12 21s-6-5.7-6-10a6 6 0 1112 0c0 4.3-6 10-6 10zm0-7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z' },
+    { label: 'Reportar',      href: '/reportar',  m: ['/reportar'],  d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
+    { label: 'Daños',         href: '/danos',     m: ['/danos'],     d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M12 8v4m0 3h.01' },
+  ];
+
   // Single standardized YELLOW for every yellow nav button (TERREMOTOS, MASCOTAS,
   // REFUGIOS, VOLUNTARIOS, TELEMEDICINA) — one source of truth so they never drift.
   // Citizen palette (default). Operator pages — detected by the presence of the
@@ -293,10 +310,129 @@
     h.setAttribute('aria-expanded', open ? 'true' : 'false');
   }));
 
+  // ── DESKTOP horizontal top bar (>=1024px ONLY) ──────────────────────────────
+  // Additive: hidden on mobile via CSS (display:none), so the entire <1024px
+  // experience above is unchanged. At >=1024px this replaces the pinned sidebar.
+  const deskCss = `
+    #s911-deskbar{display:none}
+    @media(min-width:1024px){
+      #s911-shell{display:none !important}
+      #s911-topbar{display:none !important}
+      body{ padding-left:0 !important; padding-top:74px !important }
+      #s911-deskbar{ display:block !important }
+      .s911-fullmap{ left:0 !important; top:74px !important }
+    }
+    #s911-deskbar{position:fixed;top:0;left:0;right:0;z-index:1150;font-family:'Public Sans',Inter,sans-serif}
+    #s911-deskbar .s911-tri{height:6px;background:linear-gradient(90deg,#ffce00 0 16%,#f4f4f4 16% 24%,#0033a0 24% 60%,#9d1f33 70% 80%,#cf142b 80% 100%)}
+    #s911-deskbar .s911-dbar{height:68px;display:flex;align-items:center;gap:10px;padding:0 22px;background:linear-gradient(180deg,#0c1531,#0a0f23);border-bottom:1px solid rgba(255,255,255,.07);box-shadow:0 2px 14px rgba(0,0,0,.35)}
+    #s911-deskbar .s911-dbrand{display:flex;align-items:center;gap:11px;text-decoration:none;flex:0 0 auto}
+    #s911-deskbar .s911-dbrand img{width:42px;height:42px}
+    #s911-deskbar .s911-dbrand b{display:block;font:800 22px 'Public Sans',sans-serif;color:#fff;letter-spacing:.01em;line-height:1}
+    #s911-deskbar .s911-dbrand small{display:block;font:700 9.5px Inter,sans-serif;color:#8b96b5;letter-spacing:.12em;margin-top:3px}
+    #s911-deskbar .s911-dnav{display:flex;align-items:center;gap:2px;margin:0 6px;flex:1 1 auto;justify-content:center;min-width:0}
+    #s911-deskbar .s911-dnav-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 12px;border-radius:12px;text-decoration:none;color:#c7cee2;font:700 11.5px Inter,sans-serif;position:relative;white-space:nowrap;transition:background .12s,color .12s}
+    #s911-deskbar .s911-dnav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+    #s911-deskbar .s911-dnav-item .s911-dico{width:34px;height:34px;display:grid;place-items:center;border-radius:10px}
+    #s911-deskbar .s911-dnav-item svg{width:20px;height:20px}
+    #s911-deskbar .s911-dnav-item.active{color:#fff}
+    #s911-deskbar .s911-dnav-item.active .s911-dico{background:#c0152b;color:#fff;box-shadow:0 2px 8px rgba(192,21,43,.5)}
+    #s911-deskbar .s911-dnav-item.active::after{content:'';position:absolute;left:18px;right:18px;bottom:-1px;height:3px;border-radius:3px;background:#e23147}
+    #s911-deskbar .s911-dright{display:flex;align-items:center;gap:12px;flex:0 0 auto}
+    #s911-deskbar .s911-dsearch{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;color:#c7cee2;text-decoration:none;transition:background .12s}
+    #s911-deskbar .s911-dsearch:hover{background:rgba(255,255,255,.09);color:#fff}
+    #s911-deskbar .s911-dsearch svg{width:20px;height:20px}
+    #s911-deskbar .s911-dsos{display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:11px;background:linear-gradient(180deg,#e0394c,#c41f33);color:#fff;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;box-shadow:0 2px 10px rgba(196,31,51,.5);white-space:nowrap}
+    #s911-deskbar .s911-dsos:hover{filter:brightness(1.07)}
+    #s911-deskbar .s911-dsos svg{width:17px;height:17px}
+    #s911-deskbar .s911-pop{position:relative}
+    #s911-deskbar .s911-pop-btn{display:flex;align-items:center;gap:7px;background:transparent;border:none;cursor:pointer;color:#c7cee2;font:700 11.5px Inter,sans-serif;padding:7px 10px;border-radius:12px}
+    #s911-deskbar .s911-pop-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+    #s911-deskbar .s911-pop-menu{position:absolute;top:calc(100% + 10px);right:0;min-width:240px;background:#0e1733;border:1px solid rgba(255,255,255,.1);border-radius:14px;box-shadow:0 16px 44px rgba(0,0,0,.5);padding:8px;display:none;max-height:72vh;overflow:auto}
+    #s911-deskbar .s911-pop.open .s911-pop-menu{display:block}
+    #s911-deskbar .s911-pop-menu a{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;text-decoration:none;color:#c7cee2;font:600 13px Inter,sans-serif}
+    #s911-deskbar .s911-pop-menu a:hover{background:rgba(255,255,255,.08);color:#fff}
+    #s911-deskbar .s911-pop-menu a svg{width:17px;height:17px;flex:0 0 auto;color:#8b96b5}
+    #s911-deskbar .s911-pop-sec{font:800 10px Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#6b76a0;padding:11px 11px 4px}
+    #s911-deskbar .s911-avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:800 13px 'Public Sans';color:#fff;background:#27345c;border:1px solid rgba(255,255,255,.25)}
+    #s911-deskbar .s911-pop-uname{font:700 13px Inter;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #s911-deskbar .s911-pop-urole{font:500 11px Inter;color:#8b96b5}
+    #s911-deskbar .s911-mas-cols{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;min-width:460px}
+    @media(max-width:1180px){ #s911-deskbar .s911-dnav-item .s911-dnav-lbl{display:none} #s911-deskbar .s911-dnav-item{padding:7px} }
+  `;
+  const dstyle = document.createElement('style'); dstyle.textContent = deskCss; document.head.appendChild(dstyle);
+
+  const deskItem = (it) => `<a href="${it.href}" class="s911-dnav-item${active(it) ? ' active' : ''}"><span class="s911-dico">${icon(it.d)}</span><span class="s911-dnav-lbl">${it.label}</span></a>`;
+
+  // "Más" overflow: every grouped destination + Contacto + Consola, so the
+  // condensed bar never orphans a link that the sidebar used to expose.
+  const masLink = (it) => `<a href="${it.href}">${icon(it.d)}<span>${it.label}</span></a>`;
+  const masMenu = NAV_GROUPS.map((g) => `<div class="s911-pop-sec">${g.label}</div>${g.items.map(masLink).join('')}`).join('') + `<div class="s911-pop-sec">Más</div>${masLink(NAV_CONTACTO)}${masLink(NAV_ADMIN)}`;
+
+  const deskbar = document.createElement('header');
+  deskbar.id = 's911-deskbar';
+  deskbar.innerHTML = `
+    <div class="s911-tri"></div>
+    <div class="s911-dbar">
+      <a href="/" class="s911-dbrand"><img src="/logo.svg" alt="SISMO911"><span><b>SISMO911</b><small>REGISTRO NACIONAL · COMANDO SÍSMICO</small></span></a>
+      <nav class="s911-dnav">
+        ${DESKTOP_NAV.map(deskItem).join('')}
+        <div class="s911-pop" id="s911-mas">
+          <button type="button" class="s911-pop-btn" id="s911-mas-btn" aria-expanded="false">Más
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:13px;height:13px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="s911-pop-menu"><div class="s911-mas-cols">${masMenu}</div></div>
+        </div>
+      </nav>
+      <div class="s911-dright">
+        <a href="/personas" class="s911-dsearch" title="Buscar en el Registro de Desaparecidos" aria-label="Buscar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M21 21l-4.3-4.3"/></svg>
+        </a>
+        <a href="/sos" class="s911-dsos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4m0 4h.01"/></svg>Emergencia / SOS</a>
+        <div class="s911-pop" id="s911-deskacct"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(deskbar);
+
+  // Dropdown open/close (Más + account), single-open, outside-click + Esc close.
+  const closePops = (except) => deskbar.querySelectorAll('.s911-pop.open').forEach((p) => { if (p !== except) p.classList.remove('open'); });
+  deskbar.addEventListener('click', (e) => {
+    const btn = e.target.closest('.s911-pop-btn'); if (!btn) return;
+    const pop = btn.parentElement; const willOpen = !pop.classList.contains('open');
+    closePops(pop); pop.classList.toggle('open', willOpen); btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#s911-deskbar .s911-pop')) closePops(null); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePops(null); });
+
   // Auth-aware account block
   const ROLE = { citizen: 'Ciudadano', operator: 'Operador', admin: 'Administrador' };
   const esc = (s) => (s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // Desktop top-bar account: avatar + chevron dropdown (Mi cuenta / Consola / Salir).
+  const renderDeskAcct = (d) => {
+    const box = document.getElementById('s911-deskacct'); if (!box) return;
+    if (!d || !d.authenticated) {
+      box.classList.remove('s911-pop');
+      box.innerHTML = `<a href="/login" class="s911-pop-btn" style="border:1px solid rgba(255,255,255,.25)">Iniciar sesión</a>`;
+      return;
+    }
+    const u = d.user, ini = esc((u.name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase());
+    const isOp = u.role === 'operator' || u.role === 'admin';
+    box.innerHTML = `
+      <button type="button" class="s911-pop-btn" aria-expanded="false">
+        <span class="s911-avatar">${ini}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:13px;height:13px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="s911-pop-menu" style="min-width:230px">
+        <div style="padding:6px 11px 10px"><div class="s911-pop-uname">${esc(u.name)}</div><div class="s911-pop-urole">${esc(ROLE[u.role] || ROLE.citizen)}</div></div>
+        <a href="/cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>Mi cuenta</a>
+        ${isOp ? `<a href="/admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 3.5v5c0 4-3 7-8 9-5-2-8-5-8-9v-5z"/></svg>Consola</a>` : ''}
+        <a href="#" id="s911-desklogout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Cerrar sesión</a>
+      </div>`;
+    const lo = document.getElementById('s911-desklogout');
+    if (lo) lo.onclick = async (e) => { e.preventDefault(); await fetch('/api/auth/logout', { method: 'POST' }); location.href = '/login'; };
+  };
+
   fetch('/api/auth/me').then((r) => r.json()).then((d) => {
+    renderDeskAcct(d);
     const box = document.getElementById('s911-acct');
     if (!d.authenticated) {
       box.innerHTML = `<a href="/login" class="acct" style="display:flex;align-items:center;justify-content:center;gap:8px;background:${NAVY};color:#fff;font:600 13px Inter,sans-serif;padding:10px;border-radius:10px">Iniciar sesión</a>`;
@@ -314,7 +450,7 @@
         <button id="s911-logout" style="font:600 12px Inter;color:${SECONDARY};border:1px solid ${LINE};border-radius:8px;padding:6px 10px;background:#fff">Salir</button>
       </div>`;
     document.getElementById('s911-logout').onclick = async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.href = '/login'; };
-  }).catch(() => {});
+  }).catch(() => { renderDeskAcct(null); });
 
   // The /donar zone is hidden from the public until an admin reveals it. Hide
   // EVERY link into the zone (/donar, /recaudar, /campana) — the sidebar entry
