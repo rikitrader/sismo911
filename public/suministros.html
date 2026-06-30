@@ -1416,6 +1416,20 @@
 
   <!-- ═══ ETIQUETAS ═══ -->
   <section data-panel="etiquetas" class="hidden">
+    <!-- ═══ ESCÁNER (barcode/QR → ficha de producto) ═══ -->
+    <div class="card p-3 mb-4" style="background:#082752;color:#fff">
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="eyebrow" style="color:#cbd5e1">📷 Escáner de inventario</div>
+        <input id="scanInput" placeholder="Escanea o escribe un código (SKU)…" class="inp-sm" style="flex:1;min-width:200px;background:#fff;color:#15181c" autocomplete="off">
+        <button id="scanGoBtn" class="btn-add" style="background:#fff;color:#082752;border-color:#fff">Buscar</button>
+        <button id="scanCamBtn" class="btn-add" style="background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.3)">📷 Cámara</button>
+      </div>
+      <div id="scanCam" class="hidden mt-2" style="position:relative;max-width:360px">
+        <video id="scanVideo" playsinline muted style="width:100%;border-radius:8px;background:#000"></video>
+        <button id="scanStopBtn" class="btn-add mt-1" style="background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.3)">Detener cámara</button>
+      </div>
+      <p id="scanMsg" class="text-[11px] mt-1" style="color:#cbd5e1">Compatible con lectores USB/Bluetooth (modo teclado), cámara del teléfono, o entrada manual. Cada escaneo abre la ficha del producto para recibir/ajustar — todo queda en el ledger.</p>
+    </div>
     <div class="grid lg:grid-cols-3 gap-4">
       <div class="card overflow-hidden h-fit">
         <div class="px-4 pt-3 pb-2 eyebrow">Buscar producto</div>
@@ -3274,6 +3288,47 @@ function renderEtiquetas(){
 $('#etqSearch').addEventListener('input',function(){loadEtqCatalogo(this.value);});
 $('#etqCopias').addEventListener('change',renderEtiquetas);
 $('#etqPrintBtn').addEventListener('click',()=>window.print());
+
+// ── Escáner de inventario (barcode/QR/SKU → ficha de producto) ──
+let _scanStream=null,_scanLoop=null;
+async function scanResolve(raw){
+  let code=(raw||'').trim();if(!code){return;}
+  // QR may encode JSON like {"producto_id":"prod_…"} or {"item_id":"…"}
+  let pid=null;
+  if(code[0]==='{'){try{const o=JSON.parse(code);pid=o.producto_id||null;if(o.codigo)code=o.codigo;}catch(_){}}
+  if(!PRODUCTOS.length){await loadProds().catch(()=>{});}
+  let p=null;
+  if(pid)p=PRODUCTOS.find(x=>x.id===pid);
+  if(!p)p=PRODUCTOS.find(x=>String(x.codigo||'').toLowerCase()===code.toLowerCase()||x.id===code);
+  if(!p){ // fall back to server search
+    const d=await api('productos?q='+encodeURIComponent(code)).then(j).catch(()=>({}));
+    const rs=d.results||[];
+    p=rs.find(x=>String(x.codigo||'').toLowerCase()===code.toLowerCase())||(rs.length===1?rs[0]:null);
+  }
+  if(p){setMsg('#scanMsg','✓ '+(p.nombre||p.codigo),true);scanStop();gotoTab('catalogo');setTimeout(()=>openProducto(p.id),120);$('#scanInput').value='';}
+  else setMsg('#scanMsg','Sin producto para “'+esc(code)+'”. Verifica el SKU.',false);
+}
+async function scanCamera(){
+  if(!('BarcodeDetector' in window)){setMsg('#scanMsg','Cámara no soportada en este navegador — usa un lector USB/Bluetooth o escribe el código.',false);$('#scanInput').focus();return;}
+  try{
+    _scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const v=$('#scanVideo');v.srcObject=_scanStream;await v.play();$('#scanCam').classList.remove('hidden');
+    const det=new window.BarcodeDetector({formats:['code_128','qr_code','ean_13','ean_8','code_39','upc_a']});
+    setMsg('#scanMsg','Apunta la cámara al código…',true);
+    _scanLoop=setInterval(async()=>{
+      try{const codes=await det.detect(v);if(codes&&codes.length){const val=codes[0].rawValue;if(val){scanResolve(val);}}}catch(_){}
+    },500);
+  }catch(e){setMsg('#scanMsg','No se pudo abrir la cámara ('+(e&&e.name||'error')+'). Usa lector USB o entrada manual.',false);}
+}
+function scanStop(){
+  if(_scanLoop){clearInterval(_scanLoop);_scanLoop=null;}
+  if(_scanStream){_scanStream.getTracks().forEach(t=>t.stop());_scanStream=null;}
+  const cam=$('#scanCam');if(cam)cam.classList.add('hidden');
+}
+if($('#scanInput'))$('#scanInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();scanResolve(this.value);}});
+if($('#scanGoBtn'))$('#scanGoBtn').addEventListener('click',function(){scanResolve($('#scanInput').value);});
+if($('#scanCamBtn'))$('#scanCamBtn').addEventListener('click',scanCamera);
+if($('#scanStopBtn'))$('#scanStopBtn').addEventListener('click',scanStop);
 
 // ── Generic POST ──
 async function post(endpoint,body,msgSel){
