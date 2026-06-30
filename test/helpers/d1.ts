@@ -31,6 +31,14 @@ class Stmt {
     const info = this.db.prepare(this.sql).run(...(this.args as any[]));
     return { success: true, meta: { changes: info.changes, last_row_id: Number(info.lastInsertRowid) } };
   }
+  /** Synchronous per-statement result for batch() — mirrors real D1 (SELECTs return
+   *  `results`, writes return meta). Uses better-sqlite3's `.reader` to tell them apart. */
+  batchResult(): { results: any[]; success: true; meta: any } {
+    const stmt = this.db.prepare(this.sql);
+    if (stmt.reader) return { results: stmt.all(...(this.args as any[])), success: true, meta: {} };
+    const info = stmt.run(...(this.args as any[]));
+    return { results: [], success: true, meta: { changes: info.changes, last_row_id: Number(info.lastInsertRowid) } };
+  }
 }
 
 export class D1Mock {
@@ -39,7 +47,7 @@ export class D1Mock {
     return new Stmt(this.raw, sql);
   }
   async batch(stmts: Stmt[]) {
-    const tx = this.raw.transaction(() => stmts.map((s) => s.run()));
+    const tx = this.raw.transaction(() => stmts.map((s) => s.batchResult()));
     return tx();
   }
   async exec(sql: string) {
