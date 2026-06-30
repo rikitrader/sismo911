@@ -82,7 +82,7 @@ describe('scoreOsm', () => {
     name: 'Edificio Nobel', type: 'apartments', addr: '1ª Transversal de Los Palos Grandes',
     sector: 'Los Palos Grandes', lat: 10.498, lon: -66.843,
   };
-  it('always MODELED+LOW_DATA, tier 3, bounded, keeps address', () => {
+  it('no DPM → MODELED+LOW_DATA, tier 3, bounded, keeps address', () => {
     const r = scoreOsm(o, { ...coast, parish: 'Chacao', prior: 0.28 });
     expect(r.dq).toContain('MODELED');
     expect(r.tier).toBe(3);
@@ -90,5 +90,26 @@ describe('scoreOsm', () => {
     expect(r.score).toBeLessThanOrEqual(100);
     expect(r.addr).toBe('1ª Transversal de Los Palos Grandes');
     expect(r.status).toBe('DESCONOCIDO');
+    expect(r.dpmProb).toBeUndefined();
+  });
+
+  it('observed NASA DPM → OBSERVED-DPM, tier 2, raises score above modeled, bounded', () => {
+    const sec = { ...coast, parish: 'Chacao', prior: 0.28 };
+    const modeled = scoreOsm(o, sec).score;
+    const obs = scoreOsm(o, sec, 0.99);
+    expect(obs.dq).toBe('OBSERVED-DPM');
+    expect(obs.tier).toBe(2);
+    expect(obs.confNum).toBeCloseTo(0.85);
+    expect(obs.dpmProb).toBe(0.99);
+    expect(obs.status).toBe('DPM_DANADO');
+    expect(obs.score).toBeGreaterThan(modeled); // observation lifts hazard
+    expect(obs.score).toBeLessThanOrEqual(100);
+    expect(obs.source).toContain('NASA');
+  });
+
+  it('DPM below the MMI hazard never lowers the score (max of the two)', () => {
+    const sec = { ...coast, parish: 'Chacao', prior: 0.28 };
+    const modeled = scoreOsm(o, sec).score;
+    expect(scoreOsm(o, sec, 0.01).score).toBeGreaterThanOrEqual(modeled);
   });
 });
