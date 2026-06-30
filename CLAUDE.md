@@ -67,6 +67,18 @@ Any change touching an engine that produces numbers people act on (refugios scor
 - **Preflight gates every deploy:** run `npm run preflight` (or it runs via `predeploy`) — validates auth, required secrets present, D1 reachable (catches Error 7500 before migrating), versions, pending migrations. **Deploy aborts on any required failure.** Set/rotate secrets with the idempotent `npm run bootstrap:secrets` (values entered hidden, never echoed).
 - **Secret scanning:** `bash scripts/install-secret-scan-hook.sh` installs a pre-commit guard (`scripts/secret-scan.sh`) that blocks commits containing CF/AWS/GitHub/Stripe/Anthropic/OpenAI/Google/Slack tokens or private keys. Run `npm run secret-scan` in CI. Whitelist a true example with `# pragma: allowlist secret`.
 - **Least privilege:** if not using OAuth, use one scoped Cloudflare token per task (Workers/D1/KV/R2/…), never the Global API Key or an admin token; store CI creds as GitHub Environment secrets, masked. **Rotation:** signing/JWT secrets ≤90 days and immediately on suspected exposure (`bootstrap-secrets.sh --rotate <NAME>` → redeploy → revoke old). Full spec: private security vault (`sismo911-vault/09-Security-Internal/cloudflare-secrets.md`).
+- **gitleaks CI gate (this repo is PUBLIC):** `.github/workflows/gitleaks.yml` runs gitleaks on every PR/push and **fails on any secret in the tree**. Config is `.gitleaks.toml` — its allowlist holds **only verified false positives** (RFC test seeds, the Supabase **anon** key, public IndexNow token, localStorage key names). **Never allowlist a real secret — rotate it instead.** Run locally before pushing: `gitleaks dir . --config .gitleaks.toml`.
+
+## Secret Handling in Chat, Logs & Reports (HARD RULE — never violate)
+
+A real production secret (`PLAN_SECRET`) once reached git history; the repo is now public, so this discipline is non-negotiable:
+
+- **Never print or paste a full secret** anywhere — chat, logs, terminal output, commit messages, PR/issue text, screenshots, or reports. Includes tokens, keys, JWTs, cookie/HMAC secrets, passwords, private URLs.
+- **Redact on sight.** If a secret appears in scanner output, a file, history, or a prior message, redact it in your response. Format: `PLAN_SECRET: REDACTED` (prefix/suffix only if essential: `abc…xyz`).
+- **Never echo generated replacements.** Generate locally and pipe **directly** into the secret store (`openssl rand -hex 32 | npx wrangler secret put <NAME>`); never assign to a printed variable.
+- **Rotate, don't allowlist.** A real exposed secret is rotated immediately (new value → `wrangler secret put` → verify by behavior). Allowlists are for false positives only.
+- **Rotating a live production secret is an outward-facing action** — get explicit user approval first unless they said "rotate production secrets now."
+- **Verify by behavior, never by value** — confirm the gate works / old cookies are rejected; never reveal the value to "prove" rotation.
 
 ## Project quick-reference
 

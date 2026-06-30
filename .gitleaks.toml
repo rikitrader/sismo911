@@ -1,0 +1,22 @@
+title = "SISMO911 gitleaks configuration"
+
+# Extends gitleaks' default ruleset. The allowlist below suppresses ONLY
+# verified non-secret / public-by-design findings (triaged 2026-06-30).
+# HARD RULE: never allowlist a real secret here — rotate it instead.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Verified false positives only. Real secrets are rotated, never allowlisted."
+paths = [
+  '''test/totp\.test\.ts''',          # RFC 6238 Appendix B PUBLIC test seed (a published spec vector)
+  '''test/plan-security\.test\.ts''', # dummy unit-test fixtures ('test-secret-that-is-not-in-wrangler')
+  '''scripts/seo-submit\.mjs''',      # IndexNow key = PUBLIC verification token, served at /<key>.txt by design
+]
+regexes = [
+  '''GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ''',  # RFC 6238 public test seed (also covered by path above)
+  '''sismo911_casos_hidden_cols_v1''',     # localStorage key NAME in public/casos.html — not a credential
+  # Supabase ANON key (role=anon) — PUBLIC by design, protected by Row Level Security.
+  # Pinned by EXACT value so a service_role key (a real secret) is still flagged.
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwYXZ3a2RvbnZrdnJ3eWdmemZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjAyODMsImV4cCI6MjA5NzkzNjI4M30\.-_FAsA2csTrB9qt267pBfjJkczMP7pcaUi4plMv3kv4''',
+]
