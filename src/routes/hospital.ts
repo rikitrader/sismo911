@@ -37,7 +37,7 @@ hospital.post('/hospital/ingest', async (c) => {
          (id,dedupe_key,hospital,full_name,name_variants,norm_name,edad,cedula,telefono,direccion,
           estado,conflict,observaciones,source,source_updated,match_confidence,created_ms,updated_ms)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'none', ?, ?)
-       ON CONFLICT(dedupe_key) DO UPDATE SET
+       ON CONFLICT(dedupe_key) WHERE dedupe_key IS NOT NULL DO UPDATE SET
          hospital=excluded.hospital, full_name=excluded.full_name, name_variants=excluded.name_variants,
          norm_name=excluded.norm_name, edad=excluded.edad, cedula=excluded.cedula, telefono=excluded.telefono,
          direccion=excluded.direccion, estado=excluded.estado, conflict=excluded.conflict,

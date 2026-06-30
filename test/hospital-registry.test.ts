@@ -4,6 +4,8 @@ import {
   normName, cleanCedula, splitNameVariants, parseStatus, dedupeKey, patientToRow,
 } from '../src/lib/hospital-registry';
 import { parseXlsxRows } from '../src/lib/xlsx-lite';
+import { hospital } from '../src/routes/hospital';
+import { makeDb, makeEnv, mount } from './helpers/d1';
 
 describe('hospital-registry parsers', () => {
   it('parseStatus reads the REAL status from messy observaciones (no fabrication)', () => {
@@ -56,5 +58,54 @@ describe('xlsx-lite reader (same Web-Streams code path as the Worker cron)', () 
     const r = patientToRow({ hospital: rows[4][1], nombre: rows[4][2], edad: rows[4][3], cedula: rows[4][4], observaciones: rows[4][7] })!;
     expect(r.estado).toBe('hospitalizado');
     expect(normName(r.full_name)).toBe('perez ana');
+  });
+});
+
+describe('hospital ingest route (catches the upsert / ON CONFLICT partial-index bug)', () => {
+  const setup = () => {
+    const db = makeDb(['migrations/0083_hospital_patients.sql']);
+    const env: any = makeEnv(db); env.RAV_INGEST_TOKEN = 'tok';
+    const app = mount([['/api/persons', hospital]]);
+    return { db, env, app };
+  };
+  const post = (app: any, env: any, body: unknown, tok = 'tok') =>
+    app.request('/api/persons/hospital/ingest',
+      { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${tok}` }, body: JSON.stringify(body) }, env);
+
+  it('rejects without the bearer token', async () => {
+    const { app, env } = setup();
+    const r = await post(app, env, { rows: [] }, 'wrong');
+    expect(r.status).toBe(401);
+  });
+
+  it('upserts idempotently (re-ingest is an UPDATE, not a 500 or a duplicate)', async () => {
+    const { db, env, app } = setup();
+    const rows = [
+      { hospital: 'Hosp Vargas', nombre: 'PEREZ ANA', edad: '30', cedula: '12345678', observaciones: 'Internado' },
+      { hospital: 'Domingo Luciani', nombre: 'GOMEZ LUIS', cedula: '', observaciones: 'Alta' },
+    ];
+    const r1 = await post(app, env, { rows, source_updated: '30JUN26' });
+    expect(r1.status).toBe(200);
+    const j1 = await r1.json(); expect(j1.ok).toBe(true);
+    // re-ingest the SAME rows (estado changed) → must UPDATE in place (ON CONFLICT)
+    const r2 = await post(app, env, { rows: [{ ...rows[0], observaciones: 'Fallecida' }] });
+    expect(r2.status).toBe(200);
+    const cnt: any = db.raw.prepare(`SELECT COUNT(*) AS n FROM hospital_patients`).get();
+    expect(cnt.n).toBe(2);                       // not 3 — upserted, not duplicated
+    const ana: any = db.raw.prepare(`SELECT estado FROM hospital_patients WHERE cedula='12345678'`).get();
+    expect(ana.estado).toBe('fallecido');         // refreshed
+  });
+
+  it('search + stats reflect parsed estado', async () => {
+    const { env, app } = setup();
+    await post(app, env, { rows: [
+      { hospital: 'H', nombre: 'MARIA LOPEZ', cedula: '11111111', observaciones: 'Internado UCI' },
+      { hospital: 'H', nombre: 'JUAN ALTA', cedula: '22222222', observaciones: 'Alta' },
+    ] });
+    const s = await (await app.request('/api/persons/hospital/stats', {}, env)).json();
+    expect(s.hospitalizado).toBe(1); expect(s.alta).toBe(1); expect(s.total).toBe(2);
+    const found = await (await app.request('/api/persons/hospital/search?q=maria', {}, env)).json();
+    expect(found.results[0].full_name).toBe('MARIA LOPEZ');
+    expect(found.results[0].estado).toBe('hospitalizado');
   });
 });
