@@ -2,316 +2,614 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Daños Estructurales — SISMO911</title>
-<meta name="description" content="Mapa en vivo de daños estructurales del terremoto en Venezuela: edificios colapsados, dañados, fugas de gas y personas atrapadas. Reporta y comenta ubicaciones.">
+<title>Daños Estructurales — Tablero en vivo | SISMO911</title>
+<meta name="description" content="Tablero avanzado de daños estructurales del terremoto en Venezuela: edificios colapsados y dañados, personas atrapadas, fugas de gas, refugios y puntos de ayuda. Estadísticas en vivo, mapa satelital + IA, zonas más afectadas y monitor social.">
 <link rel="canonical" href="https://sismo911.com/danos-estructurales">
 <meta property="og:type" content="website"><meta property="og:site_name" content="SISMO911"><meta property="og:locale" content="es_VE">
-<meta property="og:title" content="Daños Estructurales — Mapa en vivo | SISMO911">
-<meta property="og:description" content="Edificios colapsados y dañados, fugas de gas y personas atrapadas tras el terremoto en Venezuela.">
+<meta property="og:title" content="Daños Estructurales — Tablero en vivo | SISMO911">
+<meta property="og:description" content="Estadísticas en vivo, mapa satelital + IA y zonas más afectadas tras el terremoto en Venezuela.">
 <meta property="og:url" content="https://sismo911.com/danos-estructurales"><meta property="og:image" content="https://sismo911.com/og/og-default.png">
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#13284f">
 <link rel="manifest" href="/manifest.webmanifest">
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="stylesheet" href="/app.css" />
 <style>
-  :root{--bar:60px}
+  :root{--navy:#13284f;--red:#c8102e;--orange:#e57200;--amber:#f0a500;--blue:#2563eb;--line:#e3e5ec;--ink:#1c2433;--mut:#5a6172}
   *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,sans-serif;background:#f4f5f8;overscroll-behavior:none}
-  
-  /* full-screen stage; on desktop it sits to the right of the app-shell sidebar (16rem) */
-  #stage{position:fixed;top:0;left:0;right:0;bottom:0}
-  #dmap{position:absolute;inset:0;z-index:0;background:#e8eaf0}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;background:#f4f5f8;color:var(--ink)}
+  .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 64px}
+  .eyebrow{font:800 11px 'Public Sans',sans-serif;letter-spacing:.13em;text-transform:uppercase;color:var(--mut)}
+  h1{font:900 26px/1.1 'Public Sans',sans-serif;color:var(--navy);margin:.15rem 0 0}
+  .sub{font-size:13.5px;color:var(--mut);margin-top:6px;max-width:62ch}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .live{display:inline-flex;align-items:center;gap:6px;font:700 11px 'Public Sans';color:#15803d;background:#dcfce7;border:1px solid #bbf7d0;padding:3px 9px;border-radius:9999px}
+  .live .dot{width:7px;height:7px;border-radius:9999px;background:#22c55e;animation:bl 1.6s infinite}
+  @keyframes bl{50%{opacity:.25}}
+  /* KPI grid */
+  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}
+  @media(min-width:640px){.kpis{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:1024px){.kpis{grid-template-columns:repeat(6,1fr)}}
+  .kpi{padding:13px 13px 12px;border-radius:14px;position:relative;overflow:hidden}
+  .kpi .ic{font-size:17px;line-height:1}
+  .kpi .n{font:900 26px/1 'Public Sans',sans-serif;margin-top:8px;letter-spacing:-.5px}
+  .kpi .l{font:700 11px 'Public Sans';text-transform:uppercase;letter-spacing:.04em;margin-top:3px;opacity:.8}
+  .kpi .bar{position:absolute;left:0;top:0;bottom:0;width:4px}
+  .kpi.tot{background:linear-gradient(135deg,#13284f,#1e3a6e);color:#fff}
+  .kpi.tot .l{opacity:.78}
+  .grid2{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
+  @media(min-width:980px){.grid2{grid-template-columns:1.1fr 1fr}}
+  .pad{padding:15px 16px}
+  .h2{font:800 14px 'Public Sans';color:var(--navy);display:flex;align-items:center;gap:7px}
+  .h2 .sm{font:600 11px Inter;color:var(--mut);margin-left:auto}
+  /* horizontal bars */
+  .row{display:flex;align-items:center;gap:9px;margin:9px 0;font-size:12.5px}
+  .row .lbl{width:128px;flex:0 0 auto;display:flex;align-items:center;gap:6px;color:#374151;font-weight:600}
+  .row .lbl .sw{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .row .track{flex:1;height:9px;background:#eef0f4;border-radius:9999px;overflow:hidden}
+  .row .fill{height:100%;border-radius:9999px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+  .row .v{width:62px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:#111827}
+  .row .v small{color:var(--mut);font-weight:500}
+  /* severity segmented */
+  .seg{display:flex;height:30px;border-radius:9px;overflow:hidden;border:1px solid var(--line)}
+  .seg div{display:flex;align-items:center;justify-content:center;color:#fff;font:800 12px 'Public Sans';min-width:30px;transition:flex .6s}
+  .seglg{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:#374151}
+  .seglg span{display:inline-flex;align-items:center;gap:6px}
+  .seglg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  /* spark/timeline */
+  #spark{width:100%;height:84px;display:block}
+  .vchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .vchip{display:flex;flex-direction:column;gap:1px;background:#f7f8fb;border:1px solid var(--line);border-radius:10px;padding:8px 11px;min-width:96px}
+  .vchip b{font:900 19px 'Public Sans';color:var(--navy)}
+  .vchip span{font-size:10.5px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  /* map */
+  #mapcard{margin-top:14px;position:relative}
+  #dmap{height:clamp(380px,56vh,580px);border-radius:14px;z-index:0;background:#e8eaf0}
   .leaflet-container{font-family:Inter,sans-serif}
-  /* floating title chip (clears the mobile app-shell burger at top-left) */
-  #titlebar{position:absolute;top:10px;left:64px;right:10px;z-index:450;background:#fff;border:1px solid #e3e5ec;border-radius:12px;
-            box-shadow:0 2px 10px rgba(0,0,0,.08);padding:8px 12px;display:flex;align-items:center;gap:8px}
-  #titlebar b{font:800 15px 'Public Sans',sans-serif;color:#13284f}
-  /* markers */
   .dmk{border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
   .dmk.pulse::after{content:'';position:absolute;inset:-3px;border-radius:9999px;box-shadow:0 0 0 0 rgba(200,16,46,.6);animation:dp 1.6s infinite}
   @keyframes dp{70%{box-shadow:0 0 0 14px rgba(200,16,46,0)}100%{box-shadow:0 0 0 0 rgba(200,16,46,0)}}
-  /* bottom action bar */
-  #bar{position:fixed;left:0;right:0;bottom:0;z-index:700;height:calc(var(--bar) + env(safe-area-inset-bottom));
-       padding-bottom:env(safe-area-inset-bottom);background:#fff;border-top:1px solid #e3e5ec;display:flex;box-shadow:0 -2px 10px rgba(0,0,0,.06)}
-  #bar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-       font:600 11px 'Public Sans',sans-serif;color:#5a5e6b;background:none;border:0;cursor:pointer;min-height:var(--bar)}
-  #bar button .ic{font-size:19px;line-height:1}
-  #bar button.on{color:#13284f}
-  #bar .rep .ic{background:#c8102e;color:#fff;border-radius:9999px;width:34px;height:34px;display:grid;place-items:center;margin-top:-2px}
-  /* sheets + overlays */
-  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:820;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.2);
-         max-height:82vh;display:flex;flex-direction:column;transform:translateY(101%);transition:transform .25s ease;padding-bottom:calc(var(--bar) + env(safe-area-inset-bottom))}
-  .sheet.open{transform:translateY(0)}
-  .sheet h2{font:800 17px 'Public Sans',sans-serif;margin:0}
-  .sheet .hd{display:flex;align-items:center;gap:8px;padding:14px 16px 8px}
-  .sheet .bd{overflow-y:auto;padding:4px 16px 16px}
-  .grip{width:40px;height:4px;border-radius:9999px;background:#d4d7e0;margin:8px auto 0}
-  #scrim{position:fixed;inset:0;z-index:810;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .2s}
-  #scrim.on{opacity:1;pointer-events:auto}
-  #listView{position:fixed;top:0;left:0;right:0;bottom:calc(var(--bar) + env(safe-area-inset-bottom));z-index:600;background:#f4f5f8;overflow-y:auto;display:none;padding-top:8px}
-  #listView.show{display:block}
-  #msPanel{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);z-index:900;background:#fff;display:flex;flex-direction:column;
-           transform:translateX(101%);transition:transform .25s ease;box-shadow:-6px 0 24px rgba(0,0,0,.18)}
-  #msPanel.open{transform:translateX(0)}
-  .chip{font-size:12px;border:1px solid #d4d7e0;border-radius:9999px;padding:3px 10px;cursor:pointer;font-weight:600;white-space:nowrap}
-  .chip.on{background:#13284f;color:#fff;border-color:#13284f}
-  .field{width:100%;border:1px solid #cdd1db;border-radius:10px;padding:10px 12px;font-size:14px;margin-top:6px}
-  .lbl{font:700 12px 'Public Sans',sans-serif;color:#3a3e4b;margin-top:12px;display:block}
-  .toast{position:fixed;left:50%;bottom:calc(var(--bar) + 16px);transform:translateX(-50%);z-index:1250;background:#13284f;color:#fff;
-         padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:90vw;text-align:center}
-  /* offset everything past the app-shell sidebar on desktop */
-  @media(min-width:1024px){ #stage,#bar,.sheet,#scrim,#listView{left:16rem} #titlebar{left:12px} }
+  .citylbl{background:transparent;border:none;box-shadow:none;color:#0b1d2a;font:700 11px 'Public Sans';text-shadow:0 0 3px #fff,0 0 3px #fff}
+  .citylbl::before{display:none}
+  /* AI side panel over map */
+  #aiPanel{position:absolute;top:12px;right:12px;z-index:600;width:min(290px,calc(100% - 24px));background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,.14);overflow:hidden}
+  #aiPanel header{background:var(--navy);color:#fff;font:800 12px 'Public Sans';padding:9px 12px;display:flex;align-items:center;gap:7px;cursor:pointer}
+  #aiBody{padding:11px 12px;font-size:12.5px;max-height:46vh;overflow:auto}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;font:800 13px 'Public Sans';padding:9px 14px;cursor:pointer;border:0}
+  .btn.pri{background:var(--navy);color:#fff}.btn.pri:disabled{opacity:.4}
+  .btn.sec{background:var(--red);color:#fff}
+  .btn.gho{background:#fff;border:1px solid var(--line);color:var(--navy)}
+  .pill{display:inline-block;font:700 11px 'Public Sans';color:#fff;padding:2px 9px;border-radius:9999px}
+  .legend{position:absolute;left:12px;bottom:12px;z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:11.5px;box-shadow:0 4px 14px rgba(0,0,0,.1)}
+  .legend b{font:800 11px 'Public Sans';color:var(--navy);display:block;margin-bottom:5px}
+  .legend div{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .legend i{width:10px;height:10px;border-radius:9999px;display:inline-block}
+  /* lower tabs */
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:22px 0 0;overflow-x:auto}
+  .tab{padding:10px 14px;font:800 13px 'Public Sans';color:var(--mut);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;background:none;border-top:0;border-left:0;border-right:0}
+  .tab.on{color:var(--navy);border-color:var(--red)}
+  .panel{display:none;padding-top:16px}.panel.on{display:block}
+  .field{width:100%;border:1px solid #cdd1db;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit}
+  .lbl{font:700 12px 'Public Sans';color:#3a3e4b;margin-top:12px;display:block}
+  .chip{font-size:12px;border:1px solid #d4d7e0;border-radius:9999px;padding:4px 11px;cursor:pointer;font-weight:600;white-space:nowrap;background:#fff}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .lgrid{display:grid;grid-template-columns:1fr;gap:10px}
+  @media(min-width:640px){.lgrid{grid-template-columns:1fr 1fr}}
+  @media(min-width:1024px){.lgrid{grid-template-columns:1fr 1fr 1fr}}
+  .rcard{padding:12px 13px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2000;background:var(--navy);color:#fff;padding:11px 17px;border-radius:11px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.28);max-width:90vw;text-align:center}
+  .modal{position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,.45);padding:16px;overflow-y:auto;display:none}
+  .modal.on{display:block}
+  .toparm{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;justify-content:space-between}
 </style>
 <script src="/app-shell.js" defer></script>
 </head>
 <body class="text-on-surface">
 
-<div id="stage">
-  <div id="dmap"></div>
-  <div id="titlebar">
-    <b>Daños Estructurales</b>
-    <span id="srcMeta" class="text-[11px] text-on-surface-variant ml-auto"></span>
+<main>
+<div class="wrap">
+
+  <!-- ============ HEADER ============ -->
+  <div class="toparm">
+    <div>
+      <div class="eyebrow">Evaluación de daños · Terremoto Venezuela 2026</div>
+      <h1>Daños Estructurales — Tablero en vivo</h1>
+      <p class="sub">Reportes de la comunidad y fuentes abiertas: edificios colapsados y dañados, personas atrapadas, fugas de gas, refugios y puntos de ayuda. Mapa satelital + análisis IA, zonas más afectadas y monitor social, en tiempo real.</p>
+    </div>
+    <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+      <span class="live"><span class="dot"></span> EN VIVO</span>
+      <div id="metaLine" style="font-size:11.5px;color:var(--mut)">cargando…</div>
+      <button id="refreshBtn" class="btn gho" style="padding:6px 12px;font-size:12px">↻ Actualizar</button>
+    </div>
   </div>
-  <div id="loading" class="absolute inset-0 grid place-items-center z-[400] pointer-events-none"><div class="bg-white/90 rounded-lg px-4 py-2 text-sm shadow">Cargando daños…</div></div>
-</div>
 
-<!-- List view -->
-<section id="listView">
-  <div class="mx-auto max-w-5xl p-4">
-    <input id="listSearch" placeholder="Buscar por título, municipio o descripción…" class="field !mt-0">
-    <div id="listCount" class="text-xs text-on-surface-variant my-3"></div>
-    <div id="listGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-    <div id="listMore" class="flex justify-center mt-4"></div>
+  <!-- ============ KPI CARDS ============ -->
+  <div id="kpis" class="kpis"></div>
+
+  <!-- ============ ANALYTICS GRID ============ -->
+  <div class="grid2">
+    <!-- left column -->
+    <div class="card pad">
+      <div class="h2">🏚️ Daños por tipo <span class="sm" id="catTotal"></span></div>
+      <div id="catBars" style="margin-top:12px"></div>
+      <div class="h2" style="margin-top:22px">⚠️ Gravedad de los daños</div>
+      <div id="sevSeg" class="seg" style="margin-top:10px"></div>
+      <div id="sevLg" class="seglg"></div>
+    </div>
+    <!-- right column -->
+    <div class="card pad">
+      <div class="h2">📍 Zonas más afectadas <span class="sm">por municipio</span></div>
+      <div id="zonaBars" style="margin-top:12px"></div>
+      <div class="h2" style="margin-top:22px">✅ Verificación</div>
+      <div id="verifChips" class="vchips"></div>
+      <div class="h2" style="margin-top:22px">📈 Reportes en el tiempo <span class="sm" id="sparkMeta"></span></div>
+      <svg id="spark" viewBox="0 0 600 84" preserveAspectRatio="none"></svg>
+    </div>
   </div>
-</section>
 
-<!-- Monitor Social panel -->
-<aside id="msPanel" aria-hidden="true">
-  <header class="bg-primary text-white px-4 py-3 flex items-center gap-2"><b class="font-display flex-1">📡 Monitor Social — en vivo</b><button id="msClose" class="text-xl leading-none" aria-label="Cerrar">✕</button></header>
-  <div class="flex gap-1.5 flex-wrap px-4 py-2 border-b border-outline-variant/50">
-    <span class="chip on" data-sev="">Todo</span><span class="chip" data-sev="critical">🔴 Crítico</span>
-    <span class="chip" data-sev="alert">🟠 Alerta</span><span class="chip" data-sev="info">🟡 Info</span>
-  </div>
-  <div id="msMeta" class="text-[11px] text-on-surface-variant px-4 py-1.5"></div>
-  <div id="msList" class="flex-1 overflow-y-auto px-3 pb-3"><div class="p-4 text-sm text-on-surface-variant">Cargando señales…</div></div>
-</aside>
-
-<!-- Filters sheet -->
-<div id="scrim"></div>
-<div id="sheetFiltros" class="sheet"><div class="grip"></div>
-  <div class="hd"><h2 class="flex-1">Filtrar capas del mapa</h2><button class="sheetX text-2xl leading-none text-on-surface-variant" aria-label="Cerrar">✕</button></div>
-  <div class="bd"><p class="text-xs text-on-surface-variant mb-1">Toca para mostrar u ocultar cada tipo. El número es la cantidad de reportes.</p><div id="filtersM" class="space-y-0.5"></div></div>
-</div>
-
-<!-- Report sheet -->
-<div id="sheetReport" class="sheet"><div class="grip"></div>
-  <div class="hd"><h2 class="flex-1">Reportar una ubicación</h2><button class="sheetX text-2xl leading-none text-on-surface-variant" aria-label="Cerrar">✕</button></div>
-  <div class="bd">
-    <p class="text-xs text-on-surface-variant">Indica dónde hay daños, personas atrapadas o un punto de ayuda. La comunidad podrá verlo y comentar. Se publica tras revisión.</p>
-    <form id="repForm">
-      <label class="lbl">Tipo *</label><select name="category" class="field" required></select>
-      <label class="lbl">Título *</label><input name="title" class="field" maxlength="140" placeholder="Ej.: Edificio agrietado en Av. Bolívar" required>
-      <label class="lbl">Descripción</label><textarea name="description" class="field" rows="2" maxlength="2000" placeholder="Detalles: cuántas personas, accesos, riesgos…"></textarea>
-      <div class="grid grid-cols-2 gap-2">
-        <div><label class="lbl">Estado</label><input name="estado" class="field" maxlength="120" placeholder="Ej.: Sucre"></div>
-        <div><label class="lbl">Municipio</label><input name="municipio" class="field" maxlength="120" placeholder="Ej.: Cumaná"></div>
+  <!-- ============ MAP ============ -->
+  <div id="mapcard" class="card" style="padding:8px">
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px 8px">
+      <div class="h2" style="margin:0">🛰️ Mapa de daños — satélite + GIS</div>
+      <span id="mapMeta" class="sm" style="margin-left:auto;font:600 11px Inter;color:var(--mut)"></span>
+    </div>
+    <div style="position:relative">
+      <div id="dmap"></div>
+      <div id="loading" style="position:absolute;inset:0;display:grid;place-items:center;z-index:400;pointer-events:none"><div style="background:rgba(255,255,255,.92);border-radius:10px;padding:8px 14px;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.12)">Cargando daños…</div></div>
+      <div class="legend">
+        <b>Severidad</b>
+        <div><i style="background:#c8102e"></i> Grave / colapso</div>
+        <div><i style="background:#e57200"></i> Moderado</div>
+        <div><i style="background:#f0a500"></i> Leve</div>
+        <div><i style="background:#0b2b5b"></i> Punto de ayuda / refugio</div>
       </div>
-      <label class="lbl">Ubicación</label>
-      <div class="flex items-center gap-2 mt-1 flex-wrap">
-        <button type="button" id="geoBtn" class="chip">📍 Usar mi ubicación</button>
-        <button type="button" id="pickBtn" class="chip">🗺️ Tocar en el mapa</button>
-        <span id="geoMsg" class="text-[11px] text-on-surface-variant"></span>
+      <div id="aiPanel">
+        <header id="aiToggle">🤖 Análisis satelital IA <span id="aiChev" style="margin-left:auto;transition:transform .2s">▾</span></header>
+        <div id="aiBody">
+          <p id="aiHint" style="color:var(--mut);margin:0 0 9px">Haz clic en el mapa para elegir un punto y evaluar daños con imágenes satelitales.</p>
+          <button id="analyzeBtn" class="btn pri" style="width:100%" disabled>Analizar daños (IA)</button>
+          <div id="aiResult" style="margin-top:10px"></div>
+        </div>
       </div>
-      <label class="lbl">Tu nombre (opcional)</label><input name="reporter" class="field" maxlength="120" placeholder="Anónimo">
-      <button class="w-full mt-4 bg-secondary text-white font-display font-bold py-3 rounded-xl text-sm">Enviar reporte</button>
-      <p id="repMsg" class="text-xs text-center mt-2"></p>
-    </form>
+    </div>
+    <p style="font-size:11px;color:var(--mut);margin:8px 8px 4px">Capas: <span id="layerinfo">cargando…</span> · El análisis IA por punto requiere sesión de operador.</p>
   </div>
+
+  <!-- ============ LOWER TABS ============ -->
+  <div class="tabs">
+    <button class="tab on" data-tab="lista">📋 Lista de reportes</button>
+    <button class="tab" data-tab="monitor">📡 Monitor social</button>
+    <button class="tab" data-tab="reportar">＋ Reportar daño</button>
+    <button class="tab" data-tab="foto">📷 Foto en tierra (IA)</button>
+  </div>
+
+  <!-- Lista -->
+  <section class="panel on" id="panel-lista">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <input id="listSearch" placeholder="Buscar por título, municipio, parroquia o descripción…" class="field" style="flex:1;min-width:220px">
+      <div id="catFilters" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <div id="listCount" style="font-size:12px;color:var(--mut);margin-bottom:10px"></div>
+    <div id="listGrid" class="lgrid"></div>
+    <div id="listMore" style="display:flex;justify-content:center;margin-top:16px"></div>
+  </section>
+
+  <!-- Monitor -->
+  <section class="panel" id="panel-monitor">
+    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <span class="chip on" data-sev="">Todo</span><span class="chip" data-sev="critical">🔴 Crítico</span>
+      <span class="chip" data-sev="alert">🟠 Alerta</span><span class="chip" data-sev="info">🟡 Info</span>
+      <span id="msMeta" style="font-size:11.5px;color:var(--mut);margin-left:auto"></span>
+    </div>
+    <div id="msList" class="lgrid"><div style="font-size:13px;color:var(--mut)">Cargando señales…</div></div>
+  </section>
+
+  <!-- Reportar -->
+  <section class="panel" id="panel-reportar">
+    <div class="card pad" style="max-width:620px">
+      <p style="font-size:12.5px;color:var(--mut);margin:0 0 4px">Indica dónde hay daños, personas atrapadas o un punto de ayuda. La comunidad podrá verlo y comentar. Se publica tras revisión.</p>
+      <form id="repForm">
+        <label class="lbl">Tipo *</label><select name="category" class="field" required></select>
+        <label class="lbl">Título *</label><input name="title" class="field" maxlength="140" placeholder="Ej.: Edificio agrietado en Av. Bolívar" required>
+        <label class="lbl">Descripción</label><textarea name="description" class="field" rows="2" maxlength="2000" placeholder="Detalles: cuántas personas, accesos, riesgos…"></textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label class="lbl">Estado</label><input name="estado" class="field" maxlength="120" placeholder="Ej.: Sucre"></div>
+          <div><label class="lbl">Municipio</label><input name="municipio" class="field" maxlength="120" placeholder="Ej.: Cumaná"></div>
+        </div>
+        <label class="lbl">Ubicación</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <button type="button" id="geoBtn" class="chip">📍 Usar mi ubicación</button>
+          <button type="button" id="pickBtn" class="chip">🗺️ Tocar en el mapa</button>
+          <span id="geoMsg" style="font-size:11.5px;color:var(--mut)"></span>
+        </div>
+        <label class="lbl">Tu nombre (opcional)</label><input name="reporter" class="field" maxlength="120" placeholder="Anónimo">
+        <button class="btn sec" style="width:100%;margin-top:16px;padding:12px">Enviar reporte</button>
+        <p id="repMsg" style="font-size:12px;text-align:center;margin-top:8px"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- Foto en tierra -->
+  <section class="panel" id="panel-foto">
+    <div style="max-width:560px">
+      <p style="font-size:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:9px 12px;margin:0 0 14px">⚠️ Estimación automática preliminar — no sustituye la inspección de un ingeniero estructural.</p>
+      <label style="display:block;background:#fff;border:2px dashed #cdd1db;border-radius:12px;padding:26px;text-align:center;cursor:pointer">
+        <input id="file" type="file" accept="image/*" capture="environment" style="display:none">
+        <div id="drop" style="color:var(--mut)"><div style="font-size:34px;margin-bottom:4px">📷</div>Toca para tomar o elegir una foto</div>
+        <img id="preview" style="display:none;margin:0 auto;max-height:260px;border-radius:9px">
+      </label>
+      <button id="fotoBtn" class="btn pri" style="width:100%;margin-top:14px;padding:12px" disabled>Analizar daño</button>
+      <div id="fotoResult" style="margin-top:18px;display:none"></div>
+      <h3 style="font:800 15px 'Public Sans';color:var(--navy);margin:26px 0 10px">Reportes con foto recientes</h3>
+      <div id="fotoList" class="lgrid"></div>
+    </div>
+  </section>
+
 </div>
+</main>
 
 <!-- Comments modal -->
-<div id="cmModal" class="fixed inset-0 z-[1150] bg-black/45 p-4 overflow-y-auto" style="display:none">
-  <div id="cmInner" class="bg-white rounded-2xl max-w-md w-full mx-auto my-8 flex flex-col max-h-[85vh]">
-    <div class="flex items-start justify-between gap-2 p-4 border-b border-outline-variant/50">
-      <div><h3 id="cm_title" class="font-display font-extrabold leading-tight"></h3><div class="text-xs text-on-surface-variant">Comentarios de la comunidad</div></div>
-      <button id="cmClose" class="text-2xl leading-none text-on-surface-variant" aria-label="Cerrar">×</button>
+<div id="cmModal" class="modal">
+  <div id="cmInner" class="card" style="max-width:440px;margin:36px auto;display:flex;flex-direction:column;max-height:85vh">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:15px;border-bottom:1px solid var(--line)">
+      <div><h3 id="cm_title" style="font:800 16px 'Public Sans';color:var(--navy);margin:0"></h3><div style="font-size:11.5px;color:var(--mut)">Comentarios de la comunidad</div></div>
+      <button id="cmClose" style="font-size:24px;line-height:1;color:var(--mut);background:none;border:0;cursor:pointer">×</button>
     </div>
-    <div id="cm_list" class="flex-1 overflow-y-auto p-4 space-y-2 text-sm"></div>
-    <form id="cm_form" class="p-3 border-t border-outline-variant/50 flex gap-2">
-      <input name="body" class="field !mt-0 flex-1" placeholder="Escribe dónde encontrarlos / ayuda…" maxlength="1000" required>
-      <button class="bg-primary text-white font-bold rounded-xl px-4 text-sm">Enviar</button>
+    <div id="cm_list" style="flex:1;overflow-y:auto;padding:15px;font-size:13.5px;display:flex;flex-direction:column;gap:9px"></div>
+    <form id="cm_form" style="padding:12px;border-top:1px solid var(--line);display:flex;gap:8px">
+      <input name="body" class="field" style="flex:1" placeholder="¿Dónde encontrarlos / cómo ayudar?" maxlength="1000" required>
+      <button class="btn pri" style="padding:9px 14px">Enviar</button>
     </form>
   </div>
 </div>
-
-<!-- Bottom action bar -->
-<nav id="bar">
-  <button id="tabMapa" class="on" data-view="mapa"><span class="ic">🗺️</span>Mapa</button>
-  <button id="tabLista" data-view="lista"><span class="ic">📋</span>Lista</button>
-  <button id="tabReport" class="rep"><span class="ic">＋</span>Reportar</button>
-  <button id="tabFiltros"><span class="ic">🎚️</span>Filtros</button>
-  <button id="tabMonitor"><span class="ic">📡</span>Monitor</button>
-</nav>
 
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 const $=s=>document.querySelector(s);
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl=u=>{u=(u||'').trim();return /^https?:\/\//i.test(u)?u:'#';};
+const nf=n=>(n||0).toLocaleString('es-VE');
 const ago=t=>{if(!t)return '';const s=(Date.now()-t)/1000;if(s<3600)return Math.floor(s/60)+' min';if(s<86400)return Math.floor(s/3600)+' h';return Math.floor(s/86400)+' d';};
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3200);}
-const CAT={collapsed_building:['Edificio colapsado','#c8102e'],damaged_building:['Edificio dañado','#e57200'],
-  trapped_people:['Personas atrapadas','#c8102e'],gas_leak:['Fuga de gas','#e57200'],aid_point:['Punto de ayuda','#0b2b5b'],
-  shelter:['Refugio','#0b2b5b'],water_point:['Punto de agua','#2563eb'],medical_need:['Necesidad médica','#bb0027']};
-const SEVCOL={rojo:'#c8102e',naranja:'#e57200',amarillo:'#ffbc3d'};
+
+// ---- Taxonomy ----
+const CAT={
+  collapsed_building:['Edificios colapsados','🏚️','#c8102e'],
+  damaged_building:['Edificios dañados','🏢','#e57200'],
+  trapped_people:['Personas atrapadas','🆘','#bb0027'],
+  gas_leak:['Fugas de gas','🔥','#e57200'],
+  medical_need:['Necesidad médica','➕','#bb0027'],
+  water_point:['Puntos de agua','💧','#2563eb'],
+  shelter:['Refugios','🏠','#0b2b5b'],
+  aid_point:['Puntos de ayuda','🤝','#0b2b5b'],
+};
+const SEVCOL={rojo:'#c8102e',naranja:'#e57200',amarillo:'#f0a500'};
+const SEVLBL={rojo:'Grave / colapso',naranja:'Moderado',amarillo:'Leve'};
 const VERIF={community_confirmed:'Confirmado por comunidad',official_verified:'Verificado oficial',unverified:'Sin verificar'};
-const color=r=>{ if(['aid_point','shelter','water_point','medical_need'].includes(r.category))return CAT[r.category]?.[1]||'#0b2b5b'; return SEVCOL[r.severity]||CAT[r.category]?.[1]||'#e57200'; };
+const DAMAGE_CATS=['collapsed_building','damaged_building','trapped_people','gas_leak'];
+const color=r=>{ if(['aid_point','shelter','water_point','medical_need'].includes(r.category))return CAT[r.category]?.[2]||'#0b2b5b'; return SEVCOL[r.severity]||CAT[r.category]?.[2]||'#e57200'; };
 const LAT=r=>r.lat, LNG=r=>r.lng??r.lon;
 
-// Map id "dmap" so app-shell's #map shifter ignores it — we own the layout
-const map=L.map('dmap',{attributionControl:false,zoomControl:false}).setView([10.3,-66.9],7);
-L.control.zoom({position:'topright'}).addTo(map);
-L.control.attribution({prefix:false}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM, © CARTO · SOS Venezuela 2026 + comunidad',maxZoom:19}).addTo(map);
-const layers={}; let active=new Set(Object.keys(CAT)); let ALL=[];
+let ALL=[], COUNTS={}, active=new Set(Object.keys(CAT)), listShown=24;
 
-function render(){
-  Object.values(layers).forEach(l=>l.clearLayers());
-  ALL.forEach(r=>{const lat=LAT(r),lng=LNG(r); if(!lat||!lng)return;
-    const cat=r.category||'damaged_building'; if(!active.has(cat))return;
-    if(!layers[cat])layers[cat]=L.layerGroup().addTo(map);
-    const trap=cat==='trapped_people'; const size=cat==='collapsed_building'||trap?16:12;
+// ===================== STATS / DASHBOARD =====================
+function computeStats(){
+  COUNTS={}; const sev={rojo:0,naranja:0,amarillo:0}, ver={}, zona={};
+  ALL.forEach(r=>{
+    const c=r.category||'damaged_building'; COUNTS[c]=(COUNTS[c]||0)+1;
+    if(DAMAGE_CATS.includes(c)&&SEVCOL[r.severity])sev[r.severity]++;
+    const v=r.verification||'unverified'; ver[v]=(ver[v]||0)+1;
+    const z=(r.municipio||'').trim(); if(z)zona[z]=(zona[z]||0)+1;
+  });
+  return {sev,ver,zona};
+}
+
+function renderKpis(){
+  const k=[
+    {key:'__total',label:'Reportes totales',ic:'📊',n:ALL.length,cls:'tot'},
+    {key:'collapsed_building',label:'Colapsados',ic:'🏚️',col:'#c8102e'},
+    {key:'damaged_building',label:'Dañados',ic:'🏢',col:'#e57200'},
+    {key:'trapped_people',label:'Atrapados',ic:'🆘',col:'#bb0027'},
+    {key:'gas_leak',label:'Fugas de gas',ic:'🔥',col:'#d97706'},
+    {key:'medical_need',label:'Necesidad méd.',ic:'➕',col:'#bb0027'},
+    {key:'aid_point',label:'Puntos de ayuda',ic:'🤝',col:'#0b2b5b'},
+    {key:'shelter',label:'Refugios',ic:'🏠',col:'#0b2b5b'},
+    {key:'water_point',label:'Puntos de agua',ic:'💧',col:'#2563eb'},
+    {key:'__crit',label:'Daños graves',ic:'⚠️',col:'#c8102e',n:(COUNTS.collapsed_building||0)+(COUNTS.trapped_people||0)},
+  ];
+  $('#kpis').innerHTML=k.map(o=>{
+    const n=o.n!=null?o.n:(COUNTS[o.key]||0);
+    const bar=o.cls==='tot'?'':`<span class="bar" style="background:${o.col}"></span>`;
+    const nc=o.cls==='tot'?'#fff':(o.col||'#13284f');
+    return `<div class="card kpi ${o.cls||''}">${bar}<div class="ic">${o.ic}</div><div class="n" style="color:${nc}">${nf(n)}</div><div class="l">${o.label}</div></div>`;
+  }).join('');
+}
+
+function bars(el,entries,total,fmtMeta){
+  const max=Math.max(1,...entries.map(e=>e[1]));
+  el.innerHTML=entries.map(([label,val,col])=>{
+    const pct=Math.round(val/max*100), share=total?Math.round(val/total*100):0;
+    return `<div class="row"><div class="lbl"><span class="sw" style="background:${col}"></span>${esc(label)}</div>
+      <div class="track"><div class="fill" style="width:${pct}%;background:${col}"></div></div>
+      <div class="v">${nf(val)} <small>${fmtMeta?fmtMeta(share):share+'%'}</small></div></div>`;
+  }).join('')||'<p style="font-size:12px;color:var(--mut)">Sin datos.</p>';
+}
+
+function renderAnalytics(){
+  const {sev,ver,zona}=computeStats();
+  // category bars
+  const cats=Object.keys(CAT).map(k=>[CAT[k][0],COUNTS[k]||0,CAT[k][2]]).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
+  $('#catTotal').textContent=`${nf(ALL.length)} reportes`;
+  bars($('#catBars'),cats,ALL.length);
+  // severity segmented
+  const st=sev.rojo+sev.naranja+sev.amarillo;
+  $('#sevSeg').innerHTML=st?['rojo','naranja','amarillo'].map(s=>{const v=sev[s];if(!v)return '';const w=Math.max(8,v/st*100);
+    return `<div style="flex:${v};background:${SEVCOL[s]}" title="${SEVLBL[s]}: ${v}">${w>14?nf(v):''}</div>`;}).join(''):'<div style="flex:1;background:#e5e7eb;color:#6b7280">Sin datos de gravedad</div>';
+  $('#sevLg').innerHTML=['rojo','naranja','amarillo'].map(s=>`<span><i style="background:${SEVCOL[s]}"></i> ${SEVLBL[s]} · <b style="font-weight:800">${nf(sev[s])}</b></span>`).join('')+
+    `<span style="color:var(--mut)">de ${nf(st)} con daño clasificado</span>`;
+  // zonas
+  const zr=Object.entries(zona).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([z,v])=>[z,v,'#13284f']);
+  bars($('#zonaBars'),zr,ALL.length,()=>'rep.');
+  // verification
+  $('#verifChips').innerHTML=['community_confirmed','official_verified','unverified'].map(v=>
+    `<div class="vchip"><b>${nf(ver[v]||0)}</b><span>${esc((VERIF[v]||v).replace(' por comunidad',' comunidad'))}</span></div>`).join('');
+  renderSpark();
+}
+
+function renderSpark(){
+  const days={};
+  ALL.forEach(r=>{const t=Date.parse(r.created_at||'')||0;if(!t)return;const d=new Date(t);const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;days[k]=(days[k]||0)+1;});
+  let keys=Object.keys(days).sort();
+  const svg=$('#spark');
+  if(keys.length<2){svg.innerHTML='<text x="300" y="46" text-anchor="middle" fill="#9aa1ad" font-size="13" font-family="Inter">Datos insuficientes para la línea de tiempo</text>';$('#sparkMeta').textContent='';return;}
+  keys=keys.slice(-30);
+  const vals=keys.map(k=>days[k]), max=Math.max(...vals), W=600,H=84,pad=6,bw=W/keys.length;
+  let brs='';
+  keys.forEach((k,i)=>{const h=Math.max(2,(vals[i]/max)*(H-pad*2));brs+=`<rect x="${i*bw+1.5}" y="${H-pad-h}" width="${Math.max(1,bw-3)}" height="${h}" rx="2" fill="#13284f" opacity="${(.45+.55*(vals[i]/max)).toFixed(2)}"><title>${k}: ${vals[i]} reportes</title></rect>`;});
+  svg.innerHTML=brs;
+  const first=keys[0],last=keys[keys.length-1];
+  $('#sparkMeta').textContent=`${first.slice(5)} → ${last.slice(5)} · máx ${max}/día`;
+}
+
+// ===================== MAP =====================
+const YUMARE=[10.4351,-68.4716];
+const LAGUAIRA=[10.5,-66.92];
+const DMG_ESTADOS=['distrito-capital','la-guaira','miranda','aragua','carabobo','bolivar','barinas','zulia','lara','falcon','anzoategui','trujillo','merida','monagas','guarico','cojedes'];
+let map,danosLayer,commLayer,resultLayer,aoi=null,aoiMarker;
+
+function estadoLayers(){
+  const MUNI=['#ef476f','#f78c6b','#ffd166','#06d6a0','#118ab2','#8338ec','#3a86ff','#fb5607','#ff006e','#06ffa5','#caffbf'];
+  const ROAD={motorway:{color:'#ff6b6b',weight:2.6},trunk:{color:'#ff924c',weight:2.2},primary:{color:'#ffd166',weight:1.8},secondary:{color:'#e8eef3',weight:1.3},tertiary:{color:'#9fb3c8',weight:1}};
+  const types={
+    'Límites estatales':{file:'boundary.geojson',add:(g,gj)=>L.geoJSON(gj,{interactive:false,style:{color:'#0b1d2a',weight:2.4,fill:false,dashArray:'5 4'}}).addTo(g)},
+    'Municipios':{file:'municipios.geojson',add:(g,gj)=>{let i=0;return L.geoJSON(gj,{interactive:false,style:()=>({color:'#13284f',weight:1,fillColor:MUNI[(i++)%MUNI.length],fillOpacity:.10})}).addTo(g);}},
+    'Parroquias · La Guaira':{urls:['/la-guaira/parroquias.geojson'],add:(g,gj)=>{let i=0;return L.geoJSON(gj,{interactive:false,style:()=>({color:'#13284f',weight:1.3,fillColor:MUNI[(i++)%MUNI.length],fillOpacity:.18})}).addTo(g);}},
+    'Calles principales':{file:'roads-major.geojson',add:(g,gj)=>L.geoJSON(gj,{interactive:false,style:f=>ROAD[f.properties.highway]||{color:'#94a3b8',weight:.6}}).addTo(g)},
+    'Ciudades / Poblados':{file:'places.geojson',add:(g,gj)=>L.geoJSON(gj,{interactive:false,pointToLayer:(f,ll)=>{const p=f.properties.place,m=L.circleMarker(ll,{interactive:false,radius:p==='city'?6:p==='town'?4:2.5,color:'#13284f',weight:1,fillColor:'#3a86ff',fillOpacity:.9});if((p==='city'||p==='town')&&f.properties.name)m.bindTooltip(esc(f.properties.name),{permanent:true,direction:'right',className:'citylbl',opacity:.9});return m;}}).addTo(g)},
+  };
+  const controls={},loading={};
+  Object.keys(types).forEach(k=>controls[k]=L.layerGroup());
+  const load=k=>{if(loading[k])return loading[k];const t=types[k];const urls=t.urls||DMG_ESTADOS.map(s=>`/data/estados/${s}/${t.file}`);
+    loading[k]=Promise.all(urls.map(u=>fetch(u).then(r=>r.ok?r.json():null).catch(()=>null))).then(list=>{list.forEach(gj=>{if(gj&&gj.features&&gj.features.length)t.add(controls[k],gj);});});return loading[k];};
+  const onAdd=e=>{if(types[e.name])load(e.name);};
+  return {controls,onAdd,types};
+}
+
+function plotDamage(){
+  danosLayer.clearLayers(); commLayer.clearLayers();
+  ALL.forEach(r=>{const lat=LAT(r),lng=LNG(r);if(!lat||!lng)return;
+    const cat=r.category||'damaged_building';if(!active.has(cat))return;
+    const trap=cat==='trapped_people';const size=cat==='collapsed_building'||trap?16:12;
     const ic=L.divIcon({className:'',html:`<div class="dmk ${trap?'pulse':''}" style="position:relative;width:${size}px;height:${size}px;background:${color(r)}"></div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]});
-    const cm=r.src==='comm'?`<button data-act="openComments" data-a1="${esc(r.id)}" data-a2="${esc((r.title||'').replace(/'/g,''))}" style="font-size:11px;color:#13284f;font-weight:700;margin-top:4px">💬 comentarios</button>`:'';
-    L.marker([lat,lng],{icon:ic}).addTo(layers[cat]).bindPopup(
+    const cm=r.src==='comm'?`<button data-act="openComments" data-a1="${esc(r.id)}" data-a2="${esc((r.title||'').replace(/'/g,''))}" style="font-size:11px;color:#13284f;font-weight:700;margin-top:4px;background:none;border:0;cursor:pointer">💬 comentarios</button>`:'';
+    L.marker([lat,lng],{icon:ic}).addTo(r.src==='comm'?commLayer:danosLayer).bindPopup(
       `<div style="min-width:190px"><div style="font-weight:700;color:${color(r)}">${esc(CAT[cat]?.[0]||cat)}</div>
        <div style="font-weight:600;margin:2px 0">${esc(r.title||'')}</div>
-       <div style="font-size:12px;color:#44474f">${esc(r.description||'')}</div>
+       <div style="font-size:12px;color:#44474f">${esc((r.description||'').slice(0,220))}</div>
        <div style="font-size:11px;color:#747780;margin-top:4px">${esc(r.municipio||'')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}${r.src==='comm'?' · comunidad':''}</div>
        ${r.source_url?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener" style="font-size:11px;color:#0b2b5b">fuente ↗</a>`:''} ${cm}</div>`);
   });
 }
-function counts(){const c={};ALL.forEach(r=>{const k=r.category||'damaged_building';c[k]=(c[k]||0)+1;});return c;}
-function buildFilters(){const byCat=counts();
-  $('#filtersM').innerHTML=Object.entries(CAT).map(([k,[label,col]])=>`
-    <label class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-surface-container cursor-pointer text-sm">
-      <input type="checkbox" data-cat="${k}" ${active.has(k)?'checked':''} class="catbox w-4 h-4">
-      <span style="width:12px;height:12px;border-radius:9999px;background:${col};display:inline-block;flex:0 0 auto"></span>
-      <span class="flex-1">${label}</span><span class="text-xs text-on-surface-variant font-mono">${byCat[k]||0} reportes</span></label>`).join('');
-  document.querySelectorAll('.catbox').forEach(b=>b.onchange=()=>{const c=b.dataset.cat;b.checked?active.add(c):active.delete(c);render();renderList();});
-}
 
-let listShown=30;
+async function initMap(){
+  map=L.map('dmap',{attributionControl:false,zoomControl:false,preferCanvas:true}).setView(LAGUAIRA,9);
+  L.control.zoom({position:'topright'}).addTo(map);
+  map.createPane('danosPane');map.getPane('danosPane').style.zIndex=650;
+  const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+  const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+  const gibs=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2026-06-24/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',{maxZoom:9});
+  const bases={'Carto claro':carto,'Esri satélite':esri,'NASA GIBS (24 jun)':gibs};
+  L.circleMarker(YUMARE,{radius:10,color:'#b91c1c',fillColor:'#ef4444',fillOpacity:.4,weight:2}).addTo(map).bindPopup('<b>Epicentro</b><br>Yumare M7.5 · 24 jun 2026');
+  danosLayer=L.layerGroup().addTo(map);commLayer=L.layerGroup().addTo(map);resultLayer=L.layerGroup().addTo(map);
+
+  let cfg={};try{cfg=await fetch('/api/sat/config').then(r=>r.json());}catch{}
+  const names=['Carto'];
+  if(cfg.google){const g=L.tileLayer('/api/sat/google/{z}/{x}/{y}',{maxZoom:20});bases['Google satélite']=g;names.push('Google');}
+  names.push('Esri');if(cfg.gibs)names.push('NASA GIBS');
+  $('#layerinfo').textContent=names.join(' · ');
+
+  const estado=estadoLayers();
+  L.control.layers(bases,Object.assign({'Daños (fuentes abiertas)':danosLayer,'Reportes comunidad':commLayer,'Evaluaciones IA':resultLayer},estado.controls),{collapsed:true,position:'topright'}).addTo(map);
+  Object.keys(estado.types).slice(0,2).forEach(k=>{estado.controls[k].addTo(map);estado.onAdd({name:k});});
+  map.on('overlayadd',estado.onAdd);
+
+  map.on('click',e=>{
+    if(picking){picked=[e.latlng.lat,e.latlng.lng];picking=false;L.circleMarker(e.latlng,{radius:7,color:'#c8102e'}).addTo(map);showTab('reportar');$('#geoMsg').textContent='✓ ubicación marcada en el mapa';toast('Ubicación marcada');return;}
+    aoi={lat:e.latlng.lat,lon:e.latlng.lng};
+    if(aoiMarker)aoiMarker.setLatLng(e.latlng);else aoiMarker=L.marker(e.latlng).addTo(map);
+    $('#aiHint').textContent=`Punto: ${aoi.lat.toFixed(5)}, ${aoi.lon.toFixed(5)} (zoom ${map.getZoom()})`;
+    $('#analyzeBtn').disabled=false;
+    if($('#aiBody').style.display==='none')toggleAi();
+  });
+  loadSatAssessments();
+}
+async function loadSatAssessments(){
+  if(!resultLayer)return;
+  const {assessments=[]}=await fetch('/api/sat/damage').then(r=>r.json()).catch(()=>({assessments:[]}));
+  resultLayer.clearLayers();
+  const SAT={severo:'#c8102e',grave:'#c8102e',moderado:'#e57200',leve:'#16a34a',ninguno:'#16a34a'};
+  assessments.forEach(a=>{const col=SAT[a.severity]||'#94a3b8';
+    L.circleMarker([a.lat,a.lon],{pane:'danosPane',radius:8,color:col,fillColor:col,fillOpacity:.7,weight:2})
+     .bindPopup(`<b>IA: ${esc(a.severity||'')}</b> <span style="font-size:11px;color:#666">(${esc(a.imagery_source||'satélite')}${a.verification==='verified'?' · ✓':''})</span><br><span style="font-size:12px">${esc((a.summary||'').slice(0,200))}</span>`).addTo(resultLayer);});
+  $('#mapMeta').textContent=`${assessments.length} evaluaciones IA · ${nf(ALL.length)} reportes`;
+}
+function toggleAi(){const b=$('#aiBody');const open=b.style.display!=='none';b.style.display=open?'none':'block';$('#aiChev').style.transform=open?'rotate(-90deg)':'';}
+$('#aiToggle').onclick=toggleAi;
+$('#analyzeBtn').onclick=async()=>{
+  if(!aoi)return;const btn=$('#analyzeBtn'),out=$('#aiResult');btn.disabled=true;btn.textContent='Analizando imagen…';
+  try{const r=await fetch('/api/sat/analyze',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({lat:aoi.lat,lon:aoi.lon,zoom:Math.min(19,Math.max(16,map.getZoom()))})});
+    if(r.status===401){out.innerHTML='<div style="font-size:12.5px;color:#bb0027">Inicia sesión como operador. <a href="/login?next=/danos-estructurales" style="text-decoration:underline">Entrar</a></div>';btn.textContent='Analizar daños (IA)';btn.disabled=false;return;}
+    const d=await r.json();if(!d.ok)throw new Error(d.error||'error');
+    const SAT={severo:'#c8102e',grave:'#c8102e',moderado:'#e57200',leve:'#16a34a',ninguno:'#16a34a'};
+    out.innerHTML=`<div style="border:1px solid var(--line);border-radius:9px;padding:10px"><span class="pill" style="background:${SAT[d.severity]||'#94a3b8'}">${esc(d.severity||'')}</span> <span style="font-size:11px;color:var(--mut)">imagen ${esc(d.source||'')}</span>
+      <p style="font-size:12.5px;margin:8px 0 0;white-space:pre-line">${esc(d.summary||'')}</p>
+      ${d.hazards&&d.hazards.length?`<div style="margin-top:7px;display:flex;flex-wrap:wrap;gap:5px">${d.hazards.map(h=>`<span style="font-size:11px;background:#fef2f2;color:#bb0027;padding:1px 7px;border-radius:9999px">${esc(h)}</span>`).join('')}</div>`:''}
+      ${d.action?`<p style="font-size:12px;margin-top:7px"><b>Acción:</b> ${esc(d.action)}</p>`:''}</div>`;
+    loadSatAssessments();
+  }catch(e){out.innerHTML=`<div style="font-size:12.5px;color:#bb0027">No se pudo analizar: ${esc(e.message)}</div>`;}
+  btn.textContent='Analizar daños (IA)';btn.disabled=false;
+};
+
+// ===================== LISTA + FILTERS =====================
+function buildCatFilters(){
+  $('#catFilters').innerHTML=Object.entries(CAT).filter(([k])=>COUNTS[k]).map(([k,[label,ic]])=>
+    `<button class="chip ${active.has(k)?'on':''}" data-act="toggleCat" data-a1="${k}" style="${active.has(k)?'':'opacity:.55'}">${ic} ${label} ${COUNTS[k]||0}</button>`).join('');
+}
+function toggleCat(k){active.has(k)?active.delete(k):active.add(k);buildCatFilters();plotDamage();renderList();}
+window.toggleCat=toggleCat;
 function listRows(){const term=($('#listSearch').value||'').trim().toLowerCase();
   return ALL.filter(r=>active.has(r.category||'damaged_building')).filter(r=>!term||`${r.title||''} ${r.municipio||''} ${r.parroquia||''} ${r.description||''}`.toLowerCase().includes(term));}
 function renderList(){const rows=listRows(),page=rows.slice(0,listShown);
-  $('#listCount').textContent=`${rows.length.toLocaleString('es')} reporte(s) · mostrando ${page.length}`;
+  $('#listCount').textContent=`${nf(rows.length)} reporte(s) · mostrando ${page.length}`;
   $('#listGrid').innerHTML=page.map(r=>`
-    <div class="bg-white border border-outline-variant/60 rounded-xl p-3">
-      <div class="flex items-center gap-2"><span style="width:10px;height:10px;border-radius:9999px;background:${color(r)};display:inline-block"></span>
-        <span class="text-xs font-bold" style="color:${color(r)}">${esc(CAT[r.category]?.[0]||r.category)}</span>${r.src==='comm'?'<span class="text-[10px] text-on-surface-variant ml-auto">comunidad</span>':''}</div>
-      <div class="font-display font-bold mt-1 leading-snug">${esc(r.title||'(sin título)')}</div>
-      <div class="text-xs text-on-surface-variant mt-0.5">${esc(r.description||'')}</div>
-      <div class="text-[11px] text-on-surface-variant mt-1">${esc(r.municipio||'—')}${r.parroquia?' · '+esc(r.parroquia):''} · ${VERIF[r.verification]||''}</div>
-      <div class="flex items-center gap-3 mt-1.5">
-        ${(LAT(r)&&LNG(r))?`<button data-act="goTo" data-a1="${LAT(r)}" data-a2="${LNG(r)}" class="text-[11px] text-primary font-semibold">📍 ver en mapa</button>`:''}
-        ${r.src==='comm'?`<button data-act="openComments" data-a1="${esc(r.id)}" data-a2="${esc((r.title||'').replace(/'/g,''))}" class="text-[11px] text-primary font-semibold">💬 comentarios</button>`:''}
-        ${r.source_url?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener" class="text-[11px] text-primary underline">fuente ↗</a>`:''}
-      </div></div>`).join('')||'<p class="text-on-surface-variant text-sm col-span-full">Sin reportes que coincidan.</p>';
-  $('#listMore').innerHTML=rows.length>listShown?'<button id="lmb" class="px-4 py-2 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>':'';
-  const mb=$('#lmb');if(mb)mb.onclick=()=>{listShown+=30;renderList();};
+    <div class="card rcard">
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:9999px;background:${color(r)};display:inline-block"></span>
+        <span style="font:700 12px Inter;color:${color(r)}">${esc(CAT[r.category]?.[0]||r.category)}</span>${r.src==='comm'?'<span style="font-size:10px;color:var(--mut);margin-left:auto">comunidad</span>':''}</div>
+      <div style="font:800 14px 'Public Sans';margin-top:5px;line-height:1.25">${esc(r.title||'(sin título)')}</div>
+      <div style="font-size:12px;color:var(--mut);margin-top:3px">${esc((r.description||'').slice(0,140))}</div>
+      <div style="font-size:11px;color:var(--mut);margin-top:5px">${esc(r.municipio||'—')}${r.parroquia?' · '+esc(r.parroquia):''}${r.severity&&SEVLBL[r.severity]?' · '+SEVLBL[r.severity]:''} · ${VERIF[r.verification]||''}</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+        ${(LAT(r)&&LNG(r))?`<button data-act="goTo" data-a1="${LAT(r)}" data-a2="${LNG(r)}" style="font:700 11px Inter;color:var(--navy);background:none;border:0;cursor:pointer">📍 ver en mapa</button>`:''}
+        ${r.src==='comm'?`<button data-act="openComments" data-a1="${esc(r.id)}" data-a2="${esc((r.title||'').replace(/'/g,''))}" style="font:700 11px Inter;color:var(--navy);background:none;border:0;cursor:pointer">💬 comentarios</button>`:''}
+        ${r.source_url?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener" style="font-size:11px;color:var(--navy);text-decoration:underline">fuente ↗</a>`:''}
+      </div></div>`).join('')||'<p style="color:var(--mut);font-size:13px;grid-column:1/-1">Sin reportes que coincidan.</p>';
+  $('#listMore').innerHTML=rows.length>listShown?'<button id="lmb" class="btn gho">Cargar más</button>':'';
+  const mb=$('#lmb');if(mb)mb.onclick=()=>{listShown+=24;renderList();};
 }
-let lst;$('#listSearch').addEventListener('input',()=>{clearTimeout(lst);lst=setTimeout(()=>{listShown=30;renderList();},220);});
-function goTo(lat,lng){setView('mapa');map.setView([lat,lng],16);}
+let lst;$('#listSearch').addEventListener('input',()=>{clearTimeout(lst);lst=setTimeout(()=>{listShown=24;renderList();},220);});
+function goTo(lat,lng){$('#dmap').scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>{map.setView([lat,lng],16);},300);}
 window.goTo=goTo;
 
-const scrim=$('#scrim');
-function openSheet(id){closeSheets();$(id).classList.add('open');scrim.classList.add('on');}
-function closeSheets(){document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));scrim.classList.remove('on');}
-scrim.onclick=closeSheets; document.querySelectorAll('.sheetX').forEach(b=>b.onclick=closeSheets);
-function setView(v){const list=v==='lista';$('#listView').classList.toggle('show',list);
-  $('#tabMapa').classList.toggle('on',!list);$('#tabLista').classList.toggle('on',list);
-  if(list){listShown=30;renderList();}else{setTimeout(()=>map.invalidateSize(),60);}}
-$('#tabMapa').onclick=()=>setView('mapa'); $('#tabLista').onclick=()=>setView('lista');
-$('#tabFiltros').onclick=()=>openSheet('#sheetFiltros'); $('#tabReport').onclick=()=>openSheet('#sheetReport');
-const ms=$('#msPanel'); $('#tabMonitor').onclick=()=>{ms.classList.add('open');loadMonitor();}; $('#msClose').onclick=()=>ms.classList.remove('open');
+// ===================== TABS =====================
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='panel-'+name));
+  if(name==='monitor')loadMonitor();
+  if(name==='foto')loadFotos();
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
 
-// Report form
+// ===================== REPORT FORM =====================
 $('#repForm').querySelector('[name=category]').innerHTML='<option value="">Selecciona…</option>'+Object.entries(CAT).map(([k,[l]])=>`<option value="${k}">${l}</option>`).join('');
-let picked=null, picking=false;
+let picked=null,picking=false;
 $('#geoBtn').onclick=()=>{const m=$('#geoMsg');m.textContent='Obteniendo…';
   navigator.geolocation?.getCurrentPosition(p=>{picked=[p.coords.latitude,p.coords.longitude];m.textContent='✓ ubicación capturada';},
     ()=>{m.textContent='No se pudo obtener la ubicación';},{enableHighAccuracy:true,timeout:8000});};
-$('#pickBtn').onclick=()=>{picking=true;closeSheets();toast('Toca el mapa donde está la ubicación');};
-map.on('click',e=>{if(!picking)return;picked=[e.latlng.lat,e.latlng.lng];picking=false;
-  L.circleMarker(e.latlng,{radius:7,color:'#c8102e'}).addTo(map);openSheet('#sheetReport');$('#geoMsg').textContent='✓ ubicación marcada en el mapa';});
+$('#pickBtn').onclick=()=>{picking=true;$('#dmap').scrollIntoView({behavior:'smooth',block:'center'});toast('Toca el mapa donde está la ubicación');};
 $('#repForm').onsubmit=async e=>{e.preventDefault();const fd=Object.fromEntries(new FormData(e.target));const msg=$('#repMsg');
-  if(!fd.category){msg.textContent='Selecciona un tipo';msg.className='text-xs text-center mt-2 text-secondary';return;}
+  if(!fd.category){msg.textContent='Selecciona un tipo';msg.style.color='#bb0027';return;}
   const body={category:fd.category,title:fd.title,description:fd.description,estado:fd.estado,municipio:fd.municipio,reporter:fd.reporter};
   if(picked){body.lat=picked[0];body.lon=picked[1];}
-  msg.textContent='Enviando…';msg.className='text-xs text-center mt-2 text-on-surface-variant';
+  msg.textContent='Enviando…';msg.style.color='var(--mut)';
   try{const r=await fetch('/api/reports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json();
-    if(r.ok){e.target.reset();picked=null;$('#geoMsg').textContent='';closeSheets();toast(d.message||'Reporte recibido. Aparecerá tras revisión.');}
-    else{msg.textContent=d.error||'Error al enviar';msg.className='text-xs text-center mt-2 text-secondary';}
-  }catch{msg.textContent='Sin conexión. Intenta de nuevo.';msg.className='text-xs text-center mt-2 text-secondary';}};
+    if(r.ok){e.target.reset();picked=null;$('#geoMsg').textContent='';msg.textContent='';toast(d.message||'Reporte recibido. Aparecerá tras revisión.');showTab('lista');}
+    else{msg.textContent=d.error||'Error al enviar';msg.style.color='#bb0027';}
+  }catch{msg.textContent='Sin conexión. Intenta de nuevo.';msg.style.color='#bb0027';}};
 
-// Comments
+// ===================== COMMENTS =====================
 const cm=$('#cmModal');let cmId=null;
-function openComments(id,title){cmId=id;$('#cm_title').textContent=title||'Reporte';$('#cm_list').innerHTML='<p class="text-on-surface-variant">Cargando…</p>';cm.style.display='block';
+function openComments(id,title){cmId=id;$('#cm_title').textContent=title||'Reporte';$('#cm_list').innerHTML='<p style="color:var(--mut)">Cargando…</p>';cm.classList.add('on');
   fetch('/api/reports/'+encodeURIComponent(id)+'/comments').then(r=>r.json()).then(d=>{const cs=d.comments||d||[];
-    $('#cm_list').innerHTML=(Array.isArray(cs)&&cs.length)?cs.map(c=>`<div class="border-b border-outline-variant/40 pb-2"><div class="font-semibold text-xs">${esc(c.name||'Anónimo')} <span class="text-on-surface-variant font-normal">· ${ago(c.created_ms)}</span></div><div>${esc(c.body||'')}</div></div>`).join(''):'<p class="text-on-surface-variant">Aún no hay comentarios. Sé el primero en indicar dónde encontrarlos o cómo ayudar.</p>';
-  }).catch(()=>{$('#cm_list').innerHTML='<p class="text-secondary">No se pudieron cargar los comentarios.</p>';});}
+    $('#cm_list').innerHTML=(Array.isArray(cs)&&cs.length)?cs.map(c=>`<div style="border-bottom:1px solid #eef0f4;padding-bottom:8px"><div style="font:700 12px Inter">${esc(c.name||'Anónimo')} <span style="color:var(--mut);font-weight:400">· ${ago(c.created_ms)}</span></div><div>${esc(c.body||'')}</div></div>`).join(''):'<p style="color:var(--mut)">Aún no hay comentarios. Sé el primero en indicar dónde encontrarlos o cómo ayudar.</p>';
+  }).catch(()=>{$('#cm_list').innerHTML='<p style="color:#bb0027">No se pudieron cargar los comentarios.</p>';});}
 window.openComments=openComments;
-$('#cmClose').onclick=()=>cm.style.display='none'; cm.onclick=()=>cm.style.display='none';
+$('#cmClose').onclick=()=>cm.classList.remove('on');cm.onclick=()=>cm.classList.remove('on');
+$('#cmInner').addEventListener('click',e=>e.stopPropagation());
 $('#cm_form').onsubmit=async e=>{e.preventDefault();const inp=e.target.body;const body=inp.value.trim();if(!body||!cmId)return;inp.value='';
   try{const r=await fetch('/api/reports/'+encodeURIComponent(cmId)+'/comments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body})});
     if(r.ok)openComments(cmId,$('#cm_title').textContent);else toast('No se pudo enviar el comentario');}catch{toast('Sin conexión');}};
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheets();ms.classList.remove('open');cm.style.display='none';}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')cm.classList.remove('on');});
 
-// Monitor Social
+// ===================== MONITOR SOCIAL =====================
 const SEVC={critical:'#c70d2e',alert:'#d97706',info:'#475569'},PIC={tiktok:'🎵',instagram:'📸',reddit:'👽',gdelt:'📰',telegram:'✈️',x:'✖️'};
 let msSev='';
-document.querySelectorAll('#msPanel .chip').forEach(ch=>ch.onclick=()=>{document.querySelectorAll('#msPanel .chip').forEach(x=>x.classList.remove('on'));ch.classList.add('on');msSev=ch.dataset.sev;loadMonitor();});
+document.querySelectorAll('#panel-monitor .chip').forEach(ch=>ch.onclick=()=>{document.querySelectorAll('#panel-monitor .chip').forEach(x=>x.classList.remove('on'));ch.classList.add('on');msSev=ch.dataset.sev;loadMonitor();});
 function loadMonitor(){const qs=msSev?('?severity='+msSev+'&limit=120'):'?limit=120';
   fetch('/api/monitor/signals'+qs).then(r=>r.json()).then(d=>{const sig=d.signals||[];
-    $('#msList').innerHTML=sig.length?sig.map(s=>`<div class="border-b border-outline-variant/40 py-2 text-sm">
-      <div><span style="width:8px;height:8px;border-radius:999px;display:inline-block;margin-right:5px;background:${SEVC[s.severity]||'#475569'}"></span>
-      ${PIC[s.platform]||'•'} ${s.city?`<b>${esc(s.city)}</b> · `:''}<span class="text-on-surface-variant text-[11px]">${ago(s.posted_ms)}</span></div>
-      <div class="mt-0.5">${esc((s.title||s.text||'').slice(0,180))}</div>
-      <div class="text-[11px] text-on-surface-variant mt-0.5">${esc(s.tags||'')}${s.url?` · <a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener" class="text-primary underline">ver</a>`:''}</div></div>`).join(''):'<div class="p-4 text-sm text-on-surface-variant">Sin señales todavía. El monitor actualiza cada hora.</div>';
-  }).catch(()=>{$('#msList').innerHTML='<div class="p-4 text-sm text-secondary">No se pudo cargar el monitor.</div>';});}
+    $('#msList').innerHTML=sig.length?sig.map(s=>`<div class="card rcard">
+      <div style="font-size:12px"><span style="width:8px;height:8px;border-radius:999px;display:inline-block;margin-right:5px;background:${SEVC[s.severity]||'#475569'}"></span>
+      ${PIC[s.platform]||'•'} ${s.city?`<b>${esc(s.city)}</b> · `:''}<span style="color:var(--mut);font-size:11px">${ago(s.posted_ms)}</span></div>
+      <div style="margin-top:3px;font-size:13px">${esc((s.title||s.text||'').slice(0,180))}</div>
+      <div style="font-size:11px;color:var(--mut);margin-top:3px">${esc(s.tags||'')}${s.url?` · <a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener" style="color:var(--navy);text-decoration:underline">ver</a>`:''}</div></div>`).join(''):'<div style="font-size:13px;color:var(--mut)">Sin señales todavía. El monitor actualiza cada hora.</div>';
+  }).catch(()=>{$('#msList').innerHTML='<div style="font-size:13px;color:#bb0027">No se pudo cargar el monitor.</div>';});}
 fetch('/api/monitor/stats').then(r=>r.json()).then(d=>{const crit=(d.by_severity||[]).find(x=>x.severity==='critical');
   $('#msMeta').textContent=`${d.total||0} señales · ${crit?crit.n:0} críticas · últ. ${d.last_ingest_ms?ago(d.last_ingest_ms)+' atrás':'—'}`;}).catch(()=>{});
 
-// Load data: SOS feed + approved community reports
-Promise.allSettled([
-  fetch('/api/danos-estructurales').then(r=>r.json()),
-  fetch('/api/reports?status=approved&limit=500').then(r=>r.json()),
-]).then(([sos,comm])=>{$('#loading').style.display='none';
+// ===================== FOTO EN TIERRA (IA) =====================
+const SEVF={ninguno:['Sin daño','#16a34a'],leve:['Leve','#16a34a'],moderado:['Moderado','#e57200'],grave:['Grave','#c8102e'],severo:['Severo','#c8102e'],indeterminado:['Indeterminado','#94a3b8']};
+const file=$('#file'),preview=$('#preview'),drop=$('#drop'),fotoBtn=$('#fotoBtn'),fotoResult=$('#fotoResult');let blob=null;
+file.onchange=()=>{const f=file.files[0];if(!f)return;blob=f;preview.src=URL.createObjectURL(f);preview.style.display='block';drop.style.display='none';fotoBtn.disabled=false;};
+function fpos(){return new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>r(p.coords),()=>r(null),{timeout:6000}):r(null));}
+fotoBtn.onclick=async()=>{if(!blob)return;fotoBtn.disabled=true;fotoBtn.textContent='Analizando con IA…';
+  const fd=new FormData();fd.append('photo',blob);const p=await fpos();if(p){fd.append('lat',p.latitude);fd.append('lon',p.longitude);}
+  try{const r=await fetch('/api/damage',{method:'POST',body:fd});const d=await r.json();if(!d.ok)throw new Error(d.detail||d.error||'error');
+    const[lbl,col]=SEVF[d.severity]||SEVF.indeterminado;
+    fotoResult.innerHTML=`<div class="card pad"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span class="pill" style="background:${col}">${lbl}</span><span style="font-size:11px;color:var(--mut)">evaluación IA</span></div>
+      <p style="font-size:13px;white-space:pre-line;margin:0">${esc(d.summary||'')}</p>
+      ${d.hazards&&d.hazards.length?`<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:5px">${d.hazards.map(h=>`<span style="font-size:11px;background:#fef2f2;color:#bb0027;padding:1px 7px;border-radius:9999px">${esc(h)}</span>`).join('')}</div>`:''}</div>`;
+    fotoResult.style.display='block';loadFotos(true);
+  }catch(e){fotoResult.innerHTML=`<div style="font-size:13px;color:#bb0027;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:11px">No se pudo analizar: ${esc(e.message)}</div>`;fotoResult.style.display='block';}
+  fotoBtn.textContent='Analizar daño';fotoBtn.disabled=false;};
+let fotosLoaded=false;
+async function loadFotos(force){if(fotosLoaded&&!force)return;fotosLoaded=true;const resp=await fetch('/api/damage');if(!resp.ok){fotosLoaded=false;return;}const {reports=[]}=await resp.json();
+  $('#fotoList').innerHTML=reports.map(r=>{const[l,col]=SEVF[r.severity]||SEVF.indeterminado;
+    return `<a href="/api/damage/photo/${r.id}" target="_blank" style="display:block;position:relative;border-radius:11px;overflow:hidden;border:1px solid var(--line)">
+      <img src="/api/damage/photo/${r.id}" style="width:100%;height:120px;object-fit:cover;background:#eef0f4">
+      <span class="pill" style="position:absolute;top:6px;left:6px;background:${col};font-size:10px">${l}</span></a>`;}).join('')||'<p style="font-size:12px;color:var(--mut);grid-column:1/-1">Aún no hay fotos.</p>';}
+
+// ===================== LOAD =====================
+async function loadData(){
+  $('#metaLine').textContent='cargando…';
+  const [sos,comm]=await Promise.allSettled([
+    fetch('/api/danos-estructurales').then(r=>r.json()),
+    fetch('/api/reports?status=approved&limit=500').then(r=>r.json()),
+  ]);
+  $('#loading').style.display='none';
   const s=(sos.value?.reports||[]).map(r=>({...r,src:'sos'}));
   const c=(comm.value?.reports||[]).map(r=>({...r,src:'comm'}));
-  ALL=c.concat(s); buildFilters(); render(); renderList();
-  const pts=ALL.filter(r=>LAT(r)&&LNG(r)).map(r=>[LAT(r),LNG(r)]);
-  if(pts.length){try{map.fitBounds(L.latLngBounds(pts).pad(0.2));}catch{}}
-  $('#srcMeta').textContent=`${ALL.length.toLocaleString('es')} reportes`;
-}).catch(()=>{$('#loading').innerHTML='<div class="bg-white rounded-lg px-4 py-2 text-sm text-secondary shadow">No se pudieron cargar los daños.</div>';});
+  ALL=c.concat(s);
+  computeStats();
+  renderKpis();renderAnalytics();buildCatFilters();renderList();
+  if(map){plotDamage();
+    const pts=ALL.filter(r=>LAT(r)&&LNG(r)).map(r=>[LAT(r),LNG(r)]);
+    if(pts.length){try{map.fitBounds(L.latLngBounds(pts).pad(0.18));}catch{}}
+  }
+  const src=sos.value?.source||'fuentes abiertas';
+  $('#metaLine').innerHTML=`${nf(ALL.length)} reportes · fuente ${esc(src)} + comunidad · act. ${new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})}`;
+  $('#mapMeta').textContent=`${nf(ALL.length)} reportes`;
+}
+$('#refreshBtn').onclick=()=>{loadData().then(()=>{loadSatAssessments();toast('Datos actualizados');});};
 
-// Modal content click must not bubble to the backdrop close (replaces inline stopPropagation handler)
-$('#cmInner').addEventListener('click',function(e){e.stopPropagation();});
+// ---- Delegated dispatcher (CSP-safe: no inline handlers) ----
+var ACTIONS={openComments:(id,title)=>openComments(id,title),goTo:(lat,lng)=>goTo(+lat,+lng),toggleCat:k=>toggleCat(k)};
+function __args(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v);i++;}return a;}
+document.addEventListener("click",function(e){var el=e.target.closest("[data-act]");if(!el)return;var f=ACTIONS[el.getAttribute("data-act")];if(f){e.preventDefault();f.apply(null,__args(el));}},false);
 
-// ---- Delegated event dispatcher (replaces inline handlers for CSP) ----
-var ACTIONS={
-  openComments:function(id,title){openComments(id,title);},
-  goTo:function(lat,lng){goTo(+lat,+lng);},
-  __rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
-};
-function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
-["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){
-  var el=e.target.closest("[data-act]");if(!el)return;
-  var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;
-  var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
+initMap();
+loadData();
+// light auto-refresh every 3 min
+setInterval(loadData,180000);
 </script>
 </body>
 </html>
