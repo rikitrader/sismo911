@@ -118,11 +118,11 @@
 .trend-down { color: var(--sum-red);   background: var(--sum-red-bg); }
 .trend-flat { color: var(--ops-muted); background: var(--ops-neutral-bg); }
 
-/* ── Sidebar active item: bright-blue fill + left accent ───────────────────── */
-.seg.on { background: rgba(59, 110, 255, 0.16) !important; color: #ffffff !important; }
-.seg.on svg { opacity: 1; }
-.seg.on::before { background: var(--ops-accent-soft) !important; }
-.seg:hover:not(.on) { background: rgba(255, 255, 255, 0.07); }
+/* ── Sidebar active item: navy fill + white text (off-white sidebar) ───────── */
+.seg.on { background: #082752 !important; color: #ffffff !important; }
+.seg.on svg { opacity: 1; color: #ffffff !important; }
+.seg.on::before { background: transparent !important; }
+.seg:hover:not(.on) { background: rgba(0, 0, 0, 0.05) !important; color: #15181c !important; }
 
 /* Sidebar brand sub-label tint */
 .sidebar-brand .brand-sub { color: var(--ops-accent-soft); }
