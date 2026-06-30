@@ -1358,6 +1358,41 @@ html body { padding-left:0 !important; padding-top:0 !important; }
 /* Softer hero card */
 .hero-card { border-radius:26px; box-shadow:0 18px 44px rgba(99,102,241,.10), var(--shadow-sm); }
 
+/* ── Contactos (personal address book) ─────────────────────────────────── */
+.cts-wrap { display:grid; grid-template-columns:320px 1fr; gap:16px; align-items:start; }
+@media (max-width:760px){ .cts-wrap { grid-template-columns:1fr; } }
+.cts-list-pane { background:var(--card,#fff); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.cts-list-head { padding:14px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:10px; }
+.cts-title-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.cts-search { width:100%; padding:9px 12px; border:1px solid var(--border); border-radius:10px; font-size:.9rem; }
+.cts-import-row { display:flex; gap:8px; flex-wrap:wrap; }
+.cts-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:1px solid var(--border); border-radius:100px; background:var(--bg,#f7f7f9); font-size:.78rem; font-weight:700; cursor:pointer; }
+.cts-chip[aria-pressed="true"] { background:var(--brand-2,#0b5fff); color:#fff; border-color:transparent; }
+.cts-list { max-height:62vh; overflow:auto; }
+.cts-row { display:flex; align-items:center; gap:11px; padding:10px 14px; cursor:pointer; border-bottom:1px solid var(--border); }
+.cts-row:hover { background:var(--bg,#f7f7f9); }
+.cts-row.active { background:rgba(11,95,255,.08); }
+.cts-avatar { width:36px; height:36px; border-radius:50%; flex-shrink:0; display:grid; place-items:center; font-weight:800; color:#fff; background:linear-gradient(135deg,#6d8bff,#0b5fff); font-size:.85rem; }
+.cts-row-name { font-weight:700; font-size:.9rem; }
+.cts-row-sub { font-size:.74rem; color:var(--muted); }
+.cts-row-fav { margin-left:auto; color:#f5a623; }
+.cts-letter { padding:4px 14px; font-size:.7rem; font-weight:800; color:var(--muted); background:var(--bg,#f7f7f9); position:sticky; top:0; }
+.cts-detail-pane { background:var(--card,#fff); border:1px solid var(--border); border-radius:14px; min-height:300px; padding:22px; }
+.cts-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--muted); min-height:260px; text-align:center; }
+.cts-empty-ico { font-size:2.6rem; }
+.cts-d-head { display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+.cts-d-avatar { width:60px; height:60px; border-radius:50%; display:grid; place-items:center; font-weight:800; color:#fff; background:linear-gradient(135deg,#6d8bff,#0b5fff); font-size:1.3rem; }
+.cts-d-name { font-size:1.25rem; font-weight:800; }
+.cts-d-org { font-size:.85rem; color:var(--muted); }
+.cts-field { display:flex; flex-direction:column; gap:3px; padding:10px 0; border-top:1px solid var(--border); }
+.cts-field label { font-size:.7rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
+.cts-field input, .cts-field textarea { border:1px solid var(--border); border-radius:9px; padding:8px 10px; font-size:.9rem; width:100%; }
+.cts-field .ro { font-size:.92rem; }
+.cts-d-actions { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+.cts-modal { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:120; padding:16px; }
+.cts-modal-card { background:var(--card,#fff); border-radius:16px; padding:22px; width:min(560px,100%); max-height:90vh; overflow:auto; }
+.cts-import-actions { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+
 /* ── Soporte (support inbox) ───────────────────────────────────────────── */
 .sup-nav-badge { margin-left:auto; min-width:18px; height:18px; padding:0 5px; border-radius:9px;
   background:var(--danger); color:#fff; font-size:.66rem; font-weight:800; line-height:18px; text-align:center; }
@@ -1548,7 +1583,7 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
       <a class="side-link" href="/campana"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg><span>Campañas</span></a>
       <div class="nav-divider" role="separator"></div>
       <button class="side-link" id="nav-activity" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Actividad reciente</span></button>
-      <a class="side-link" href="/contacto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 9h0M9 13a3 3 0 0 1 6 0M15 9h0"/></svg><span>Contactos</span></a>
+      <button class="side-link" role="tab" data-tab="contactos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Contactos</span></button>
       <button class="side-link" role="tab" data-tab="soporte" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="14" width="4" height="6" rx="1.5"/><rect x="18" y="14" width="4" height="6" rx="1.5"/></svg><span>Soporte</span></button>
       <button class="side-link" role="tab" data-tab="ajustes" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></button>
     </nav>
@@ -2573,6 +2608,53 @@ html[data-theme="dark"] .ov-footer-cta { background:linear-gradient(135deg,rgba(
       </div>
     </div>
 
+    <!-- ── Contactos (personal address book, Apple-Contacts style) ───────── -->
+    <div class="panel" data-panel="contactos" role="tabpanel">
+      <div class="cts-wrap">
+        <aside class="cts-list-pane">
+          <div class="cts-list-head">
+            <div class="cts-title-row">
+              <div class="sup-title">Contactos</div>
+              <button class="btn btn-primary btn-sm" type="button" id="cts-new-btn">+ Nuevo</button>
+            </div>
+            <input class="cts-search" id="cts-search" type="search" placeholder="Buscar por nombre, correo, teléfono o wallet…" autocomplete="off">
+            <div class="cts-import-row">
+              <button class="cts-chip" type="button" id="cts-import-btn">⇪ Importar</button>
+              <button class="cts-chip" type="button" id="cts-fav-btn" aria-pressed="false">★ Favoritos</button>
+            </div>
+          </div>
+          <div class="cts-list" id="cts-list" aria-live="polite">
+            <div class="skeleton skel-line" style="margin:10px;"></div>
+            <div class="skeleton skel-line m" style="margin:10px;"></div>
+          </div>
+        </aside>
+        <section class="cts-detail-pane" id="cts-detail">
+          <div class="cts-empty" id="cts-detail-empty">
+            <div class="cts-empty-ico">👤</div>
+            <div>Selecciona un contacto o crea uno nuevo.</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Import modal -->
+      <div class="cts-modal" id="cts-import-modal" hidden>
+        <div class="cts-modal-card">
+          <div class="card-title">Importar contactos</div>
+          <div class="card-subtitle">Pega o sube un archivo <b>vCard (.vcf)</b> o <b>CSV</b>. Desde WhatsApp/iPhone/Android: exporta tus contactos como vCard y súbelo aquí (no existe una API que lea tu libreta de WhatsApp).</div>
+          <div class="cts-import-actions">
+            <label class="cts-chip" for="cts-import-file">📄 Subir .vcf / .csv<input id="cts-import-file" type="file" accept=".vcf,.csv,text/vcard,text/csv" hidden></label>
+            <button class="cts-chip" type="button" id="cts-import-google">🔵 Importar desde Google</button>
+          </div>
+          <textarea class="sup-input sup-textarea" id="cts-import-text" rows="6" placeholder="…o pega aquí el contenido vCard/CSV"></textarea>
+          <div class="form-err" id="cts-import-err"></div>
+          <div class="sup-form-actions">
+            <button class="btn btn-secondary" type="button" id="cts-import-cancel">Cancelar</button>
+            <button class="btn btn-primary" type="button" id="cts-import-submit">Importar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /#content -->
 </main>
 
@@ -2678,6 +2760,7 @@ function switchTab(name) {
   /* Lazy-load finance sub-views the first time they're shown (nav or Finanzas sub-tools). */
   if (name === 'contabilidad' && typeof loadLedger === 'function' && !_ledgerLoaded) loadLedger();
   if (name === 'retiros'      && typeof loadWithdrawals === 'function' && !_retLoaded) loadWithdrawals();
+  if (name === 'contactos'    && typeof ensureContactsLoaded === 'function') ensureContactsLoaded();
   /* Reflect the active child on the Finanzas group: highlight + auto-open. */
   const grp = document.getElementById('grp-finanzas');
   if (grp) {
@@ -5931,6 +6014,200 @@ async function ensureStripeConnect() {
   on('cta-qr',     goQR);
 })();
 
+/* ── Contactos (personal address book) ─────────────────────────────────── */
+var _ctsLoaded = false, _ctsList = [], _ctsSelId = null, _ctsQuery = '', _ctsFav = false, _ctsSearchT = null;
+
+function ctsInitials(name){ return (String(name||'?').trim().split(/\s+/).map(function(w){return w[0]||'';}).slice(0,2).join('')||'?').toUpperCase(); }
+
+function ensureContactsLoaded(){ if (_ctsLoaded) return; _ctsLoaded = true; wireContacts(); loadContacts(); }
+
+async function loadContacts(){
+  var box = document.getElementById('cts-list'); if (!box) return;
+  try {
+    var qs = [];
+    if (_ctsQuery) qs.push('q=' + encodeURIComponent(_ctsQuery));
+    if (_ctsFav) qs.push('favorite=1');
+    var r = await fetch('/api/profile/contacts' + (qs.length ? '?' + qs.join('&') : ''), { credentials:'same-origin' });
+    if (r.status === 401){ location.href = '/login?next=/cuenta'; return; }
+    var d = await r.json().catch(function(){ return {}; });
+    _ctsList = (d && d.contacts) || [];
+    renderCtsList();
+  } catch(e){ box.innerHTML = '<div class="cts-empty" style="min-height:120px;">No se pudieron cargar los contactos.</div>'; }
+}
+
+function renderCtsList(){
+  var box = document.getElementById('cts-list'); if (!box) return;
+  if (!_ctsList.length){
+    box.innerHTML = '<div class="cts-empty" style="min-height:160px;"><div class="cts-empty-ico">📇</div><div>' +
+      (_ctsQuery || _ctsFav ? 'Sin resultados.' : 'Aún no tienes contactos. Crea uno o importa tu libreta.') + '</div></div>';
+    return;
+  }
+  var html = '', letter = '';
+  _ctsList.forEach(function(c){
+    var L = (c.display_name || '#').charAt(0).toUpperCase();
+    if (!_ctsFav && !_ctsQuery && L !== letter){ letter = L; html += '<div class="cts-letter">' + esc(letter) + '</div>'; }
+    var sub = (c.emails && c.emails[0] && c.emails[0].value) || (c.phones && c.phones[0] && c.phones[0].value) || (c.wallet_address ? ('wallet ' + c.wallet_address.slice(0,6) + '…') : (c.org || ''));
+    html += '<div class="cts-row' + (c.id === _ctsSelId ? ' active' : '') + '" data-cts-id="' + esc(c.id) + '">' +
+      '<div class="cts-avatar">' + esc(ctsInitials(c.display_name)) + '</div>' +
+      '<div style="min-width:0;"><div class="cts-row-name">' + esc(c.display_name) + '</div>' +
+      (sub ? '<div class="cts-row-sub">' + esc(sub) + '</div>' : '') + '</div>' +
+      (c.favorite ? '<span class="cts-row-fav">★</span>' : '') + '</div>';
+  });
+  box.innerHTML = html;
+  box.querySelectorAll('[data-cts-id]').forEach(function(el){
+    el.addEventListener('click', function(){ selectContact(el.getAttribute('data-cts-id')); });
+  });
+}
+
+function contactById(id){ return _ctsList.filter(function(c){ return c.id === id; })[0] || null; }
+
+async function selectContact(id){
+  _ctsSelId = id; renderCtsList();
+  var c = contactById(id);
+  if (!c){
+    try { var r = await fetch('/api/profile/contacts/' + encodeURIComponent(id), { credentials:'same-origin' }); var d = await r.json(); c = d && d.contact; } catch(e){}
+  }
+  if (c) renderCtsDetail(c, false);
+}
+
+function fieldRows(c, editing){
+  function multi(label, arr, key){
+    arr = arr && arr.length ? arr : [{ label:'', value:'' }];
+    return arr.map(function(it, i){
+      return '<div class="cts-field"><label>' + esc(label) + (it.label ? ' · ' + esc(it.label) : '') + '</label>' +
+        (editing ? '<input data-cts-multi="' + key + '" data-i="' + i + '" value="' + esc(it.value||'') + '">' : '<div class="ro">' + esc(it.value||'—') + '</div>') + '</div>';
+    }).join('');
+  }
+  function single(label, key, val){
+    return '<div class="cts-field"><label>' + esc(label) + '</label>' +
+      (editing ? '<input data-cts-f="' + key + '" value="' + esc(val||'') + '">' : '<div class="ro">' + esc(val||'—') + '</div>') + '</div>';
+  }
+  var html = '';
+  if (editing) html += single('Nombre', 'display_name', c.display_name);
+  html += single('Organización', 'org', c.org);
+  html += multi('Correo', c.emails, 'emails');
+  html += multi('Teléfono', c.phones, 'phones');
+  html += single('Wallet (USDC)', 'wallet_address', c.wallet_address);
+  html += '<div class="cts-field"><label>Nota</label>' + (editing ? '<textarea data-cts-f="note" rows="2">' + esc(c.note||'') + '</textarea>' : '<div class="ro">' + esc(c.note||'—') + '</div>') + '</div>';
+  return html;
+}
+
+function renderCtsDetail(c, editing){
+  var pane = document.getElementById('cts-detail'); if (!pane) return;
+  pane.innerHTML =
+    '<div class="cts-d-head"><div class="cts-d-avatar">' + esc(ctsInitials(c.display_name)) + '</div>' +
+      '<div style="min-width:0;">' + (editing ? '' : '<div class="cts-d-name">' + esc(c.display_name) + '</div>') +
+      (c.org && !editing ? '<div class="cts-d-org">' + esc(c.org) + '</div>' : '') + '</div>' +
+      '<button class="cts-chip" id="cts-fav-toggle" style="margin-left:auto;" aria-pressed="' + (c.favorite?'true':'false') + '">' + (c.favorite ? '★ Favorito' : '☆ Favorito') + '</button></div>' +
+    '<div id="cts-fields">' + fieldRows(c, editing) + '</div>' +
+    '<div class="cts-d-actions">' +
+      (editing
+        ? '<button class="btn btn-primary btn-sm" id="cts-save">Guardar</button><button class="btn btn-secondary btn-sm" id="cts-cancel">Cancelar</button>'
+        : '<button class="btn btn-secondary btn-sm" id="cts-edit">Editar</button><button class="btn btn-secondary btn-sm" id="cts-del" style="color:var(--danger);">Eliminar</button>') +
+    '</div>';
+
+  var favBtn = document.getElementById('cts-fav-toggle');
+  if (favBtn) favBtn.addEventListener('click', function(){ patchContact(c.id, { favorite: !c.favorite }); });
+  if (editing){
+    document.getElementById('cts-save').addEventListener('click', function(){ saveCtsEdit(c.id); });
+    document.getElementById('cts-cancel').addEventListener('click', function(){ c.id ? selectContact(c.id) : (document.getElementById('cts-detail').innerHTML = '<div class="cts-empty" id="cts-detail-empty"><div class="cts-empty-ico">👤</div><div>Selecciona un contacto o crea uno nuevo.</div></div>'); });
+  } else {
+    document.getElementById('cts-edit').addEventListener('click', function(){ renderCtsDetail(c, true); });
+    document.getElementById('cts-del').addEventListener('click', function(){ deleteContact(c.id); });
+  }
+}
+
+function collectCtsForm(){
+  var out = {};
+  document.querySelectorAll('[data-cts-f]').forEach(function(el){ out[el.getAttribute('data-cts-f')] = el.value.trim(); });
+  var emails = [], phones = [];
+  document.querySelectorAll('[data-cts-multi="emails"]').forEach(function(el){ if (el.value.trim()) emails.push({ label:'email', value: el.value.trim() }); });
+  document.querySelectorAll('[data-cts-multi="phones"]').forEach(function(el){ if (el.value.trim()) phones.push({ label:'tel', value: el.value.trim() }); });
+  out.emails = emails; out.phones = phones;
+  return out;
+}
+
+async function saveCtsEdit(id){
+  var body = collectCtsForm();
+  if (!body.display_name){ toast('El nombre es obligatorio.', 'error'); return; }
+  if (id) await patchContact(id, body);
+  else await createContact(body);
+}
+
+async function createContact(body){
+  try {
+    var r = await fetch('/api/profile/contacts', { method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(body) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (r.ok && d.ok){ toast('Contacto guardado ✓'); _ctsSelId = d.contact.id; await loadContacts(); selectContact(d.contact.id); }
+    else toast(d.error || 'No se pudo crear el contacto.', 'error');
+  } catch(e){ toast('Error de red.', 'error'); }
+}
+
+async function patchContact(id, body){
+  try {
+    var r = await fetch('/api/profile/contacts/' + encodeURIComponent(id), { method:'PATCH', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(body) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (r.ok && d.ok){ toast('Contacto actualizado ✓'); await loadContacts(); selectContact(id); }
+    else toast(d.error || 'No se pudo actualizar.', 'error');
+  } catch(e){ toast('Error de red.', 'error'); }
+}
+
+async function deleteContact(id){
+  if (!confirm('¿Eliminar este contacto?')) return;
+  try {
+    var r = await fetch('/api/profile/contacts/' + encodeURIComponent(id), { method:'DELETE', credentials:'same-origin' });
+    var d = await r.json().catch(function(){ return {}; });
+    if (r.ok && d.ok){ toast('Contacto eliminado ✓'); _ctsSelId = null;
+      document.getElementById('cts-detail').innerHTML = '<div class="cts-empty"><div class="cts-empty-ico">👤</div><div>Selecciona un contacto o crea uno nuevo.</div></div>';
+      await loadContacts(); }
+    else toast(d.error || 'No se pudo eliminar.', 'error');
+  } catch(e){ toast('Error de red.', 'error'); }
+}
+
+function newContactDraft(){ _ctsSelId = null; renderCtsList(); renderCtsDetail({ id:null, display_name:'', emails:[], phones:[] }, true); }
+
+function ctsModal(open){ var m = document.getElementById('cts-import-modal'); if (m) m.hidden = !open; if (open){ var t=document.getElementById('cts-import-text'); if(t) t.value=''; var e=document.getElementById('cts-import-err'); if(e) e.textContent=''; } }
+
+async function submitImport(){
+  var data = (document.getElementById('cts-import-text')||{}).value || '';
+  var err = document.getElementById('cts-import-err');
+  if (!data.trim()){ if(err) err.textContent='Pega contenido vCard/CSV o sube un archivo.'; return; }
+  try {
+    var r = await fetch('/api/profile/contacts/import', { method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify({ data: data }) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (r.ok && d.ok){ toast('Importados ' + d.imported + ' · actualizados ' + d.updated + ' ✓'); ctsModal(false); await loadContacts(); }
+    else if (err) err.textContent = (d.error === 'no_contacts_found' ? 'No se encontraron contactos en el archivo.' : (d.detail || d.error || 'No se pudo importar.'));
+  } catch(e){ if(err) err.textContent='Error de red.'; }
+}
+
+async function importFromGoogle(){
+  try {
+    var r = await fetch('/api/profile/contacts/import/google/start', { credentials:'same-origin' });
+    var d = await r.json().catch(function(){ return {}; });
+    if (r.ok && d.ok && d.url){ window.location.href = d.url; return; }
+    var err = document.getElementById('cts-import-err');
+    if (err) err.textContent = (d.error === 'google_not_configured' ? 'La importación de Google no está configurada en este servidor.' : (d.detail || 'No se pudo iniciar Google.'));
+  } catch(e){ var er=document.getElementById('cts-import-err'); if(er) er.textContent='Error de red.'; }
+}
+
+function wireContacts(){
+  var s = document.getElementById('cts-search');
+  if (s) s.addEventListener('input', function(){ clearTimeout(_ctsSearchT); _ctsSearchT = setTimeout(function(){ _ctsQuery = s.value.trim(); loadContacts(); }, 220); });
+  var nb = document.getElementById('cts-new-btn'); if (nb) nb.addEventListener('click', newContactDraft);
+  var fb = document.getElementById('cts-fav-btn'); if (fb) fb.addEventListener('click', function(){ _ctsFav = !_ctsFav; fb.setAttribute('aria-pressed', _ctsFav?'true':'false'); loadContacts(); });
+  var ib = document.getElementById('cts-import-btn'); if (ib) ib.addEventListener('click', function(){ ctsModal(true); });
+  var ic = document.getElementById('cts-import-cancel'); if (ic) ic.addEventListener('click', function(){ ctsModal(false); });
+  var is = document.getElementById('cts-import-submit'); if (is) is.addEventListener('click', submitImport);
+  var ig = document.getElementById('cts-import-google'); if (ig) ig.addEventListener('click', importFromGoogle);
+  var fileEl = document.getElementById('cts-import-file');
+  if (fileEl) fileEl.addEventListener('change', function(){ var f = fileEl.files && fileEl.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function(){ var t = document.getElementById('cts-import-text'); if (t) t.value = String(rd.result||''); }; rd.readAsText(f); });
+  // Surface the Google import result banner (?contacts_import=N|error).
+  try {
+    var ci = new URLSearchParams(location.search).get('contacts_import');
+    if (ci !== null){ if (/^\d+$/.test(ci)) toast('Importados ' + ci + ' contactos de Google ✓'); else toast('No se pudo completar la importación de Google.', 'error'); }
+  } catch(e){}
+}
+
 /* ── CSP-safe delegated dispatcher (replaces inline on* handler attributes) ── */
 var ACTIONS = {
   switchTab: switchTab,
@@ -6107,7 +6384,9 @@ function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!
 
   // Deep-link: /cuenta#soporte (from email + notifications) opens the inbox.
   function maybeOpenFromHash() {
-    if ((location.hash || '').replace(/^#/, '') === 'soporte') { if (typeof switchTab === 'function') switchTab('soporte'); ensureLoaded(); }
+    var h = (location.hash || '').replace(/^#/, '');
+    if (h === 'soporte') { if (typeof switchTab === 'function') switchTab('soporte'); ensureLoaded(); }
+    else if (h === 'contactos') { if (typeof switchTab === 'function') switchTab('contactos'); }
   }
   window.addEventListener('hashchange', maybeOpenFromHash);
   // Warm the unread badge on load even if the panel isn't opened yet.
