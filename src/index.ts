@@ -79,6 +79,7 @@ export { FleetLive } from './realtime/fleet-live';
 import { sumUbicaciones } from './routes/suministros-ubicaciones';
 import { sumCategorias } from './routes/suministros-categorias';
 import { sumProductos } from './routes/suministros-productos';
+import { sumKits } from './routes/suministros-kits';
 import { sumInventario } from './routes/suministros-inventario';
 import { sumMovimientos } from './routes/suministros-movimientos';
 import { sumRequisiciones } from './routes/suministros-requisiciones';
@@ -600,6 +601,7 @@ app.get('/ws/flota/unit', async (c) => {
 app.route('/api/suministros/ubicaciones', sumUbicaciones);     // stock-holding sites CRUD
 app.route('/api/suministros/categorias', sumCategorias);       // product categories CRUD
 app.route('/api/suministros/productos', sumProductos);         // product catalog (SKU master) CRUD
+app.route('/api/suministros/kits', sumKits);                   // kits / BOM: bundle products, cost + buildable, assemble (consumes FEFO)
 app.route('/api/suministros/inventario', sumInventario);       // read-only stock-on-hand views + item pickers
 app.route('/api/suministros/movimientos', sumMovimientos);     // stock transactions: recepción/despacho/traslado/ajuste/conteo
 app.route('/api/suministros/requisiciones', sumRequisiciones); // stock requests + FEFO fulfillment

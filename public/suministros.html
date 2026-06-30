@@ -597,11 +597,60 @@
   <!-- ═══ KITS ═══ -->
   <section data-panel="kits" class="hidden space-y-4">
     <div class="card p-3 flex flex-wrap items-center gap-3">
-      <div class="eyebrow">Kits / bundles por categoría</div>
-      <input id="kitSearch" placeholder="Filtrar kits o productos…" class="inp-sm" style="width:220px">
+      <div class="eyebrow">Kits / BOM — bundles ensamblables</div>
+      <input id="kitSearch" placeholder="Filtrar kits…" class="inp-sm" style="width:200px">
+      <button id="btnNuevoKit" class="bg-primary text-white font-semibold rounded px-2.5 py-1 text-xs">+ Nuevo kit</button>
       <a href="/suministros-medicos" class="ml-auto text-xs font-bold rounded px-3 py-1.5" style="background:var(--sum-blue-bg);color:var(--ops-accent)">💊 Botiquín médico completo →</a>
     </div>
+
+    <!-- Nuevo/editar kit -->
+    <form id="fKit" class="hidden card p-3 space-y-2">
+      <div class="eyebrow" id="kitFormTitle">Nuevo kit</div>
+      <input type="hidden" id="kitEditId" value="">
+      <div class="grid sm:grid-cols-2 gap-2">
+        <input id="kitNombre" placeholder="Nombre del kit*" required>
+        <select id="kitCat"><option value="">-- Categoría --</option></select>
+      </div>
+      <input id="kitDesc" placeholder="Descripción (opcional)">
+      <div class="eyebrow mt-1">Componentes (productos × cantidad por kit)</div>
+      <div id="kitLineas" class="space-y-1.5"></div>
+      <button type="button" class="btn-add" data-act="kitAddBlank">+ Agregar componente</button>
+      <div class="flex gap-2 pt-1">
+        <button class="flex-1 bg-secondary text-white font-bold rounded py-1.5 text-xs">Guardar kit</button>
+        <button type="button" class="flex-1 border border-gray-200 rounded py-1.5 text-xs font-semibold" data-act="kitCancel">Cancelar</button>
+      </div>
+      <p id="kitMsg" class="text-xs text-center"></p>
+    </form>
+
     <div id="kitGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-3"><div class="text-sm text-on-surface-variant py-8 text-center">Cargando…</div></div>
+
+    <!-- Detalle / ensamblar -->
+    <div id="kitDetail" class="hidden card p-0 overflow-hidden">
+      <div class="px-4 py-3 flex items-center justify-between" style="background:#082752;color:#fff">
+        <div><div id="kdName" class="font-bold text-[15px] leading-tight">—</div><div id="kdSku" class="mono text-[11px] opacity-80"></div></div>
+        <button data-act="kitClose" class="text-xs font-semibold rounded px-2 py-1" style="background:rgba(255,255,255,.16);color:#fff">✕ Cerrar</button>
+      </div>
+      <div class="p-4 space-y-4">
+        <div id="kdKpis" class="grid grid-cols-3 gap-2"></div>
+        <div>
+          <div class="eyebrow mb-1">Componentes (BOM)</div>
+          <div class="overflow-x-auto"><table class="dt"><thead><tr><th>Producto</th><th class="text-right">Cant./kit</th><th class="text-right">Costo u.</th><th class="text-right">On hand</th><th class="text-right">Alcanza p/</th></tr></thead><tbody id="kdComps"></tbody></table></div>
+        </div>
+        <div class="card p-3" style="background:var(--ops-panel)">
+          <div class="eyebrow mb-2">Ensamblar (consume componentes de una ubicación)</div>
+          <form id="fEnsamblar" class="grid sm:grid-cols-[1fr_auto_auto] gap-2 items-end">
+            <div><label class="lbl">Ubicación</label><select id="kdUbic" class="inp-sm" style="width:100%"></select></div>
+            <div><label class="lbl">Nº de kits</label><input id="kdQty" type="number" min="1" step="1" class="inp-sm" style="width:110px"></div>
+            <button class="btn-add" style="background:#082752;color:#fff;border-color:#082752">Ensamblar</button>
+          </form>
+          <div class="flex gap-2 mt-2">
+            <button class="btn-add" data-act="kitEdit">✎ Editar BOM</button>
+            <button class="btn-del" data-act="kitDelete">Eliminar kit</button>
+          </div>
+          <p id="kdMsg" class="text-xs mt-1"></p>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ═══ UBICACIONES ═══ -->
@@ -3400,32 +3449,123 @@ async function udDoConteo(){
   if(ok){toast('Conteo conciliado');udRefresh();}
 }
 
-// ── KITS (real bundles: products grouped by category) ──
-let _kitData=[];
+// ── KITS / BOM (real bundles: define components, cost + buildable, assemble) ──
+let KITS=[], KD_CURRENT=null;
 async function loadKits(){
   const grid=$('#kitGrid');if(!grid)return;
-  const r=await api('productos').catch(()=>null);
+  if(!PRODUCTOS.length){await loadProds().catch(()=>{});}
+  if(!CATEGORIAS.length){await loadCats().catch(()=>{});}
+  const r=await api('kits').catch(()=>null);
   if(!r||!r.ok){grid.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Sin datos.</div>';return;}
-  const d=await j(r).catch(()=>({}));const prods=d.results||[];
-  const groups={};
-  prods.forEach(p=>{const k=p.categoria_nombre||'Sin categoría';(groups[k]=groups[k]||[]).push(p);});
-  _kitData=Object.entries(groups).map(([cat,items])=>({cat,items,total:items.reduce((s,x)=>s+(Number(x.on_hand)||0),0)})).sort((a,b)=>b.items.length-a.items.length);
-  renderKits('');
+  const d=await j(r).catch(()=>({}));KITS=d.results||[];
+  // category select for the form
+  const cs=$('#kitCat');if(cs)cs.innerHTML='<option value="">-- Categoría --</option>'+CATEGORIAS.map(c=>`<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');
+  renderKits($('#kitSearch')?.value||'');
 }
 function renderKits(q){
   const grid=$('#kitGrid');if(!grid)return;
   q=(q||'').toLowerCase();
-  const data=_kitData.map(g=>({...g,items:q?g.items.filter(p=>(p.nombre||'').toLowerCase().includes(q)||(g.cat||'').toLowerCase().includes(q)):g.items})).filter(g=>g.items.length);
-  if(!data.length){grid.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center">Sin kits que coincidan.</div>';return;}
-  const pal=['it-blue','it-indigo','it-purple','it-green','it-amber','it-cyan','it-pink','it-red'];
-  grid.innerHTML=data.map((g,gi)=>`<div class="card p-4">
-    <div class="flex items-center gap-2.5 mb-3">
-      <div class="icon-tile ${pal[gi%pal.length]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
-      <div><div class="font-display font-extrabold text-[15px] leading-tight">${esc(g.cat)}</div><div class="text-[11px] text-on-surface-variant">${g.items.length} producto${g.items.length===1?'':'s'} · ${g.total.toLocaleString('es-VE')} unid. en stock</div></div>
+  const data=q?KITS.filter(k=>(k.nombre||'').toLowerCase().includes(q)||(k.codigo||'').toLowerCase().includes(q)):KITS;
+  if(!KITS.length){grid.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center col-span-full">Aún no hay kits. Crea uno con “+ Nuevo kit”.</div>';return;}
+  if(!data.length){grid.innerHTML='<div class="text-sm text-on-surface-variant py-8 text-center col-span-full">Sin kits que coincidan.</div>';return;}
+  grid.innerHTML=data.map(k=>`<div class="card p-4 cursor-pointer" data-act="openKit" data-a1="${esc(k.id)}" title="Ver / ensamblar">
+    <div class="flex items-center gap-2.5 mb-2">
+      <div class="icon-tile it-indigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+      <div class="min-w-0"><div class="font-display font-extrabold text-[15px] leading-tight truncate">${esc(k.nombre)}</div><div class="mono text-[11px] text-on-surface-variant">${esc(k.codigo)}${k.categoria_nombre?' · '+esc(k.categoria_nombre):''}</div></div>
     </div>
-    <div class="space-y-1" style="max-height:180px;overflow-y:auto">${g.items.slice(0,40).map(p=>`<div class="flex items-center justify-between text-[12px] py-0.5"><span class="truncate">${esc(p.nombre||'—')}</span><span class="mono font-semibold ${(Number(p.on_hand)||0)<=(Number(p.stock_min)||0)&&p.stock_min?'text-[color:var(--sum-amber)]':''}">${p.on_hand??0}</span></div>`).join('')}</div>
+    <div class="grid grid-cols-3 gap-2 mt-2">
+      <div><div class="lbl">Componentes</div><div class="font-bold text-[14px]">${k.n_componentes}</div></div>
+      <div><div class="lbl">Costo/kit</div><div class="font-bold text-[14px]">${money(k.costo_total)}</div></div>
+      <div><div class="lbl">Ensamblables</div><div class="font-bold text-[14px] ${k.buildable>0?'':'text-[#b91c1c]'}">${k.buildable}</div></div>
+    </div>
   </div>`).join('');
 }
+function kitProdOptions(sel){return '<option value="">— Producto —</option>'+PRODUCTOS.map(p=>`<option value="${esc(p.id)}"${sel===p.id?' selected':''}>${esc(p.nombre)} (${esc(p.codigo||'')})</option>`).join('');}
+function kitAddLinea(pid,qty){
+  const box=$('#kitLineas');if(!box)return;
+  const row=document.createElement('div');row.className='grid grid-cols-[1fr_90px_auto] gap-2 items-center kit-lrow';
+  row.innerHTML=`<select class="inp-sm kit-prod" style="width:100%">${kitProdOptions(pid||'')}</select>
+    <input type="number" min="0.01" step="any" class="inp-sm kit-qty" placeholder="Cant." value="${qty!=null?qty:''}">
+    <button type="button" class="btn-del" data-act="kitRmLinea">✕</button>`;
+  box.appendChild(row);
+}
+function kitRmLinea(el){const r=el.closest('.kit-lrow');if(r)r.remove();}
+function kitNuevo(){
+  $('#kitEditId').value='';$('#kitFormTitle').textContent='Nuevo kit';
+  $('#kitNombre').value='';$('#kitDesc').value='';$('#kitCat').value='';
+  $('#kitLineas').innerHTML='';kitAddLinea();$('#kitMsg').textContent='';
+  $('#fKit').classList.remove('hidden');$('#kitDetail').classList.add('hidden');
+  $('#fKit').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function kitCancel(){$('#fKit').classList.add('hidden');}
+async function kitSubmit(e){
+  e.preventDefault();
+  const nombre=$('#kitNombre').value.trim();
+  if(!nombre){setMsg('#kitMsg','Nombre requerido',false);return;}
+  const lineas=$$('#kitLineas .kit-lrow').map(r=>({producto_id:r.querySelector('.kit-prod').value,cantidad:num(r.querySelector('.kit-qty').value)})).filter(l=>l.producto_id&&l.cantidad>0);
+  if(!lineas.length){setMsg('#kitMsg','Agrega al menos un componente',false);return;}
+  const body={nombre,categoria_id:$('#kitCat').value||null,descripcion:$('#kitDesc').value||null,lineas};
+  const id=$('#kitEditId').value;
+  let ok;
+  if(id){ const r=await api('kits/'+id,{method:'PATCH',body:JSON.stringify(body)}); ok=r.ok; if(!ok)setMsg('#kitMsg',(await r.json().catch(()=>({}))).error||'Error',false); else setMsg('#kitMsg','✓ Guardado',true);}
+  else ok=await post('kits',body,'#kitMsg');
+  if(ok){$('#fKit').classList.add('hidden');toast('Kit guardado');loadKits();}
+}
+async function openKit(id){
+  KD_CURRENT=id;$('#fKit').classList.add('hidden');
+  const dt=$('#kitDetail');dt.classList.remove('hidden');
+  $('#kdName').textContent='Cargando…';$('#kdSku').textContent='';$('#kdComps').innerHTML='';$('#kdMsg').textContent='';
+  dt.scrollIntoView({behavior:'smooth',block:'start'});
+  if(!UBICACIONES.length)await ensureUbic().catch(()=>{});
+  const k=await api('kits/'+id).then(j).catch(()=>null);
+  if(!k||k.error){$('#kdName').textContent='No se pudo cargar el kit';return;}
+  $('#kdName').textContent=k.nombre;$('#kdSku').textContent=k.codigo+(k.categoria_nombre?' · '+k.categoria_nombre:'');
+  const kpi=(l,v)=>`<div class="card p-2" style="background:var(--ops-panel)"><div class="lbl">${l}</div><div class="font-bold text-[15px]">${v}</div></div>`;
+  $('#kdKpis').innerHTML=kpi('Costo por kit',money(k.costo_total))+kpi('Ensamblables',k.buildable)+kpi('Componentes',(k.componentes||[]).length);
+  $('#kdComps').innerHTML=(k.componentes||[]).map(c=>{
+    const per=Number(c.cantidad)||0,alcanza=per>0?Math.floor((Number(c.on_hand)||0)/per):0;
+    return `<tr>
+      <td class="text-[12px]"><div class="font-semibold">${esc(c.producto_nombre)}</div><div class="mono text-[11px] text-on-surface-variant">${esc(c.codigo||'')}</div></td>
+      <td class="mono text-[12px] text-right">${per} ${esc(c.unidad||'')}</td>
+      <td class="mono text-[12px] text-right">${money(c.costo_unit)}</td>
+      <td class="mono text-[12px] text-right">${c.on_hand}</td>
+      <td class="mono text-[12px] text-right font-semibold ${alcanza>0?'':'text-[#b91c1c]'}">${alcanza}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="5" class="text-center text-on-surface-variant py-3">Sin componentes.</td></tr>';
+  const sel=$('#kdUbic');sel.innerHTML='<option value="">— Ubicación —</option>'+(UBICACIONES||[]).map(u=>`<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('');
+  $('#kdQty').value='';
+  $('#fEnsamblar').onsubmit=async ev=>{ev.preventDefault();
+    const ubic=sel.value,qty=num($('#kdQty').value);
+    if(!ubic){setMsg('#kdMsg','Elige ubicación',false);return;}
+    if(!qty||qty<1){setMsg('#kdMsg','Nº de kits inválido',false);return;}
+    const r=await api('kits/'+id+'/ensamblar',{method:'POST',body:JSON.stringify({ubicacion_id:ubic,cantidad:qty})});
+    if(r.status===401||r.status===403){setMsg('#kdMsg','Inicia sesión como operador',false);return;}
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){setMsg('#kdMsg',d.error||'Error '+r.status,false);return;}
+    toast('Ensamblados '+qty+' kit(s) — componentes consumidos');openKit(id);loadKits();
+  };
+}
+function kitClose(){$('#kitDetail').classList.add('hidden');KD_CURRENT=null;}
+async function kitEdit(){
+  const id=KD_CURRENT;if(!id)return;
+  const k=await api('kits/'+id).then(j).catch(()=>null);if(!k)return;
+  $('#kitEditId').value=id;$('#kitFormTitle').textContent='Editar kit';
+  $('#kitNombre').value=k.nombre||'';$('#kitDesc').value=k.descripcion||'';$('#kitCat').value=k.categoria_id||'';
+  $('#kitLineas').innerHTML='';(k.componentes||[]).forEach(c=>kitAddLinea(c.producto_id,c.cantidad));
+  if(!(k.componentes||[]).length)kitAddLinea();
+  $('#kitMsg').textContent='';$('#kitDetail').classList.add('hidden');$('#fKit').classList.remove('hidden');
+  $('#fKit').scrollIntoView({behavior:'smooth',block:'center'});
+}
+async function kitDelete(){
+  const id=KD_CURRENT;if(!id)return;
+  if(!confirm('¿Eliminar este kit? (no afecta el inventario)'))return;
+  const r=await api('kits/'+id,{method:'DELETE'});
+  if(r.ok){toast('Kit eliminado');kitClose();loadKits();}else setMsg('#kdMsg','No se pudo eliminar',false);
+}
+function kitAddBlank(){kitAddLinea();}
+if($('#btnNuevoKit'))$('#btnNuevoKit').onclick=kitNuevo;
+if($('#kitSearch'))$('#kitSearch').oninput=function(e){renderKits(e.target.value);};
+if($('#fKit'))$('#fKit').onsubmit=kitSubmit;
 
 // ── RECEPCIONES (incoming donaciones + órdenes awaiting receipt) ──
 async function loadRecepciones(){
@@ -3700,7 +3840,7 @@ function exportCSV(){
 }
 
 // ── Register new dispatcher actions (ACTIONS read at event-time) ──
-Object.assign(ACTIONS,{gotoTab:gotoTab,scrollToMap:scrollToMap,abrirRecepcion:abrirRecepcion,nuevoTransfer:nuevoTransfer,genEnlacePago:genEnlacePago,copyPay:copyPay,bellSeeAll:bellSeeAll,nuevoCreate:nuevoCreate,openUbic:openUbic,closeUbic:udClose,udRecibir:udRecibir,udDoRecibir:udDoRecibir,udDespachar:udDespachar,udDoDespachar:udDoDespachar,udTrasladar:udTrasladar,udDoTrasladar:udDoTrasladar,udConteo:udConteo,udDoConteo:udDoConteo});
+Object.assign(ACTIONS,{gotoTab:gotoTab,scrollToMap:scrollToMap,abrirRecepcion:abrirRecepcion,nuevoTransfer:nuevoTransfer,genEnlacePago:genEnlacePago,copyPay:copyPay,bellSeeAll:bellSeeAll,nuevoCreate:nuevoCreate,openUbic:openUbic,closeUbic:udClose,udRecibir:udRecibir,udDoRecibir:udDoRecibir,udDespachar:udDespachar,udDoDespachar:udDoDespachar,udTrasladar:udTrasladar,udDoTrasladar:udDoTrasladar,udConteo:udConteo,udDoConteo:udDoConteo,openKit:openKit,kitClose:kitClose,kitCancel:kitCancel,kitEdit:kitEdit,kitDelete:kitDelete,kitRmLinea:kitRmLinea,kitAddBlank:kitAddBlank});
 
 // ── Wire top-bar controls ──
 (function(){
