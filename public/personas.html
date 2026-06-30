@@ -225,7 +225,9 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch
   const val=document.getElementById('pp-lq-val'),det=document.getElementById('pp-lq-detail');
   if(!val||!det||!window.sismoTick)return;
   let stop=null;
-  fetch('/api/events?limit=1').then(r=>r.json()).then(d=>{
+  // 1-min freshness bucket bypasses the 4h CDN pin on /api/* so "el último
+  // sismo" reflects the newest event promptly (same trick as geoseismic).
+  fetch('/api/events?limit=1&t='+Math.floor(Date.now()/60000)).then(r=>r.json()).then(d=>{
     const ev=(d&&d.events&&d.events[0])||null;
     if(!ev||!ev.time_ms){det.textContent='Sin datos de sismos recientes →';val.textContent='—';return;}
     const place=ev.place_es||ev.place||'Sismo';
