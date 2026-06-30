@@ -3,7 +3,9 @@ import type { Env } from '../types';
 import { timingSafeEqualStr } from '../lib/security';
 import { audit } from '../lib/audit';
 import type { RawPatient } from '../lib/hospital-registry';
-import { upsertHospitalRows, collapseHospitalDupes } from '../lib/hospital-ingest';
+import { parseStatus, patientToRow } from '../lib/hospital-registry';
+import { upsertHospitalRows, collapseHospitalDupes, mapSheetRows } from '../lib/hospital-ingest';
+import { parseXlsxRows } from '../lib/xlsx-lite';
 import { drainHospitalRegistryMatch } from '../ingest/hospital-registry-match';
 import { ingestHospitalRegistry } from '../ingest/hospital-registry-sync';
 
@@ -65,6 +67,83 @@ hospital.post('/hospital/collapse', async (c) => {
   if (!authed(c)) return c.json({ error: 'unauthorized' }, 401);
   const out = await collapseHospitalDupes(c.env);
   return c.json({ ok: !out.reason, ...out });
+});
+
+// ── POST /hospital/source-audit — ground-truth reconciliation (READ-ONLY) ────────
+// Re-parses the live source feed and reports counts by estado, a per-keyword
+// breakdown of WHY rows are classified hospitalizado, the deduped projection, and
+// the deltas vs the live DB. Writes nothing — the zero-hallucination anchor for
+// deciding the "hospitalizado" definition.
+hospital.post('/hospital/source-audit', async (c) => {
+  if (!authed(c)) return c.json({ error: 'unauthorized' }, 401);
+  const url = (c.env.HOSPITAL_FEED_URL || '').trim();
+  if (!url) return c.json({ ok: false, reason: 'no_feed_url' }, 400);
+  let patients: RawPatient[] = [];
+  let sourceUpdated = '';
+  try {
+    const res = await fetch(url, { headers: { 'user-agent': 'sismo911-hospital-sync', accept: 'application/octet-stream' } });
+    if (!res.ok) return c.json({ ok: false, reason: 'fetch_' + res.status }, 502);
+    const rows = await parseXlsxRows(await res.arrayBuffer());
+    const mapped = mapSheetRows(rows);
+    patients = mapped.patients; sourceUpdated = mapped.source_updated;
+  } catch (e: any) {
+    return c.json({ ok: false, reason: String(e?.message || e).slice(0, 120) }, 502);
+  }
+
+  // Raw per-row classification (one entry per source row, pre-dedup).
+  const KEYWORDS = ['internad', 'hospitaliz', 'uci', 'upt', 'ingres', 'emergencia', 'servicio:', 'fallec', 'alta'];
+  const rawByEstado: Record<string, number> = { hospitalizado: 0, alta: 0, fallecido: 0, desconocido: 0 };
+  // Which keyword drove a hospitalizado classification (first match in parseStatus order).
+  const hospByKeyword: Record<string, number> = { internad: 0, hospitaliz: 0, uci: 0, upt: 0, ingres: 0, emergencia: 0, 'servicio:': 0 };
+  // Deduped projection: one estado per person (dedupe_key), best status wins.
+  const rank: Record<string, number> = { fallecido: 0, alta: 1, hospitalizado: 2, desconocido: 3 };
+  const best: Record<string, string> = {};
+  let blankObsHosp = 0;
+  for (const p of patients) {
+    const obs = String(p.observaciones || '').toLowerCase();
+    const { estado } = parseStatus(p.observaciones);
+    rawByEstado[estado] = (rawByEstado[estado] || 0) + 1;
+    if (estado === 'hospitalizado') {
+      if (/internad/.test(obs)) hospByKeyword.internad++;
+      else if (/hospitaliz/.test(obs)) hospByKeyword.hospitaliz++;
+      else if (/\buci\b/.test(obs)) hospByKeyword.uci++;
+      else if (/\bupt\b/.test(obs)) hospByKeyword.upt++;
+      else if (/ingres/.test(obs)) hospByKeyword.ingres++;
+      else if (/emergencia/.test(obs)) hospByKeyword.emergencia++;
+      else if (/servicio:/.test(obs)) hospByKeyword['servicio:']++;
+      if (!obs.trim()) blankObsHosp++;
+    }
+    const row = patientToRow(p);
+    if (row?.dedupe_key) {
+      const cur = best[row.dedupe_key];
+      if (cur === undefined || rank[estado] < rank[cur]) best[row.dedupe_key] = estado;
+    }
+  }
+  const dedupByEstado: Record<string, number> = { hospitalizado: 0, alta: 0, fallecido: 0, desconocido: 0 };
+  for (const k in best) dedupByEstado[best[k]] = (dedupByEstado[best[k]] || 0) + 1;
+
+  // Live DB counts.
+  const dbRows = (await c.env.DB.prepare(`SELECT estado, COUNT(*) AS n FROM hospital_patients GROUP BY estado`).all<any>()).results ?? [];
+  const db: Record<string, number> = { hospitalizado: 0, alta: 0, fallecido: 0, desconocido: 0 };
+  for (const r of dbRows) db[r.estado] = Number(r.n) || 0;
+  const dbTotal = Object.values(db).reduce((a, b) => a + b, 0);
+
+  return c.json({
+    ok: true,
+    source_updated: sourceUpdated,
+    source_rows: patients.length,
+    rawByEstado,                                  // per source row (pre-dedup)
+    hospByKeyword,                                // why hospitalizado (per source row)
+    blank_obs_hospitalizado: blankObsHosp,        // hospitalizado source rows with NO observación text
+    dedup_projection: { byEstado: dedupByEstado, distinct_people: Object.keys(best).length },
+    db: { byEstado: db, total: dbTotal },
+    deltas: {                                     // dedup projection − live DB (should be ~0 if pipeline honest)
+      hospitalizado: (dedupByEstado.hospitalizado || 0) - (db.hospitalizado || 0),
+      alta: (dedupByEstado.alta || 0) - (db.alta || 0),
+      fallecido: (dedupByEstado.fallecido || 0) - (db.fallecido || 0),
+      total: Object.keys(best).length - dbTotal,
+    },
+  });
 });
 
 // ── GET /hospital/search?q= — public search (the source's stated purpose) ──────
