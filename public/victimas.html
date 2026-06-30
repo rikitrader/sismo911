@@ -62,6 +62,17 @@
   .conf>span{display:block;height:100%;background:linear-gradient(90deg,#16a34a,#65a30d)}
   a.cite{color:#2563eb;text-decoration:none;font-weight:600}
   a.cite:hover{text-decoration:underline}
+  /* agency estimate cards */
+  .agencyCards{grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;padding:0 18px 18px}
+  .agency{display:flex;flex-direction:column;gap:7px;padding:15px 16px;border:1px solid var(--line);border-radius:12px;background:#fbfcfe;border-left:4px solid var(--navy)}
+  .agency.nasa{border-left-color:#2563eb}
+  .agency.msft{border-left-color:#16a34a}
+  .agency.usgs{border-left-color:var(--red)}
+  .agency .org{font:800 11px 'Public Sans';text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .agency .fig{font:900 26px/1 'Public Sans';color:var(--navy);letter-spacing:-.02em}
+  .agency .fig small{font:700 13px 'Public Sans';color:var(--muted)}
+  .agency .desc{font-size:12px;color:#475569;line-height:1.45;flex:1}
+  .agency .src{margin-top:2px}
   .subnav{position:sticky;top:0;z-index:20;background:#eef0f4;display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;margin-bottom:6px}
   .subnav a{font:800 12px 'Public Sans';text-transform:uppercase;letter-spacing:.04em;color:var(--navy);background:#fff;border:1px solid var(--line);border-radius:9999px;padding:7px 14px;text-decoration:none;cursor:pointer}
   .subnav a:hover,.subnav a.on{background:var(--navy);color:#fff}
@@ -81,6 +92,7 @@
 <main>
   <div class="subnav">
     <a href="#resumen" class="on">Resumen</a>
+    <a href="#agencias">Agencias</a>
     <a href="#fuentes">Por fuente</a>
     <a href="#registro">Registro de fuentes</a>
     <a href="/terremotos">Sismos</a>
@@ -102,6 +114,13 @@
 
   <div style="height:16px"></div>
   <div class="grid metrics" id="metricCards"></div>
+
+  <div style="height:22px"></div>
+  <section class="card" id="agencias">
+    <div class="pad" style="padding-bottom:6px"><div class="eyebrow">Evaluaciones satelitales / modelo</div><h2>Estimaciones de agencias</h2>
+      <p class="lede">Evaluaciones independientes de daños y pérdidas de NASA, Microsoft AI for Good y el USGS. Cada tarjeta enlaza la fuente original. Son estimaciones preliminares (satélite/modelo), no censos verificados en campo.</p></div>
+    <div class="grid agencyCards" id="agencyCards"><div class="muted" style="padding:0 18px 18px">Cargando…</div></div>
+  </section>
 
   <div style="height:22px"></div>
   <section class="card" id="fuentes">
@@ -166,6 +185,28 @@
         '<div class="n">' + m.sources.length + ' fuente(s)</div></div>';
     }).join('');
     document.getElementById('metricCards').innerHTML = cards || '<div class="muted pad">Sin datos.</div>';
+
+    // agency estimate cards (NASA / Microsoft / USGS) — pulled live from the same data
+    const AGENCIES = [
+      { key: 'nasa_dpm', metric: 'buildings', cls: 'nasa', org: 'NASA · Sentinel-1', unit: 'edificios dañados/destruidos' },
+      { key: 'msft_ai4good', metric: 'buildings', cls: 'msft', org: 'Microsoft AI for Good', unit: 'edificios (Catia La Mar)' },
+      { key: 'usgs_pager', metric: 'dead', cls: 'usgs', org: 'USGS PAGER', unit: 'fallecidos (banda modelada)' },
+    ];
+    const findSrc = (metric, key) => {
+      const m = (s.metrics || []).find(x => x.metric === metric);
+      return m ? (m.sources || []).find(src => src.source_key === key) : null;
+    };
+    const agencyCards = AGENCIES.map(a => {
+      const src = findSrc(a.metric, a.key);
+      if (!src) return '';
+      return '<div class="agency ' + a.cls + '">' +
+        '<div class="org">' + esc(a.org) + '</div>' +
+        '<div class="fig">' + fmt(src.value_min, src.value_max) + ' <small>' + esc(a.unit) + '</small></div>' +
+        (src.note ? '<div class="desc">' + esc(src.note) + '</div>' : '') +
+        '<div class="src">' + (src.citation_url ? '<a class="cite" href="' + esc(src.citation_url) + '" target="_blank" rel="noopener">ver fuente ↗</a>' : '') + '</div>' +
+        '</div>';
+    }).filter(Boolean).join('');
+    document.getElementById('agencyCards').innerHTML = agencyCards || '<div class="muted" style="padding:0 18px 18px">Sin estimaciones de agencias.</div>';
 
     // per-source rows (flatten metric → sources)
     const rows = [];
