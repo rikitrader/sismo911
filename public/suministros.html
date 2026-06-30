@@ -61,17 +61,18 @@
     @media print{body *{visibility:hidden}#etq-print,#etq-print *{visibility:visible}#etq-print{position:absolute;top:0;left:0;width:100%}.etq-grid{display:grid!important;grid-template-columns:repeat(3,1fr);gap:8mm;padding:8mm}.etq-label{break-inside:avoid}}
     /* ── App Shell ── */
     .app-shell{display:flex;min-height:100vh}
-    .sidebar{width:248px;flex-shrink:0;background:var(--ops-bar-1);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto;z-index:40}
-    .sidebar-brand{height:var(--hdr-h);box-sizing:border-box;padding:0 1rem;display:flex;align-items:center;gap:.7rem;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0}
-    .brand-name{font-weight:800;font-size:.95rem;color:var(--ops-bar-fg);line-height:1;letter-spacing:.01em}
-    .brand-sub{font-family:var(--ops-mono),monospace;font-size:.58rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--ops-bar-faint);margin-top:3px}
+    .sidebar{width:248px;flex-shrink:0;background:#f4f4f1;border-right:1px solid rgba(0,0,0,.09);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto;z-index:40}
+    .sidebar-brand{height:var(--hdr-h);box-sizing:border-box;padding:0 1rem;display:flex;align-items:center;gap:.7rem;border-bottom:1px solid rgba(0,0,0,.09);flex-shrink:0}
+    .sidebar-brand img{width:34px;height:34px;flex-shrink:0;object-fit:contain}
+    .brand-name{font-weight:800;font-size:.95rem;color:#15181c;line-height:1;letter-spacing:.01em}
+    .brand-sub{font-family:var(--ops-mono),monospace;font-size:.58rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#5b626b;margin-top:3px}
     .sidebar-nav{flex:1;padding:.55rem .45rem;overflow-y:auto}
     .nav-section{margin-bottom:.1rem}
     .nav-section+.nav-section{margin-top:.45rem}
-    .nav-section-label{font-family:var(--ops-mono),monospace;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ops-bar-faint);padding:.45rem .55rem .25rem;display:block}
-    .sidebar-footer{padding:.7rem .85rem;border-top:1px solid rgba(255,255,255,.08);font-size:.71rem;color:var(--ops-bar-faint);flex-shrink:0;line-height:1.5}
-    .sidebar-footer a{color:var(--ops-bar-faint);text-decoration:none;font-weight:600}
-    .sidebar-footer a:hover{color:var(--ops-bar-fg)}
+    .nav-section-label{font-family:var(--ops-mono),monospace;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6b7280;padding:.45rem .55rem .25rem;display:block}
+    .sidebar-footer{padding:.7rem .85rem;border-top:1px solid rgba(0,0,0,.09);font-size:.71rem;color:#6b7280;flex-shrink:0;line-height:1.5}
+    .sidebar-footer a{color:#3f454d;text-decoration:none;font-weight:600}
+    .sidebar-footer a:hover{color:#15181c}
     .main-area{flex:1;min-width:0;display:flex;flex-direction:column;overflow:auto;background:var(--ops-bg)}
     .top-bar{background:var(--ops-bar-1);height:var(--hdr-h);box-sizing:border-box;padding:0 1.25rem;display:flex;align-items:center;gap:.6rem;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.08)}
     .top-bar-right{margin-left:auto;display:flex;align-items:center;gap:.75rem}
@@ -87,11 +88,11 @@
       .sidebar-backdrop.open{display:block}
     }
     /* Sidebar nav item (.seg) — replaces horizontal pill style */
-    .seg{display:flex;align-items:center;gap:.55rem;width:100%;text-align:left;font:600 .82rem 'Inter',sans-serif;padding:.48rem .55rem;border-radius:.4rem;cursor:pointer;color:var(--ops-bar-faint);border:none;background:none;position:relative;margin-bottom:1px;line-height:1.35;transition:background .12s,color .12s;white-space:normal}
-    .seg svg{flex-shrink:0;width:17px;height:17px;opacity:.62;transition:opacity .12s}
-    .seg:hover:not(.on){background:rgba(255,255,255,.08);color:var(--ops-bar-fg)}
+    .seg{display:flex;align-items:center;gap:.55rem;width:100%;text-align:left;font:600 .82rem 'Inter',sans-serif;padding:.48rem .55rem;border-radius:.4rem;cursor:pointer;color:#3f454d;border:none;background:none;position:relative;margin-bottom:1px;line-height:1.35;transition:background .12s,color .12s;white-space:normal}
+    .seg svg{flex-shrink:0;width:17px;height:17px;opacity:.6;transition:opacity .12s}
+    .seg:hover:not(.on){background:rgba(0,0,0,.05);color:#15181c}
     .seg:hover:not(.on) svg{opacity:.85}
-    .seg.on{background:rgba(255,255,255,.1);color:var(--ops-bar-fg);font-weight:700}
+    .seg.on{background:rgba(0,0,0,.07);color:#15181c;font-weight:700}
     .seg.on svg{opacity:1}
     .seg.on::before{content:'';position:absolute;left:0;top:18%;bottom:18%;width:3px;border-radius:0 3px 3px 0;background:var(--ops-accent-soft)}
   </style>
@@ -108,10 +109,10 @@
 
   <!-- Brand block -->
   <div class="sidebar-brand">
-    <img src="/logo.svg" alt="SISMO911" style="width:32px;height:32px;flex-shrink:0" />
+    <img src="/logo.png" alt="SISMO911" />
     <div>
       <div class="brand-name">SISMO911</div>
-      <div class="brand-sub">Suministros y Almacén</div>
+      <div class="brand-sub">Suministros</div>
     </div>
   </div>
 
