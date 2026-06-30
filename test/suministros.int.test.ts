@@ -10,6 +10,7 @@ import { sumConteos } from '../src/routes/suministros-conteos';
 import { sumProductos } from '../src/routes/suministros-productos';
 import { sumInventario } from '../src/routes/suministros-inventario';
 import { sumReportes } from '../src/routes/suministros-reportes';
+import { sumKits } from '../src/routes/suministros-kits';
 
 // Integration tests proving the SUMINISTROS stock-mutation flows end-to-end:
 // real route handlers → real in-memory SQLite (D1 adapter) → assert the actual
@@ -30,6 +31,7 @@ const MIGS = [
   'migrations/0044_sum_envios.sql',
   'migrations/0045_sum_conteos.sql',
   'migrations/0076_sum_producto_costo.sql',
+  'migrations/0077_sum_kits.sql',
 ];
 
 let db: D1Mock;
@@ -45,6 +47,7 @@ const app = mount([
   ['/api/suministros/productos', sumProductos],
   ['/api/suministros/inventario', sumInventario],
   ['/api/suministros/reportes', sumReportes],
+  ['/api/suministros/kits', sumKits],
 ]);
 
 const M = '/api/suministros/movimientos';
@@ -317,5 +320,56 @@ describe('movimientos — ?producto_id filter (per-product ledger)', () => {
     const allRefs = all.json.results.map((t: any) => t.referencia);
     expect(allRefs).toContain('FILTER-AGUA');
     expect(allRefs).toContain('FILTER-ARROZ');
+  });
+});
+
+describe('kits — BOM cost/buildable + assemble consumes components (FEFO, atomic)', () => {
+  async function makeKit() {
+    const r = await call(app, 'POST', '/api/suministros/kits', env, {
+      nombre: 'Kit prueba', lineas: [
+        { producto_id: 'prod_agua1', cantidad: 2 },
+        { producto_id: 'prod_manta', cantidad: 1 },
+      ],
+    });
+    expect(r.status).toBe(201);
+    return r.json.id as string;
+  }
+
+  it('computes component count, cost and buildable', async () => {
+    const id = await makeKit();
+    const list = await call(app, 'GET', '/api/suministros/kits', env);
+    const kit = list.json.results.find((k: any) => k.id === id);
+    expect(kit).toBeTruthy();
+    expect(kit.n_componentes).toBe(2);
+    expect(typeof kit.costo_total).toBe('number');
+    // buildable = min(floor(agua/2), floor(manta/1)); both seeded > 0 at ubi_ccs
+    expect(kit.buildable).toBeGreaterThan(0);
+  });
+
+  it('ensamblar consumes the right quantities from the location and ledgers it', async () => {
+    const id = await makeKit();
+    const agua0 = stock('ubi_ccs', 'item_agua1');
+    const manta0 = stock('ubi_ccs', 'item_manta');
+    const r = await call(app, 'POST', `/api/suministros/kits/${id}/ensamblar`, env, {
+      ubicacion_id: 'ubi_ccs', cantidad: 3,
+    });
+    expect(r.status).toBe(201);
+    expect(stock('ubi_ccs', 'item_agua1')).toBe(agua0 - 6); // 2 × 3
+    expect(stock('ubi_ccs', 'item_manta')).toBe(manta0 - 3); // 1 × 3
+    // a despacho transaction referencing the kit code exists
+    const tx = db.raw.prepare(
+      `SELECT referencia FROM sum_transacciones WHERE tipo='despacho' ORDER BY created_ms DESC LIMIT 1`
+    ).get() as any;
+    expect(String(tx.referencia)).toContain('Ensamblaje');
+  });
+
+  it('refuses to assemble more than available (409) and leaves stock untouched', async () => {
+    const id = await makeKit();
+    const agua0 = stock('ubi_ccs', 'item_agua1');
+    const r = await call(app, 'POST', `/api/suministros/kits/${id}/ensamblar`, env, {
+      ubicacion_id: 'ubi_ccs', cantidad: 1_000_000,
+    });
+    expect(r.status).toBe(409);
+    expect(stock('ubi_ccs', 'item_agua1')).toBe(agua0); // unchanged
   });
 });
