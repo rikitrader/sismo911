@@ -586,8 +586,10 @@ async function loadData(){
     fetch('/api/reports?status=approved&limit=500').then(r=>r.json()),
   ]);
   $('#loading').style.display='none';
-  const s=(sos.value?.reports||[]).map(r=>({...r,src:'sos'}));
-  const c=(comm.value?.reports||[]).map(r=>({...r,src:'comm'}));
+  // /api/danos-estructurales → {reports:[…]}; /api/reports → a BARE array. Accept both shapes.
+  const arr=v=>Array.isArray(v)?v:(v&&Array.isArray(v.reports)?v.reports:[]);
+  const s=arr(sos.value).map(r=>({...r,src:'sos'}));
+  const c=arr(comm.value).map(r=>({...r,src:'comm'}));
   ALL=c.concat(s);
   computeStats();
   renderKpis();renderAnalytics();buildCatFilters();renderList();
