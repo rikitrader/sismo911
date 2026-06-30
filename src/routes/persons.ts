@@ -253,11 +253,14 @@ persons.get('/cases', async (c) => {
   // ---------- filters: native `persons` table ----------
   const pWhere: string[] = []; const pBind: unknown[] = [];
   if (q) { pWhere.push('(p.full_name LIKE ? OR p.last_seen LIKE ? OR p.case_number LIKE ?' + (op ? ' OR p.contact_phone LIKE ?' : '') + ')'); pBind.push(l, l, l); if (op) pBind.push(l); }
-  if (status === 'hospitalizado') {
-    // A hospitalizado case is one flagged on the case itself OR cross-linked to a
-    // hospitalizado patient in the registry (name-only matches stay status='missing'
-    // by design, so without this they'd never surface under the filter).
-    pWhere.push("(p.status='hospitalizado' OR p.id IN (SELECT matched_person_id FROM hospital_patients WHERE matched_person_id IS NOT NULL AND estado='hospitalizado'))");
+  // A case carries a registry status (hospitalizado / alta→found_safe / fallecido→
+  // found_deceased) when flagged on the case itself OR cross-linked to a registry
+  // patient of that estado (name-only matches stay status='missing' by design, so
+  // without this they'd never surface under the filter).
+  const REG_ESTADO: Record<string, string> = { hospitalizado: 'hospitalizado', found_safe: 'alta', found_deceased: 'fallecido' };
+  if (REG_ESTADO[status]) {
+    pWhere.push(`(p.status=? OR p.id IN (SELECT matched_person_id FROM hospital_patients WHERE matched_person_id IS NOT NULL AND estado=?))`);
+    pBind.push(status, REG_ESTADO[status]);
   } else if (status && CASE_STATUSES.includes(status)) { pWhere.push('p.status = ?'); pBind.push(status); }
   if (priority && ['alta', 'media', 'baja'].includes(priority)) { pWhere.push('p.priority = ?'); pBind.push(priority); }
   if (since > 0) { pWhere.push('p.created_ms >= ?'); pBind.push(since); }
@@ -277,10 +280,10 @@ persons.get('/cases', async (c) => {
   // what the cleaner did. Operators still see every row (no filter).
   if (!op) { fWhere.push("moderation = 'approved'"); fWhere.push(`NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`); }
   if (q) { fWhere.push('(nombre LIKE ? OR ubicacion LIKE ?' + (op ? ' OR contacto LIKE ?' : '') + ')'); fBind.push(l, l); if (op) fBind.push(l); }
-  if (status === 'found_safe') fWhere.push("estado = 'localizado'");
+  if (status === 'found_safe') fWhere.push("(estado = 'localizado' OR id IN (SELECT matched_persona_id FROM hospital_patients WHERE matched_persona_id IS NOT NULL AND estado='alta'))");
   else if (status === 'aparecido') fWhere.push("estado = 'aparecido'");
   else if (status === 'hospitalizado') fWhere.push("(estado = 'hospitalizado' OR id IN (SELECT matched_persona_id FROM hospital_patients WHERE matched_persona_id IS NOT NULL AND estado='hospitalizado'))");
-  else if (status === 'found_deceased') fWhere.push("estado = 'fallecido'");
+  else if (status === 'found_deceased') fWhere.push("(estado = 'fallecido' OR id IN (SELECT matched_persona_id FROM hospital_patients WHERE matched_persona_id IS NOT NULL AND estado='fallecido'))");
   else if (status === 'missing') fWhere.push("estado NOT IN ('localizado','aparecido','hospitalizado','fallecido')");
   else if (status === 'unknown') fWhere.push('1=0');                                   // personas have no 'unknown' bucket
   if (since > 0) { fWhere.push('created_at >= ?'); fBind.push(since); }
@@ -292,11 +295,19 @@ persons.get('/cases', async (c) => {
   // which reads this same endpoint, works too). Only the UNMATCHED hospitalizados
   // are added here — those already linked to a real expediente surface via that
   // case (see the matched_* OR-clauses above), so nobody is double-counted.
-  // Included on the default view and the Hospitalizada filter; a priority/review/
-  // status-other filter excludes them (registry rows have no priority/review state).
-  const includeHosp = includeFam && (status === '' || status === 'hospitalizado') && !review;
-  const hWhere: string[] = ["estado = 'hospitalizado'", 'matched_person_id IS NULL', 'matched_persona_id IS NULL'];
-  const hBind: unknown[] = [];
+  // Included on the default view and the hospitalizado/found_safe/found_deceased
+  // filters (the three real registry statuses; desconocido stays out — no actionable
+  // status — and is reachable via /hospital/search). A priority/review/other-status
+  // filter excludes the registry (registry rows have no priority/review state).
+  const hospStatuses = (includeFam && !review) ? (
+    status === '' ? ['hospitalizado', 'alta', 'fallecido']
+    : status === 'hospitalizado' ? ['hospitalizado']
+    : status === 'found_safe' ? ['alta']
+    : status === 'found_deceased' ? ['fallecido'] : []
+  ) : [];
+  const includeHosp = hospStatuses.length > 0;
+  const hWhere: string[] = [`estado IN (${hospStatuses.map(() => '?').join(',') || "''"})`, 'matched_person_id IS NULL', 'matched_persona_id IS NULL'];
+  const hBind: unknown[] = [...hospStatuses];
   if (q) { hWhere.push('(full_name LIKE ?' + (op ? ' OR cedula LIKE ?' : '') + ')'); hBind.push(l); if (op) hBind.push(l); }
   if (since > 0) { hWhere.push('created_ms >= ?'); hBind.push(since); }
   const hW = 'WHERE ' + hWhere.join(' AND ');
@@ -477,17 +488,19 @@ persons.get('/cases', async (c) => {
   const fsumSuppress = op ? '' : ` AND NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`;
   try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas WHERE moderation = 'approved'${fsumSuppress}`).first() || {}; } catch {}
   // Hospital registry KPIs. `hospitalized` = every hospitalizado in the registry
-  // (the headline count). `hospUnmatched` = those NOT already on a real expediente;
-  // only these add to the docket `total` so the banner equals the pager on the
-  // default view (matched ones are already counted inside persons/personas).
+  // (the headline count). `hospUnmatched` = registry people (hospitalizado/alta/
+  // fallecido) NOT already on a real expediente; only these federate as hosp- cases,
+  // so adding them to `total` keeps the banner equal to the pager on the default view
+  // (matched ones are already counted inside persons/personas).
   let hospitalized = 0, hospUnmatched = 0;
   try {
     const hr: any = await c.env.DB.prepare(
-      `SELECT COUNT(*) AS all_n,
-              SUM(CASE WHEN matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_n
-         FROM hospital_patients WHERE estado='hospitalizado'`
+      `SELECT SUM(CASE WHEN estado='hospitalizado' THEN 1 ELSE 0 END) AS hosp_all,
+              SUM(CASE WHEN estado IN ('hospitalizado','alta','fallecido')
+                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_n
+         FROM hospital_patients`
     ).first();
-    hospitalized = Number(hr?.all_n) || 0;
+    hospitalized = Number(hr?.hosp_all) || 0;
     hospUnmatched = Number(hr?.unmatched_n) || 0;
   } catch {}
   const summary = {
