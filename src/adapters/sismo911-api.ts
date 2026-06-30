@@ -44,6 +44,53 @@ function normName(s: string): string {
     .trim();
 }
 
+// SQLite's built-in lower() is ASCII-only and never folds accents, so a stored
+// "Moisés" would NOT match a typed "Moises". These helpers build SQL expressions
+// that fold the common Spanish accents (both cases) → bare ASCII, so LIKE is
+// accent- AND case-insensitive. Verbose but correct and index-agnostic.
+const ACCENTS: ReadonlyArray<[string, string]> = [
+  ['á', 'a'], ['é', 'e'], ['í', 'i'], ['ó', 'o'], ['ú', 'u'], ['ü', 'u'], ['ñ', 'n'],
+  ['Á', 'a'], ['É', 'e'], ['Í', 'i'], ['Ó', 'o'], ['Ú', 'u'], ['Ü', 'u'], ['Ñ', 'n'],
+  ['à', 'a'], ['è', 'e'], ['ì', 'i'], ['ò', 'o'], ['ù', 'u'],
+  ['â', 'a'], ['ê', 'e'], ['î', 'i'], ['ô', 'o'], ['û', 'u'],
+];
+
+/** SQL expression: column folded to lowercase, accent-stripped. */
+function fold(col: string): string {
+  let expr = col;
+  for (const [a, b] of ACCENTS) expr = `replace(${expr},'${a}','${b}')`;
+  return `lower(${expr})`;
+}
+
+/** SQL expression: column reduced to bare cédula digits (drops dots/dashes/
+ *  spaces and the V-/E- nationality prefix) so formatting never blocks a match. */
+function digitsExpr(col: string): string {
+  let e = col;
+  for (const ch of ['.', '-', ' ', 'V', 'E', 'v', 'e']) e = `replace(${e},'${ch}','')`;
+  return e;
+}
+
+/** Split a normalized name into matchable tokens (≥2 chars). Falls back to the
+ *  whole string when every token is too short (e.g. "Jo"). */
+function nameTokens(norm: string): string[] {
+  const toks = norm.split(' ').filter((t) => t.length >= 2);
+  return toks.length ? toks : norm ? [norm] : [];
+}
+
+/** Build an accent/case-insensitive, order-independent name predicate: every
+ *  search token must appear (as a substring) in at least one of `cols`. */
+function nameWhere(cols: string[], tokenCount: number): string {
+  const perToken = '(' + cols.map((c) => `${fold(c)} LIKE ?`).join(' OR ') + ')';
+  return Array.from({ length: tokenCount }, () => perToken).join(' AND ');
+}
+
+/** Binds for nameWhere: `%token%` once per column, per token (matching order). */
+function nameBinds(cols: string[], tokens: string[]): string[] {
+  const binds: string[] = [];
+  for (const t of tokens) for (let i = 0; i < cols.length; i++) binds.push(`%${t}%`);
+  return binds;
+}
+
 /** Normalize the raw identifiers a user supplied. Pure. */
 export function normalizePersonInput(input: {
   name?: string;
@@ -241,7 +288,7 @@ export async function searchPersonById(env: Env, cedulaRaw: string): Promise<Cas
   const out: CaseRecord[] = [];
 
   const hosp: any = await env.DB
-    .prepare(`SELECT ${HOSP_COLS} FROM hospital_patients WHERE cedula = ? LIMIT ${MAX_RESULTS}`)
+    .prepare(`SELECT ${HOSP_COLS} FROM hospital_patients WHERE ${digitsExpr('cedula')} = ? LIMIT ${MAX_RESULTS}`)
     .bind(cedula)
     .all();
   for (const r of hosp?.results ?? []) out.push(hydrateHospital(r, 'national_id'));
@@ -249,7 +296,7 @@ export async function searchPersonById(env: Env, cedulaRaw: string): Promise<Cas
   // case_identity.cedula → person_id ('per_…' | 'fam-<id>' | 'hosp-<id>'). Only
   // rows where the institutional verification actually matched are trustworthy.
   const ident: any = await env.DB
-    .prepare(`SELECT person_id, result FROM case_identity WHERE cedula = ? AND result = 'match' LIMIT ${MAX_RESULTS}`)
+    .prepare(`SELECT person_id, result FROM case_identity WHERE ${digitsExpr('cedula')} = ? AND result = 'match' LIMIT ${MAX_RESULTS}`)
     .bind(cedula)
     .all();
   for (const r of ident?.results ?? []) {
@@ -291,18 +338,19 @@ export async function searchPersonByName(
 ): Promise<CaseRecord[]> {
   const norm = normalizePersonInput({ name: input.name, dob: input.dob }, nowMs);
   if (!norm.name) return [];
-  const like = `%${norm.normName}%`;
+  const tokens = nameTokens(norm.normName ?? '');
+  if (!tokens.length) return [];
   const out: CaseRecord[] = [];
 
   const persons: any = await env.DB
-    .prepare(`SELECT ${PERSON_COLS} FROM persons WHERE lower(full_name) LIKE ? LIMIT ${MAX_RESULTS}`)
-    .bind(like)
+    .prepare(`SELECT ${PERSON_COLS} FROM persons WHERE ${nameWhere(['full_name'], tokens.length)} LIMIT ${MAX_RESULTS}`)
+    .bind(...nameBinds(['full_name'], tokens))
     .all();
   for (const r of persons?.results ?? []) out.push(hydratePerson(r, 'name'));
 
   const personas: any = await env.DB
-    .prepare(`SELECT ${PERSONA_COLS} FROM personas WHERE lower(nombre) LIKE ? LIMIT ${MAX_RESULTS}`)
-    .bind(like)
+    .prepare(`SELECT ${PERSONA_COLS} FROM personas WHERE ${nameWhere(['nombre'], tokens.length)} LIMIT ${MAX_RESULTS}`)
+    .bind(...nameBinds(['nombre'], tokens))
     .all();
   for (const r of personas?.results ?? []) out.push(hydratePersona(r, 'name'));
 
@@ -325,22 +373,25 @@ export async function searchHospitalized(
   const cedula = input.cedula ? normalizeCedula(input.cedula) : '';
   if (cedula && cedula.length >= 5) {
     const r: any = await env.DB
-      .prepare(`SELECT ${HOSP_COLS} FROM hospital_patients WHERE cedula = ? LIMIT ${MAX_RESULTS}`)
+      .prepare(`SELECT ${HOSP_COLS} FROM hospital_patients WHERE ${digitsExpr('cedula')} = ? LIMIT ${MAX_RESULTS}`)
       .bind(cedula)
       .all();
     for (const row of r?.results ?? []) out.push(hydrateHospital(row, 'national_id'));
   }
   if (input.name && input.name.trim()) {
-    const like = `%${normName(input.name)}%`;
-    const r: any = await env.DB
-      .prepare(
-        `SELECT ${HOSP_COLS} FROM hospital_patients
-         WHERE (lower(full_name) LIKE ? OR lower(name_variants) LIKE ?)
-         ORDER BY (estado='hospitalizado') DESC LIMIT ${MAX_RESULTS}`,
-      )
-      .bind(like, like)
-      .all();
-    for (const row of r?.results ?? []) out.push(hydrateHospital(row, 'name'));
+    const cols = ['full_name', 'name_variants'];
+    const tokens = nameTokens(normName(input.name));
+    if (tokens.length) {
+      const r: any = await env.DB
+        .prepare(
+          `SELECT ${HOSP_COLS} FROM hospital_patients
+           WHERE ${nameWhere(cols, tokens.length)}
+           ORDER BY (estado='hospitalizado') DESC LIMIT ${MAX_RESULTS}`,
+        )
+        .bind(...nameBinds(cols, tokens))
+        .all();
+      for (const row of r?.results ?? []) out.push(hydrateHospital(row, 'name'));
+    }
   }
   return dedupe(out).slice(0, MAX_RESULTS);
 }

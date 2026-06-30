@@ -192,8 +192,7 @@ telegram.post('/webhook', async (c) => {
         city: ai.city ?? cmd.city,
       };
       if (cmd.name) {
-        const words = cmd.name.split(/\s+/).filter(Boolean);
-        cmd.partialName = words.length < 2 || cmd.name.replace(/\s+/g, '').length < 3;
+        cmd.partialName = cmd.name.replace(/\s+/g, '').length < 3;
       }
     }
   }
@@ -215,7 +214,20 @@ telegram.post('/webhook', async (c) => {
     queryHash: fp,
   });
 
-  // 8. Reply.
-  await sendMessage(token, chatId, buildTelegramResponse(result, { lang: cmd.lang, role, canSeeSensitive }));
+  // 8. Anti-spam guard for groups: stay silent on non-actionable replies to
+  //    messages that were NOT explicitly addressed to the bot (no slash command,
+  //    no @-mention). Without this, if Telegram privacy mode were ever turned
+  //    off, the bot would answer "no record found" to every message in a busy
+  //    emergency group. Greetings/help and real matches are always sent.
+  const isGroup = chatType === 'group' || chatType === 'supergroup';
+  const addressed = /^\s*\//.test(msg.text) || msg.text.includes('@');
+  const quietKinds = new Set(['no_match', 'bad_input', 'need_more', 'multiple', 'error']);
+  if (isGroup && !addressed && quietKinds.has(result.kind)) {
+    return c.json({ ok: true });
+  }
+
+  // 9. Reply.
+  const baseUrl = c.env.PUBLIC_BASE_URL || 'https://sismo911.com';
+  await sendMessage(token, chatId, buildTelegramResponse(result, { lang: cmd.lang, role, canSeeSensitive, baseUrl }));
   return c.json({ ok: true });
 });

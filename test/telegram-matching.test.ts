@@ -11,29 +11,37 @@ import {
 import { resolveQuery } from '../src/telegram/route';
 import type { Env } from '../src/types';
 
-// --- Minimal in-memory fake D1 that understands exactly the adapter's queries.
+// --- Minimal in-memory fake D1 that understands the adapter's queries.
+// It mirrors the real SQL semantics: accent/case-insensitive substring matching
+// and token-AND name search (every bound %token% must appear in the column).
 function makeDB(data: Record<string, any[]>) {
   const tableOf = (sql: string) => /FROM\s+(\w+)/i.exec(sql)?.[1] ?? '';
-  const like = (val: any, pat: any) =>
-    String(val ?? '').toLowerCase().includes(String(pat).replace(/%/g, '').toLowerCase());
+  const fold = (s: any) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const digits = (s: any) => String(s ?? '').replace(/[.\-\sVEve]/g, '');
+  // every bound `%tok%` must be a substring of (any of) the folded column values
+  const matchAllTokens = (vals: any[], args: any[]) =>
+    args.every((a) => vals.some((v) => fold(v).includes(fold(String(a).replace(/%/g, '')))));
   function run(sql: string, args: any[]): any[] {
     const t = tableOf(sql);
+    // Detect predicates from the WHERE clause only — the SELECT column list also
+    // mentions full_name/cedula/etc and would cause false matches.
+    const where = sql.split(/\bWHERE\b/i)[1] ?? '';
     let rows = (data[t] ?? []).slice();
     if (t === 'persons') {
-      if (/case_number = \? OR id = \?/.test(sql)) rows = rows.filter((r) => r.case_number === args[0] || r.id === args[1] || r.id === args[0]);
-      else if (/WHERE id = \?/.test(sql)) rows = rows.filter((r) => r.id === args[0]);
-      else if (/lower\(full_name\) LIKE/.test(sql)) rows = rows.filter((r) => like(r.full_name, args[0]));
-      else if (/contact_phone/.test(sql)) rows = rows.filter((r) => like(String(r.contact_phone ?? '').replace(/[^0-9]/g, ''), args[0]));
+      if (/case_number = \? OR id = \?/.test(where)) rows = rows.filter((r) => r.case_number === args[0] || r.id === args[1] || r.id === args[0]);
+      else if (/contact_phone/.test(where)) rows = rows.filter((r) => fold(String(r.contact_phone ?? '').replace(/[^0-9]/g, '')).includes(String(args[0]).replace(/%/g, '')));
+      else if (/full_name/.test(where) && /LIKE/.test(where)) rows = rows.filter((r) => matchAllTokens([r.full_name], args));
+      else if (/\bid = \?/.test(where)) rows = rows.filter((r) => r.id === args[0]);
     } else if (t === 'personas') {
-      if (/WHERE id = \?/.test(sql)) rows = rows.filter((r) => r.id === args[0]);
-      else if (/lower\(nombre\) LIKE/.test(sql)) rows = rows.filter((r) => like(r.nombre, args[0]));
+      if (/nombre/.test(where) && /LIKE/.test(where)) rows = rows.filter((r) => matchAllTokens([r.nombre], args));
+      else if (/\bid = \?/.test(where)) rows = rows.filter((r) => r.id === args[0]);
     } else if (t === 'hospital_patients') {
-      if (/WHERE id = \?/.test(sql)) rows = rows.filter((r) => r.id === args[0]);
-      else if (/WHERE cedula = \?/.test(sql)) rows = rows.filter((r) => String(r.cedula) === String(args[0]));
-      else if (/full_name\) LIKE \? OR lower\(name_variants\)/.test(sql)) rows = rows.filter((r) => like(r.full_name, args[0]) || like(r.name_variants, args[1]));
-      else if (/telefono/.test(sql)) rows = rows.filter((r) => like(String(r.telefono ?? '').replace(/[^0-9]/g, ''), args[0]));
+      if (/cedula/.test(where) && /= \?/.test(where)) rows = rows.filter((r) => digits(r.cedula) === digits(args[0]));
+      else if (/telefono/.test(where)) rows = rows.filter((r) => fold(String(r.telefono ?? '').replace(/[^0-9]/g, '')).includes(String(args[0]).replace(/%/g, '')));
+      else if (/name_variants/.test(where)) rows = rows.filter((r) => matchAllTokens([r.full_name, r.name_variants], args));
+      else if (/\bid = \?/.test(where)) rows = rows.filter((r) => r.id === args[0]);
     } else if (t === 'case_identity') {
-      rows = rows.filter((r) => String(r.cedula) === String(args[0]) && r.result === 'match');
+      rows = rows.filter((r) => digits(r.cedula) === digits(args[0]) && r.result === 'match');
     }
     return rows;
   }
@@ -150,6 +158,27 @@ describe('searchPersonByName + DOB corroboration', () => {
   it('upgrades to name_dob when a DOB-derived age corroborates', async () => {
     const recs = await searchPersonByName(env(data), { name: 'Carlos Ramirez', dob: '1980-01-01' }, NOW);
     expect(recs.some((r) => r.matchStrength === 'name_dob')).toBe(true);
+  });
+});
+
+describe('name search is accent- AND case-insensitive, order-independent', () => {
+  const data = {
+    persons: [
+      { id: 'per_mo', full_name: 'Moisés Alejandro Carpio', age: 30, status: 'missing', review: 'approved', case_number: 'EXP-2026-0300', updated_ms: NOW },
+    ],
+    personas: [] as any[],
+  };
+  it('matches "Moises" (no accent) against stored "Moisés"', async () => {
+    expect((await searchPersonByName(env(data), { name: 'Moises Carpio' }, NOW)).length).toBe(1);
+  });
+  it('matches ALL CAPS', async () => {
+    expect((await searchPersonByName(env(data), { name: 'MOISES CARPIO' }, NOW)).length).toBe(1);
+  });
+  it('matches tokens in any order', async () => {
+    expect((await searchPersonByName(env(data), { name: 'carpio moises' }, NOW)).length).toBe(1);
+  });
+  it('matches the exact accented spelling too', async () => {
+    expect((await searchPersonByName(env(data), { name: 'Moisés Carpio' }, NOW)).length).toBe(1);
   });
 });
 
