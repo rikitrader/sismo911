@@ -19,6 +19,12 @@ const DEFAULT_URL = 'http://www.funvisis.gob.ve/maravilla.json';
 // times are local, so UTC = local + 4h.
 const VE_OFFSET_MS = 4 * 3600 * 1000;
 
+// A seismic origin time can never be in the future. FUNVISIS has shipped feed
+// entries stamped with a future local time (e.g. 20:07 while it's only ~01:00),
+// which then sort as "el último sismo" and freeze the elapsed-time cronómetro at
+// 00:00:00. Drop anything more than a small clock-skew ahead of now.
+const FUTURE_SKEW_MS = 5 * 60 * 1000;
+
 /** First signed number in a string, or null. "5.0 km" -> 5, "2,5" handled too. */
 function num(s: unknown): number | null {
   const m = String(s ?? '').replace(',', '.').match(/-?\d+(\.\d+)?/);
@@ -52,6 +58,9 @@ export function normalizeFunvisisFeature(f: any): SeismicEvent | null {
   const time_ms = parseFunvisisTime(p.postalCode, p.city);
   // Drop anything we can't place on a map or a timeline.
   if (lat == null || lon == null || mag == null || time_ms == null) return null;
+  // Drop physically-impossible future events (bad feed timestamps) — they would
+  // otherwise become "el último sismo" and stall the elapsed-time counter.
+  if (time_ms > Date.now() + FUTURE_SKEW_MS) return null;
 
   const datePart = String(p.postalCode ?? '').replace(/[^0-9]/g, '');
   const timePart = String(p.city ?? '').replace(/[^0-9]/g, '');

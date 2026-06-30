@@ -61,10 +61,13 @@ export async function recordIngest(
 }
 
 export async function listEvents(env: Env, limit = 100): Promise<SeismicEvent[]> {
+  // Exclude physically-impossible future-dated rows (bad source timestamps) so a
+  // future event can never sort as "el último sismo" and stall the cronómetro.
+  // 5-min skew tolerance for source/worker clock drift. Mirrors the ingest guard.
   const { results } = await env.DB.prepare(
     `SELECT id, source, mag, place, place_es, time_ms, updated_ms, lat, lon, depth_km, mmi, alert, tsunami, felt, url
-     FROM events WHERE dup_of IS NULL ORDER BY time_ms DESC LIMIT ?`
-  ).bind(limit).all<SeismicEvent>();
+     FROM events WHERE dup_of IS NULL AND time_ms <= ? ORDER BY time_ms DESC LIMIT ?`
+  ).bind(Date.now() + 5 * 60 * 1000, limit).all<SeismicEvent>();
   return results ?? [];
 }
 
