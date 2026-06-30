@@ -8,6 +8,7 @@ import {
 import sectorsRaw from '../data/buildings/sectors.json';
 import curatedRaw from '../data/buildings/curated.json';
 import osmRaw from '../data/buildings/osm.json';
+import osmDpmRaw from '../data/buildings/osm_dpm.json'; // observed NASA Sentinel-1 DPM per footprint, keyed "lat,lon"
 
 // BUILDINGS DAMAGE ENGINE (/api/buildings) — el "motor" de daño estructural.
 //
@@ -20,6 +21,7 @@ export const buildings = new Hono<{ Bindings: Env }>();
 const SECTORS = sectorsRaw as Record<string, Sector>;
 const CURATED = curatedRaw as Curated[];
 const OSM = osmRaw as Osm[];
+const OSM_DPM = osmDpmRaw as Record<string, number>; // "lat,lon" -> observed damage_probability
 
 // Score everything once at module load (deterministic, cheap).
 const SCORED_CURATED: Scored[] = CURATED
@@ -28,8 +30,9 @@ const SCORED_CURATED: Scored[] = CURATED
   .sort((a, z) => z.score - a.score);
 const SCORED_OSM: Scored[] = OSM
   .filter((o) => SECTORS[o.sector])
-  .map((o) => scoreOsm(o, SECTORS[o.sector]))
+  .map((o) => scoreOsm(o, SECTORS[o.sector], OSM_DPM[`${o.lat},${o.lon}`]))
   .sort((a, z) => z.score - a.score);
+const DPM_OBSERVED = SCORED_OSM.filter((r) => r.dpmProb != null).length;
 
 const COLLAPSED_STATUSES = new Set(['COLAPSO_TOTAL', 'COLAPSO_PARCIAL', 'CONDENADO', 'DANADO']);
 
@@ -49,8 +52,9 @@ const METHODOLOGY = {
   priorBlend: PRIOR_BLEND,
   priorSources: ['NASA Sentinel-1 DPM (Oregon State)', 'Microsoft AI for Good Lab'],
   bands: { CRITICO: '80-100', ALTO: '60-79', MODERADO: '40-59', BAJO: '20-39', MINIMO: '0-19' },
-  dataQuality: { DIRECT: 'daño reportado por fuente', MODELED: 'estimado por el modelo', LOW_DATA: 'suelo/construcción desconocidos' },
-  tiers: { HIGH: 'T1/0.85', MEDIUM: 'T2/0.60', LOW: 'T3/0.35' },
+  dataQuality: { DIRECT: 'daño reportado por fuente', 'OBSERVED-DPM': 'NASA Sentinel-1 detectó daño en la huella (damage_probability)', MODELED: 'estimado por el modelo', LOW_DATA: 'suelo/construcción desconocidos' },
+  dpmOverlay: 'Huellas OSM cruzadas (≤40m) con estructuras dañadas de NASA Sentinel-1 (damage=1); cuando hay coincidencia, la probabilidad observada reemplaza al MMI como término de peligro.',
+  tiers: { HIGH: 'T1/0.85', 'NASA-DPM': 'T2/0.85', MEDIUM: 'T2/0.60', LOW: 'T3/0.35' },
   event: 've-eq-2026-06-24 · Mw 7.2 (us6000t7zc) + Mw 7.5 (us6000t7zp) · ShakeMap MMI max 9.05',
   caveat: 'No existe censo oficial certificado (CIV + Min. Hábitat). Estimación + prensa; reportes ciudadanos no verificados.',
 };
@@ -105,7 +109,7 @@ buildings.get('/summary', async (c) => {
     const reported = SCORED_CURATED.filter((r) => COLLAPSED_STATUSES.has(r.status)).length;
     return {
       event: METHODOLOGY.event, total: all.length, curated: SCORED_CURATED.length, osm: SCORED_OSM.length,
-      reported_damaged: reported, by_band: byBand, by_state: byState, by_sector: bySector,
+      reported_damaged: reported, dpm_observed: DPM_OBSERVED, by_band: byBand, by_state: byState, by_sector: bySector,
       methodology: METHODOLOGY,
     };
   });
