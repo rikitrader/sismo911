@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   mmiToHaz, vulnFactor, band, scoreCurated, scoreOsm, PRIOR_BLEND, damageRatio, computeCost,
-  type Sector, type Curated, type Osm,
+  computeSar, estimateOccupants, sarSeverity, type Sector, type Curated, type Osm, type Scored,
 } from '../src/lib/building-score';
 
 // Building damage-scoring engine invariants (CROSS-CHECK GATE): scores bounded
@@ -152,5 +152,45 @@ describe('cost model (replacement + repair)', () => {
     expect(r.cost).toBeDefined();
     expect(r.cost!.repairUsd).toBeLessThanOrEqual(r.cost!.replacementUsd);
     expect(r.cost!.replacementUsd).toBeGreaterThan(0);
+  });
+});
+
+describe('SAR triage', () => {
+  const collapsed: Scored = {
+    score: 98, band: 'CRITICO', dq: 'DIRECT', name: 'Edif', use: 'RESIDENCIAL', addr: 'x',
+    sector: 'Los Corales', parish: 'Caraballeda', city: 'La Guaira', state: 'La Guaira',
+    status: 'COLAPSO_TOTAL', notes: '', conf: 'HIGH', tier: 1, confNum: 0.85,
+    lat: 10.61, lon: -66.85, soil: 1.45, prior: 0.55, mmi: 8.7, vulnX: 1.3, modeled: 90,
+    source: 's', cost: { areaM2: 500, areaSrc: 'OSM', levels: 8, levSrc: 'OSM', floorM2: 4000,
+      unitUsdM2: 700, replacementUsd: 2800000, damageRatio: 1, repairUsd: 2800000, costConf: 'HIGH' },
+  };
+  const fine: Scored = { ...collapsed, status: 'HABITABLE', band: 'BAJO', score: 25, dpmProb: undefined };
+
+  it('estimateOccupants uses floor area ÷ density', () => {
+    expect(estimateOccupants('RESIDENCIAL', 4000)).toBe(133); // 4000/30
+    expect(estimateOccupants('RESIDENCIAL', undefined)).toBe(0);
+  });
+  it('sarSeverity: collapse=1, partial=0.75, undamaged≈0', () => {
+    expect(sarSeverity('COLAPSO_TOTAL', 'CRITICO')).toBe(1);
+    expect(sarSeverity('COLAPSO_PARCIAL', 'ALTO')).toBe(0.75);
+    expect(sarSeverity('HABITABLE', 'BAJO')).toBe(0);
+  });
+  it('collapsed building → SAR row, INMEDIATA, bounded, occupants estimated', () => {
+    const s = computeSar(collapsed)!;
+    expect(s).not.toBeNull();
+    expect(s.sarScore).toBeGreaterThan(0);
+    expect(s.sarScore).toBeLessThanOrEqual(100);
+    expect(s.priority).toBe('INMEDIATA');
+    expect(s.occupantsEst).toBe(133);
+  });
+  it('undamaged building → not SAR-relevant (null)', () => {
+    expect(computeSar(fine)).toBeNull();
+  });
+  it('reported missing boosts SAR score and is carried through', () => {
+    const base = computeSar(collapsed)!.sarScore;
+    const withMissing = computeSar(collapsed, ['Ana', 'Luis'])!;
+    expect(withMissing.missingCount).toBe(2);
+    expect(withMissing.sarScore).toBeGreaterThanOrEqual(base);
+    expect(withMissing.sarScore).toBeLessThanOrEqual(100);
   });
 });

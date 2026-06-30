@@ -3,7 +3,7 @@ import type { Env } from '../types';
 import { rateLimit } from '../lib/security';
 import { edgeCached } from '../lib/edge-cache';
 import {
-  scoreCurated, scoreOsm, type Sector, type Curated, type Osm, type Scored, PRIOR_BLEND,
+  scoreCurated, scoreOsm, computeSar, type Sector, type Curated, type Osm, type Scored, type Sar, PRIOR_BLEND,
 } from '../lib/building-score';
 import sectorsRaw from '../data/buildings/sectors.json';
 import curatedRaw from '../data/buildings/curated.json';
@@ -33,6 +33,21 @@ const SCORED_OSM: Scored[] = OSM
   .map((o) => scoreOsm(o, SECTORS[o.sector], OSM_DPM[`${o.lat},${o.lon}`]))
   .sort((a, z) => z.score - a.score);
 const DPM_OBSERVED = SCORED_OSM.filter((r) => r.dpmProb != null).length;
+
+// SAR triage list — damaged buildings ranked for search & rescue, with estimated
+// occupants and any reported missing-person names (deep-linkable to /personas).
+interface SarRow extends Sar { name: string; addr: string; sector: string; state: string;
+  status: string; dq: string; lat: number; lon: number; caseQuery: string; }
+const SAR: SarRow[] = [...SCORED_CURATED, ...SCORED_OSM]
+  .map((b) => {
+    const sar = computeSar(b, b.missing ?? []);
+    if (!sar) return null;
+    return { ...sar, name: b.name, addr: b.addr, sector: b.sector, state: b.state,
+      status: b.status, dq: b.dq, lat: b.lat, lon: b.lon,
+      caseQuery: (b.missing && b.missing[0]) ? b.missing[0] : b.name };
+  })
+  .filter((x): x is SarRow => x !== null)
+  .sort((a, z) => z.sarScore - a.sarScore || z.occupantsEst - a.occupantsEst);
 
 const COLLAPSED_STATUSES = new Set(['COLAPSO_TOTAL', 'COLAPSO_PARCIAL', 'CONDENADO', 'DANADO']);
 
@@ -122,6 +137,52 @@ buildings.get('/summary', async (c) => {
         note: 'Estimación de ingeniería (HAZUS + costos reales VE 2026), NO tasación oficial. Total OSM cubre solo edificios con nombre → subestima el agregado real.',
       },
       methodology: METHODOLOGY,
+    };
+  });
+});
+
+// ── GET /api/buildings/sar — search & rescue priority list ────────────────────
+// Damaged buildings ranked by rescue priority (severity × estimated occupants,
+// boosted by reported missing). ?state= ?priority=INMEDIATA|ALTA|MEDIA ?limit=
+buildings.get('/sar', async (c) => {
+  const limited = await rateLimit(c.env, c, 'buildings_sar', 60, 60);
+  if (limited) return limited;
+  const state = c.req.query('state');
+  const priority = c.req.query('priority');
+  const limit = Math.min(Math.max(Number(c.req.query('limit')) || 300, 1), 2000);
+  return edgeCached(c, 300, async () => {
+    let rows = SAR;
+    if (state) rows = rows.filter((r) => r.state.toLowerCase() === state.toLowerCase());
+    if (priority) rows = rows.filter((r) => r.priority === priority.toUpperCase());
+    return {
+      event: METHODOLOGY.event,
+      count: rows.length,
+      note: 'Triage de rescate: prioridad = severidad × ocupantes estimados (ocupación nocturna; sismo 18:04 VET), realzado por desaparecidos reportados. "Ocupantes estimados" = personas probablemente dentro, NO un conteo de atrapados. Estimación, no censo de campo.',
+      methodology: {
+        priority: 'sarScore≥70 INMEDIATA · ≥45 ALTA · ≥25 MEDIA · resto BAJA',
+        occupants: 'área construida ÷ densidad (RESIDENCIAL 30 m²/persona; HAZUS occupancy)',
+        cases: 'caseQuery → /personas?q= (buscar desaparecidos vinculados)',
+      },
+      buildings: rows.slice(0, limit),
+    };
+  });
+});
+
+// ── GET /api/buildings/sar/summary — SAR aggregate ────────────────────────────
+buildings.get('/sar/summary', async (c) => {
+  return edgeCached(c, 300, async () => {
+    const byPriority: Record<string, number> = {};
+    let occupants = 0; const missingNames = new Set<string>(); let withMissing = 0;
+    for (const r of SAR) {
+      byPriority[r.priority] = (byPriority[r.priority] || 0) + 1;
+      occupants += r.occupantsEst;
+      if (r.missingCount) { withMissing++; r.missing.forEach((n) => missingNames.add(n)); }
+    }
+    return {
+      event: METHODOLOGY.event, sar_buildings: SAR.length, by_priority: byPriority,
+      estimated_occupants: occupants, buildings_with_reported_missing: withMissing,
+      reported_missing_names: [...missingNames],
+      note: 'Ocupantes = estimación de personas dentro (ocupación nocturna), NO atrapados. Desaparecidos = nombres reportados por prensa/DBs ciudadanas, no verificados.',
     };
   });
 });

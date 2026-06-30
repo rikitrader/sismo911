@@ -73,6 +73,20 @@
     <div class="card pad stat"><div class="n num" id="s_repl">—</div><div class="l">Costo reemplazo (estim.)</div></div>
   </div>
 
+  <!-- SAR — search & rescue priority -->
+  <div class="card pad" style="margin-bottom:14px;border-color:#f04438">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <h2 style="color:#d92d20">🔺 Prioridad de Rescate (SAR)</h2>
+      <span id="sarSum" style="font-size:12px;color:var(--ops-muted)"></span>
+    </div>
+    <div style="font-size:11px;color:var(--ops-muted);margin:4px 0 10px"><b>Ocupantes estimados</b> = personas probablemente dentro (ocupación nocturna; sismo 18:04 VET), <b>no</b> un conteo de atrapados. Desaparecidos = nombres reportados (prensa/DBs ciudadanas), no verificados. Clic en un nombre → buscar en Desaparecidos.</div>
+    <div style="overflow:auto;max-height:340px">
+      <table class="dt"><thead><tr>
+        <th>Prioridad</th><th>Edificio</th><th>Severidad</th><th>Ocupantes est.</th><th>Desaparecidos reportados</th>
+      </tr></thead><tbody id="sarBody"><tr><td colspan="5" style="padding:14px;color:var(--ops-muted)">Cargando…</td></tr></tbody></table>
+    </div>
+  </div>
+
   <!-- filters -->
   <div class="card pad" style="margin-bottom:14px">
     <div class="filters">
@@ -194,6 +208,32 @@
   }
   function refresh(){ var rows=filtered(); renderMap(rows); renderTable(rows); }
 
+  var PRIOC={INMEDIATA:'#d92d20',ALTA:'#f04438',MEDIA:'#f5c518',BAJA:'#a6d96a'};
+  async function loadSar(){
+    var sum=await fetch('/api/buildings/sar/summary').then(function(x){return x.json();});
+    var bp=sum.by_priority||{};
+    document.getElementById('sarSum').textContent=
+      sum.sar_buildings+' edificios · ~'+fmtN(sum.estimated_occupants)+' ocupantes estimados · '+
+      (bp.INMEDIATA||0)+' inmediata / '+(bp.ALTA||0)+' alta · '+fmtN(sum.buildings_with_reported_missing)+' con desaparecidos reportados';
+    var d=await fetch('/api/buildings/sar?limit=80').then(function(x){return x.json();});
+    var rows=d.buildings||[];
+    document.getElementById('sarBody').innerHTML=rows.map(function(r){
+      var col=PRIOC[r.priority]||'#9aa4b2';
+      var miss=(r.missing&&r.missing.length)
+        ? r.missing.map(function(n){ return '<a href="/personas?q='+encodeURIComponent(n)+'" style="color:#1570ef;text-decoration:underline">'+esc(n)+'</a>'; }).join(', ')
+        : '<span style="color:var(--ops-muted)">—</span>';
+      return '<tr class="row" data-lat="'+r.lat+'" data-lon="'+r.lon+'">'+
+        '<td><span class="chip" style="background:'+col+'">'+esc(r.priority)+'</span><div style="font-size:10px;color:var(--ops-muted);margin-top:2px">SAR '+r.sarScore+'</div></td>'+
+        '<td><b>'+esc(r.name)+'</b><div style="font-size:11px;color:var(--ops-muted)">'+esc(r.sector)+', '+esc(r.state)+'</div></td>'+
+        '<td>'+esc(r.sevLabel)+'</td>'+
+        '<td class="num">'+fmtN(r.occupantsEst)+'</td>'+
+        '<td>'+miss+'</td></tr>';
+    }).join('')||'<tr><td colspan="5" style="padding:14px;color:var(--ops-muted)">Sin edificios en triage.</td></tr>';
+    document.querySelectorAll('#sarBody tr.row').forEach(function(tr){
+      tr.addEventListener('click',function(e){ if(e.target.tagName==='A')return; focusBuilding(+tr.getAttribute('data-lat'),+tr.getAttribute('data-lon')); });
+    });
+  }
+
   function initMap(){
     map=L.map('map',{attributionControl:false}).setView([10.55,-66.90],10);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
@@ -238,6 +278,7 @@
     window.addEventListener('hashchange',applyHash);
     refresh();
     applyHash();
+    loadSar();
   }
   boot();
 })();
