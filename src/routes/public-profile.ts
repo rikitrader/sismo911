@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { isX402Live, x402Network, x402Asset } from '../lib/x402';
+import { isStripeLive } from '../lib/stripe';
 
 // Public payment profile — the page behind a citizen's "Enlace público"
 // (sismo911.com/u/:id). PUBLIC by design: anyone, logged-in or not, can view a
@@ -125,7 +126,9 @@ publicProfile.get('/:id/cobro/:slug', async (c) => {
       WHERE user_id = ? AND slug = ? AND archived_ms IS NULL LIMIT 1`
   ).bind(u.id, slug).first();
   if (!r || !r.active) return c.json({ ok: false, found: false }, 404);
-  if (r.kind === 'stripe') return c.json({ ok: false, found: false }, 404); // deferred
+  // Stripe links are payable only when the card rail is live; otherwise the link
+  // exists but has no working checkout yet (mirrors x402's gated behaviour).
+  if (r.kind === 'stripe' && !isStripeLive(c.env)) return c.json({ ok: false, found: false }, 404);
 
   const payTo = u.x402_pay_to || u.wallet_address || null;
   const receiving = Boolean(u.x402_enabled && payTo);
@@ -149,6 +152,11 @@ publicProfile.get('/:id/cobro/:slug', async (c) => {
       live: isX402Live(c.env), receiving, payTo,
       network, asset: u.x402_asset || x402Asset(c.env, network),
       payUrl: new URL(`/api/x402/pay/${u.id}/${r.slug}`, c.req.url).toString(),
+    },
+    stripe: {
+      // Card checkout is available for stripe-kind links when the rail is live.
+      live: (r.kind || '') === 'stripe' && isStripeLive(c.env),
+      checkoutUrl: new URL(`/api/stripe/checkout/${u.id}/${r.slug}`, c.req.url).toString(),
     },
   });
 });

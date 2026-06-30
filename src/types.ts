@@ -131,6 +131,15 @@ export interface Env {
   X402_FACILITATOR_API_KEY?: string; // optional bearer for facilitators that require auth (e.g. CDP mainnet)
   X402_PAYMENTS_ENABLED?: string;    // feature flag: 'true' + a facilitator → payments go LIVE (advertise + accept). Default off.
 
+  // --- Stripe Checkout (receiving) + Connect (payouts) ----------------------
+  // All optional + gated (isStripeLive = key present AND flag on), like x402.
+  // Inert by design until a supported-country Stripe account + keys exist
+  // (Stripe does not onboard Venezuela-based entities).
+  STRIPE_SECRET_KEY?: string;        // sk_live_… / sk_test_…  (server-side secret)
+  STRIPE_WEBHOOK_SECRET?: string;    // whsec_…  (endpoint signing secret for /api/stripe/webhook)
+  STRIPE_PAYMENTS_ENABLED?: string;  // feature flag: 'true' + a secret key → Stripe goes LIVE. Default off. (in [vars])
+  STRIPE_CONNECT_COUNTRY?: string;   // default country for new Express accounts (e.g. 'US'). (in [vars])
+
   // --- DB Ingestion Gatekeeper (src/security/*) -----------------------------
   // All optional: the gate has safe built-in defaults and degrades gracefully.
   // Cloudflare Turnstile server secret (verify the public widget token). When

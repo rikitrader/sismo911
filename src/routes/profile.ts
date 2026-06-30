@@ -8,6 +8,7 @@ import { x402Network, x402Asset } from '../lib/x402';
 import { scanFile } from '../security/file-scan';
 import { stripImageMetadata } from '../security/image-metadata';
 import { notify } from '../lib/notify';
+import { isStripeLive } from '../lib/stripe';
 import {
   WITHDRAWAL_METHODS, type WithdrawalMethod, computeBalance, withdrawnLast24h,
   maskDestination, riskScore, PER_TX_MAX_USD, DAILY_MAX_USD, MIN_WITHDRAWAL_USD,
@@ -428,23 +429,44 @@ profile.get('/payments/summary', async (c) => {
     by_status[r.status] = { n: Number(r.n) || 0, usd: Number(r.usd) || 0 };
     if (r.status === 'failed') failed = Number(r.n) || 0;
   }
-  const count = Number(settled?.n) || 0;
-  const total = Number(settled?.usd) || 0;
+  const x402Count = Number(settled?.n) || 0;
+  const x402Total = Number(settled?.usd) || 0;
+  let x402Month = Number(thisMonth?.usd) || 0;
+
+  // Fold in paid Stripe (card) receipts (tolerant if the table is absent).
+  let stripeCount = 0, stripeTotal = 0, stripeMonth = 0, stripeLast: number | null = null;
+  try {
+    const sp: any = await c.env.DB.prepare(
+      `SELECT COUNT(*) AS n, COALESCE(SUM(amount_usd),0) AS usd, MAX(COALESCE(paid_ms,created_ms)) AS ms FROM stripe_payments WHERE payee_user_id = ? AND status = 'paid'`
+    ).bind(id).first();
+    const spm: any = await c.env.DB.prepare(
+      `SELECT COALESCE(SUM(amount_usd),0) AS usd FROM stripe_payments WHERE payee_user_id = ? AND status = 'paid' AND COALESCE(paid_ms,created_ms) >= ?`
+    ).bind(id, monthStart).first();
+    stripeCount = Number(sp?.n) || 0; stripeTotal = Number(sp?.usd) || 0;
+    stripeLast = sp?.ms ?? null; stripeMonth = Number(spm?.usd) || 0;
+  } catch { /* stripe_payments absent on older schema → 0 */ }
+
+  const count = x402Count + stripeCount;
+  const total = Math.round((x402Total + stripeTotal) * 100) / 100;
+  const lastPaymentMs = Math.max(Number(lastPay?.ms) || 0, Number(stripeLast) || 0) || null;
 
   return c.json({
     ok: true,
     summary: {
       total_received_usd: total,
       count,
-      this_month_usd: Number(thisMonth?.usd) || 0,
+      this_month_usd: Math.round((x402Month + stripeMonth) * 100) / 100,
       avg_usd: count ? Math.round((total / count) * 100) / 100 : 0,
       failed_count: failed,
       active_links: Number(activeLinks?.n) || 0,
       pending_invoices: 0, // invoices land in W3/W4
-      last_payment_ms: lastPay?.ms ?? null,
+      last_payment_ms: lastPaymentMs,
     },
     by_status,
-    by_provider: { x402: { n: count, usd: total } }, // only x402 settles today
+    by_provider: {
+      x402: { n: x402Count, usd: x402Total },
+      ...(stripeCount ? { stripe: { n: stripeCount, usd: Math.round(stripeTotal * 100) / 100 } } : {}),
+    },
     monthly: ((monthly.results ?? []) as any[]).reverse().map((r) => ({ ym: r.ym, n: Number(r.n) || 0, usd: Number(r.usd) || 0 })),
     top_links: ((topLinks.results ?? []) as any[]).map((r) => ({ title: r.title, n: Number(r.n) || 0, usd: Number(r.usd) || 0 })),
   });
@@ -465,11 +487,10 @@ function payUrlFor(reqUrl: string, userId: string, slug: string, kind: string): 
 }
 
 // Human-facing hosted checkout. Every payable kind (x402 USDC, open-amount
-// donation, invoice) shares one branded page at /pagar/:user/:slug; Stripe is
-// deferred so it has no checkout yet. This is the link a person clicks/shares —
-// distinct from payUrlFor (the raw 402 endpoint agents hit programmatically).
-function checkoutUrlFor(reqUrl: string, userId: string, slug: string, kind: string): string | null {
-  if (kind === 'stripe') return null;
+// donation, invoice, Stripe card) shares one branded page at /pagar/:user/:slug.
+// This is the link a person clicks/shares — distinct from payUrlFor (the raw 402
+// endpoint agents hit programmatically; Stripe has none).
+function checkoutUrlFor(reqUrl: string, userId: string, slug: string, _kind: string): string | null {
   return new URL(`/pagar/${userId}/${slug}`, reqUrl).toString();
 }
 
@@ -517,7 +538,7 @@ profile.get('/payment-links', async (c) => {
       payUrl: payUrlFor(c.req.url, me.id, r.slug, kind),
       checkoutUrl: checkoutUrlFor(c.req.url, me.id, r.slug, kind),
       campaignUrl: campaignUrlFor(c.req.url, me.id, r.slug, kind, Boolean(r.campaign_public)),
-      live: kind === 'x402' || kind === 'donation' || kind === 'invoice',
+      live: kind === 'x402' || kind === 'donation' || kind === 'invoice' || (kind === 'stripe' && isStripeLive(c.env)),
     };
   });
   return c.json({ ok: true, links });
@@ -537,7 +558,8 @@ profile.post('/payment-links', async (c) => {
   const price = Number(b.price_usd ?? b.amount);
   if (!(price >= 0) || !isFinite(price)) return c.json({ error: 'price_invalid' }, 400);
   const kind = LINK_KINDS.includes(b.kind) ? b.kind : 'x402';
-  if (kind === 'stripe') return c.json({ error: 'kind_unavailable', detail: 'Stripe aún no está disponible.' }, 400);
+  // Stripe links may be created any time; the checkout endpoint itself is gated
+  // on isStripeLive, so an inert deployment records the link but won't charge.
   const currency = str(b.currency, 8) || (kind === 'x402' ? 'USDC' : 'USD');
   const active = b.active === false ? 0 : 1;
   const now = Date.now();
@@ -577,7 +599,7 @@ profile.post('/payment-links', async (c) => {
     payUrl: payUrlFor(c.req.url, me.id, slug, kind),
     checkoutUrl: checkoutUrlFor(c.req.url, me.id, slug, kind),
     campaignUrl: campaignUrlFor(c.req.url, me.id, slug, kind, Boolean(campaignPublic)),
-    live: kind === 'x402' || kind === 'donation' || kind === 'invoice',
+    live: kind === 'x402' || kind === 'donation' || kind === 'invoice' || (kind === 'stripe' && isStripeLive(c.env)),
   } }, 201);
 });
 
@@ -596,7 +618,7 @@ profile.patch('/payment-links/:id', async (c) => {
   if (b.description !== undefined) { sets.push('description=?'); vals.push(str(b.description, 500)); }
   if (b.price_usd !== undefined) { const p = Number(b.price_usd); if (!(p >= 0) || !isFinite(p)) return c.json({ error: 'price_invalid' }, 400); sets.push('price_usd=?'); vals.push(p); }
   if (b.currency !== undefined) { sets.push('currency=?'); vals.push(str(b.currency, 8) || 'USD'); }
-  if (b.kind !== undefined) { if (!LINK_KINDS.includes(b.kind) || b.kind === 'stripe') return c.json({ error: 'kind_invalid' }, 400); sets.push('kind=?'); vals.push(b.kind); }
+  if (b.kind !== undefined) { if (!LINK_KINDS.includes(b.kind)) return c.json({ error: 'kind_invalid' }, 400); sets.push('kind=?'); vals.push(b.kind); }
   if (b.active !== undefined) { if (typeof b.active !== 'boolean') return c.json({ error: 'active_must_be_boolean' }, 400); sets.push('active=?'); vals.push(b.active ? 1 : 0); }
   // Donation campaign fields
   if (b.goal_usd !== undefined) { const g = b.goal_usd === null || b.goal_usd === '' ? null : Number(b.goal_usd); if (g !== null && (!(g > 0) || !isFinite(g))) return c.json({ error: 'goal_invalid' }, 400); sets.push('goal_usd=?'); vals.push(g); }
@@ -661,6 +683,30 @@ profile.get('/accounting/ledger', async (c) => {
     reconciled: Boolean(p.reconciled), reconciled_ms: p.reconciled_ms ?? null,
   }));
 
+  // Merge the Stripe (card) ledger. A paid Stripe receipt is real money, so it
+  // maps to status 'settled' for the KPI rollup (tolerant if the table is absent).
+  try {
+    const sp = await c.env.DB.prepare(
+      `SELECT sp.id, sp.created_ms, sp.paid_ms, sp.payer_email, sp.amount_usd, sp.currency, sp.status,
+              sp.session_id, sp.payment_intent, sp.tax_category, sp.notes, sp.reconciled, sp.reconciled_ms,
+              r.title AS link_title
+         FROM stripe_payments sp
+         LEFT JOIN x402_resources r ON r.id = sp.resource_id
+        WHERE sp.payee_user_id = ? ORDER BY sp.created_ms DESC LIMIT 500`
+    ).bind(me.id).all();
+    for (const p of (sp.results ?? []) as any[]) {
+      rows.push({
+        id: p.id, date_ms: p.paid_ms || p.created_ms, payer: p.payer_email ?? null,
+        provider: 'stripe', amount_usd: Number(p.amount_usd) || 0, currency: p.currency || 'USD',
+        status: p.status === 'paid' ? 'settled' : p.status, link_title: p.link_title ?? null,
+        tx_hash: null, ref: p.payment_intent || p.session_id || null,
+        tax_category: p.tax_category ?? null, notes: p.notes ?? null,
+        reconciled: Boolean(p.reconciled), reconciled_ms: p.reconciled_ms ?? null,
+      });
+    }
+    rows.sort((a, b) => (b.date_ms || 0) - (a.date_ms || 0));
+  } catch { /* stripe_payments absent on older schema → x402-only ledger */ }
+
   // KPIs over SETTLED rows only (real money). Fees are 0 for x402 → net = gross.
   const settled = rows.filter((r) => r.status === 'settled');
   const gross = settled.reduce((s, r) => s + r.amount_usd, 0);
@@ -690,7 +736,9 @@ profile.patch('/accounting/ledger/:id', async (c) => {
   const me = await getUserFromRequest(c.env, c);
   if (!me) return c.json({ error: 'unauthorized' }, 401);
   const id = c.req.param('id');
-  const owns: any = await c.env.DB.prepare(`SELECT id FROM x402_payments WHERE id=? AND payee_user_id=?`).bind(id, me.id).first();
+  // Stripe ledger rows (stp_…) live in stripe_payments; x402 rows in x402_payments.
+  const table = id.startsWith('stp_') ? 'stripe_payments' : 'x402_payments';
+  const owns: any = await c.env.DB.prepare(`SELECT id FROM ${table} WHERE id=? AND payee_user_id=?`).bind(id, me.id).first();
   if (!owns) return c.json({ error: 'not_found' }, 404);
   const b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object') return c.json({ error: 'bad_body' }, 400);
@@ -708,7 +756,7 @@ profile.patch('/accounting/ledger/:id', async (c) => {
   }
   if (!sets.length) return c.json({ error: 'nothing_to_update' }, 400);
   vals.push(id);
-  await c.env.DB.prepare(`UPDATE x402_payments SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
+  await c.env.DB.prepare(`UPDATE ${table} SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
   await audit(c, 'profile.accounting.update', { id, fields: sets.map((s) => s.split('=')[0]) });
   return c.json({ ok: true });
 });
@@ -760,7 +808,17 @@ profile.post('/withdrawals', async (c) => {
 
   const method = String(b.method_type || '') as WithdrawalMethod;
   if (!WITHDRAWAL_METHODS.includes(method)) return c.json({ error: 'method_invalid' }, 400);
-  if (method === 'stripe') return c.json({ error: 'method_unavailable', detail: 'Stripe payouts no están disponibles aún.' }, 400);
+  // Stripe payouts route to the user's Connect account — only allowed once that
+  // account exists AND Stripe says payouts are enabled (onboarding/KYC complete).
+  // Settlement itself stays on the manual operator rail (pending_review below);
+  // we never auto-transfer, consistent with every other payout method here.
+  let stripeAcct: any = null;
+  if (method === 'stripe') {
+    if (!isStripeLive(c.env)) return c.json({ error: 'method_unavailable', detail: 'Stripe payouts no están disponibles.' }, 400);
+    stripeAcct = await c.env.DB.prepare(`SELECT account_id, payouts_enabled FROM stripe_accounts WHERE user_id=?`).bind(me.id).first();
+    if (!stripeAcct) return c.json({ error: 'connect_required', detail: 'Conecta tu cuenta de Stripe antes de retirar por Stripe.' }, 400);
+    if (!stripeAcct.payouts_enabled) return c.json({ error: 'connect_incomplete', detail: 'Completa la verificación de tu cuenta de Stripe (payouts aún no habilitados).' }, 400);
+  }
   const amount = Number(b.amount_source ?? b.amount);
   if (!(amount >= MIN_WITHDRAWAL_USD) || !isFinite(amount)) return c.json({ error: 'amount_invalid' }, 400);
   if (amount > PER_TX_MAX_USD) return c.json({ error: 'over_per_tx_limit', limit: PER_TX_MAX_USD }, 400);
@@ -781,7 +839,11 @@ profile.post('/withdrawals', async (c) => {
   const today = await withdrawnLast24h(c.env, me.id, now);
   if (today + net > DAILY_MAX_USD) return c.json({ error: 'over_daily_limit', limit: DAILY_MAX_USD, already: today }, 400);
 
-  const { summary, redacted } = maskDestination(method, (b.destination && typeof b.destination === 'object') ? b.destination : {});
+  // For Stripe, the destination is the verified Connect account (not user-supplied).
+  const destInput = method === 'stripe'
+    ? { account_id: stripeAcct?.account_id }
+    : (b.destination && typeof b.destination === 'object') ? b.destination : {};
+  const { summary, redacted } = maskDestination(method, destInput);
   const risk = riskScore(method, amount);
   // No licensed payout provider → ALWAYS pending_review (manual operator action).
   const status = 'pending_review';
