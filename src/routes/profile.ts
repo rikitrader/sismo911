@@ -9,6 +9,7 @@ import { scanFile } from '../security/file-scan';
 import { stripImageMetadata } from '../security/image-metadata';
 import { notify } from '../lib/notify';
 import { isStripeLive } from '../lib/stripe';
+import { upsertFromPayee } from '../lib/contacts';
 import {
   WITHDRAWAL_METHODS, type WithdrawalMethod, computeBalance, withdrawnLast24h,
   maskDestination, riskScore, PER_TX_MAX_USD, DAILY_MAX_USD, MIN_WITHDRAWAL_USD,
@@ -910,6 +911,12 @@ profile.post('/withdrawal-methods', async (c) => {
     `INSERT INTO withdrawal_methods (id,user_id,type,label,details_json,is_default,created_ms,updated_ms) VALUES (?,?,?,?,?,?,?,?)`
   ).bind(id, me.id, type, label, JSON.stringify(redacted), b.is_default ? 1 : 0, now, now).run();
   await audit(c, 'withdrawal.method.add', { id, type });
+  // Auto-create/update a Contacto from a new "send" wallet (per the address book
+  // feature). Best-effort — a contacts hiccup must never block saving the method.
+  try {
+    const rawAddr = (b.details && typeof b.details === 'object') ? String(b.details.address || b.details.wallet_address || '').trim() : '';
+    if (type === 'usdc' && rawAddr) await upsertFromPayee(c.env, me.id, { wallet_address: rawAddr, display_name: str(b.label, 160) || undefined }, now);
+  } catch { /* contacts auto-create is best-effort */ }
   return c.json({ ok: true, method: { id, type, label, is_default: Boolean(b.is_default), details: redacted } }, 201);
 });
 
