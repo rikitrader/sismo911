@@ -7,8 +7,8 @@ import { CRON_GROUPS, jobsForCron } from '../src/cron';
 // per hour), every job has a runner, and the cron keys match wrangler.toml.
 
 const ALL_JOB_NAMES = [
-  'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders',
-  'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match',
+  'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync',
+  'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match', 'hospital-registry-match',
   'familia-photo-mirror', 'monitor-sheet', 'case-alerts', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
   'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe', 'rav-reports-dedupe-extid',
@@ -40,10 +40,10 @@ describe('cron groups', () => {
     // Coarse guardrail: keep groups small so even multi-subrequest jobs stay well
     // under the ~1000/invocation cap. Tighten/loosen deliberately, not by accident.
     for (const [cron, jobs] of Object.entries(CRON_GROUPS)) {
-      // :15 carries 8 persons/familia D1 jobs (all bounded, D1-only — no external
-      // fetch), incl. the hospital cross-match + the ext_id dedupe. Still far under
-      // the subrequest cap.
-      expect(jobs.length, `group ${cron} has too many jobs`).toBeLessThanOrEqual(8);
+      // :15 carries 9 persons/familia D1 jobs (all bounded, D1-only — no external
+      // fetch), incl. both hospital cross-matches + the ext_id dedupe. :00 carries 9
+      // light jobs incl. the every-6h hospital-registry pull. Still far under the cap.
+      expect(jobs.length, `group ${cron} has too many jobs`).toBeLessThanOrEqual(9);
     }
   });
 

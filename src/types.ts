@@ -140,6 +140,10 @@ export interface Env {
   STRIPE_PAYMENTS_ENABLED?: string;  // feature flag: 'true' + a secret key → Stripe goes LIVE. Default off. (in [vars])
   STRIPE_CONNECT_COUNTRY?: string;   // default country for new Express accounts (e.g. 'US'). (in [vars])
 
+  // Hospital patient registry feed (.xlsx direct-download). The pull cron fetches +
+  // parses + re-ingests it; configurable so the source can change without a redeploy. (in [vars])
+  HOSPITAL_FEED_URL?: string;
+
   // --- DB Ingestion Gatekeeper (src/security/*) -----------------------------
   // All optional: the gate has safe built-in defaults and degrades gracefully.
   // Cloudflare Turnstile server secret (verify the public widget token). When
