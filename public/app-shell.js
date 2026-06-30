@@ -318,13 +318,11 @@
     @media(min-width:1024px){
       #s911-shell{display:none !important}
       #s911-topbar{display:none !important}
-      body{ padding-left:0 !important; padding-top:78px !important }
+      body{ padding-left:0 !important; padding-top:68px !important }
       #s911-deskbar{ display:block !important }
-      .s911-fullmap{ left:0 !important; top:78px !important }
+      .s911-fullmap{ left:0 !important; top:68px !important }
     }
     #s911-deskbar{position:fixed;top:0;left:0;right:0;z-index:1150;font-family:'Public Sans',Inter,sans-serif}
-    /* Bandera de Venezuela: tres franjas horizontales amarillo / azul / rojo. */
-    #s911-deskbar .s911-tri{height:10px;background:linear-gradient(180deg,#ffcc00 0 33.34%,#00247d 33.34% 66.67%,#cf142b 66.67% 100%)}
     #s911-deskbar .s911-dbar{height:68px;display:flex;align-items:center;gap:10px;padding:0 22px;background:linear-gradient(180deg,#0c1531,#0a0f23);border-bottom:1px solid rgba(255,255,255,.07);box-shadow:0 2px 14px rgba(0,0,0,.35)}
     #s911-deskbar .s911-dbrand{display:flex;align-items:center;gap:11px;text-decoration:none;flex:0 0 auto}
     #s911-deskbar .s911-dbrand img{width:42px;height:42px}
@@ -357,32 +355,19 @@
     #s911-deskbar .s911-avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:800 13px 'Public Sans';color:#fff;background:#27345c;border:1px solid rgba(255,255,255,.25)}
     #s911-deskbar .s911-pop-uname{font:700 13px Inter;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     #s911-deskbar .s911-pop-urole{font:500 11px Inter;color:#8b96b5}
-    #s911-deskbar .s911-mas-cols{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;min-width:460px}
     @media(max-width:1180px){ #s911-deskbar .s911-dnav-item .s911-dnav-lbl{display:none} #s911-deskbar .s911-dnav-item{padding:7px} }
   `;
   const dstyle = document.createElement('style'); dstyle.textContent = deskCss; document.head.appendChild(dstyle);
 
   const deskItem = (it) => `<a href="${it.href}" class="s911-dnav-item${active(it) ? ' active' : ''}"><span class="s911-dico">${icon(it.d)}</span><span class="s911-dnav-lbl">${it.label}</span></a>`;
 
-  // "Más" overflow: every grouped destination + Contacto + Consola, so the
-  // condensed bar never orphans a link that the sidebar used to expose.
-  const masLink = (it) => `<a href="${it.href}">${icon(it.d)}<span>${it.label}</span></a>`;
-  const masMenu = NAV_GROUPS.map((g) => `<div class="s911-pop-sec">${g.label}</div>${g.items.map(masLink).join('')}`).join('') + `<div class="s911-pop-sec">Más</div>${masLink(NAV_CONTACTO)}${masLink(NAV_ADMIN)}`;
-
   const deskbar = document.createElement('header');
   deskbar.id = 's911-deskbar';
   deskbar.innerHTML = `
-    <div class="s911-tri"></div>
     <div class="s911-dbar">
       <a href="/" class="s911-dbrand" title="Inicio · SISMO911" aria-label="Inicio"><img src="/logo.svg" alt="SISMO911"><span><b>SISMO911</b><small>REGISTRO NACIONAL · COMANDO SÍSMICO</small></span></a>
       <nav class="s911-dnav">
         ${DESKTOP_NAV.map(deskItem).join('')}
-        <div class="s911-pop" id="s911-mas">
-          <button type="button" class="s911-pop-btn" id="s911-mas-btn" aria-expanded="false">Más
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:13px;height:13px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="s911-pop-menu"><div class="s911-mas-cols">${masMenu}</div></div>
-        </div>
       </nav>
       <div class="s911-dright">
         <a href="/personas" class="s911-dsearch" title="Buscar en el Registro de Desaparecidos" aria-label="Buscar">
