@@ -59,7 +59,7 @@ function fmtDate(s){ if(!s) return ''; try{ return new Date(s).toLocaleDateStrin
 
 async function loadStats(){
   try{
-    const r = await fetch('/api/stats/official'); const j = await r.json();
+    const r = await fetch('/api/stats/official?t='+Math.floor(Date.now()/60000)); const j = await r.json();
     const s = j.stats; const box = document.getElementById('stats');
     if(!s){ box.innerHTML = '<div class="text-on-surface-variant text-sm col-span-full">Sin datos oficiales por ahora.</div>'; return; }
     const cell = (label, val, color) => `<div class="rounded-lg border border-outline-variant/60 p-3">
@@ -104,7 +104,7 @@ function buildTopics(){
 }
 async function loadFeed(){
   try{
-    const r = await fetch('/api/verified-info?limit=144'); const j = await r.json();
+    const r = await fetch('/api/verified-info?limit=144&t='+Math.floor(Date.now()/60000)); const j = await r.json();
     allItems = j.items || [];
     buildTopics(); render('');
   }catch(e){ document.getElementById('feed').innerHTML = '<div class="text-on-surface-variant text-sm">No se pudo cargar la información.</div>'; }

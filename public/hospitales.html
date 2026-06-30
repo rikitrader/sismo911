@@ -55,7 +55,7 @@ async function search(){
   const q=document.getElementById('q').value.trim();
   document.getElementById('grid').innerHTML='<div class="text-on-surface-variant text-sm">Buscando…</div>';
   try{
-    const r=await fetch('/api/rav/reports?kind=hospital&limit=200'+(q?'&q='+encodeURIComponent(q):''));
+    const r=await fetch('/api/rav/reports?kind=hospital&limit=200&t='+Math.floor(Date.now()/60000)+(q?'&q='+encodeURIComponent(q):''));
     const d=await r.json(); const items=d.items||[];
     document.getElementById('cnt').textContent=items.length?('· '+items.length+(items.length===200?'+':'')+' resultados'):'';
     document.getElementById('grid').innerHTML=items.length?items.map(card).join(''):'<p class="text-on-surface-variant text-sm col-span-full">Sin coincidencias. Prueba otro nombre u hospital.</p>';
@@ -73,7 +73,7 @@ function ccard(c){
 }
 async function loadCasos(){
   try{
-    const r=await fetch('/api/persons/cases?status=hospitalizado&limit=60');
+    const r=await fetch('/api/persons/cases?status=hospitalizado&limit=60&t='+Math.floor(Date.now()/60000));
     const d=await r.json(); const cs=d.cases||d.items||[];
     document.getElementById('casos').innerHTML=cs.length?cs.map(ccard).join(''):'<p class="text-on-surface-variant text-sm col-span-full">Aún no hay casos confirmados como hospitalizados.</p>';
   }catch(e){ document.getElementById('casos').innerHTML='<p class="text-on-surface-variant text-sm col-span-full">No se pudo cargar.</p>'; }
