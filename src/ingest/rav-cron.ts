@@ -102,22 +102,29 @@ export async function ingestRav(env: Env, pages = MAX_PAGES_PER_RUN): Promise<Ra
   }
 }
 
-// Single-row casualty counter (id=1 UPSERT — no dupes by construction).
+// Single-row casualty counter (id=1). The HEADLINE balance (fallecidos/heridos)
+// is now owned by the canonical AI-extract pipeline (lib/canonical-casualties →
+// syncOfficialStats, called from the casualty cron) so the DB row and every page
+// stay standardized. RAV must NOT clobber the balance back to its own figure —
+// it only contributes refugiados/desaparecidos when it actually has them, and
+// never overwrites fallecidos/heridos/source/origen.
 export async function ingestRavStats(env: Env): Promise<number> {
   try {
     const runIso = new Date().toISOString();
     const { rows } = await ravFetch<RavStatsRow>(env, 'official_stats', { limit: 1 });
     if (!rows.length) return 0;
     const s = mapRavStats(rows[0], runIso);
+    // Only fill refugiados/desaparecidos when RAV provides a value AND the row
+    // doesn't already have one — never touch the AI-owned balance or labels.
+    if (s.refugiados == null && s.desaparecidos == null) return 0;
     await env.DB.prepare(
-      `INSERT INTO official_stats (id, fallecidos, heridos, refugiados, desaparecidos, source, origen, updated_at, pulled_at)
-       VALUES (1,?,?,?,?,?, 'rav', ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         fallecidos=excluded.fallecidos, heridos=excluded.heridos, refugiados=excluded.refugiados,
-         desaparecidos=excluded.desaparecidos, source=excluded.source,
-         updated_at=excluded.updated_at, pulled_at=excluded.pulled_at`,
-    ).bind(s.fallecidos, s.heridos, s.refugiados, s.desaparecidos, s.source, s.updated_at, s.pulled_at).run();
-    console.log('[rav] official_stats upserted', JSON.stringify(s));
+      `UPDATE official_stats SET
+         refugiados    = COALESCE(?, refugiados),
+         desaparecidos = COALESCE(desaparecidos, ?),
+         pulled_at     = ?
+       WHERE id = 1`,
+    ).bind(s.refugiados, s.desaparecidos, s.pulled_at).run();
+    console.log('[rav] official_stats refugiados/desaparecidos merged (balance untouched)');
     return 1;
   } catch (e: any) { console.error('[rav] stats failed:', e?.message ?? e); return 0; }
 }

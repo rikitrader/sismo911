@@ -7,6 +7,7 @@ import { dedupePersonas } from '../lib/dedupe';
 import { maskContact, timingSafeEqualStr } from '../lib/security';
 import { backfillHospitalMatches } from '../ingest/hospital-match';
 import { ingestPacientesRvz } from '../ingest/pacientes-rvz-cron';
+import { getCanonicalCasualties, applyCanonical } from '../lib/canonical-casualties';
 
 // redayudavenezuela.com (RAV) surface:
 //   POST /api/rav/run     — Bearer-gated backfill/ingest driver (used by scripts/pull-rav.mjs)
@@ -66,12 +67,17 @@ rav.post('/api/rav/run', async (c) => {
 });
 
 // GET /api/stats/official — single-row casualty counter (public).
+// fallecidos/heridos are overlaid from the CANONICAL source of truth (latest
+// AI-extract figures, see lib/canonical-casualties) so this can never disagree
+// with the /terremotos dashboard or /victimas. refugiados/desaparecidos stay
+// from the stored row.
 rav.get('/api/stats/official', async (c) => {
   const row = await c.env.DB.prepare(
     `SELECT fallecidos, heridos, refugiados, desaparecidos, source, origen, updated_at, pulled_at
      FROM official_stats WHERE id = 1`,
   ).first();
-  return c.json({ ok: true, stats: row ?? null }, 200, { 'Cache-Control': 'public, max-age=120' });
+  const stats = applyCanonical(row, await getCanonicalCasualties(c.env));
+  return c.json({ ok: true, stats: stats ?? null }, 200, { 'Cache-Control': 'public, max-age=120' });
 });
 
 // GET /api/verified-info?topic=&limit= — verified-news feed (public).

@@ -24,6 +24,7 @@ import type { Env } from '../types';
 import { uid, recordIngest } from '../lib/db';
 import { gateCasualty, type CasualtyRowInput } from './casualty-gate';
 import { logAgentActivity } from '../lib/agent-activity';
+import { syncOfficialStats } from '../lib/canonical-casualties';
 
 /** The active event the public dashboard defaults to. */
 export const CURRENT_EVENT_ID = 've-eq-2026-06-24';
@@ -235,6 +236,11 @@ export async function ingestCasualties(env: Env): Promise<{ written: number; usg
         }
       }
     }
+
+    // Standardize the DB: persist the canonical headline (latest AI-extract
+    // fallecidos/heridos) into official_stats id=1 so the stored row matches what
+    // every page shows. Single writer of the balance — RAV no longer touches it.
+    await syncOfficialStats(env).catch(() => {});
 
     await recordIngest(env, 'casualties', true, written,
       reliefweb ? undefined : 'reliefweb_unreachable');
