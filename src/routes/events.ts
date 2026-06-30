@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { listEvents, getEvent } from '../lib/db';
-import { getCachedEvents, ingestUsgs } from '../ingest/usgs-cron';
+import { getCachedEvents, ingestUsgs, refreshEventsCache } from '../ingest/usgs-cron';
 import { backfillUsgsHistory } from '../ingest/usgs-history';
 import { estimatePager } from '../lib/pager';
 import { scoreThreat } from '../lib/threat';
@@ -77,10 +77,14 @@ events.get('/:id', async (c) => {
 });
 
 // POST /api/events/refresh — force an ingest (used by ops / cron fallback).
+// ingestUsgs writes a USGS-only snapshot; rebuild it from D1 afterwards so the
+// public feed reflects ALL sources (FUNVISIS included) — otherwise a manual
+// refresh would drop the more-recent FUNVISIS events until the next cron.
 events.post('/refresh', async (c) => {
   try {
     const r = await ingestUsgs(c.env);
-    return c.json({ ok: true, ...r });
+    const cached = await refreshEventsCache(c.env);
+    return c.json({ ok: true, ...r, cached });
   } catch (e: any) {
     return c.json({ ok: false, error: String(e?.message ?? e) }, 502);
   }
