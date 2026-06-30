@@ -925,7 +925,10 @@ select,input { font-family:var(--font); }
 /* Neutralize the global app-shell injected chrome on THIS page only.
    Higher specificity (html body) beats app-shell's runtime `body{…!important}`. */
 html body { padding-left:0 !important; padding-top:0 !important; }
-#s911-shell, #s911-topbar, #s911-back, #s911-deskbar, #s911-footer { display:none !important; }
+/* High specificity (html body #id) so it beats app-shell's runtime-injected
+   `@media{#s911-deskbar{display:block!important}}`, which loads AFTER this rule. */
+html body #s911-shell, html body #s911-topbar, html body #s911-back,
+html body #s911-deskbar, html body #s911-footer { display:none !important; }
 
 .ac-shell { display:flex; align-items:stretch; min-height:100vh; }
 
