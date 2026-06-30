@@ -3,6 +3,8 @@ import type { Env } from '../types';
 import { timingSafeEqualStr } from '../lib/security';
 import type { RawPatient } from '../lib/hospital-registry';
 import { upsertHospitalRows } from '../lib/hospital-ingest';
+import { drainHospitalRegistryMatch } from '../ingest/hospital-registry-match';
+import { ingestHospitalRegistry } from '../ingest/hospital-registry-sync';
 
 // Hospital patient registry API. Mounted under /api/persons (public allow-list):
 //   POST /api/persons/hospital/ingest  — token-gated bulk upsert (like /api/rav/run)
@@ -25,6 +27,21 @@ hospital.post('/hospital/ingest', async (c) => {
   const sourceUpdated = String(b.source_updated || '').slice(0, 80);
   const out = await upsertHospitalRows(c.env, b.rows as RawPatient[], sourceUpdated);
   return c.json({ ok: true, ...out, source_updated: sourceUpdated });
+});
+
+// ── POST /hospital/match — token-gated manual run of the cross-reference drain ─
+hospital.post('/hospital/match', async (c) => {
+  if (!authed(c)) return c.json({ error: 'unauthorized' }, 401);
+  const pages = Math.min(Math.max(Number(c.req.query('pages')) || 12, 1), 20);
+  const out = await drainHospitalRegistryMatch(c.env, { pages });
+  return c.json({ ok: true, ...out });
+});
+
+// ── POST /hospital/sync — token-gated manual run of the feed pull ──────────────
+hospital.post('/hospital/sync', async (c) => {
+  if (!authed(c)) return c.json({ error: 'unauthorized' }, 401);
+  const out = await ingestHospitalRegistry(c.env);
+  return c.json(out);
 });
 
 // ── GET /hospital/search?q= — public search (the source's stated purpose) ──────
