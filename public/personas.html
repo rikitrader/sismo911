@@ -256,7 +256,7 @@ const fmtFecha=p=>{ if(p.fecha)return String(p.fecha); if(p.updated_at){const d=
 const EDOS=['Amazonas','Anzoátegui','Apure','Aragua','Barinas','Bolívar','Carabobo','Cojedes','Delta Amacuro','Distrito Capital','Falcón','Guárico','La Guaira','Lara','Mérida','Miranda','Monagas','Nueva Esparta','Portuguesa','Sucre','Táchira','Trujillo','Yaracuy','Zulia'];
 $('fedo').insertAdjacentHTML('beforeend',EDOS.map(e=>`<option value="${e}">${e}</option>`).join(''));
 
-async function stats(){try{const d=await fetch('/api/persons/stats').then(r=>r.json());$('s_missing').textContent=Number(d.missing||0).toLocaleString('es');$('s_found').textContent=Number(d.found||0).toLocaleString('es');$('s_total').textContent=Number(d.total||0).toLocaleString('es');$('s_hosp').textContent=Number(d.hospitalized||0).toLocaleString('es');}catch{}}
+async function stats(){try{const d=await fetch('/api/persons/stats?t='+Math.floor(Date.now()/60000)).then(r=>r.json());$('s_missing').textContent=Number(d.missing||0).toLocaleString('es');$('s_found').textContent=Number(d.found||0).toLocaleString('es');$('s_total').textContent=Number(d.total||0).toLocaleString('es');$('s_hosp').textContent=Number(d.hospitalized||0).toLocaleString('es');}catch{}}
 stats();
 
 // ---- vCard wall (filtered photo registry) ----

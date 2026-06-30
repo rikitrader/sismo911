@@ -573,6 +573,7 @@ async function load(){
   if(OP&&$('#f_prio').value)p.set('priority',$('#f_prio').value);
   p.set('sort',$('#f_sort').value);
   p.set('page',PAGE); p.set('limit',PAGESIZE);
+  p.set('t',String(Math.floor(Date.now()/60000)));   // 1-min freshness bucket — bypass the 4h CDN pin on /api/* so the KPIs reflect live data
   let data={};
   try{ data=await (await api('persons/cases?'+p.toString())).json(); }catch{ data={cases:[],summary:{}}; }
   const {cases=[],summary={},operator=false,page=1,pages=1,total=0}=data;
@@ -595,7 +596,7 @@ let BO_DONE=false;
 async function loadBalanceOficial(){
   if(BO_DONE) return; BO_DONE=true;
   try{
-    const s=(await (await fetch('/api/stats/official')).json()).stats;
+    const s=(await (await fetch('/api/stats/official?t='+Math.floor(Date.now()/60000))).json()).stats;
     if(!s||s.fallecidos==null) { BO_DONE=false; return; }
     const fmt=n=>(n==null?'—':Number(n).toLocaleString('es'));
     $('#bo_dead').textContent=fmt(s.fallecidos);
