@@ -33,6 +33,9 @@ export interface Env {
   // Workers AI text model the always-on blog cron writes articles with.
   // Optional override; defaults to llama-3.3-70b-instruct-fp8-fast.
   BLOG_AI_MODEL?: string;
+  // Workers AI model the casualty poller extracts live tolls with.
+  // Optional override; defaults to llama-3.3-70b-instruct-fp8-fast.
+  CASUALTY_AI_MODEL?: string;
   // Web Push
   VAPID_PUBLIC_KEY?: string;
   // Cloudflare Workers AI (situation reports). Optional binding.
