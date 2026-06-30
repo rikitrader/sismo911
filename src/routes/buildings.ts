@@ -54,6 +54,8 @@ const METHODOLOGY = {
   bands: { CRITICO: '80-100', ALTO: '60-79', MODERADO: '40-59', BAJO: '20-39', MINIMO: '0-19' },
   dataQuality: { DIRECT: 'daño reportado por fuente', 'OBSERVED-DPM': 'NASA Sentinel-1 detectó daño en la huella (damage_probability)', MODELED: 'estimado por el modelo', LOW_DATA: 'suelo/construcción desconocidos' },
   dpmOverlay: 'Huellas OSM cruzadas (≤40m) con estructuras dañadas de NASA Sentinel-1 (damage=1); cuando hay coincidencia, la probabilidad observada reemplaza al MMI como término de peligro.',
+  costModel: 'Costo de reemplazo = sup. construida (huella OSM real × pisos) × USD/m² (real VE 2026: La Guaira 700, Caracas 1000, Miranda 1200, interior 500; ×uso). Reparación = reemplazo × ratio HAZUS (Complete 100% · Extensive 50% · Moderate 10% · Slight 2%). cost.costConf: HIGH=área+pisos reales.',
+  costSources: ['micasaenvenezuela.com 2026', 'proyectoscecor.com', 'FEMA HAZUS-MH Technical Manual'],
   tiers: { HIGH: 'T1/0.85', 'NASA-DPM': 'T2/0.85', MEDIUM: 'T2/0.60', LOW: 'T3/0.35' },
   event: 've-eq-2026-06-24 · Mw 7.2 (us6000t7zc) + Mw 7.5 (us6000t7zp) · ShakeMap MMI max 9.05',
   caveat: 'No existe censo oficial certificado (CIV + Min. Hábitat). Estimación + prensa; reportes ciudadanos no verificados.',
@@ -107,9 +109,18 @@ buildings.get('/summary', async (c) => {
       s.count++; if (r.band === 'CRITICO') s.critico++;
     }
     const reported = SCORED_CURATED.filter((r) => COLLAPSED_STATUSES.has(r.status)).length;
+    // Aggregate cost (USD). OSM named set = comprehensive lower bound (named buildings only).
+    const sumRepl = (rs: Scored[]) => Math.round(rs.reduce((s, r) => s + (r.cost?.replacementUsd ?? 0), 0));
+    const sumRepair = (rs: Scored[]) => Math.round(rs.reduce((s, r) => s + (r.cost?.repairUsd ?? 0), 0));
+    const confirmed = SCORED_CURATED.filter((r) => COLLAPSED_STATUSES.has(r.status));
     return {
       event: METHODOLOGY.event, total: all.length, curated: SCORED_CURATED.length, osm: SCORED_OSM.length,
       reported_damaged: reported, dpm_observed: DPM_OBSERVED, by_band: byBand, by_state: byState, by_sector: bySector,
+      costs_usd: {
+        osm_replacement: sumRepl(SCORED_OSM), osm_repair: sumRepair(SCORED_OSM),
+        confirmed_replacement: sumRepl(confirmed), confirmed_repair: sumRepair(confirmed),
+        note: 'Estimación de ingeniería (HAZUS + costos reales VE 2026), NO tasación oficial. Total OSM cubre solo edificios con nombre → subestima el agregado real.',
+      },
       methodology: METHODOLOGY,
     };
   });
