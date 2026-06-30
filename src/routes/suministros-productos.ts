@@ -17,6 +17,13 @@ const num = (v: unknown) => (v == null || v === '' ? null : Number(v));
 const ON_HAND = `(SELECT COALESCE(SUM(e.cantidad),0) FROM sum_existencias e
   JOIN sum_items i ON i.id = e.item_id WHERE i.producto_id = p.id)`;
 
+// Effective unit cost: manual override (costo_unit>0) → preferred supplier → MIN → 0.
+const COSTO_EFECTIVO = `COALESCE(
+    NULLIF(p.costo_unit, 0),
+    (SELECT precio FROM sum_producto_proveedor WHERE producto_id = p.id AND preferido = 1 LIMIT 1),
+    (SELECT MIN(precio) FROM sum_producto_proveedor WHERE producto_id = p.id),
+    0)`;
+
 // GET / → list with categoria name + on_hand; ?categoria_id= ?activo= ?q= filters.
 sumProductos.get('/', async (c) => {
   const categoria = c.req.query('categoria_id');
@@ -32,12 +39,17 @@ sumProductos.get('/', async (c) => {
   if (activo === '0' || activo === '1') { where.push('p.activo = ?'); vals.push(Number(activo)); }
   if (q) { where.push('(p.nombre LIKE ? OR p.codigo LIKE ?)'); vals.push(`%${q}%`, `%${q}%`); }
 
-  const sql = `SELECT p.*, cat.nombre AS categoria_nombre, cat.color AS categoria_color, ${ON_HAND} AS on_hand
+  const sql = `SELECT p.*, cat.nombre AS categoria_nombre, cat.color AS categoria_color,
+      ${ON_HAND} AS on_hand, ${COSTO_EFECTIVO} AS costo_efectivo
     FROM sum_productos p LEFT JOIN sum_categorias cat ON cat.id = p.categoria_id
     ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY p.nombre LIMIT ?`;
   vals.push(limit);
   const { results } = await c.env.DB.prepare(sql).bind(...vals).all();
-  return c.json({ results: results ?? [] });
+  const rows = (results ?? []).map((r: any) => ({
+    ...r,
+    valor_inventario: Math.round((Number(r.on_hand) || 0) * (Number(r.costo_efectivo) || 0) * 100) / 100,
+  }));
+  return c.json({ results: rows });
 });
 
 // POST / → create. Auto-generates a codigo (PRD-XXXXXX) when blank.
@@ -55,13 +67,14 @@ sumProductos.post('/', async (c) => {
 
   const id = uid('prod');
   const now = Date.now();
+  const costoUnit = Math.max(0, num(b?.costo_unit) ?? 0);
   await c.env.DB.prepare(
     `INSERT INTO sum_productos
-       (id, codigo, nombre, categoria_id, unidad, perecedero, stock_min, descripcion, activo, created_ms, updated_ms)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`
+       (id, codigo, nombre, categoria_id, unidad, perecedero, stock_min, descripcion, costo_unit, activo, created_ms, updated_ms)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id, codigo, nombre, str(b?.categoria_id, 40), unidad,
-    b?.perecedero ? 1 : 0, num(b?.stock_min) ?? 0, str(b?.descripcion, 1000),
+    b?.perecedero ? 1 : 0, num(b?.stock_min) ?? 0, str(b?.descripcion, 1000), costoUnit,
     b?.activo === undefined ? 1 : (b.activo ? 1 : 0), now, now
   ).run();
 
@@ -69,13 +82,20 @@ sumProductos.post('/', async (c) => {
   return c.json(row, 201);
 });
 
-// GET /:id → product + categoria + on_hand.
+// GET /:id → product + categoria + on_hand + effective cost + inventory value
+//   + preferred supplier (name + price).
 sumProductos.get('/:id', async (c) => {
   const row = await c.env.DB.prepare(
-    `SELECT p.*, cat.nombre AS categoria_nombre, ${ON_HAND} AS on_hand
+    `SELECT p.*, cat.nombre AS categoria_nombre, cat.color AS categoria_color,
+        ${ON_HAND} AS on_hand, ${COSTO_EFECTIVO} AS costo_efectivo,
+        (SELECT pr.nombre FROM sum_producto_proveedor pp JOIN sum_proveedores pr ON pr.id = pp.proveedor_id
+           WHERE pp.producto_id = p.id AND pp.preferido = 1 LIMIT 1) AS proveedor_preferido,
+        (SELECT pp.precio FROM sum_producto_proveedor pp
+           WHERE pp.producto_id = p.id AND pp.preferido = 1 LIMIT 1) AS precio_preferido
      FROM sum_productos p LEFT JOIN sum_categorias cat ON cat.id = p.categoria_id WHERE p.id = ?`
-  ).bind(c.req.param('id')).first();
+  ).bind(c.req.param('id')).first<any>();
   if (!row) return c.json({ error: 'no encontrado' }, 404);
+  row.valor_inventario = Math.round((Number(row.on_hand) || 0) * (Number(row.costo_efectivo) || 0) * 100) / 100;
   return c.json(row);
 });
 
@@ -105,6 +125,7 @@ sumProductos.patch('/:id', async (c) => {
   if (b?.categoria_id !== undefined) { sets.push('categoria_id = ?'); vals.push(str(b.categoria_id, 40)); }
   if (b?.perecedero !== undefined) { sets.push('perecedero = ?'); vals.push(b.perecedero ? 1 : 0); }
   if (b?.stock_min !== undefined) { sets.push('stock_min = ?'); vals.push(num(b.stock_min) ?? 0); }
+  if (b?.costo_unit !== undefined) { sets.push('costo_unit = ?'); vals.push(Math.max(0, num(b.costo_unit) ?? 0)); }
   if (b?.descripcion !== undefined) { sets.push('descripcion = ?'); vals.push(str(b.descripcion, 1000)); }
   if (b?.activo !== undefined) { sets.push('activo = ?'); vals.push(b.activo ? 1 : 0); }
 

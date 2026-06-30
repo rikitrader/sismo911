@@ -476,8 +476,9 @@
         </div>
         <div class="grid grid-cols-2 gap-2 items-center">
           <input name="stock_min" type="number" min="0" placeholder="Stock mínimo">
-          <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer"><input name="perecedero" type="checkbox"> Perecedero</label>
+          <input name="costo_unit" type="number" min="0" step="any" placeholder="Costo unitario (USD)">
         </div>
+        <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer"><input name="perecedero" type="checkbox"> Perecedero (controla lote + caducidad)</label>
         <div class="flex gap-2">
           <button class="flex-1 bg-secondary text-white font-bold rounded py-1.5 text-xs">Guardar</button>
           <button type="button" id="btnCancelProd" class="flex-1 border border-gray-200 rounded py-1.5 text-xs font-semibold">Cancelar</button>
@@ -485,8 +486,63 @@
         <p id="prodMsg" class="text-xs text-center"></p>
       </form>
       <div class="overflow-x-auto" style="max-height:62vh">
-        <table class="dt"><thead><tr><th>Nombre</th><th>Categoría</th><th>Unidad</th><th>Stock mín.</th><th>On Hand</th></tr></thead>
-        <tbody id="prodRows"><tr><td colspan="5" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody></table>
+        <table class="dt"><thead><tr><th>Nombre</th><th>Categoría</th><th>Unidad</th><th class="text-right">Stock mín.</th><th class="text-right">On Hand</th><th class="text-right">Costo u.</th><th class="text-right">Valor</th></tr></thead>
+        <tbody id="prodRows"><tr><td colspan="7" class="text-center text-on-surface-variant py-8">Cargando…</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- ═══ PERFIL DE PRODUCTO (ficha tipo almacén) ═══ -->
+    <div id="prodDetail" class="hidden card p-0 mt-4 overflow-hidden">
+      <div class="px-4 py-3 flex items-center justify-between" style="background:#082752;color:#fff">
+        <div>
+          <div id="pdName" class="font-bold text-[15px] leading-tight">—</div>
+          <div id="pdSku" class="mono text-[11px] opacity-80"></div>
+        </div>
+        <button data-act="closeProducto" class="text-xs font-semibold rounded px-2 py-1" style="background:rgba(255,255,255,.16);color:#fff">✕ Cerrar</button>
+      </div>
+      <div class="p-4 space-y-4">
+        <!-- KPI strip -->
+        <div id="pdKpis" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+        <div id="pdMeta" class="text-[12px] text-on-surface-variant"></div>
+
+        <!-- Existencias por ubicación + ajuste -->
+        <div>
+          <div class="eyebrow mb-1">Existencias por ubicación</div>
+          <div class="overflow-x-auto">
+            <table class="dt"><thead><tr><th>Ubicación</th><th>Lote</th><th>Caducidad</th><th class="text-right">Cantidad</th><th class="text-right">Acción</th></tr></thead>
+            <tbody id="pdStock"></tbody></table>
+          </div>
+        </div>
+
+        <!-- Recibir stock nuevo -->
+        <div class="card p-3" style="background:var(--ops-panel)">
+          <div class="eyebrow mb-2">Recibir / ingresar stock</div>
+          <form id="pdRecepForm" class="grid sm:grid-cols-[1fr_auto_auto] gap-2 items-end">
+            <div>
+              <label class="lbl">Ubicación destino</label>
+              <select id="pdRecepUbic" class="inp-sm" style="width:100%"></select>
+            </div>
+            <div>
+              <label class="lbl">Cantidad</label>
+              <input id="pdRecepQty" type="number" min="0.01" step="any" class="inp-sm" style="width:110px" placeholder="0">
+            </div>
+            <button class="btn-add" style="background:#082752;color:#fff;border-color:#082752">+ Recibir</button>
+            <div id="pdPerecRow" class="hidden grid grid-cols-2 gap-2 sm:col-span-3">
+              <div><label class="lbl">Lote</label><input id="pdRecepLote" class="inp-sm" style="width:100%" placeholder="Lote (opcional)"></div>
+              <div><label class="lbl">Caducidad</label><input id="pdRecepCad" type="date" class="inp-sm" style="width:100%"></div>
+            </div>
+          </form>
+          <p id="pdRecepMsg" class="text-xs mt-1"></p>
+        </div>
+
+        <!-- Historial de movimientos (ledger) -->
+        <div>
+          <div class="eyebrow mb-1">Historial de movimientos (trazabilidad)</div>
+          <div class="overflow-x-auto" style="max-height:34vh">
+            <table class="dt"><thead><tr><th>Fecha</th><th>Tipo</th><th>Origen → Destino</th><th>Ref.</th><th>Actor</th></tr></thead>
+            <tbody id="pdLedger"></tbody></table>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -1681,23 +1737,118 @@ function fillProdSels(){
   const opts=PRODUCTOS.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
   $$('.row-prod-sel').forEach(s=>{const c=s.value;s.innerHTML='<option value="">-- Producto --</option>'+opts;if(c)s.value=c;});
 }
+const money=n=>(n==null||n===''||isNaN(n))?'—':'$'+Number(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
 function renderProds(list){
   const tb=$('#prodRows');if(!tb)return;
-  if(!list.length){tb.innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-8">Sin productos todavía.</td></tr>';return;}
-  tb.innerHTML=list.map(p=>`<tr class="row">
+  if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin productos todavía.</td></tr>';return;}
+  tb.innerHTML=list.map(p=>{
+    const low=p.stock_min>0&&p.on_hand!=null&&Number(p.on_hand)<=Number(p.stock_min);
+    return `<tr class="row" data-act="openProducto" data-a1="${esc(p.id)}" title="Ver ficha del producto">
     <td><div class="font-semibold text-[12px]">${esc(p.nombre)}</div><div class="mono text-[11px] text-on-surface-variant">${esc(p.codigo||'')}</div></td>
     <td class="text-[12px]">${esc(p.categoria_nombre||'—')}</td>
     <td class="text-[12px]">${esc(p.unidad||'—')}</td>
-    <td class="mono text-[12px]">${p.stock_min??'—'}</td>
-    <td class="mono text-[12px] font-semibold">${p.on_hand??'—'}</td>
-  </tr>`).join('');
+    <td class="mono text-[12px] text-right">${p.stock_min??'—'}</td>
+    <td class="mono text-[12px] font-semibold text-right ${low?'text-[#b91c1c]':''}">${p.on_hand??'—'}${low?' ▼':''}</td>
+    <td class="mono text-[12px] text-right">${money(p.costo_efectivo)}</td>
+    <td class="mono text-[12px] text-right font-semibold">${money(p.valor_inventario)}</td>
+  </tr>`;}).join('');
 }
 $('#btnNuevoProd').onclick=()=>$('#fProd').classList.toggle('hidden');
 $('#btnCancelProd').onclick=()=>{$('#fProd').classList.add('hidden');$('#fProd').reset();};
 $('#fProd').onsubmit=async e=>{e.preventDefault();const f=e.target;
-  const ok=await post('productos',{nombre:f.nombre.value,categoria_id:f.categoria_id.value||null,unidad:f.unidad.value,perecedero:f.perecedero.checked,stock_min:num(f.stock_min.value)||0},'#prodMsg');
+  const ok=await post('productos',{nombre:f.nombre.value,categoria_id:f.categoria_id.value||null,unidad:f.unidad.value,perecedero:f.perecedero.checked,stock_min:num(f.stock_min.value)||0,costo_unit:num(f.costo_unit.value)||0},'#prodMsg');
   if(ok){f.reset();$('#fProd').classList.add('hidden');loadProds();}
 };
+
+// ── Perfil de producto (ficha) ──
+let PD_CURRENT=null;
+function pdClose(){$('#prodDetail').classList.add('hidden');PD_CURRENT=null;}
+async function openProducto(id){
+  PD_CURRENT=id;
+  if(!UBICACIONES.length){await ensureUbic().catch(()=>{});}
+  const dt=$('#prodDetail');dt.classList.remove('hidden');
+  $('#pdName').textContent='Cargando…';$('#pdSku').textContent='';
+  $('#pdKpis').innerHTML='';$('#pdStock').innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-4">Cargando…</td></tr>';
+  $('#pdLedger').innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-4">Cargando…</td></tr>';
+  dt.scrollIntoView({behavior:'smooth',block:'start'});
+  const[pr,br,mr]=await Promise.all([
+    api('productos/'+id).then(j).catch(()=>null),
+    api('inventario/producto/'+id).then(j).catch(()=>({})),
+    api('movimientos?limit=100&producto_id='+encodeURIComponent(id)).then(j).catch(()=>({})),
+  ]);
+  if(!pr||pr.error){$('#pdName').textContent='No se pudo cargar el producto';return;}
+  $('#pdName').textContent=pr.nombre;
+  $('#pdSku').textContent=(pr.codigo||'')+(pr.categoria_nombre?' · '+pr.categoria_nombre:'');
+  const low=pr.stock_min>0&&Number(pr.on_hand)<=Number(pr.stock_min);
+  const kpi=(l,v,extra='')=>`<div class="card p-2" style="background:var(--ops-panel)"><div class="lbl">${l}</div><div class="font-bold text-[15px] ${extra}">${v}</div></div>`;
+  $('#pdKpis').innerHTML=
+    kpi('On hand',(pr.on_hand??0)+' '+esc(pr.unidad||''),low?'text-[#b91c1c]':'')+
+    kpi('Stock mín.',pr.stock_min??0,'')+
+    kpi('Costo unit.',money(pr.costo_efectivo),'')+
+    kpi('Valor inventario',money(pr.valor_inventario),'');
+  $('#pdMeta').innerHTML=
+    (low?'<span class="chip" style="color:#b91c1c;background:#fee2e2">▼ Bajo stock</span> ':'')+
+    (pr.perecedero?'<span class="chip" style="color:#b45309;background:#fef3c7">Perecedero</span> ':'')+
+    (pr.proveedor_preferido?`Proveedor: <b>${esc(pr.proveedor_preferido)}</b> (${money(pr.precio_preferido)}) · `:'')+
+    (pr.descripcion?esc(pr.descripcion):'');
+  // per-location breakdown + inline adjust
+  const ex=br.existencias||[];const now=Date.now();
+  $('#pdStock').innerHTML=ex.length?ex.map(e=>{
+    const cad=e.caducidad_ms?Number(e.caducidad_ms):null;
+    const cls=cad&&cad<now?'vencido':(cad&&Math.floor((cad-now)/86400000)<=30?'por-vencer':'');
+    return `<tr class="${cls}">
+      <td class="text-[12px]">${esc(e.ubicacion_nombre||'—')}</td>
+      <td class="mono text-[11px]">${esc(e.lote||'—')}</td>
+      <td class="text-[12px]">${cad?fdate(cad):'—'}</td>
+      <td class="mono text-[12px] font-semibold text-right">${e.cantidad}</td>
+      <td class="text-right whitespace-nowrap">
+        <button class="btn-add" data-act="pdAdjust" data-a1="${esc(e.ubicacion_id)}" data-a2="${esc(e.item_id)}" data-a3="${esc(e.ubicacion_nombre||'')}">Ajustar ±</button>
+        <button class="btn-add" data-act="pdConteo" data-a1="${esc(e.ubicacion_id)}" data-a2="${esc(e.item_id)}" data-a3="${esc(e.ubicacion_nombre||'')}" data-a4="${e.cantidad}">Conteo =</button>
+      </td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="5" class="text-center text-on-surface-variant py-4">Sin existencias en ninguna ubicación.</td></tr>';
+  // recepcion form
+  const sel=$('#pdRecepUbic');
+  sel.innerHTML='<option value="">— Ubicación —</option>'+(UBICACIONES||[]).map(u=>`<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('');
+  $('#pdPerecRow').classList.toggle('hidden',!pr.perecedero);
+  $('#pdRecepMsg').textContent='';
+  $('#pdRecepForm').onsubmit=async ev=>{ev.preventDefault();
+    const ubic=sel.value, qty=num($('#pdRecepQty').value);
+    if(!ubic){setMsg('#pdRecepMsg','Elige una ubicación',false);return;}
+    if(!qty||qty<=0){setMsg('#pdRecepMsg','Cantidad inválida',false);return;}
+    const linea={producto_id:id,cantidad:qty};
+    if(pr.perecedero){const lote=$('#pdRecepLote').value.trim();const cad=$('#pdRecepCad').value;if(lote)linea.lote=lote;if(cad)linea.caducidad_ms=new Date(cad).getTime();}
+    const ok=await post('movimientos/recepcion',{ubicacion_id:ubic,referencia:'Recepción manual (ficha)',lineas:[linea]},'#pdRecepMsg');
+    if(ok){$('#pdRecepQty').value='';$('#pdRecepLote')&&($('#pdRecepLote').value='');toast('Stock recibido');openProducto(id);loadProds();}
+  };
+  // ledger
+  const movs=mr.results||[];
+  $('#pdLedger').innerHTML=movs.length?movs.map(t=>`<tr>
+      <td class="text-[11px] whitespace-nowrap">${fdate(t.created_ms)}</td>
+      <td>${chipOf(t.tipo,TXTIPO)}</td>
+      <td class="text-[12px]">${esc(t.ubicacion_nombre||'—')}${t.ubicacion_dest_nombre?' → '+esc(t.ubicacion_dest_nombre):''}</td>
+      <td class="text-[11px]">${esc(t.referencia||t.motivo||'—')}</td>
+      <td class="text-[11px]">${esc(t.actor||'—')}</td>
+    </tr>`).join(''):'<tr><td colspan="5" class="text-center text-on-surface-variant py-4">Sin movimientos registrados.</td></tr>';
+}
+async function pdAdjust(ubic,item,ubicNombre){
+  const v=prompt('Ajuste para '+ubicNombre+'\nIngresa el delta (+ agrega, − retira):','');
+  if(v==null)return;const delta=Number(v);
+  if(!delta||isNaN(delta)){toast('Delta inválido',false);return;}
+  const motivo=prompt('Motivo del ajuste (requerido):','Corrección de inventario');
+  if(!motivo)return;
+  const ok=await post('movimientos/ajuste',{ubicacion_id:ubic,motivo:motivo,lineas:[{item_id:item,delta:delta}]});
+  if(ok){toast('Ajuste registrado');PD_CURRENT&&openProducto(PD_CURRENT);loadProds();}
+  else toast('No se pudo ajustar (¿sesión de operador?)',false);
+}
+async function pdConteo(ubic,item,ubicNombre,actual){
+  const v=prompt('Conteo físico en '+ubicNombre+'\nCantidad real contada (actual: '+actual+'):',actual);
+  if(v==null)return;const cant=Number(v);
+  if(isNaN(cant)||cant<0){toast('Cantidad inválida',false);return;}
+  const ok=await post('movimientos/conteo',{ubicacion_id:ubic,motivo:'Conteo físico (ficha)',lineas:[{item_id:item,cantidad:cant}]});
+  if(ok){toast('Conteo conciliado');PD_CURRENT&&openProducto(PD_CURRENT);loadProds();}
+  else toast('No se pudo conciliar (¿sesión de operador?)',false);
+}
 
 // ── Inventario ──
 async function loadInv(){
@@ -3049,7 +3200,7 @@ $('#refreshBtn').onclick=()=>{const t=$$('.seg.on')[0]?.dataset.tab;if(t)onTab(t
 function __rmClosest(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
 function __h1(el){var n=el.closest('.lrow');if(n)n.remove();calcFacTotal();}
 function __h2(el){var n=el.closest('.lrow');if(n)n.remove();rebuildContSels();}
-var ACTIONS={addRow:addRow,loadItems:loadItems,addDonRow:addDonRow,addOrdenRow:addOrdenRow,addFacRow:addFacRow,addPkRow:addPkRow,addEnvContRow:addEnvContRow,addEnvRow:addEnvRow,loadCntItems:loadCntItems,toggleCntLineas:toggleCntLineas,addCntRow:addCntRow,switchRep:switchRep,delCat:delCat,openRq:openRq,patchRq:patchRq,surtirRq:surtirRq,openProveedor:openProveedor,delPrecio:delPrecio,openDonacion:openDonacion,recibirDonacion:recibirDonacion,cancelarDonacion:cancelarDonacion,openOrden:openOrden,patchOrden:patchOrden,showOcRecibir:showOcRecibir,delCuenta:delCuenta,openFactura:openFactura,patchFac:patchFac,pagarFac:pagarFac,openPicklist:openPicklist,pickPicklist:pickPicklist,completarPicklist:completarPicklist,cancelarPicklist:cancelarPicklist,delMetodo:delMetodo,openEnvio:openEnvio,despacharEnvio:despacharEnvio,cancelarEnvio:cancelarEnvio,patchEnvio:patchEnvio,recibirEnvio:recibirEnvio,openConteo:openConteo,guardarConteo:guardarConteo,conciliarConteo:conciliarConteo,cancelarConteo:cancelarConteo,loadReporte:loadReporte,exportLedgerCSV:exportLedgerCSV,loadEtiquetas:loadEtiquetas,rebuildContSels:rebuildContSels,__rmClosest:__rmClosest,__h1:__h1,__h2:__h2};
+var ACTIONS={openProducto:openProducto,closeProducto:pdClose,pdAdjust:pdAdjust,pdConteo:pdConteo,addRow:addRow,loadItems:loadItems,addDonRow:addDonRow,addOrdenRow:addOrdenRow,addFacRow:addFacRow,addPkRow:addPkRow,addEnvContRow:addEnvContRow,addEnvRow:addEnvRow,loadCntItems:loadCntItems,toggleCntLineas:toggleCntLineas,addCntRow:addCntRow,switchRep:switchRep,delCat:delCat,openRq:openRq,patchRq:patchRq,surtirRq:surtirRq,openProveedor:openProveedor,delPrecio:delPrecio,openDonacion:openDonacion,recibirDonacion:recibirDonacion,cancelarDonacion:cancelarDonacion,openOrden:openOrden,patchOrden:patchOrden,showOcRecibir:showOcRecibir,delCuenta:delCuenta,openFactura:openFactura,patchFac:patchFac,pagarFac:pagarFac,openPicklist:openPicklist,pickPicklist:pickPicklist,completarPicklist:completarPicklist,cancelarPicklist:cancelarPicklist,delMetodo:delMetodo,openEnvio:openEnvio,despacharEnvio:despacharEnvio,cancelarEnvio:cancelarEnvio,patchEnvio:patchEnvio,recibirEnvio:recibirEnvio,openConteo:openConteo,guardarConteo:guardarConteo,conciliarConteo:conciliarConteo,cancelarConteo:cancelarConteo,loadReporte:loadReporte,exportLedgerCSV:exportLedgerCSV,loadEtiquetas:loadEtiquetas,rebuildContSels:rebuildContSels,__rmClosest:__rmClosest,__h1:__h1,__h2:__h2};
 function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
 ["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){var el=e.target.closest("[data-act]");if(!el)return;var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 

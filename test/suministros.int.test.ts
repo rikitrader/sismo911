@@ -7,6 +7,9 @@ import { sumOrdenes } from '../src/routes/suministros-ordenes';
 import { sumEnvios } from '../src/routes/suministros-envios';
 import { sumPicklists } from '../src/routes/suministros-picklists';
 import { sumConteos } from '../src/routes/suministros-conteos';
+import { sumProductos } from '../src/routes/suministros-productos';
+import { sumInventario } from '../src/routes/suministros-inventario';
+import { sumReportes } from '../src/routes/suministros-reportes';
 
 // Integration tests proving the SUMINISTROS stock-mutation flows end-to-end:
 // real route handlers → real in-memory SQLite (D1 adapter) → assert the actual
@@ -26,6 +29,7 @@ const MIGS = [
   'migrations/0043_sum_picklists.sql',
   'migrations/0044_sum_envios.sql',
   'migrations/0045_sum_conteos.sql',
+  'migrations/0076_sum_producto_costo.sql',
 ];
 
 let db: D1Mock;
@@ -38,6 +42,9 @@ const app = mount([
   ['/api/suministros/envios', sumEnvios],
   ['/api/suministros/picklists', sumPicklists],
   ['/api/suministros/conteos', sumConteos],
+  ['/api/suministros/productos', sumProductos],
+  ['/api/suministros/inventario', sumInventario],
+  ['/api/suministros/reportes', sumReportes],
 ]);
 
 const M = '/api/suministros/movimientos';
@@ -269,5 +276,46 @@ describe('conteos — conciliar reconciles variance via ajuste', () => {
     expect(stock('ubi_ccs', 'item_agua1')).toBe(790); // -10 variance applied
     expect(stock('ubi_ccs', 'item_para_b')).toBe(610); // +10 variance applied
     expect(db.raw.prepare(`SELECT estado FROM sum_conteos WHERE id='cnt_demo01'`).get()).toMatchObject({ estado: 'conciliado' });
+  });
+});
+
+describe('productos — cost + valuation surfacing', () => {
+  it('list returns costo_efectivo + valor_inventario', async () => {
+    const r = await call(app, 'GET', '/api/suministros/productos', env);
+    expect(r.status).toBe(200);
+    const agua = r.json.results.find((p: any) => p.id === 'prod_agua1');
+    expect(agua).toBeTruthy();
+    expect(typeof agua.costo_efectivo).toBe('number');
+    expect(agua.valor_inventario).toBeCloseTo(Number(agua.on_hand) * Number(agua.costo_efectivo), 2);
+  });
+  it('manual costo_unit override wins over supplier price and drives value', async () => {
+    const patch = await call(app, 'PATCH', '/api/suministros/productos/prod_agua1', env, { costo_unit: 7 });
+    expect(patch.status).toBe(200);
+    const r = await call(app, 'GET', '/api/suministros/productos/prod_agua1', env);
+    expect(r.json.costo_efectivo).toBe(7);
+    expect(r.json.valor_inventario).toBeCloseTo(Number(r.json.on_hand) * 7, 2);
+    const val = await call(app, 'GET', '/api/suministros/reportes/valuacion', env);
+    expect(val.json.total).toBeGreaterThan(0);
+  });
+});
+
+describe('movimientos — ?producto_id filter (per-product ledger)', () => {
+  it('returns only transactions that touch the given product', async () => {
+    await call(app, 'POST', `${M}/recepcion`, env, {
+      ubicacion_id: 'ubi_ccs', referencia: 'FILTER-AGUA',
+      lineas: [{ producto_id: 'prod_agua1', cantidad: 10 }],
+    });
+    await call(app, 'POST', `${M}/recepcion`, env, {
+      ubicacion_id: 'ubi_ccs', referencia: 'FILTER-ARROZ',
+      lineas: [{ producto_id: 'prod_arroz', cantidad: 10 }],
+    });
+    const filtered = await call(app, 'GET', `${M}?producto_id=prod_agua1`, env);
+    const refs = filtered.json.results.map((t: any) => t.referencia);
+    expect(refs).toContain('FILTER-AGUA');
+    expect(refs).not.toContain('FILTER-ARROZ');
+    const all = await call(app, 'GET', `${M}`, env);
+    const allRefs = all.json.results.map((t: any) => t.referencia);
+    expect(allRefs).toContain('FILTER-AGUA');
+    expect(allRefs).toContain('FILTER-ARROZ');
   });
 });
