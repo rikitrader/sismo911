@@ -1564,6 +1564,50 @@
   </section>
 
     <p class="text-[11px] text-on-surface-variant">Actualización manual · las acciones de escritura requieren sesión de operador.</p>
+
+    <!-- ═══ PERFIL DE UBICACIÓN / ALMACÉN (global, compartido por Almacenes + Ubicaciones) ═══ -->
+    <div id="ubicDetail" class="hidden card p-0 mt-4 overflow-hidden">
+      <div class="px-4 py-3 flex items-center justify-between" style="background:#082752;color:#fff">
+        <div>
+          <div id="udName" class="font-bold text-[15px] leading-tight">—</div>
+          <div id="udSku" class="mono text-[11px] opacity-80"></div>
+        </div>
+        <button data-act="closeUbic" class="text-xs font-semibold rounded px-2 py-1" style="background:rgba(255,255,255,.16);color:#fff">✕ Cerrar</button>
+      </div>
+      <div class="p-4 space-y-4">
+        <div id="udKpis" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+        <div id="udMeta" class="text-[12px] text-on-surface-variant"></div>
+
+        <div>
+          <div class="eyebrow mb-1">Existencias en esta ubicación</div>
+          <div class="overflow-x-auto" style="max-height:34vh">
+            <table class="dt"><thead><tr><th>Producto</th><th>Lote</th><th>Caducidad</th><th class="text-right">Cantidad</th><th class="text-right">Valor</th></tr></thead>
+            <tbody id="udStock"></tbody></table>
+          </div>
+        </div>
+
+        <!-- Acciones de ubicación -->
+        <div class="card p-3" style="background:var(--ops-panel)">
+          <div class="eyebrow mb-2">Operaciones en esta ubicación</div>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn-add" style="background:#082752;color:#fff;border-color:#082752" data-act="udRecibir">+ Recibir stock</button>
+            <button class="btn-add" data-act="udDespachar">− Despachar</button>
+            <button class="btn-add" data-act="udTrasladar">⇄ Trasladar</button>
+            <button class="btn-add" data-act="udConteo">✓ Conteo físico</button>
+          </div>
+          <div id="udOpBox" class="hidden mt-3"></div>
+          <p id="udMsg" class="text-xs mt-1"></p>
+        </div>
+
+        <div>
+          <div class="eyebrow mb-1">Movimientos recientes aquí (trazabilidad)</div>
+          <div class="overflow-x-auto" style="max-height:30vh">
+            <table class="dt"><thead><tr><th>Fecha</th><th>Tipo</th><th>Origen → Destino</th><th>Ref.</th><th>Actor</th></tr></thead>
+            <tbody id="udLedger"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
   </main><!-- end page-content -->
 
 </div><!-- end main-area -->
@@ -1629,6 +1673,7 @@ const TAB_LABEL={tablero:'Resumen',inventario:'Existencias',catalogo:'Productos'
 function setBreadcrumb(t){const el=$('#crumbCur');if(el)el.textContent=TAB_LABEL[t]||'Suministros';}
 function onTab(t){
   setBreadcrumb(t);
+  if(t!=='almacenes'&&t!=='ubicaciones'){const ud=$('#ubicDetail');if(ud)ud.classList.add('hidden');}
   const gs=$('#globalSearch');if(gs)gs.value='';
   if(t==='tablero')loadTablero();
   else if(t==='inventario'){ensureUbic();loadInv();}
@@ -1687,7 +1732,7 @@ function fillUbicSelects(){
 function renderUbic(list){
   const tb=$('#ubicRows');if(!tb)return;
   if(!list.length){tb.innerHTML='<tr><td colspan="6" class="text-center text-on-surface-variant py-8">Sin ubicaciones todavía.</td></tr>';return;}
-  tb.innerHTML=list.map(u=>`<tr class="row">
+  tb.innerHTML=list.map(u=>`<tr class="row" data-act="openUbic" data-a1="${esc(u.id)}" title="Ver perfil de la ubicación">
     <td><div class="font-semibold text-[12px]">${esc(u.nombre)}</div>${u.direccion?`<div class="text-[11px] text-on-surface-variant">${esc(u.direccion)}</div>`:''}</td>
     <td class="text-[12px]">${esc(UTIPO[u.tipo]||u.tipo||'—')}</td>
     <td class="mono text-[11px]">${esc(u.codigo||'—')}</td>
@@ -3200,7 +3245,7 @@ $('#refreshBtn').onclick=()=>{const t=$$('.seg.on')[0]?.dataset.tab;if(t)onTab(t
 function __rmClosest(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
 function __h1(el){var n=el.closest('.lrow');if(n)n.remove();calcFacTotal();}
 function __h2(el){var n=el.closest('.lrow');if(n)n.remove();rebuildContSels();}
-var ACTIONS={openProducto:openProducto,closeProducto:pdClose,pdAdjust:pdAdjust,pdConteo:pdConteo,addRow:addRow,loadItems:loadItems,addDonRow:addDonRow,addOrdenRow:addOrdenRow,addFacRow:addFacRow,addPkRow:addPkRow,addEnvContRow:addEnvContRow,addEnvRow:addEnvRow,loadCntItems:loadCntItems,toggleCntLineas:toggleCntLineas,addCntRow:addCntRow,switchRep:switchRep,delCat:delCat,openRq:openRq,patchRq:patchRq,surtirRq:surtirRq,openProveedor:openProveedor,delPrecio:delPrecio,openDonacion:openDonacion,recibirDonacion:recibirDonacion,cancelarDonacion:cancelarDonacion,openOrden:openOrden,patchOrden:patchOrden,showOcRecibir:showOcRecibir,delCuenta:delCuenta,openFactura:openFactura,patchFac:patchFac,pagarFac:pagarFac,openPicklist:openPicklist,pickPicklist:pickPicklist,completarPicklist:completarPicklist,cancelarPicklist:cancelarPicklist,delMetodo:delMetodo,openEnvio:openEnvio,despacharEnvio:despacharEnvio,cancelarEnvio:cancelarEnvio,patchEnvio:patchEnvio,recibirEnvio:recibirEnvio,openConteo:openConteo,guardarConteo:guardarConteo,conciliarConteo:conciliarConteo,cancelarConteo:cancelarConteo,loadReporte:loadReporte,exportLedgerCSV:exportLedgerCSV,loadEtiquetas:loadEtiquetas,rebuildContSels:rebuildContSels,__rmClosest:__rmClosest,__h1:__h1,__h2:__h2};
+var ACTIONS={openProducto:openProducto,closeProducto:pdClose,pdAdjust:pdAdjust,pdConteo:pdConteo,openUbic:openUbic,closeUbic:udClose,udRecibir:udRecibir,udDoRecibir:udDoRecibir,udDespachar:udDespachar,udDoDespachar:udDoDespachar,udTrasladar:udTrasladar,udDoTrasladar:udDoTrasladar,udConteo:udConteo,udDoConteo:udDoConteo,addRow:addRow,loadItems:loadItems,addDonRow:addDonRow,addOrdenRow:addOrdenRow,addFacRow:addFacRow,addPkRow:addPkRow,addEnvContRow:addEnvContRow,addEnvRow:addEnvRow,loadCntItems:loadCntItems,toggleCntLineas:toggleCntLineas,addCntRow:addCntRow,switchRep:switchRep,delCat:delCat,openRq:openRq,patchRq:patchRq,surtirRq:surtirRq,openProveedor:openProveedor,delPrecio:delPrecio,openDonacion:openDonacion,recibirDonacion:recibirDonacion,cancelarDonacion:cancelarDonacion,openOrden:openOrden,patchOrden:patchOrden,showOcRecibir:showOcRecibir,delCuenta:delCuenta,openFactura:openFactura,patchFac:patchFac,pagarFac:pagarFac,openPicklist:openPicklist,pickPicklist:pickPicklist,completarPicklist:completarPicklist,cancelarPicklist:cancelarPicklist,delMetodo:delMetodo,openEnvio:openEnvio,despacharEnvio:despacharEnvio,cancelarEnvio:cancelarEnvio,patchEnvio:patchEnvio,recibirEnvio:recibirEnvio,openConteo:openConteo,guardarConteo:guardarConteo,conciliarConteo:conciliarConteo,cancelarConteo:cancelarConteo,loadReporte:loadReporte,exportLedgerCSV:exportLedgerCSV,loadEtiquetas:loadEtiquetas,rebuildContSels:rebuildContSels,__rmClosest:__rmClosest,__h1:__h1,__h2:__h2};
 function __resolveArgs(el){var a=[],i=1,v;while((v=el.getAttribute("data-a"+i))!==null){a.push(v==="@value"?el.value:(v==="@checked"?el.checked:v));i++;}a.push(el);return a;}
 ["click","change","input"].forEach(function(ev){document.addEventListener(ev,function(e){var el=e.target.closest("[data-act]");if(!el)return;var want=el.getAttribute("data-ev")||"click";if(want!==ev)return;var f=ACTIONS[el.getAttribute("data-act")];if(f)f.apply(el,__resolveArgs(el));},false);});
 
@@ -3221,7 +3266,7 @@ async function loadAlmacenes(){
   if(!UBICACIONES.length)await loadUbic();
   const list=UBICACIONES.filter(u=>u.tipo==='almacen'||u.tipo==='deposito');
   if(!list.length){tb.innerHTML='<tr><td colspan="7" class="text-center text-on-surface-variant py-8">Sin almacenes ni depósitos todavía.</td></tr>';return;}
-  tb.innerHTML=list.map(u=>`<tr class="row">
+  tb.innerHTML=list.map(u=>`<tr class="row" data-act="openUbic" data-a1="${esc(u.id)}" title="Ver perfil del almacén">
     <td><div class="font-semibold text-[12px]">${esc(u.nombre)}</div>${u.direccion?`<div class="text-[11px] text-on-surface-variant">${esc(u.direccion)}</div>`:''}</td>
     <td class="text-[12px]">${esc(UTIPO[u.tipo]||u.tipo||'—')}</td>
     <td class="mono text-[11px]">${esc(u.codigo||'—')}</td>
@@ -3230,6 +3275,130 @@ async function loadAlmacenes(){
     <td class="text-[12px]">${esc(u.telefono||'—')}</td>
     <td>${u.activa!==false?'<span class="chip" style="color:#15803d;background:#dcfce7">Activa</span>':'<span class="chip" style="color:#b91c1c;background:#fee2e2">Inactiva</span>'}</td>
   </tr>`).join('');
+}
+
+// ── Perfil de ubicación / almacén ──
+let UD_CURRENT=null, UD_COST={}, UD_ITEMS=[];
+function udClose(){$('#ubicDetail').classList.add('hidden');UD_CURRENT=null;}
+async function openUbic(id){
+  UD_CURRENT=id;
+  if(!UBICACIONES.length)await ensureUbic().catch(()=>{});
+  const u=(UBICACIONES||[]).find(x=>x.id===id);
+  const dt=$('#ubicDetail');dt.classList.remove('hidden');
+  $('#udName').textContent=u?u.nombre:'Cargando…';
+  $('#udSku').textContent=u?[(u.codigo||''),(UTIPO[u.tipo]||u.tipo||''),(u.estado_region||'')].filter(Boolean).join(' · '):'';
+  $('#udKpis').innerHTML='';$('#udStock').innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-4">Cargando…</td></tr>';
+  $('#udLedger').innerHTML='<tr><td colspan="5" class="text-center text-on-surface-variant py-4">Cargando…</td></tr>';
+  $('#udOpBox').classList.add('hidden');$('#udMsg').textContent='';
+  dt.scrollIntoView({behavior:'smooth',block:'start'});
+  const[inv,movs,prods,items]=await Promise.all([
+    api('inventario?ubicacion_id='+encodeURIComponent(id)).then(j).catch(()=>({})),
+    api('movimientos?limit=60&ubicacion_id='+encodeURIComponent(id)).then(j).catch(()=>({})),
+    api('productos').then(j).catch(()=>({})),
+    api('inventario/items?ubicacion_id='+encodeURIComponent(id)).then(j).catch(()=>({})),
+  ]);
+  UD_COST={};(prods.results||[]).forEach(p=>UD_COST[p.id]=Number(p.costo_efectivo)||0);
+  UD_ITEMS=items.results||[];
+  const rows=inv.results||[];const now=Date.now();
+  let totalQty=0,totalVal=0;const skuSet=new Set();
+  rows.forEach(r=>{totalQty+=Number(r.cantidad)||0;skuSet.add(r.producto_id);totalVal+=(Number(r.cantidad)||0)*(UD_COST[r.producto_id]||0);});
+  const kpi=(l,v)=>`<div class="card p-2" style="background:var(--ops-panel)"><div class="lbl">${l}</div><div class="font-bold text-[15px]">${v}</div></div>`;
+  $('#udKpis').innerHTML=kpi('Productos distintos',skuSet.size)+kpi('Unidades totales',totalQty.toLocaleString('es-VE'))+kpi('Valor en sitio',money(Math.round(totalVal*100)/100))+kpi('Estado',(u&&u.activa!==false)?'Activa':'Inactiva');
+  $('#udMeta').innerHTML=[u&&u.responsable?`Responsable: <b>${esc(u.responsable)}</b>`:'',u&&u.telefono?`Tel: ${esc(u.telefono)}`:'',u&&u.direccion?esc(u.direccion):''].filter(Boolean).join(' · ');
+  $('#udStock').innerHTML=rows.length?rows.map(r=>{
+    const cad=r.caducidad_ms?Number(r.caducidad_ms):null;
+    const cls=cad&&cad<now?'vencido':(cad&&Math.floor((cad-now)/86400000)<=30?'por-vencer':'');
+    const val=(Number(r.cantidad)||0)*(UD_COST[r.producto_id]||0);
+    return `<tr class="${cls}">
+      <td class="text-[12px]"><div class="font-semibold">${esc(r.producto_nombre||'—')}</div><div class="mono text-[11px] text-on-surface-variant">${esc(r.codigo||'')}</div></td>
+      <td class="mono text-[11px]">${esc(r.lote||'—')}</td>
+      <td class="text-[12px]">${cad?fdate(cad):'—'}</td>
+      <td class="mono text-[12px] font-semibold text-right">${r.cantidad}</td>
+      <td class="mono text-[12px] text-right">${money(Math.round(val*100)/100)}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="5" class="text-center text-on-surface-variant py-4">Sin existencias en esta ubicación.</td></tr>';
+  const tx=movs.results||[];
+  $('#udLedger').innerHTML=tx.length?tx.map(t=>`<tr>
+      <td class="text-[11px] whitespace-nowrap">${fdate(t.created_ms)}</td>
+      <td>${chipOf(t.tipo,TXTIPO)}</td>
+      <td class="text-[12px]">${esc(t.ubicacion_nombre||'—')}${t.ubicacion_dest_nombre?' → '+esc(t.ubicacion_dest_nombre):''}</td>
+      <td class="text-[11px]">${esc(t.referencia||t.motivo||'—')}</td>
+      <td class="text-[11px]">${esc(t.actor||'—')}</td>
+    </tr>`).join(''):'<tr><td colspan="5" class="text-center text-on-surface-variant py-4">Sin movimientos en esta ubicación.</td></tr>';
+}
+function udItemOptions(){return '<option value="">— Ítem en sitio —</option>'+UD_ITEMS.map(i=>`<option value="${esc(i.item_id)}">${esc(i.producto_nombre)}${i.lote?(' · '+esc(i.lote)):''} (${i.disponible} disp.)</option>`).join('');}
+function udProdSelect(){
+  // productos cache for recepcion (any product can be received)
+  const opts=(PRODUCTOS&&PRODUCTOS.length?PRODUCTOS:Object.keys(UD_COST).map(id=>({id,nombre:id}))).map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+  return '<option value="">— Producto —</option>'+opts;
+}
+function udDestSelect(){return '<option value="">— Destino —</option>'+(UBICACIONES||[]).filter(x=>x.id!==UD_CURRENT).map(u=>`<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('');}
+function udShowOp(html){const b=$('#udOpBox');b.classList.remove('hidden');b.innerHTML=html;$('#udMsg').textContent='';}
+async function udRefresh(){if(UD_CURRENT)await openUbic(UD_CURRENT);loadProds&&loadProds();}
+function udRecibir(){
+  udShowOp(`<div class="eyebrow mb-1">Recibir stock aquí</div>
+    <div class="grid sm:grid-cols-[1fr_auto] gap-2 items-end">
+      <div><label class="lbl">Producto</label><select id="udProd" class="inp-sm" style="width:100%">${udProdSelect()}</select></div>
+      <div><label class="lbl">Cantidad</label><input id="udQty" type="number" min="0.01" step="any" class="inp-sm" style="width:110px"></div>
+      <div class="grid grid-cols-2 gap-2 sm:col-span-2"><div><label class="lbl">Lote (opcional)</label><input id="udLote" class="inp-sm" style="width:100%"></div><div><label class="lbl">Caducidad (opcional)</label><input id="udCad" type="date" class="inp-sm" style="width:100%"></div></div>
+    </div>
+    <button class="btn-add mt-2" style="background:#082752;color:#fff;border-color:#082752" data-act="udDoRecibir">Confirmar recepción</button>`);
+}
+async function udDoRecibir(){
+  const prod=$('#udProd').value,qty=num($('#udQty').value);
+  if(!prod){setMsg('#udMsg','Elige un producto',false);return;}
+  if(!qty||qty<=0){setMsg('#udMsg','Cantidad inválida',false);return;}
+  const linea={producto_id:prod,cantidad:qty};const lote=$('#udLote').value.trim(),cad=$('#udCad').value;
+  if(lote)linea.lote=lote;if(cad)linea.caducidad_ms=new Date(cad).getTime();
+  const ok=await post('movimientos/recepcion',{ubicacion_id:UD_CURRENT,referencia:'Recepción (perfil ubicación)',lineas:[linea]},'#udMsg');
+  if(ok){toast('Stock recibido');udRefresh();}
+}
+function udDespachar(){
+  udShowOp(`<div class="eyebrow mb-1">Despachar (salida) desde aquí</div>
+    <div class="grid sm:grid-cols-[1fr_auto] gap-2 items-end">
+      <div><label class="lbl">Ítem</label><select id="udItem" class="inp-sm" style="width:100%">${udItemOptions()}</select></div>
+      <div><label class="lbl">Cantidad</label><input id="udQty" type="number" min="0.01" step="any" class="inp-sm" style="width:110px"></div>
+    </div>
+    <button class="btn-add mt-2" data-act="udDoDespachar">Confirmar despacho</button>`);
+}
+async function udDoDespachar(){
+  const item=$('#udItem').value,qty=num($('#udQty').value);
+  if(!item){setMsg('#udMsg','Elige un ítem',false);return;}
+  if(!qty||qty<=0){setMsg('#udMsg','Cantidad inválida',false);return;}
+  const ok=await post('movimientos/despacho',{ubicacion_id:UD_CURRENT,motivo:'Despacho (perfil ubicación)',lineas:[{item_id:item,cantidad:qty}]},'#udMsg');
+  if(ok){toast('Despachado');udRefresh();}
+}
+function udTrasladar(){
+  udShowOp(`<div class="eyebrow mb-1">Trasladar a otra ubicación</div>
+    <div class="grid sm:grid-cols-3 gap-2 items-end">
+      <div><label class="lbl">Ítem</label><select id="udItem" class="inp-sm" style="width:100%">${udItemOptions()}</select></div>
+      <div><label class="lbl">Cantidad</label><input id="udQty" type="number" min="0.01" step="any" class="inp-sm" style="width:100%"></div>
+      <div><label class="lbl">Destino</label><select id="udDest" class="inp-sm" style="width:100%">${udDestSelect()}</select></div>
+    </div>
+    <button class="btn-add mt-2" data-act="udDoTrasladar">Confirmar traslado</button>`);
+}
+async function udDoTrasladar(){
+  const item=$('#udItem').value,qty=num($('#udQty').value),dest=$('#udDest').value;
+  if(!item){setMsg('#udMsg','Elige un ítem',false);return;}
+  if(!qty||qty<=0){setMsg('#udMsg','Cantidad inválida',false);return;}
+  if(!dest){setMsg('#udMsg','Elige destino',false);return;}
+  const ok=await post('movimientos/traslado',{ubicacion_id:UD_CURRENT,ubicacion_dest_id:dest,motivo:'Traslado (perfil ubicación)',lineas:[{item_id:item,cantidad:qty}]},'#udMsg');
+  if(ok){toast('Traslado realizado');udRefresh();}
+}
+function udConteo(){
+  udShowOp(`<div class="eyebrow mb-1">Conteo físico (fija la cantidad real)</div>
+    <div class="grid sm:grid-cols-[1fr_auto] gap-2 items-end">
+      <div><label class="lbl">Ítem</label><select id="udItem" class="inp-sm" style="width:100%">${udItemOptions()}</select></div>
+      <div><label class="lbl">Cantidad contada</label><input id="udQty" type="number" min="0" step="any" class="inp-sm" style="width:130px"></div>
+    </div>
+    <button class="btn-add mt-2" data-act="udDoConteo">Confirmar conteo</button>`);
+}
+async function udDoConteo(){
+  const item=$('#udItem').value,qty=num($('#udQty').value);
+  if(!item){setMsg('#udMsg','Elige un ítem',false);return;}
+  if(qty==null||qty<0){setMsg('#udMsg','Cantidad inválida',false);return;}
+  const ok=await post('movimientos/conteo',{ubicacion_id:UD_CURRENT,motivo:'Conteo físico (perfil ubicación)',lineas:[{item_id:item,cantidad:qty}]},'#udMsg');
+  if(ok){toast('Conteo conciliado');udRefresh();}
 }
 
 // ── KITS (real bundles: products grouped by category) ──
