@@ -85,6 +85,27 @@ export function computeSar(b: Scored, missing: string[] = []): Sar | null {
   };
 }
 
+// ===== Live missing-persons linkage =====
+// A reported missing person with their free-text last-seen location (lowercased).
+export interface MissingReport { name: string; loc: string; }
+const GENERIC_NAME_RE = /\b(edificio|edif|residencias?|conjunto|torre|hotel|aparthotel|urb|urbanizacion|complejo|villa|club)\b/gi;
+// Distinctive part of a building name (drops generic words + parenthetical/aliases).
+export function buildingKey(name: string): string {
+  return name.toLowerCase().replace(/\(.*?\)/g, ' ').replace(GENERIC_NAME_RE, ' ')
+    .replace(/[^a-z0-9áéíóúñ ]/gi, ' ').replace(/\s+/g, ' ').trim();
+}
+// Reporter names whose last-seen location references this building by a distinctive
+// token (≥7 chars, to avoid generic-word cross-linking like "coral"/"mar"/"playa").
+export function linkLiveMissing(buildingName: string, reports: MissingReport[]): string[] {
+  const tokens = buildingKey(buildingName).split(' ').filter((t) => t.length >= 7);
+  if (!tokens.length) return [];
+  const seen = new Set<string>(); const out: string[] = [];
+  for (const r of reports) {
+    if (tokens.some((t) => r.loc.includes(t)) && !seen.has(r.name)) { seen.add(r.name); out.push(r.name); }
+  }
+  return out;
+}
+
 const MMI_MAP: Record<number, number> = { 5: 0.05, 6: 0.15, 7: 0.35, 8: 0.6, 9: 0.85, 10: 0.95 };
 const STATUS_SCORE: Record<string, number> = {
   COLAPSO_TOTAL: 98, COLAPSO_PARCIAL: 85, CONDENADO: 80, DANADO: 62, HABITABLE: 15,

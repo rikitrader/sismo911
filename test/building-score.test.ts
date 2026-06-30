@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   mmiToHaz, vulnFactor, band, scoreCurated, scoreOsm, PRIOR_BLEND, damageRatio, computeCost,
-  computeSar, estimateOccupants, sarSeverity, type Sector, type Curated, type Osm, type Scored,
+  computeSar, estimateOccupants, sarSeverity, buildingKey, linkLiveMissing,
+  type Sector, type Curated, type Osm, type Scored, type MissingReport,
 } from '../src/lib/building-score';
 
 // Building damage-scoring engine invariants (CROSS-CHECK GATE): scores bounded
@@ -192,5 +193,29 @@ describe('SAR triage', () => {
     expect(withMissing.missingCount).toBe(2);
     expect(withMissing.sarScore).toBeGreaterThanOrEqual(base);
     expect(withMissing.sarScore).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('live missing-persons linkage', () => {
+  it('buildingKey drops generic words + aliases, keeps the distinctive part', () => {
+    expect(buildingKey('Edificio Breogan')).toBe('breogan');
+    expect(buildingKey('Edificio Solymar (Sol y Mar)')).toBe('solymar');
+    expect(buildingKey('Ritasol Palace')).toBe('ritasol palace');
+  });
+  const reports: MissingReport[] = [
+    { name: 'Diemery Ruiz', loc: 'caraballeda, edificio breogan, los corales' },
+    { name: 'Crescencio Marotta', loc: 'solymar, los corales' },
+    { name: 'Otro Caso', loc: 'macuto, calle el cristo' },
+  ];
+  it('links reporters whose last-seen references the building by distinctive token', () => {
+    expect(linkLiveMissing('Edificio Breogan', reports)).toEqual(['Diemery Ruiz']);
+    expect(linkLiveMissing('Edificio Solymar (Sol y Mar)', reports)).toEqual(['Crescencio Marotta']);
+  });
+  it('does NOT cross-link on short/generic tokens (coral, mar, sol)', () => {
+    // "Coral Park" → key tokens all <7 chars → no spurious match to Los Corales reports
+    expect(linkLiveMissing('Coral Park', reports)).toEqual([]);
+  });
+  it('returns empty when nothing references the building', () => {
+    expect(linkLiveMissing('Edificio Vallarta', reports)).toEqual([]);
   });
 });
