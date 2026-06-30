@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { timingSafeEqualStr } from '../lib/security';
 import type { RawPatient } from '../lib/hospital-registry';
-import { upsertHospitalRows } from '../lib/hospital-ingest';
+import { upsertHospitalRows, collapseHospitalDupes } from '../lib/hospital-ingest';
 import { drainHospitalRegistryMatch } from '../ingest/hospital-registry-match';
 import { ingestHospitalRegistry } from '../ingest/hospital-registry-sync';
 
@@ -42,6 +42,13 @@ hospital.post('/hospital/sync', async (c) => {
   if (!authed(c)) return c.json({ error: 'unauthorized' }, 401);
   const out = await ingestHospitalRegistry(c.env);
   return c.json(out);
+});
+
+// ── POST /hospital/collapse — token-gated manual duplicate collapse (reversible) ─
+hospital.post('/hospital/collapse', async (c) => {
+  if (!authed(c)) return c.json({ error: 'unauthorized' }, 401);
+  const out = await collapseHospitalDupes(c.env);
+  return c.json({ ok: !out.reason, ...out });
 });
 
 // ── GET /hospital/search?q= — public search (the source's stated purpose) ──────

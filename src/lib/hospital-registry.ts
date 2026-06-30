@@ -52,10 +52,19 @@ export function parseStatus(observaciones: string | null | undefined): { estado:
   return { estado, conflict };
 }
 
-/** Stable per-patient key: cédula if present, else hospital|normalized-primary-name. */
-export function dedupeKey(cedula: string, hospital: string | null | undefined, primaryNorm: string): string {
+/**
+ * Stable per-patient key: cédula if present, else the normalized primary name.
+ * Hospital is deliberately NOT part of the key — the same person listed under a
+ * hospital-name variant ("…Pérez de León" vs "…Pérez de León 2") must collapse to
+ * ONE record, not split into two. (The earlier `hospital|name` key split the same
+ * person across hospital-string variants, inflating the registry by ~3k rows.)
+ * Two different real people who share a normalized name AND both lack a cédula are
+ * indistinguishable from this data and are intentionally merged; the cross-key
+ * collapse (collapseHospitalDupes) keeps cédula-identified people separate.
+ */
+export function dedupeKey(cedula: string, _hospital: string | null | undefined, primaryNorm: string): string {
   if (cedula) return 'c:' + cedula;
-  return 'n:' + normName(hospital) + '|' + primaryNorm;
+  return 'n:' + primaryNorm;
 }
 
 export interface RawPatient {

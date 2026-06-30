@@ -1,6 +1,6 @@
 import type { Env } from '../types';
 import { parseXlsxRows } from '../lib/xlsx-lite';
-import { mapSheetRows, upsertHospitalRows } from '../lib/hospital-ingest';
+import { mapSheetRows, upsertHospitalRows, collapseHospitalDupes } from '../lib/hospital-ingest';
 import { logAgentActivity } from '../lib/agent-activity';
 
 // Recurring pull of the hospital patient registry. Fetches the configured feed
@@ -8,7 +8,7 @@ import { logAgentActivity } from '../lib/agent-activity';
 // dependency-free xlsx-lite reader, and re-ingests (idempotent upsert by dedupe_key).
 // No silent failure: a missing URL / fetch / parse error is logged to agent_activity.
 
-export async function ingestHospitalRegistry(env: Env): Promise<{ ok: boolean; written?: number; reason?: string }> {
+export async function ingestHospitalRegistry(env: Env): Promise<{ ok: boolean; written?: number; collapsed?: number; reason?: string }> {
   const url = (env.HOSPITAL_FEED_URL || '').trim();
   if (!url) return { ok: false, reason: 'no_feed_url' };   // unconfigured → no-op (not an error)
   try {
@@ -19,11 +19,15 @@ export async function ingestHospitalRegistry(env: Env): Promise<{ ok: boolean; w
     const { source_updated, patients } = mapSheetRows(rows);
     if (!patients.length) throw new Error('no_rows_parsed');
     const out = await upsertHospitalRows(env, patients, source_updated);
+    // Self-heal duplicates each pull: the source lists some people both with and
+    // without a cédula (and under hospital-name variants), so an upsert alone can
+    // leave duplicate rows. collapseHospitalDupes merges them (reversible).
+    const col = await collapseHospitalDupes(env);
     await logAgentActivity(env, {
       source: 'hospital-registry-sync', action: 'ingest', fetched: patients.length, created: out.written,
-      summary: `🏥 Registro hospitalario actualizado — ${out.written} paciente(s) (fuente: ${source_updated || 's/f'}).`, ok: true,
+      summary: `🏥 Registro hospitalario actualizado — ${out.written} paciente(s)${col.collapsed ? `, ${col.collapsed} duplicado(s) fusionado(s)` : ''} (fuente: ${source_updated || 's/f'}).`, ok: true,
     });
-    return { ok: true, written: out.written };
+    return { ok: true, written: out.written, collapsed: col.collapsed };
   } catch (e: any) {
     const reason = String(e?.message || e).slice(0, 120);
     await logAgentActivity(env, { source: 'hospital-registry-sync', action: 'ingest', ok: false,
