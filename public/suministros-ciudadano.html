@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suministros — SISMO911</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#f5f7fb">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  :root{
+    --bg:#f5f7fb; --surface:#fff; --surface-2:#f9fafc; --text:#111827; --muted:#6b7280;
+    --border:#d9dee8; --brand:#001b44; --brand-2:#0b5fff; --success:#2e7d32;
+    --warning:#f59e0b; --danger:#dc2626; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Public Sans',system-ui,sans-serif;line-height:1.5}
+  .wrap{max-width:880px;margin:0 auto;padding:28px 20px 64px}
+  .page-head{margin-bottom:22px}
+  .eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-2)}
+  h1{font-size:1.7rem;font-weight:800;margin:.3rem 0 .35rem;color:var(--brand)}
+  .lede{color:var(--muted);font-size:1rem;max-width:60ch}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:18px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .card h2{font-size:1.15rem;font-weight:700;margin:0 0 .25rem;color:var(--brand)}
+  .card .sub{color:var(--muted);font-size:.9rem;margin:0 0 16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field label{font-size:.84rem;font-weight:600;color:var(--text)}
+  .field .req{color:var(--danger)}
+  input,select,textarea{font-family:inherit;font-size:.95rem;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text);width:100%}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--brand-2);outline-offset:1px;background:#fff}
+  textarea{resize:vertical;min-height:84px}
+  .btn{display:inline-flex;align-items:center;gap:8px;justify-content:center;font-family:inherit;font-size:.95rem;font-weight:700;padding:11px 18px;border-radius:10px;border:1px solid transparent;cursor:pointer;transition:.15s}
+  .btn-primary{background:var(--brand-2);color:#fff}
+  .btn-primary:hover{background:#0a52d8}
+  .btn-primary:disabled{opacity:.55;cursor:not-allowed}
+  .btn-ghost{background:transparent;color:var(--brand-2);border-color:var(--border)}
+  .btn-ghost:hover{background:var(--surface-2)}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:999px;border:1px solid transparent}
+  .b-pendiente{background:#fff7ed;color:#b45309;border-color:#fed7aa}
+  .b-aprobada{background:#ecfdf3;color:#15803d;border-color:#bbf7d0}
+  .b-rechazada{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
+  .b-en_camino{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+  .b-entregada{background:#f0fdf4;color:#166534;border-color:#bbf7d0}
+  .state-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+  .si-wait{background:#fff7ed;color:#b45309}
+  .si-no{background:#fef2f2;color:#b91c1c}
+  .reqlist{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .reqrow{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2)}
+  .reqrow .ic{width:38px;height:38px;border-radius:9px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .reqrow .meta{flex:1;min-width:0}
+  .reqrow .tname{font-weight:700;text-transform:capitalize}
+  .reqrow .tsub{font-size:.82rem;color:var(--muted)}
+  .empty{text-align:center;color:var(--muted);padding:26px 12px;font-size:.92rem}
+  .note{background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--warning);border-radius:8px;padding:10px 14px;font-size:.9rem;color:var(--text);margin:12px 0}
+  .alert{padding:11px 14px;border-radius:10px;font-size:.9rem;margin-bottom:14px;display:none}
+  .alert.show{display:block}
+  .alert-err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+  .alert-ok{background:#ecfdf3;color:#15803d;border:1px solid #bbf7d0}
+  .skeleton{color:var(--muted);text-align:center;padding:40px}
+  .row-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="page-head">
+    <div class="eyebrow">SISMO911 · Suministros</div>
+    <h1>Suministros</h1>
+    <p class="lede">Solicita acceso para pedir alimentos, agua, medicinas y otros insumos de emergencia, y haz seguimiento al estado de cada solicitud.</p>
+  </div>
+
+  <div id="alert" class="alert" role="alert"></div>
+  <div id="root"><div class="skeleton">Cargando…</div></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var root = document.getElementById('root');
+  var alertBox = document.getElementById('alert');
+  var BASE = '/api/suministros-ciudadano';
+
+  var TIPO_SOLICITANTE = [
+    ['beneficiario', 'Beneficiario / familia afectada'],
+    ['coordinador_refugio', 'Coordinador de refugio'],
+    ['lider_comunitario', 'Líder comunitario'],
+    ['organizacion', 'Organización / ONG']
+  ];
+  var TIPO_PEDIDO = [
+    ['alimentos', '🍚 Alimentos'], ['agua', '💧 Agua'], ['medicinas', '💊 Medicinas'],
+    ['higiene', '🧼 Higiene'], ['abrigo', '🛏️ Abrigo'], ['otro', '📦 Otro']
+  ];
+  var TIPO_ICON = { alimentos:'🍚', agua:'💧', medicinas:'💊', higiene:'🧼', abrigo:'🛏️', otro:'📦' };
+  var URGENCIA = [['baja','Baja'], ['normal','Normal'], ['alta','Alta']];
+  var STATUS_LABEL = { pendiente:'Pendiente', aprobada:'Aprobada', en_camino:'En camino', entregada:'Entregada', rechazada:'Rechazada' };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  function fmtDate(ms) {
+    if (!ms) return '';
+    try { return new Date(Number(ms)).toLocaleDateString('es-VE', { day:'2-digit', month:'short', year:'numeric' }); }
+    catch (e) { return ''; }
+  }
+  function showAlert(msg, kind) {
+    alertBox.textContent = msg;
+    alertBox.className = 'alert show ' + (kind === 'ok' ? 'alert-ok' : 'alert-err');
+    if (kind === 'ok') setTimeout(function () { alertBox.className = 'alert'; }, 4000);
+  }
+  function clearAlert() { alertBox.className = 'alert'; }
+
+  async function api(path, opts) {
+    opts = opts || {};
+    var init = { credentials: 'same-origin', headers: { Accept: 'application/json' } };
+    if (opts.body) { init.method = 'POST'; init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(opts.body); }
+    var res = await fetch(BASE + path, init);
+    if (res.status === 401) { window.location.href = '/login?next=' + encodeURIComponent('/suministros-ciudadano'); throw new Error('unauthorized'); }
+    var data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (!res.ok) { var err = new Error((data && data.error) || ('HTTP ' + res.status)); err.data = data; err.status = res.status; throw err; }
+    return data;
+  }
+
+  function optionsHtml(pairs, selected) {
+    return pairs.map(function (p) {
+      return '<option value="' + esc(p[0]) + '"' + (p[0] === selected ? ' selected' : '') + '>' + esc(p[1]) + '</option>';
+    }).join('');
+  }
+
+  // ── Enrollment application form ──────────────────────────────────────────
+  function renderForm(prefill) {
+    prefill = prefill || {};
+    root.innerHTML =
+      '<div class="card">' +
+        '<h2>Solicitar acceso a Suministros</h2>' +
+        '<p class="sub">Completa esta solicitud una sola vez. Un coordinador la revisará y, al aprobarla, podrás pedir insumos.</p>' +
+        '<form id="enroll-form" novalidate>' +
+          '<div class="field"><label for="f-nombre">Nombre completo <span class="req">*</span></label>' +
+            '<input id="f-nombre" name="nombre" maxlength="120" required value="' + esc(prefill.nombre) + '"></div>' +
+          '<div class="grid2">' +
+            '<div class="field"><label for="f-cedula">Cédula</label>' +
+              '<input id="f-cedula" name="cedula" maxlength="30" value="' + esc(prefill.cedula) + '"></div>' +
+            '<div class="field"><label for="f-contacto">Teléfono / contacto</label>' +
+              '<input id="f-contacto" name="contacto" maxlength="120" value="' + esc(prefill.contacto) + '"></div>' +
+          '</div>' +
+          '<div class="grid2">' +
+            '<div class="field"><label for="f-tipo">Tipo de solicitante</label>' +
+              '<select id="f-tipo" name="tipo">' + optionsHtml(TIPO_SOLICITANTE, prefill.tipo || 'beneficiario') + '</select></div>' +
+            '<div class="field"><label for="f-personas"># de personas a tu cargo</label>' +
+              '<input id="f-personas" name="personas" type="number" min="1" max="100000" value="' + esc(prefill.personas || 1) + '"></div>' +
+          '</div>' +
+          '<div class="field"><label for="f-ubicacion">Ubicación / parroquia</label>' +
+            '<input id="f-ubicacion" name="ubicacion" maxlength="160" value="' + esc(prefill.ubicacion) + '"></div>' +
+          '<div class="field"><label for="f-necesidad">Describe tu necesidad</label>' +
+            '<textarea id="f-necesidad" name="necesidad" maxlength="1000" placeholder="¿Qué insumos necesitas y por qué?">' + esc(prefill.necesidad) + '</textarea></div>' +
+          '<button type="submit" class="btn btn-primary" id="enroll-submit">Enviar solicitud</button>' +
+        '</form>' +
+      '</div>';
+
+    document.getElementById('enroll-form').addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      clearAlert();
+      var btn = document.getElementById('enroll-submit');
+      var f = ev.target;
+      var nombre = f.nombre.value.trim();
+      if (!nombre) { showAlert('Ingresa tu nombre completo.', 'err'); f.nombre.focus(); return; }
+      btn.disabled = true; btn.textContent = 'Enviando…';
+      try {
+        await api('/solicitud', { body: {
+          nombre: nombre, cedula: f.cedula.value, contacto: f.contacto.value,
+          tipo: f.tipo.value, personas: f.personas.value, ubicacion: f.ubicacion.value,
+          necesidad: f.necesidad.value
+        } });
+        await load();
+      } catch (e) {
+        if (e.status === 409) { showAlert('Ya tienes una solicitud activa.', 'err'); await load(); }
+        else { showAlert('No se pudo enviar la solicitud. Intenta de nuevo.', 'err'); btn.disabled = false; btn.textContent = 'Enviar solicitud'; }
+      }
+    });
+  }
+
+  // ── Pending state ────────────────────────────────────────────────────────
+  function renderPending(enr) {
+    root.innerHTML =
+      '<div class="card">' +
+        '<div class="state-icon si-wait" aria-hidden="true">⏳</div>' +
+        '<h2>Tu solicitud está en revisión</h2>' +
+        '<p class="sub">Recibimos tu solicitud el ' + esc(fmtDate(enr.created_ms)) + '. Un coordinador la revisará pronto; te avisaremos cuando sea aprobada.</p>' +
+        '<p><span class="badge b-pendiente">Pendiente</span></p>' +
+      '</div>';
+  }
+
+  // ── Rejected state ───────────────────────────────────────────────────────
+  function renderRejected(enr) {
+    root.innerHTML =
+      '<div class="card">' +
+        '<div class="state-icon si-no" aria-hidden="true">✕</div>' +
+        '<h2>Tu solicitud no fue aprobada</h2>' +
+        '<p class="sub">Puedes corregir tus datos y volver a solicitar acceso.</p>' +
+        (enr.review_note ? '<div class="note"><strong>Nota del revisor:</strong> ' + esc(enr.review_note) + '</div>' : '') +
+        '<div class="row-actions"><button class="btn btn-primary" id="reapply">Volver a solicitar</button></div>' +
+      '</div>';
+    document.getElementById('reapply').addEventListener('click', function () {
+      clearAlert();
+      renderForm({
+        nombre: enr.nombre, cedula: enr.cedula, contacto: enr.contacto,
+        tipo: enr.tipo, personas: enr.personas, ubicacion: enr.ubicacion, necesidad: enr.necesidad
+      });
+    });
+  }
+
+  // ── Approved dashboard ───────────────────────────────────────────────────
+  function renderDashboard(enr, requests) {
+    var listHtml = requests.length
+      ? '<div class="reqlist">' + requests.map(function (r) {
+          var st = r.status;
+          return '<div class="reqrow">' +
+            '<div class="ic" aria-hidden="true">' + (TIPO_ICON[r.tipo] || '📦') + '</div>' +
+            '<div class="meta">' +
+              '<div class="tname">' + esc(r.tipo) + ' · ' + esc(r.cantidad) + '</div>' +
+              '<div class="tsub">' + esc(fmtDate(r.created_ms)) + ' · urgencia ' + esc(r.urgencia) +
+                (r.descripcion ? ' · ' + esc(r.descripcion) : '') + '</div>' +
+              (r.note ? '<div class="tsub"><strong>Nota:</strong> ' + esc(r.note) + '</div>' : '') +
+            '</div>' +
+            '<span class="badge b-' + esc(st) + '">' + esc(STATUS_LABEL[st] || st) + '</span>' +
+          '</div>';
+        }).join('') + '</div>'
+      : '<div class="empty">Aún no has hecho ninguna solicitud de suministros.</div>';
+
+    root.innerHTML =
+      '<div class="card">' +
+        '<h2>Solicitar suministros</h2>' +
+        '<p class="sub">Tu acceso está aprobado. Pide los insumos que necesites.</p>' +
+        '<form id="pedido-form" novalidate>' +
+          '<div class="grid2">' +
+            '<div class="field"><label for="p-tipo">Tipo de insumo <span class="req">*</span></label>' +
+              '<select id="p-tipo" name="tipo">' + optionsHtml(TIPO_PEDIDO, 'alimentos') + '</select></div>' +
+            '<div class="field"><label for="p-cantidad">Cantidad</label>' +
+              '<input id="p-cantidad" name="cantidad" type="number" min="1" max="100000" value="1"></div>' +
+          '</div>' +
+          '<div class="field"><label for="p-urgencia">Urgencia</label>' +
+            '<select id="p-urgencia" name="urgencia">' + optionsHtml(URGENCIA, 'normal') + '</select></div>' +
+          '<div class="field"><label for="p-desc">Descripción (opcional)</label>' +
+            '<textarea id="p-desc" name="descripcion" maxlength="1000" placeholder="Detalla lo que necesitas"></textarea></div>' +
+          '<button type="submit" class="btn btn-primary" id="pedido-submit">Enviar solicitud</button>' +
+        '</form>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h2>Mis solicitudes</h2>' +
+        '<p class="sub">Seguimiento del estado de cada pedido.</p>' +
+        listHtml +
+      '</div>';
+
+    document.getElementById('pedido-form').addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      clearAlert();
+      var btn = document.getElementById('pedido-submit');
+      var f = ev.target;
+      btn.disabled = true; btn.textContent = 'Enviando…';
+      try {
+        await api('/pedido', { body: {
+          tipo: f.tipo.value, cantidad: f.cantidad.value, urgencia: f.urgencia.value, descripcion: f.descripcion.value
+        } });
+        showAlert('Solicitud enviada.', 'ok');
+        await load();
+      } catch (e) {
+        showAlert('No se pudo enviar la solicitud. Intenta de nuevo.', 'err');
+        btn.disabled = false; btn.textContent = 'Enviar solicitud';
+      }
+    });
+  }
+
+  async function load() {
+    root.innerHTML = '<div class="skeleton">Cargando…</div>';
+    try {
+      var data = await api('/estado');
+      var enr = data.enrollment;
+      if (!enr) return renderForm();
+      if (enr.status === 'aprobada') return renderDashboard(enr, data.requests || []);
+      if (enr.status === 'rechazada') return renderRejected(enr);
+      return renderPending(enr);
+    } catch (e) {
+      if (e.message === 'unauthorized') return;
+      root.innerHTML = '<div class="card"><div class="empty">No se pudo cargar. <button class="btn btn-ghost" id="retry">Reintentar</button></div></div>';
+      var rb = document.getElementById('retry');
+      if (rb) rb.addEventListener('click', load);
+    }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

@@ -13,6 +13,7 @@ export const STRICT_SCRIPT_SRC = [
   "https://js.stripe.com",
   "https://*.crossmint.com",
   "'sha256-+0Q545JlZtN3DT8iBRxmI6b/rjuL6Gt7oYE932yNcSA='",
+  "'sha256-+vVo1LJ2jUpUIo1wyVWqdOCGzTx4jw+dHyNFXJbF2Uc='",
   "'sha256-/jR/FEZpdWK0wQHMQZdDAKwSSUvtp+eCvR6/PQLuTWo='",
   "'sha256-0eKWyCN+BBDBqKxlVN/DQ8LeI/AGQfBeyNEMv1jPGPU='",
   "'sha256-2PLhoAsL/egsOWnRvGhv5OzMhgzzxdlVkdluUZVqmUE='",

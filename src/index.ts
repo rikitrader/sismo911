@@ -95,6 +95,7 @@ import { sumEnvios } from './routes/suministros-envios';
 import { sumConteos } from './routes/suministros-conteos';
 import { sumReportes } from './routes/suministros-reportes';
 import { sumEtiquetas } from './routes/suministros-etiquetas';
+import { suministrosCiudadano } from './routes/suministros-ciudadano';
 import { runCronGroup } from './cron';
 import { adapterStatus } from './adapters/social';
 import { getUserFromRequest } from './lib/auth';
@@ -615,6 +616,10 @@ app.route('/api/suministros/envios', sumEnvios);               // multi-step shi
 app.route('/api/suministros/conteos', sumConteos);             // scheduled cycle counts → reconcile via ajuste
 app.route('/api/suministros/reportes', sumReportes);           // reporting engine (valuación/rotación/caducidad/ledger/fill-rate)
 app.route('/api/suministros/etiquetas', sumEtiquetas);         // barcode/label data for printing
+// CITIZEN side of Suministros — one-time enrollment application + supply requests.
+// Self-authed (scoped to the caller) + /admin/* gated by ops:console; distinct
+// from the operator ledger above (see route-policy '/api/suministros-ciudadano').
+app.route('/api/suministros-ciudadano', suministrosCiudadano);
 
 // Homepage = the DESAPARECIDOS registry. The root URL serves the /personas page
 // (family-reunification is the app's front door post-quake); the old TERREMOTOS
@@ -692,6 +697,16 @@ app.get('/', async (c) => {
   return serveAsset(c, '/personas');
 });
 app.get('/terremotos', (c) => serveAsset(c, '/'));
+
+// CITIZEN Suministros page — enrollment application + (once approved) supply
+// requests. Requires a logged-in user (any role); the data loads via
+// /api/suministros-ciudadano/*. Unlike the operator /suministros division shell,
+// this is open to every citizen, so it gates on login only (not suministros:read).
+app.get('/suministros-ciudadano', async (c) => {
+  const user = await getUserFromRequest(c.env, c).catch(() => null);
+  if (!user) return c.redirect('/login?next=' + encodeURIComponent('/suministros-ciudadano'), 302);
+  return serveAsset(c, '/suministros-ciudadano');
+});
 
 // Per-person social cards: a shared /familia?persona=<id> link rewrites the page's
 // OG/Twitter meta to the person's photo + name, so the preview shows THEM (→ virality).

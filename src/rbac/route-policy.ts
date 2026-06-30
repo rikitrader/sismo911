@@ -72,6 +72,11 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   // getUserFromRequest and are scoped to the caller's own tickets; the
   // /api/support/admin/* staff endpoints self-gate with requirePermission(ops:console).
   '/api/support',
+  // SUMINISTROS citizen enrollment + requests. Citizen endpoints self-auth via
+  // getUserFromRequest (scoped to the caller's user_id); /admin/* self-gate with
+  // ops:console — like /api/support. Distinct from /api/suministros (the operator
+  // ledger gated by suministros:read/:manage), so it must NOT collide with that.
+  '/api/suministros-ciudadano',
 ];
 
 /** True if `path` is on the public /api allow-list (prefix match on a path segment). */
@@ -89,8 +94,13 @@ export function evaluateGate(path: string, method: string): GateDecision {
   // Public exceptions inside otherwise-gated prefixes.
   const isAcopioReport = method === 'POST' && path === '/api/acopio/report';
   const isEmergenciaShare = method === 'POST' && /^\/api\/emergencia\/[^/]+\/share$/.test(path);
+  // Citizen Suministros intake — self-auth / ops:console inside handlers, NOT the
+  // operator ledger. The '/api/suministros' ADMIN_WRITE_PREFIXES entry would
+  // otherwise swallow '/api/suministros-ciudadano/*' writes (prefix has no trailing
+  // slash), gating citizens behind suministros:manage. Exclude it so it stays public.
+  const isSuministrosCiudadano = path.startsWith('/api/suministros-ciudadano');
 
-  const isAdminWrite = !isAcopioReport && !isEmergenciaShare &&
+  const isAdminWrite = !isAcopioReport && !isEmergenciaShare && !isSuministrosCiudadano &&
     WRITE_METHODS.has(method) && ADMIN_WRITE_PREFIXES.some((p) => path.startsWith(p));
 
   const isReportModeration =
