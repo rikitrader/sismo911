@@ -21,7 +21,17 @@ export async function upsertHospitalRows(env: Env, rawRows: RawPatient[], source
        ON CONFLICT(dedupe_key) WHERE dedupe_key IS NOT NULL DO UPDATE SET
          hospital=excluded.hospital, full_name=excluded.full_name, name_variants=excluded.name_variants,
          norm_name=excluded.norm_name, edad=excluded.edad, cedula=excluded.cedula, telefono=excluded.telefono,
-         direccion=excluded.direccion, estado=excluded.estado, conflict=excluded.conflict,
+         direccion=excluded.direccion,
+         -- Status is STICKY UPWARD: with the name-only dedupe key, a person listed
+         -- both with "Internado" and with a blank cell collides on ONE row. A blank
+         -- (desconocido) re-ingest must NEVER clobber a known status, or hospitalizados
+         -- silently vanish. Priority: fallecido > alta > hospitalizado > desconocido.
+         estado=CASE
+           WHEN excluded.estado='fallecido'      OR hospital_patients.estado='fallecido'      THEN 'fallecido'
+           WHEN excluded.estado='alta'           OR hospital_patients.estado='alta'           THEN 'alta'
+           WHEN excluded.estado='hospitalizado'  OR hospital_patients.estado='hospitalizado'  THEN 'hospitalizado'
+           ELSE excluded.estado END,
+         conflict=CASE WHEN excluded.conflict=1 OR hospital_patients.conflict=1 THEN 1 ELSE 0 END,
          observaciones=excluded.observaciones, source_updated=excluded.source_updated, updated_ms=excluded.updated_ms`
     ).bind(uid('hp'), r.dedupe_key, r.hospital, r.full_name, r.name_variants, r.norm_name, r.edad, r.cedula,
            r.telefono, r.direccion, r.estado, r.conflict, r.observaciones, 'registro-maestro', src, now, now));
@@ -88,14 +98,15 @@ export async function collapseHospitalDupes(env: Env): Promise<{ collapsed: numb
          FROM hospital_patients GROUP BY norm_name
        ),
        best AS (
-         SELECT norm_name, MIN(CASE estado WHEN 'hospitalizado' THEN 0 WHEN 'fallecido' THEN 1
-                                           WHEN 'alta' THEN 2 ELSE 3 END) AS bp
+         -- Same priority as the upsert: fallecido > alta > hospitalizado > desconocido.
+         SELECT norm_name, MIN(CASE estado WHEN 'fallecido' THEN 0 WHEN 'alta' THEN 1
+                                           WHEN 'hospitalizado' THEN 2 ELSE 3 END) AS bp
          FROM hospital_patients GROUP BY norm_name
        )
        UPDATE hospital_patients
          SET estado = CASE (SELECT bp FROM best b WHERE b.norm_name = hospital_patients.norm_name)
-                        WHEN 0 THEN 'hospitalizado' WHEN 1 THEN 'fallecido'
-                        WHEN 2 THEN 'alta' ELSE 'desconocido' END,
+                        WHEN 0 THEN 'fallecido' WHEN 1 THEN 'alta'
+                        WHEN 2 THEN 'hospitalizado' ELSE 'desconocido' END,
              updated_ms = ?
        WHERE norm_name IN (SELECT norm_name FROM grp WHERE n_ced <= 1)`
     ).bind(now).run();
