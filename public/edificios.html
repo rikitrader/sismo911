@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Edificios — Daño estructural y costos | SISMO911</title>
+<meta name="description" content="Motor de daño estructural por edificio para el terremoto de La Guaira/Venezuela (24-jun-2026): puntaje de daño 0-100 por fragilidad anclada a NASA Sentinel-1, dirección, estado de colapso, y costo estimado de reemplazo y reparación (HAZUS + costos reales VE 2026)." />
+<link rel="canonical" href="https://sismo911.com/edificios" />
+<meta property="og:title" content="Edificios — Daño estructural y costos | SISMO911" />
+<meta property="og:description" content="Puntaje de daño por edificio (NASA Sentinel-1 + fragilidad) + costo de reemplazo y reparación." />
+<meta property="og:url" content="https://sismo911.com/edificios" />
+<meta property="og:image" content="https://sismo911.com/og/og-default.png" />
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<meta name="theme-color" content="#14171b" />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/app.css" />
+<link rel="stylesheet" href="/ops-theme.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  body{background:var(--ops-bg);color:var(--ops-text);font-family:Inter,system-ui,sans-serif}
+  main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+  .eyebrow{font:800 11px var(--ops-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ops-accent)}
+  h1{font:900 30px/1.05 'Public Sans';letter-spacing:-.02em;margin:4px 0 6px;color:var(--ops-text)}
+  h2{font:800 18px 'Public Sans';color:var(--ops-text);margin:0 0 4px}
+  .lede{color:var(--ops-muted);font-size:14px;max-width:820px;line-height:1.5}
+  .card{background:var(--ops-panel);border:1px solid var(--ops-border);border-radius:14px;box-shadow:0 1px 3px rgba(16,24,40,.04)}
+  .pad{padding:18px}
+  .grid{display:grid;gap:14px}
+  .stat .n{font:900 24px var(--ops-mono);font-variant-numeric:tabular-nums;color:var(--ops-text)}
+  .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ops-muted);margin-top:2px}
+  #map{height:520px;border-radius:10px;z-index:0}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ops-muted);align-items:center;margin-top:8px}
+  .dot{display:inline-block;width:11px;height:11px;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px var(--ops-border-strong);vertical-align:middle;margin-right:4px}
+  table.dt{width:100%;font-size:13px;border-collapse:collapse}
+  table.dt th{font:800 10px var(--ops-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ops-muted);text-align:left;padding:8px 10px;background:var(--ops-panel-2);position:sticky;top:0;cursor:pointer}
+  table.dt td{padding:8px 10px;border-top:1px solid var(--ops-border);vertical-align:top}
+  table.dt tr.row:hover{background:var(--ops-hover);cursor:pointer}
+  .chip{display:inline-flex;align-items:center;gap:.3rem;font:800 10px var(--ops-mono);padding:2px 8px;border-radius:9999px;text-transform:uppercase;letter-spacing:.03em;color:#fff;white-space:nowrap}
+  .mono,.num{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+  .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
+  label.f{font:800 10px var(--ops-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ops-muted);display:block;margin-bottom:4px}
+  input,select{width:100%;border:1px solid var(--ops-border-strong);border-radius:8px;padding:8px 10px;font-size:14px;background:var(--ops-panel);color:var(--ops-text)}
+  input:focus,select:focus{outline:none;border-color:var(--ops-accent-soft);box-shadow:0 0 0 3px var(--ops-ring)}
+  .note{font-size:12px;color:var(--ops-warn);background:var(--ops-warn-bg);border:1px solid var(--ops-accent-soft);border-radius:8px;padding:8px 11px}
+  .tag{font:700 10px var(--ops-mono);padding:1px 6px;border-radius:6px;background:var(--ops-panel-2);border:1px solid var(--ops-border);color:var(--ops-muted)}
+  .leaflet-popup-content{font-family:Inter,sans-serif;font-size:13px}
+</style>
+</head>
+<body>
+<header style="background:linear-gradient(180deg,var(--ops-bar-1),var(--ops-bar-2));color:var(--ops-bar-fg)">
+  <div style="max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px">
+    <a href="/" style="display:flex;align-items:center;gap:8px;color:var(--ops-bar-fg);text-decoration:none;font:800 15px 'Public Sans'"><img src="/logo.svg" alt="" style="width:28px;height:28px"> SISMO911</a>
+  </div>
+</header>
+
+<main>
+  <div class="eyebrow">Comando · Daño estructural La Guaira</div>
+  <h1>Edificios — Daño y costo de reconstrucción</h1>
+  <p class="lede">Motor de daño por edificio para el terremoto del <b>24-jun-2026 (Mw 7,2 + 7,5)</b>. Cada edificio recibe un <b>puntaje de daño 0-100</b> (modelo de fragilidad tipo HAZUS, anclado al peligro de sacudida USGS y a las estructuras dañadas observadas por <b>NASA Sentinel-1</b>), su <b>dirección</b>, su estado de colapso, y un <b>costo estimado de reemplazo y reparación</b> con costos reales de Venezuela 2026.</p>
+  <p class="note" style="margin-top:12px">⚠️ Estimación de ingeniería, <b>no</b> una tasación ni censo oficial (no existe aún un padrón certificado del Colegio de Ingenieros / Protección Civil). Las filas marcadas <b>OBSERVADO-DPM</b> son daño detectado por satélite NASA; el resto es modelado. Costos y pisos estimados llevan su nivel de confianza por fila.</p>
+
+  <!-- summary -->
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:16px 0">
+    <div class="card pad stat"><div class="n num" id="s_total">—</div><div class="l">Edificios evaluados</div></div>
+    <div class="card pad stat"><div class="n num" id="s_crit">—</div><div class="l">En estado crítico</div></div>
+    <div class="card pad stat"><div class="n num" id="s_dpm">—</div><div class="l">Daño NASA observado</div></div>
+    <div class="card pad stat"><div class="n num" id="s_rep">—</div><div class="l">Colapsos confirmados</div></div>
+    <div class="card pad stat"><div class="n num" id="s_repair">—</div><div class="l">Costo reparación (estim.)</div></div>
+    <div class="card pad stat"><div class="n num" id="s_repl">—</div><div class="l">Costo reemplazo (estim.)</div></div>
+  </div>
+
+  <!-- filters -->
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="filters">
+      <div><label class="f">Buscar</label><input id="f_q" placeholder="Nombre o dirección…" /></div>
+      <div><label class="f">Estado</label><select id="f_state"></select></div>
+      <div><label class="f">Sector</label><select id="f_sector"></select></div>
+      <div><label class="f">Banda</label><select id="f_band"><option value="">Todas</option><option>CRITICO</option><option>ALTO</option><option>MODERADO</option><option>BAJO</option><option>MINIMO</option></select></div>
+      <div><label class="f">Puntaje mínimo</label><input id="f_min" type="number" value="0" min="0" max="100" /></div>
+    </div>
+    <div class="legend"><b style="color:var(--ops-text)">Banda:</b>
+      <span><i class="dot" style="background:#d92d20"></i>Crítico 80-100</span>
+      <span><i class="dot" style="background:#f04438"></i>Alto 60-79</span>
+      <span><i class="dot" style="background:#f5c518"></i>Moderado 40-59</span>
+      <span><i class="dot" style="background:#a6d96a"></i>Bajo 20-39</span>
+      <span><i class="dot" style="background:#22c55e"></i>Mínimo 0-19</span>
+      <span id="f_count" class="tag" style="margin-left:auto"></span>
+    </div>
+  </div>
+
+  <!-- map -->
+  <div id="mapa" class="card pad" style="margin-bottom:14px">
+    <h2>Mapa de daño</h2>
+    <div id="map" style="margin-top:10px"></div>
+  </div>
+
+  <!-- table -->
+  <div class="card" style="overflow:auto;max-height:640px">
+    <table class="dt">
+      <thead><tr>
+        <th data-k="score">Puntaje</th><th data-k="name">Edificio</th><th data-k="addr">Dirección</th>
+        <th data-k="state">Estado</th><th data-k="status">Daño</th><th data-k="repair">Reparación USD</th>
+        <th data-k="repl">Reemplazo USD</th><th data-k="conf">Confianza</th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="8" style="padding:18px;color:var(--ops-muted)">Cargando…</td></tr></tbody>
+    </table>
+  </div>
+  <p style="font-size:11px;color:var(--ops-muted);margin-top:10px">Fuentes: USGS ShakeMap (us6000t7zp), NASA Sentinel-1 Likely Damaged Structures (Oregon State), OpenStreetMap, FEMA HAZUS-MH, costos VE 2026 (micasaenvenezuela/proyectoscecor). Tabla limitada a 400 filas; usa los filtros para acotar.</p>
+</main>
+
+<script src="/app-shell.js" defer></script>
+<script>
+(function(){
+  var BANDC={CRITICO:'#d92d20',ALTO:'#f04438',MODERADO:'#f5c518',BAJO:'#a6d96a',MINIMO:'#22c55e'};
+  var ALL=[], map, layer, sortK='score', sortDir=-1;
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function fmtUsd(n){ if(n==null)return '—'; n=+n; if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B'; if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M'; if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'k'; return '$'+n; }
+  function fmtN(n){ return (n==null?'—':(+n).toLocaleString('es')); }
+  function bandColor(b){ return BANDC[b]||'#9aa4b2'; }
+
+  function setKpis(s){
+    var c=s.costs_usd||{}, bb=s.by_band||{};
+    document.getElementById('s_total').textContent=fmtN(s.total);
+    document.getElementById('s_crit').textContent=fmtN(bb.CRITICO||0);
+    document.getElementById('s_dpm').textContent=fmtN(s.dpm_observed||0);
+    document.getElementById('s_rep').textContent=fmtN(s.reported_damaged||0);
+    document.getElementById('s_repair').textContent=fmtUsd(c.osm_repair);
+    document.getElementById('s_repl').textContent=fmtUsd(c.osm_replacement);
+  }
+  function fillSelect(id,vals,label){
+    var el=document.getElementById(id); var o='<option value="">'+label+'</option>';
+    vals.sort().forEach(function(v){ o+='<option>'+esc(v)+'</option>'; }); el.innerHTML=o;
+  }
+  function filtered(){
+    var q=(document.getElementById('f_q').value||'').toLowerCase();
+    var st=document.getElementById('f_state').value, se=document.getElementById('f_sector').value;
+    var ba=document.getElementById('f_band').value, mn=+document.getElementById('f_min').value||0;
+    return ALL.filter(function(b){
+      if(st && b.state!==st) return false;
+      if(se && b.sector!==se) return false;
+      if(ba && b.band!==ba) return false;
+      if(b.score<mn) return false;
+      if(q && (b.name+' '+b.addr).toLowerCase().indexOf(q)<0) return false;
+      return true;
+    });
+  }
+  function damageLabel(b){ return b.dpmProb!=null ? 'NASA p='+b.dpmProb : (b.status&&b.status!=='DESCONOCIDO'?b.status:b.dq); }
+  function renderTable(rows){
+    rows=rows.slice().sort(function(a,c){
+      var x=a[sortK], y=c[sortK];
+      if(sortK==='repair'||sortK==='repl'){ x=(a.cost||{})[sortK==='repair'?'repairUsd':'replacementUsd']||0; y=(c.cost||{})[sortK==='repair'?'repairUsd':'replacementUsd']||0; }
+      if(typeof x==='string') return sortDir*x.localeCompare(y);
+      return sortDir*((x||0)-(y||0));
+    });
+    document.getElementById('f_count').textContent=rows.length+' edificios';
+    var html=rows.slice(0,400).map(function(b){
+      var c=b.cost||{}; var col=bandColor(b.band);
+      return '<tr class="row" data-lat="'+b.lat+'" data-lon="'+b.lon+'">'+
+        '<td><span class="chip" style="background:'+col+'">'+b.score+'</span></td>'+
+        '<td><b>'+esc(b.name)+'</b><div style="font-size:11px;color:var(--ops-muted)">'+esc(b.sector)+'</div></td>'+
+        '<td style="max-width:240px">'+esc(b.addr)+'</td>'+
+        '<td>'+esc(b.state)+'</td>'+
+        '<td>'+(b.dpmProb!=null?'<span class="tag" style="color:#fff;background:#1570ef;border-color:#1570ef">NASA</span> ':'')+esc(damageLabel(b))+'</td>'+
+        '<td class="num">'+fmtUsd(c.repairUsd)+'</td>'+
+        '<td class="num">'+fmtUsd(c.replacementUsd)+'</td>'+
+        '<td><span class="tag">'+esc(c.costConf||'—')+'</span></td>'+
+      '</tr>';
+    }).join('');
+    document.getElementById('tbody').innerHTML=html||'<tr><td colspan="8" style="padding:18px;color:var(--ops-muted)">Sin resultados.</td></tr>';
+    document.querySelectorAll('#tbody tr.row').forEach(function(tr){
+      tr.addEventListener('click',function(){ var la=+tr.getAttribute('data-lat'),lo=+tr.getAttribute('data-lon'); document.getElementById('mapa').scrollIntoView({behavior:'smooth'}); map.setView([la,lo],17); });
+    });
+  }
+  function renderMap(rows){
+    layer.clearLayers();
+    rows.forEach(function(b){
+      if(b.lat==null) return;
+      var c=b.cost||{};
+      L.circleMarker([b.lat,b.lon],{radius:b.band==='CRITICO'?6:5,color:'#fff',weight:1,fillColor:bandColor(b.band),fillOpacity:.9})
+        .bindPopup('<div style="min-width:210px"><div style="font:800 14px \'Public Sans\'">'+esc(b.name)+'</div>'+
+          '<div style="font-size:11px;color:#5b6781;margin-bottom:5px">'+esc(b.addr)+'</div>'+
+          '<span class="chip" style="background:'+bandColor(b.band)+'">'+b.score+' · '+esc(b.band)+'</span>'+
+          (b.dpmProb!=null?' <span class="tag" style="color:#fff;background:#1570ef;border-color:#1570ef">NASA p='+b.dpmProb+'</span>':'')+
+          '<div style="font-size:12px;margin-top:6px">Reparación <b>'+fmtUsd(c.repairUsd)+'</b> · Reemplazo '+fmtUsd(c.replacementUsd)+'</div>'+
+          '<div style="font-size:11px;color:#5b6781">'+esc(damageLabel(b))+' · confianza '+esc(c.costConf||'—')+'</div></div>').addTo(layer);
+    });
+  }
+  function refresh(){ var rows=filtered(); renderMap(rows); renderTable(rows); }
+
+  function initMap(){
+    map=L.map('map',{attributionControl:false}).setView([10.55,-66.90],10);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+    layer=L.layerGroup().addTo(map);
+  }
+  async function boot(){
+    initMap();
+    var s=await fetch('/api/buildings/summary').then(function(x){return x.json();}); setKpis(s);
+    var d=await fetch('/api/buildings?source=all&limit=5000').then(function(x){return x.json();});
+    ALL=d.buildings||[];
+    fillSelect('f_state',[...new Set(ALL.map(function(b){return b.state;}))],'Todos');
+    fillSelect('f_sector',[...new Set(ALL.map(function(b){return b.sector;}))],'Todos');
+    ['f_q','f_state','f_sector','f_band','f_min'].forEach(function(id){ document.getElementById(id).addEventListener('input',refresh); });
+    document.querySelectorAll('th[data-k]').forEach(function(th){ th.addEventListener('click',function(){ var k=th.getAttribute('data-k'); if(sortK===k) sortDir*=-1; else {sortK=k; sortDir=(k==='name'||k==='addr'||k==='state')?1:-1;} refresh(); }); });
+    refresh();
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

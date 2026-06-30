@@ -65,6 +65,7 @@ export const STRICT_SCRIPT_SRC = [
   "'sha256-TDcw3XSlBNOMF5BbHRhZ9+Mxs8jZXgIZZ06p4hEkmPk='",
   "'sha256-TRtWSwgVsWaGCM4kHRz8Al8l+jXBvx75DJ+KOx4yp7U='",
   "'sha256-Tdmmv3QfDbBs6p6uK30Gwb1xXFaAI8oByCYUMpyWiPI='",
+  "'sha256-UBcT5guNqlDxf4HzvI2wfNm5w+BASzWl5QWi7j8ByyI='",
   "'sha256-UFSkwv9ZkMskJ411mS5J39gnonEathTEWRuB/kzGWyE='",
   "'sha256-UNCD49xMbP1nGrouYfV4eGqGC8gshbQ6WSlzJTola+Y='",
   "'sha256-UtTdLPqiq37FtRl5+Yj1qD9aqYGE3Hc6uiSJpwcXDy8='",
