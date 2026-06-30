@@ -9,7 +9,7 @@ import { CRON_GROUPS, jobsForCron } from '../src/cron';
 const ALL_JOB_NAMES = [
   'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders',
   'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match',
-  'familia-photo-mirror', 'monitor-sheet', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
+  'familia-photo-mirror', 'monitor-sheet', 'case-alerts', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
   'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe', 'rav-reports-dedupe-extid',
   'pacientes-rvz',
@@ -51,6 +51,7 @@ describe('cron groups', () => {
     expect(CRON_GROUPS['30 * * * *'].map((j) => j.name)).toEqual([
       'familia-photo-mirror',
       'monitor-sheet',
+      'case-alerts',
       'personas-dedupe-fuzzyphone',
       'personas-phash-backfill-30',
     ]);
