@@ -68,11 +68,15 @@
   .agency.nasa{border-left-color:#2563eb}
   .agency.msft{border-left-color:#16a34a}
   .agency.usgs{border-left-color:var(--red)}
+  .agency.immap{border-left-color:var(--amber)}
   .agency .org{font:800 11px 'Public Sans';text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
   .agency .fig{font:900 26px/1 'Public Sans';color:var(--navy);letter-spacing:-.02em}
   .agency .fig small{font:700 13px 'Public Sans';color:var(--muted)}
   .agency .desc{font-size:12px;color:#475569;line-height:1.45;flex:1}
   .agency .src{margin-top:2px}
+  .agency a.thumb{display:block;border-radius:8px;overflow:hidden;border:1px solid var(--line);line-height:0}
+  .agency a.thumb img{width:100%;height:104px;object-fit:cover;display:block;transition:transform .3s}
+  .agency a.thumb:hover img{transform:scale(1.04)}
   .subnav{position:sticky;top:0;z-index:20;background:#eef0f4;display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;margin-bottom:6px}
   .subnav a{font:800 12px 'Public Sans';text-transform:uppercase;letter-spacing:.04em;color:var(--navy);background:#fff;border:1px solid var(--line);border-radius:9999px;padding:7px 14px;text-decoration:none;cursor:pointer}
   .subnav a:hover,.subnav a.on{background:var(--navy);color:#fff}
@@ -186,9 +190,12 @@
     }).join('');
     document.getElementById('metricCards').innerHTML = cards || '<div class="muted pad">Sin datos.</div>';
 
-    // agency estimate cards (NASA / Microsoft / USGS) — pulled live from the same data
+    // agency estimate cards (NASA / Microsoft / USGS) — pulled live from the same data.
+    // NASA card carries a thumbnail of the live damage map (img-src allows https).
+    const NASA_MAP = 'https://www.arcgis.com/home/item.html?id=0c3d77dd5aae46e4829d9a282477615c';
+    const NASA_THUMB = 'https://www.arcgis.com/sharing/rest/content/items/0c3d77dd5aae46e4829d9a282477615c/info/thumbnail/ago_downloaded.png';
     const AGENCIES = [
-      { key: 'nasa_dpm', metric: 'buildings', cls: 'nasa', org: 'NASA · Sentinel-1', unit: 'edificios dañados/destruidos' },
+      { key: 'nasa_dpm', metric: 'buildings', cls: 'nasa', org: 'NASA · Sentinel-1', unit: 'edificios dañados/destruidos', thumb: NASA_THUMB, thumbHref: NASA_MAP },
       { key: 'msft_ai4good', metric: 'buildings', cls: 'msft', org: 'Microsoft AI for Good', unit: 'edificios (Catia La Mar)' },
       { key: 'usgs_pager', metric: 'dead', cls: 'usgs', org: 'USGS PAGER', unit: 'fallecidos (banda modelada)' },
     ];
@@ -202,11 +209,19 @@
       return '<div class="agency ' + a.cls + '">' +
         '<div class="org">' + esc(a.org) + '</div>' +
         '<div class="fig">' + fmt(src.value_min, src.value_max) + ' <small>' + esc(a.unit) + '</small></div>' +
+        (a.thumb ? '<a class="thumb" href="' + esc(a.thumbHref) + '" target="_blank" rel="noopener"><img src="' + esc(a.thumb) + '" alt="Mapa de daños NASA Sentinel-1" loading="lazy"></a>' : '') +
         (src.note ? '<div class="desc">' + esc(src.note) + '</div>' : '') +
         '<div class="src">' + (src.citation_url ? '<a class="cite" href="' + esc(src.citation_url) + '" target="_blank" rel="noopener">ver fuente ↗</a>' : '') + '</div>' +
         '</div>';
     }).filter(Boolean).join('');
-    document.getElementById('agencyCards').innerHTML = agencyCards || '<div class="muted" style="padding:0 18px 18px">Sin estimaciones de agencias.</div>';
+    // iMMAP ShakeMap population-exposure card (static product, USGS ShakeMap × WorldPop).
+    const immapCard = '<div class="agency immap">' +
+      '<div class="org">iMMAP · ShakeMap (USGS × WorldPop)</div>' +
+      '<div class="fig">220.000 <small>expuestos a sacudida severa/violenta (VIII+)</small></div>' +
+      '<div class="desc">Población por zona de intensidad sísmica: VII 370.000 · VI 4,80M · V 5,92M · IV 5,05M.</div>' +
+      '<div class="src"><a class="cite" href="https://immap.org/publications-and-resources/venezuela-earthquake-impact-map-24th-june-2026" target="_blank" rel="noopener">ver fuente ↗</a></div>' +
+      '</div>';
+    document.getElementById('agencyCards').innerHTML = (agencyCards + immapCard) || '<div class="muted" style="padding:0 18px 18px">Sin estimaciones de agencias.</div>';
 
     // per-source rows (flatten metric → sources)
     const rows = [];
