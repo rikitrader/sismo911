@@ -55,6 +55,10 @@ run_worker_first = [
   # SUMINISTROS SPA shell is Worker-owned so the gate can require suministros:read
   # (staff-only) before serving it — the division is not publicly open.
   "/suministros",
+  # CITIZEN Suministros intake page is Worker-owned so the login gate runs BEFORE
+  # the static asset is served (anon → /login, no page flash). The page also
+  # self-redirects on the API 401, but this gives a clean server-side 302.
+  "/suministros-ciudadano",
   "/api/*",
   "/mcp",
   "/console",
