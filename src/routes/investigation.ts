@@ -16,6 +16,7 @@ import { rateLimit, nameHasSpam, textHasLink } from '../lib/security';
 import { audit } from '../lib/audit';
 import { getUserFromRequest } from '../lib/auth';
 import { identitySources, verifyCedula, normalizeCedula, type IdentitySource } from '../lib/identity';
+import { requestSubscription } from '../lib/case-subscribe';
 import { linkPatientToPerson, setCaseStatus, recordCaseEvent, isCaseStatus, registerConsultPatient, syncCaseFromAppointmentStatus, type CaseStatus } from '../lib/patients';
 
 export const investigation = new Hono<{ Bindings: Env }>();
@@ -118,6 +119,30 @@ investigation.post('/:id/tip', async (c) => {
   ).run();
   await audit(c, 'persons.tip_add', { id, lid, type });
   return c.json({ ok: true, id: lid, status: 'pending', message: 'Gracias. Tu pista quedó pendiente de verificación por un operador.' }, 201);
+});
+
+// POST /api/persons/:id/subscribe — PUBLIC. A citizen asks to follow a case by
+// email. Double opt-in: we email a confirmation link first (see /s/verify); no
+// alert is ever sent to an unconfirmed address. Rate-limited per IP.
+investigation.post('/:id/subscribe', async (c) => {
+  const id = c.req.param('id');
+  const limited = await rateLimit(c.env, c, 'case_subscribe', 6, 600);
+  if (limited) return limited;
+  const b = await c.req.json().catch(() => ({} as any));
+  const origin = new URL(c.req.url).origin;
+  const r = await requestSubscription(c.env, id, b.email, origin);
+  if (!r.ok) {
+    if (r.status === 404) return c.json({ error: 'not_found' }, 404);
+    return c.json({ error: 'bad_email', hint: 'Introduce un correo válido.' }, 400);
+  }
+  await audit(c, 'persons.subscribe', { id, already: !!r.already }).catch(() => {});
+  return c.json({
+    ok: true,
+    already: !!r.already,
+    message: r.already
+      ? 'Ya sigues este caso. Te avisaremos por correo cuando haya novedades.'
+      : 'Revisa tu correo y confirma para activar los avisos de este caso.',
+  });
 });
 
 // POST /api/persons/:id/protect — operator flags a case as PROTECTED (responder-

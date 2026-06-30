@@ -35,6 +35,7 @@ import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
 import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
+import { runCaseAlerts } from './ingest/case-alerts';
 
 // Drain the hospital cross-match a bounded number of pages per tick (whole
 // registry completes over a few ticks; thereafter it re-scans for new intakes).
@@ -127,6 +128,11 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   '30 * * * *': [
     { name: 'familia-photo-mirror', run: mirrorFamiliaPhotos },
     { name: 'monitor-sheet', run: syncMonitorSheet },
+    // Email subscribers when a case they follow changes (status / new verified
+    // lead / data). Scans only cases with active subs; the AI summary + email
+    // send fire ONLY on a real change, so a quiet tick is ~cheap D1 reads. Rides
+    // :30 (4 jobs, ample subrequest budget) rather than the full :00 group.
+    { name: 'case-alerts', run: (env) => runCaseAlerts(env) },
     // Safe fuzzy dedup: same normalized name + age + phone (near-zero false merges).
     { name: 'personas-dedupe-fuzzyphone', run: (env) => drain(() => dedupePersonas(env, { mode: 'fuzzyphone', apply: true, limit: 400 })) },
     // 2nd phash-backfill slot (batch 400). Adding the backfill to 3 hourly groups
