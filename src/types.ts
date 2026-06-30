@@ -165,6 +165,17 @@ export interface Env {
   // Optional Durable Object namespace backing the abuse counter (rate-limit.ts).
   // Falls back to the D1 burst limiter when unbound, so it is NOT required.
   ABUSE_COUNTER?: DurableObjectNamespace;
+
+  // --- Telegram case-status bot (src/telegram/*) ----------------------------
+  // The bot is INERT until TELEGRAM_BOT_TOKEN + TELEGRAM_WEBHOOK_SECRET are set
+  // (both Worker Secrets). The allow-lists are non-secret [vars]; an empty
+  // allow-list rejects every chat (fail closed), never opens access.
+  TELEGRAM_BOT_TOKEN?: string;        // BotFather token (Worker Secret)
+  TELEGRAM_WEBHOOK_SECRET?: string;   // secret echoed in X-Telegram-Bot-Api-Secret-Token (Worker Secret)
+  ALLOWED_TELEGRAM_GROUP_IDS?: string; // comma-separated approved chat ids (negative) — [vars]
+  ADMIN_TELEGRAM_USER_IDS?: string;    // comma-separated admin user ids — [vars]
+  ALLOWED_TELEGRAM_USER_IDS?: string;  // optional extra authorized (non-admin) user ids — [vars]
+  TELEGRAM_AI_MODEL?: string;          // optional Workers-AI model override for intent parsing — [vars]
 }
 
 export interface SeismicEvent {

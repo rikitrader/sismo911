@@ -71,6 +71,7 @@ import { layers } from './routes/layers';
 import { sitrep } from './routes/sitrep';
 import { dataApi } from './routes/data-api';
 import { mcp } from './routes/mcp';
+import { telegram } from './telegram/route';
 import { flotaUnidades } from './routes/flota-unidades';
 import { flotaPersonal } from './routes/flota-personal';
 import { flotaFlotas } from './routes/flota-flotas';
@@ -351,6 +352,7 @@ app.route('/api/profile', profile);  // Profile Command Center: self-scoped prof
 app.route('/api/profile', contactsPersonal); // Personal "Contactos" address book (self-scoped); /api/profile/contacts/* — distinct from the operator /api/contacts directory
 app.route('/api/persons', hospital);  // Hospital patient registry: /api/persons/hospital/{ingest(token),search(public),stats(public)} — the "Hospitalizados" data
 app.route('/api/support', support);   // Support ticket inbox ("Soporte"): citizen self-scoped + /admin/* ops:console-gated; inbound email threaded via email()
+app.route('/api/telegram', telegram); // Telegram case-status bot: POST /webhook (secret-gated) + GET /health. Verified-DB answers only; redacts PII; approved-group/admin-only. Inert until TELEGRAM_BOT_TOKEN+TELEGRAM_WEBHOOK_SECRET set.
 app.route('/api/u', publicProfile);   // Public payment profile (behind a citizen's "Enlace público"): name + active links + avatar. Public, no PII.
 // x402 service discovery (public). Agents/clients read this to learn the network + pay-URL template.
 // Fix 1: when payments are not LIVE, 503 instead of advertising a protocol we can't settle.
