@@ -31,6 +31,8 @@ import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestR
 import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
 import { backfillHospitalMatches } from './ingest/hospital-match';
+import { drainHospitalRegistryMatch } from './ingest/hospital-registry-match';
+import { ingestHospitalRegistry } from './ingest/hospital-registry-sync';
 import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
 import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
@@ -100,6 +102,9 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'quake-announce', run: announceQuakes },
     { name: 'sos-damage', run: ingestSosDamage },
     { name: 'case-score-sweep', run: (env) => sweepCaseScores(env) },
+    // Pull + re-ingest the hospital patient registry every 6h (idempotent; bounded
+    // subrequests). No-op when HOSPITAL_FEED_URL is unset.
+    { name: 'hospital-registry-sync', run: (env) => (new Date().getUTCHours() % 6 === 0 ? ingestHospitalRegistry(env) : Promise.resolve({ skipped: true })) },
     { name: 'sos-sheet', run: syncSosSheet },
     { name: 'telemed-reminders', run: sendTelemedReminders },
   ],
@@ -121,6 +126,9 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // Cross-match desaparecidos ↔ hospital intakes → persisted matches + pending
     // docket notes (status untouched). Drains the registry, then re-scans for new intakes.
     { name: 'hospital-match', run: (env) => drainHospitalMatch(env) },
+    // Cross-reference the hospital_patients REGISTRY ↔ cases: link + tracer note
+    // (cédula-confirmed → auto status). Cursor-drained, converges over ticks.
+    { name: 'hospital-registry-match', run: (env) => drainHospitalRegistryMatch(env) },
   ],
   // :30 — photo mirroring (external fetch + R2 puts, the heaviest) plus the
   // sheet sync and fuzzyphone dedupe. Keep RAV off this trigger: together these
