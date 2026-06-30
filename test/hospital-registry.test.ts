@@ -108,10 +108,11 @@ describe('hospital ingest route (catches the upsert / ON CONFLICT partial-index 
     await post(app, env, { rows: [{ hospital: 'H', nombre: 'PEDRO HOSPI', observaciones: 'Internado UCI' }] });
     let row: any = db.raw.prepare(`SELECT estado FROM hospital_patients WHERE norm_name='pedro hospi'`).get();
     expect(row.estado).toBe('hospitalizado');
-    // Re-ingest the SAME name with a blank cell — must NOT clobber to desconocido.
+    // Re-ingest the SAME name with a blank cell — must NOT clobber status OR erase evidence.
     await post(app, env, { rows: [{ hospital: 'H', nombre: 'PEDRO HOSPI', observaciones: '' }] });
-    row = db.raw.prepare(`SELECT estado FROM hospital_patients WHERE norm_name='pedro hospi'`).get();
+    row = db.raw.prepare(`SELECT estado, observaciones FROM hospital_patients WHERE norm_name='pedro hospi'`).get();
     expect(row.estado).toBe('hospitalizado');                 // sticky — not downgraded
+    expect(row.observaciones).toContain('Internado');          // evidence preserved, not blanked
     // But a real progression (alta) DOES win over hospitalizado.
     await post(app, env, { rows: [{ hospital: 'H', nombre: 'PEDRO HOSPI', observaciones: 'Alta médica' }] });
     row = db.raw.prepare(`SELECT estado FROM hospital_patients WHERE norm_name='pedro hospi'`).get();
