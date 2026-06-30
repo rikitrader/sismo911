@@ -57,6 +57,9 @@ describe('xlsx-lite reader (same Web-Streams code path as the Worker cron)', () 
     expect(rows[4][2]).toBe('PÉREZ ANA / PEREZ ANA M');
     expect(rows[4][4]).toBe('18134813');
     expect(rows[6][7]).toContain('FALLECIDO');
+    // gappy row 6 (empty cédula/tel/dir) — obs must NOT be swallowed by the self-closing-cell bug
+    expect(rows[5][2]).toBe('GÓMEZ LUIS');
+    expect(rows[5][7]).toBe('Alta médica');
     // end-to-end: a parsed data row → clean record
     const r = patientToRow({ hospital: rows[4][1], nombre: rows[4][2], edad: rows[4][3], cedula: rows[4][4], observaciones: rows[4][7] })!;
     expect(r.estado).toBe('hospitalizado');
