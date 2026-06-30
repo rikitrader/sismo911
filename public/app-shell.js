@@ -17,7 +17,7 @@
     // Yellow "REFUGIOS" button directly under TERREMOTOS — same compact chip frame,
     // bright yellow (#f5c518) with navy text/icon; links to the refugios/evacuation map.
     { label: 'REFUGIOS', href: '/refugios', m: ['/refugios', '/refugios.html'], refugio: true, d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
-    { label: 'AYUDA CERCA', href: '/cerca', m: ['/cerca', '/cerca.html'], d: 'M12 21s-6-5.7-6-10a6 6 0 1112 0c0 4.3-6 10-6 10zm0-7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z' },
+    { label: 'AYUDA CERCA', href: '/cerca', m: ['/cerca', '/cerca.html'], refugio: true, d: 'M12 21s-6-5.7-6-10a6 6 0 1112 0c0 4.3-6 10-6 10zm0-7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z' },
     // Big flashing red CTA pulled out of the "Familia y Reportes" submenu so a
     // damage report is always one tap away — extra top/bottom spacing.
     { label: 'REPORTAR', href: '/reportar', m: ['/reportar'], report: true, d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
