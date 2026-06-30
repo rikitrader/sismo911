@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { timingSafeEqualStr } from '../lib/security';
+import { audit } from '../lib/audit';
 import type { RawPatient } from '../lib/hospital-registry';
 import { upsertHospitalRows, collapseHospitalDupes } from '../lib/hospital-ingest';
 import { drainHospitalRegistryMatch } from '../ingest/hospital-registry-match';
@@ -42,6 +43,21 @@ hospital.post('/hospital/sync', async (c) => {
   if (!authed(c)) return c.json({ error: 'unauthorized' }, 401);
   const out = await ingestHospitalRegistry(c.env);
   return c.json(out);
+});
+
+// ── POST /hospital/reset?confirm=RESET-HOSPITAL — clear + reload the registry ──
+// Maintenance: token-gated AND requires an explicit confirm token so it can't fire
+// by accident. Truncates hospital_patients (a reconstructable ingest — no user data;
+// case tracer notes live in person_events) then re-pulls the feed. Idempotent.
+hospital.post('/hospital/reset', async (c) => {
+  if (!authed(c)) return c.json({ error: 'unauthorized' }, 401);
+  if (c.req.query('confirm') !== 'RESET-HOSPITAL') return c.json({ error: 'confirm_required', hint: '?confirm=RESET-HOSPITAL' }, 400);
+  const before: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM hospital_patients`).first().catch(() => ({ n: 0 }));
+  await c.env.DB.prepare(`DELETE FROM hospital_patients`).run();
+  const reload = await ingestHospitalRegistry(c.env);
+  const after: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM hospital_patients`).first().catch(() => ({ n: 0 }));
+  await audit(c, 'hospital.registry.reset', { deleted: Number(before?.n) || 0, reloaded: Number(after?.n) || 0 });
+  return c.json({ ok: true, deleted: Number(before?.n) || 0, reload, total_after: Number(after?.n) || 0 });
 });
 
 // ── POST /hospital/collapse — token-gated manual duplicate collapse (reversible) ─
