@@ -93,7 +93,7 @@
   // other destination (the NAV_GROUPS, Contacto, Consola) lives in the "Más ▾"
   // overflow dropdown so nothing is orphaned by the condensed look.
   const DESKTOP_NAV = [
-    { label: 'Inicio',        href: '/',          m: ['/'],          d: 'M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z' },
+    // "Inicio" removed — the SISMO911 logo (brand, href="/") is the home link.
     { label: 'Desaparecidos', href: '/personas',  m: ['/personas'],  d: 'M16 21v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8z' },
     { label: 'Expedientes',   href: '/casos',     m: ['/casos'],     d: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM8 13h8M8 16h5' },
     { label: 'Mascotas',      href: '/mascotas',  m: ['/mascotas'],  d: 'M4.5 12a2 2 0 100-4 2 2 0 000 4zm15 0a2 2 0 100-4 2 2 0 000 4zM9 8a2 2 0 100-4 2 2 0 000 4zm6 0a2 2 0 100-4 2 2 0 000 4zm-3 3c-2.5 0-4.5 2-4.5 4.5 0 1.5 1.5 2.5 4.5 2.5s4.5-1 4.5-2.5C16.5 13 14.5 11 12 11z' },
@@ -318,12 +318,13 @@
     @media(min-width:1024px){
       #s911-shell{display:none !important}
       #s911-topbar{display:none !important}
-      body{ padding-left:0 !important; padding-top:74px !important }
+      body{ padding-left:0 !important; padding-top:78px !important }
       #s911-deskbar{ display:block !important }
-      .s911-fullmap{ left:0 !important; top:74px !important }
+      .s911-fullmap{ left:0 !important; top:78px !important }
     }
     #s911-deskbar{position:fixed;top:0;left:0;right:0;z-index:1150;font-family:'Public Sans',Inter,sans-serif}
-    #s911-deskbar .s911-tri{height:6px;background:linear-gradient(90deg,#ffce00 0 16%,#f4f4f4 16% 24%,#0033a0 24% 60%,#9d1f33 70% 80%,#cf142b 80% 100%)}
+    /* Bandera de Venezuela: tres franjas horizontales amarillo / azul / rojo. */
+    #s911-deskbar .s911-tri{height:10px;background:linear-gradient(180deg,#ffcc00 0 33.34%,#00247d 33.34% 66.67%,#cf142b 66.67% 100%)}
     #s911-deskbar .s911-dbar{height:68px;display:flex;align-items:center;gap:10px;padding:0 22px;background:linear-gradient(180deg,#0c1531,#0a0f23);border-bottom:1px solid rgba(255,255,255,.07);box-shadow:0 2px 14px rgba(0,0,0,.35)}
     #s911-deskbar .s911-dbrand{display:flex;align-items:center;gap:11px;text-decoration:none;flex:0 0 auto}
     #s911-deskbar .s911-dbrand img{width:42px;height:42px}
@@ -373,7 +374,7 @@
   deskbar.innerHTML = `
     <div class="s911-tri"></div>
     <div class="s911-dbar">
-      <a href="/" class="s911-dbrand"><img src="/logo.svg" alt="SISMO911"><span><b>SISMO911</b><small>REGISTRO NACIONAL · COMANDO SÍSMICO</small></span></a>
+      <a href="/" class="s911-dbrand" title="Inicio · SISMO911" aria-label="Inicio"><img src="/logo.svg" alt="SISMO911"><span><b>SISMO911</b><small>REGISTRO NACIONAL · COMANDO SÍSMICO</small></span></a>
       <nav class="s911-dnav">
         ${DESKTOP_NAV.map(deskItem).join('')}
         <div class="s911-pop" id="s911-mas">
