@@ -84,7 +84,7 @@
 <script>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 const set=(id,v)=>document.getElementById(id).textContent=Number(v||0).toLocaleString('es-VE');
-async function stats(){try{const[r,p]=await Promise.all([fetch('/api/reports/stats').then(x=>x.json()),fetch('/api/persons/stats').then(x=>x.json())]);
+async function stats(){try{const _t='?t='+Math.floor(Date.now()/60000);const[r,p]=await Promise.all([fetch('/api/reports/stats'+_t).then(x=>x.json()),fetch('/api/persons/stats'+_t).then(x=>x.json())]);
   set('c_total',r.total);set('c_critical',r.critical);set('c_missing',p.missing);set('c_found',p.found);}catch{}}
 stats();setInterval(stats,15000);
 </script>

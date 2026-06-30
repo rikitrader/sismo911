@@ -44,7 +44,7 @@ async function search(){
   const q=document.getElementById('q').value.trim();
   document.getElementById('list').innerHTML='<div class="text-on-surface-variant text-sm">Buscando…</div>';
   try{
-    const d=await (await fetch('/api/rav/safe?limit=400'+(q?'&q='+encodeURIComponent(q):''))).json();
+    const d=await (await fetch('/api/rav/safe?limit=400&t='+Math.floor(Date.now()/60000)+(q?'&q='+encodeURIComponent(q):''))).json();
     const items=d.items||[];
     document.getElementById('cnt').textContent=items.length?('· '+items.length+' personas'):'';
     document.getElementById('list').innerHTML=items.length?items.map(card).join(''):'<p class="text-on-surface-variant text-sm col-span-full">Sin coincidencias.</p>';

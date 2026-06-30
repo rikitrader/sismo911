@@ -392,7 +392,7 @@
       api('aid-orgs').catch(()=>({orgs:[]})),
       api('contacts').catch(()=>({contacts:[]})),
       fetch('/acopio-data.json').then(r=>r.json()).catch(()=>[]),
-      fetch('/api/acopio/status').then(r=>r.json()).catch(()=>({status:{}})),
+      fetch('/api/acopio/status?t='+Math.floor(Date.now()/60000)).then(r=>r.json()).catch(()=>({status:{}})),
     ]);
 
     const sum=cases.summary||{};
@@ -512,7 +512,7 @@
     if(!ACAT.length){
       const [cat,st]=await Promise.all([
         fetch('/acopio-data.json').then(r=>r.json()),
-        fetch('/api/acopio/status').then(r=>r.json()).catch(()=>({status:{}})),
+        fetch('/api/acopio/status?t='+Math.floor(Date.now()/60000)).then(r=>r.json()).catch(()=>({status:{}})),
       ]);
       ACAT=cat; AST=st.status||{};
     }
@@ -755,7 +755,7 @@
 <script>
   // Tiny operator alert: show a banner if spam submissions were blocked today.
   (function(){
-    fetch('/api/admin/spam-stats',{credentials:'same-origin'})
+    fetch('/api/admin/spam-stats?t='+Math.floor(Date.now()/60000),{credentials:'same-origin'})
       .then(function(r){return r.ok?r.json():null;})
       .then(function(d){
         if(!d||!d.today) return;

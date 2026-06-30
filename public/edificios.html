@@ -210,12 +210,12 @@
 
   var PRIOC={INMEDIATA:'#d92d20',ALTA:'#f04438',MEDIA:'#f5c518',BAJA:'#a6d96a'};
   async function loadSar(){
-    var sum=await fetch('/api/buildings/sar/summary').then(function(x){return x.json();});
+    var sum=await fetch('/api/buildings/sar/summary?t='+Math.floor(Date.now()/60000)).then(function(x){return x.json();});
     var bp=sum.by_priority||{};
     document.getElementById('sarSum').textContent=
       sum.sar_buildings+' edificios · ~'+fmtN(sum.estimated_occupants)+' ocupantes estimados · '+
       (bp.INMEDIATA||0)+' inmediata / '+(bp.ALTA||0)+' alta · '+fmtN(sum.buildings_with_live_links||0)+' con desaparecidos EN VIVO ('+fmtN(sum.live_reports_indexed||0)+' reportes indexados)';
-    var d=await fetch('/api/buildings/sar?limit=80').then(function(x){return x.json();});
+    var d=await fetch('/api/buildings/sar?limit=80&t='+Math.floor(Date.now()/60000)).then(function(x){return x.json();});
     var rows=d.buildings||[];
     document.getElementById('sarBody').innerHTML=rows.map(function(r){
       var col=PRIOC[r.priority]||'#9aa4b2';
@@ -270,8 +270,8 @@
   }
   async function boot(){
     initMap();
-    var s=await fetch('/api/buildings/summary').then(function(x){return x.json();}); setKpis(s);
-    var d=await fetch('/api/buildings?source=all&limit=5000').then(function(x){return x.json();});
+    var s=await fetch('/api/buildings/summary?t='+Math.floor(Date.now()/60000)).then(function(x){return x.json();}); setKpis(s);
+    var d=await fetch('/api/buildings?source=all&limit=5000&t='+Math.floor(Date.now()/60000)).then(function(x){return x.json();});
     ALL=d.buildings||[];
     fillSelect('f_state',[...new Set(ALL.map(function(b){return b.state;}))],'Todos');
     fillSelect('f_sector',[...new Set(ALL.map(function(b){return b.sector;}))],'Todos');

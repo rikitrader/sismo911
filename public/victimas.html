@@ -167,7 +167,7 @@
 
   async function load() {
     let s;
-    try { s = await (await fetch('/api/casualties/latest')).json(); }
+    try { s = await (await fetch('/api/casualties/latest?t='+Math.floor(Date.now()/60000))).json(); }
     catch (e) { document.getElementById('subtitle').textContent = 'No se pudieron cargar las cifras.'; return; }
 
     document.getElementById('lvlText').textContent = LVL[s.alert] || 'Alerta';
@@ -239,7 +239,7 @@
 
     // sources registry + freshness
     try {
-      const sr = await (await fetch('/api/casualties/latest/sources')).json();
+      const sr = await (await fetch('/api/casualties/latest/sources?t='+Math.floor(Date.now()/60000))).json();
       const KIND = { api: 'API', model: 'Modelo', official: 'Oficial', media: 'Medios', social: 'Ciudadano' };
       document.getElementById('srcRows').innerHTML = (sr.sources || []).map(x =>
         '<tr><td><b>' + esc(x.name) + '</b>' + (x.homepage ? ' <a class="cite" href="' + esc(x.homepage) + '" target="_blank" rel="noopener">↗</a>' : '') + '</td>' +
