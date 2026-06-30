@@ -118,7 +118,12 @@ export function evaluateGate(path: string, method: string): GateDecision {
   // Per-case operator surfaces (evidence, tasks, investigation leads, identity
   // verification, …). NOTE: POST /api/persons/:id/tip is deliberately NOT here —
   // it is the PUBLIC citizen-tip endpoint (rate-limited in its handler).
-  const isCaseAdmin = /^\/api\/persons\/[^/]+\/(attachments|tasks|messages|victims|case|audit|evidence|intel|identity)(\/|$)/.test(path);
+  const isCaseAdmin = /^\/api\/persons\/[^/]+\/(attachments|tasks|messages|victims|case|audit|evidence|intel|identity|medical)(\/|$)/.test(path);
+
+  // Telemedicina ↔ casos bridge: the standalone medical-case operator surface
+  // (list/detail/status/link). Per-public-case medical reads use /:id/medical
+  // above (isCaseAdmin). Both map to persons:moderate (operator + super_admin).
+  const isMedicalCases = path.startsWith('/api/persons/medical-cases');
 
   const isSosTriage =
     (path === '/api/sos' && method === 'GET') ||
@@ -140,7 +145,7 @@ export function evaluateGate(path: string, method: string): GateDecision {
   const isNinezAdminRead = method === 'GET' && path.startsWith('/api/ninez/admin');
 
   const gated = isAdminPage || isAdminWrite || isReportModeration || isPersonModeration ||
-    isDocketSubmit || isCaseAdmin || isSosTriage || isDamageReview || isManualRefresh ||
+    isMedicalCases || isDocketSubmit || isCaseAdmin || isSosTriage || isDamageReview || isManualRefresh ||
     isShelterModeration || isSatWrite || isAcopioReview || isFlotaApi || isFlotaAdminApi ||
     isSuministrosPage || isSuministrosRead || isNinezAdminRead;
 
@@ -168,7 +173,7 @@ export function evaluateGate(path: string, method: string): GateDecision {
   // read_only/auditor roles do NOT hold. Previously ALL flota mapped to flota:read,
   // letting a read-only auditor mutate and dispatch the live emergency fleet.
   else if (isFlotaApi) perm = WRITE_METHODS.has(method) ? 'flota:dispatch' : 'flota:read';
-  else if (isCaseAdmin || isPersonModeration) perm = 'persons:moderate';
+  else if (isCaseAdmin || isPersonModeration || isMedicalCases) perm = 'persons:moderate';
   else if (isReportModeration) perm = 'reports:moderate';
   else if (isSosTriage) perm = 'sos:triage';
   else if (isDamageReview) perm = 'damage:moderate';

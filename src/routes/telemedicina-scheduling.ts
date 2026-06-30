@@ -18,6 +18,7 @@ const BOOK_WINDOW_SEC = 3600; // 1h
 import { audit } from '../lib/audit';
 import { sendEmail, randomToken, telemedScheduledEmail, telemedApptStatusEmail } from '../lib/email';
 import { notifyPatientText } from '../lib/sms';
+import { registerConsultPatient, syncCaseFromAppointmentStatus, recordCaseEventForAppointment } from '../lib/patients';
 import {
   APPT_TYPES, APPT_TYPE_KEYS, isApptType, type ApptType, type ApptStatus, isStatus, canTransition,
   computeSlots, localToMs, weekdayOf, minToHHMM, type Interval,
@@ -232,6 +233,15 @@ telemedScheduling.post('/book/appointments', async (c) => {
   ).run();
   await c.env.DB.prepare(`INSERT INTO telemed_appt_status (id, appointment_id, status, actor, at_ms) VALUES (?,?,?,?,?)`)
     .bind(uid('sh'), id, 'scheduled', 'system', now).run();
+  // Bridge → public DB: register the patient + open/track a medical case.
+  // Best-effort; a failure here must never block the patient's booking.
+  try {
+    await registerConsultPatient(c.env, {
+      appointmentId: id, kind: 'appointment', patient_name: name,
+      patient_cedula: cedula, patient_email: email || null, patient_phone: phone || null,
+      patient_dob: dob, patient_gender: gender, patient_city: ploc, specialty, doctor_id: doctorId,
+    });
+  } catch (e) { await audit(c, 'telemed.bridge_error', { id, stage: 'book', err: String(e) }).catch(() => {}); }
 
   const track = trackUrl(c, manageToken);
   const icsUrl = `${baseUrl(c)}/api/telemedicina/appt/${id}/ics?t=${manageToken}`;
@@ -297,6 +307,7 @@ async function patientStatus(c: any, to: ApptStatus) {
   await c.env.DB.prepare(`UPDATE telemed_appointments SET status=?, updated_ms=? WHERE id=?`).bind(to, now, a.id).run();
   await c.env.DB.prepare(`INSERT INTO telemed_appt_status (id, appointment_id, status, actor, at_ms) VALUES (?,?,?,?,?)`)
     .bind(uid('sh'), a.id, to, 'patient', now).run();
+  await syncCaseFromAppointmentStatus(c.env, a.id, to, 'patient').catch(() => null);
   await audit(c, 'telemed.appt_status', { id: a.id, to, actor: 'patient' }).catch(() => {});
   return c.json({ ok: true, id: a.id, status: to }, 200);
 }
@@ -373,6 +384,7 @@ telemedScheduling.post('/panel/appointments/:id/status', async (c) => {
   await c.env.DB.prepare(`UPDATE telemed_appointments SET status=?, updated_ms=? WHERE id=?`).bind(to, now, id).run();
   await c.env.DB.prepare(`INSERT INTO telemed_appt_status (id, appointment_id, status, actor, note, at_ms) VALUES (?,?,?,?,?,?)`)
     .bind(uid('sh'), id, to, 'doctor', b.note ? String(b.note).slice(0, 300) : null, now).run();
+  await syncCaseFromAppointmentStatus(c.env, id, to, doc.id).catch(() => null);
   // Notify the patient on the meaningful transitions.
   if (a.patient_email && (to === 'in_progress' || to === 'completed' || to === 'cancelled' || to === 'no_show')) {
     c.executionCtx?.waitUntil?.(sendEmail(c.env, a.patient_email, telemedApptStatusEmail({
@@ -510,6 +522,7 @@ telemedScheduling.post('/panel/appointment/:id/note', async (c) => {
   const nid = uid('cn'); const now = Date.now();
   await c.env.DB.prepare(`INSERT INTO telemed_consult_notes (id, appointment_id, doctor_id, body, at_ms) VALUES (?,?,?,?,?)`)
     .bind(nid, o.appt.id, o.doc.id, body.slice(0, 4000), now).run();
+  await recordCaseEventForAppointment(c.env, o.appt.id, 'note_added', { actor: o.doc.id }).catch(() => null);
   await audit(c, 'telemed.consult_note', { id: o.appt.id }).catch(() => {});
   return c.json({ ok: true, id: nid, at_ms: now }, 201);
 });
@@ -544,6 +557,7 @@ telemedScheduling.post('/panel/appointment/:id/prescription', async (c) => {
   const rid = uid('rx'); const now = Date.now();
   await c.env.DB.prepare(`INSERT INTO telemed_prescriptions (id, appointment_id, doctor_id, items, notes, issued_ms) VALUES (?,?,?,?,?,?)`)
     .bind(rid, o.appt.id, o.doc.id, JSON.stringify(items), b.notes ? String(b.notes).slice(0, 1000) : null, now).run();
+  await recordCaseEventForAppointment(c.env, o.appt.id, 'rx_issued', { actor: o.doc.id, detail: `${items.length} med(s)` }).catch(() => null);
   await audit(c, 'telemed.prescription', { id: o.appt.id, items: items.length }).catch(() => {});
   // Let the patient know a récipe is available.
   if (o.appt.patient_email) c.executionCtx?.waitUntil?.(sendEmail(c.env, o.appt.patient_email, telemedApptStatusEmail({

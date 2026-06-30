@@ -4,6 +4,7 @@ import { uid } from '../lib/db';
 import { rateLimit, nameHasSpam, textHasLink, requestIp } from '../lib/security';
 import { audit } from '../lib/audit';
 import { getUserFromRequest } from '../lib/auth';
+import { registerConsultPatient } from '../lib/patients';
 import {
   sendEmail, randomToken,
   telemedDoctorWelcomeEmail, telemedRequestReceivedEmail, telemedClaimedEmail, telemedScheduledEmail,
@@ -194,6 +195,16 @@ telemedicina.post('/requests', async (c) => {
     specialty, urgency, lang, b.description ? String(b.description).slice(0, 2000) : null,
     'open', manageToken, requestIp(c), new Date(now).toISOString(), now, now,
   ).run();
+  // Bridge → public DB: register the patient + open/track a medical case.
+  try {
+    await registerConsultPatient(c.env, {
+      appointmentId: id, kind: 'request', patient_name: name,
+      patient_email: email || null, patient_phone: phone || null,
+      patient_state: b.patient_state ? String(b.patient_state).slice(0, 80) : null,
+      patient_city: b.patient_city ? String(b.patient_city).slice(0, 80) : null,
+      specialty,
+    });
+  } catch (e) { await audit(c, 'telemed.bridge_error', { id, stage: 'request', err: String(e) }).catch(() => {}); }
 
   const manageUrl = `${baseUrl(c)}/telemedicina?caso=${manageToken}`;
   if (email) c.executionCtx?.waitUntil?.(sendEmail(c.env, email, telemedRequestReceivedEmail({ name: firstName(name), refId: id, manageUrl, specialty })).then(() => {}));
