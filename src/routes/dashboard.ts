@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { edgeCached } from '../lib/edge-cache';
+import { getCanonicalCasualties, applyCanonical } from '../lib/canonical-casualties';
 
 export const dashboard = new Hono<{ Bindings: Env }>();
 
@@ -19,11 +20,14 @@ dashboard.get('/geoseismic', async (c) => edgeCached(c, 30, async () => {
   ).all<any>().catch(() => ({ results: [] }));
   const points = (hm.results ?? []).map((e: any) => [e.lat, e.lon, Math.max(0.1, Math.min(1, e.mag / 8))]);
 
-  // Official casualty stats (same as /api/stats/official, rav.ts)
-  const stats: any = await c.env.DB.prepare(
+  // Official casualty stats (same as /api/stats/official, rav.ts). fallecidos/
+  // heridos overlaid from the CANONICAL source of truth (latest AI-extract) so
+  // this dashboard always matches /casos and /informacion-verificada.
+  const statsRow: any = await c.env.DB.prepare(
     `SELECT fallecidos, heridos, refugiados, desaparecidos, source, origen, updated_at, pulled_at
      FROM official_stats WHERE id = 1`
   ).first().catch(() => null);
+  const stats: any = applyCanonical(statsRow, await getCanonicalCasualties(c.env));
 
   // Desaparecidos: the official press balance never reports this figure (shows
   // "—"), but WE run the missing-persons registry. We surface two DISTINCT counts
