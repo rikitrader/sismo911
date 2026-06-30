@@ -1,0 +1,33 @@
+name: gitleaks
+
+# Secret-scanning gate. This repo is PUBLIC, so any committed secret is exposed
+# the moment it lands. gitleaks scans the working tree on every PR and push and
+# FAILS the build on any real finding. Verified false positives are suppressed in
+# .gitleaks.toml (allowlist) — never allowlist a real secret there; rotate it.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history available for an optional manual sweep
+
+      - name: Install gitleaks
+        run: |
+          VER=8.30.1
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scan working tree (fail on any secret)
+        run: gitleaks dir . --config .gitleaks.toml --redact --no-banner --exit-code 1
