@@ -7,7 +7,8 @@ import { uid } from '../lib/db';
 
 export const sumProductos = new Hono<{ Bindings: Env }>();
 
-const UNIDADES = ['unidad', 'caja', 'kg', 'litro', 'paquete', 'saco', 'blister'];
+const UNIDADES = ['unidad', 'caja', 'kg', 'litro', 'ml', 'paquete', 'saco', 'blister',
+  'ampolla', 'vial', 'tableta', 'dosis', 'bolsa', 'frasco', 'par', 'sobre', 'set'];
 
 const str = (v: unknown, max: number) =>
   v == null ? null : String(v).trim().slice(0, max) || null;
