@@ -102,6 +102,22 @@ describe('hospital ingest route (catches the upsert / ON CONFLICT partial-index 
     expect(ana.estado).toBe('fallecido');         // refreshed
   });
 
+  it('a blank (desconocido) re-ingest never downgrades a known status (sticky upward)', async () => {
+    const { db, env, app } = setup();
+    // Same person (no cédula → name key) listed once as Internado, once blank.
+    await post(app, env, { rows: [{ hospital: 'H', nombre: 'PEDRO HOSPI', observaciones: 'Internado UCI' }] });
+    let row: any = db.raw.prepare(`SELECT estado FROM hospital_patients WHERE norm_name='pedro hospi'`).get();
+    expect(row.estado).toBe('hospitalizado');
+    // Re-ingest the SAME name with a blank cell — must NOT clobber to desconocido.
+    await post(app, env, { rows: [{ hospital: 'H', nombre: 'PEDRO HOSPI', observaciones: '' }] });
+    row = db.raw.prepare(`SELECT estado FROM hospital_patients WHERE norm_name='pedro hospi'`).get();
+    expect(row.estado).toBe('hospitalizado');                 // sticky — not downgraded
+    // But a real progression (alta) DOES win over hospitalizado.
+    await post(app, env, { rows: [{ hospital: 'H', nombre: 'PEDRO HOSPI', observaciones: 'Alta médica' }] });
+    row = db.raw.prepare(`SELECT estado FROM hospital_patients WHERE norm_name='pedro hospi'`).get();
+    expect(row.estado).toBe('alta');
+  });
+
   it('search + stats reflect parsed estado', async () => {
     const { env, app } = setup();
     await post(app, env, { rows: [
