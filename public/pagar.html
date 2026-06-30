@@ -37,6 +37,7 @@ body{ background:var(--bg); color:var(--text); font-family:var(--font); min-heig
 .kind-x402{ background:rgba(46,125,50,.12); color:var(--success); }
 .kind-donation{ background:rgba(11,95,255,.10); color:var(--brand-2); }
 .kind-invoice{ background:rgba(245,158,11,.14); color:#b45309; }
+.kind-stripe{ background:rgba(99,91,255,.12); color:#6356e5; }
 .pay-title{ font-family:var(--font-display); font-weight:800; font-size:1.4rem; color:var(--text); letter-spacing:-.02em; margin:14px 0 4px; line-height:1.2; }
 .pay-desc{ font-size:.9rem; color:var(--muted); margin-bottom:6px; }
 .pay-to{ font-size:.8rem; color:var(--muted); margin-top:2px; }
@@ -145,8 +146,8 @@ input.amount:focus{ outline:none; border-bottom-color:var(--brand-2); }
   function render(){
     var L = DATA.link, X = DATA.x402, payee = DATA.payee || {};
     var kind = L.kind || 'x402';
-    var kindLabel = kind==='donation' ? 'Donación' : kind==='invoice' ? 'Factura' : 'Pago · USDC';
-    var kindCls = kind==='donation' ? 'kind-donation' : kind==='invoice' ? 'kind-invoice' : 'kind-x402';
+    var kindLabel = kind==='donation' ? 'Donación' : kind==='invoice' ? 'Factura' : kind==='stripe' ? 'Pago · Tarjeta' : 'Pago · USDC';
+    var kindCls = kind==='donation' ? 'kind-donation' : kind==='invoice' ? 'kind-invoice' : kind==='stripe' ? 'kind-stripe' : 'kind-x402';
     var html = '<span class="kind-pill '+kindCls+'">'+esc(kindLabel)+'</span>'+
       '<div class="pay-title">'+esc(L.title)+'</div>';
     if (L.description) html += '<div class="pay-desc">'+esc(L.description)+'</div>';
@@ -160,8 +161,9 @@ input.amount:focus{ outline:none; border-bottom-color:var(--brand-2); }
         '<div class="progress-meta"><b>'+esc(fmtUSD(L.raised_usd||0))+'</b><span>meta '+esc(fmtUSD(L.goal_usd))+' · '+pct+'%</span></div></div>';
     }
 
-    // Amount block
-    if (L.open_amount){
+    // Amount block. Stripe links with no fixed price let the payer name an amount.
+    var stripeOpen = kind==='stripe' && !(Number(L.price_usd)>0);
+    if (L.open_amount || stripeOpen){
       html += '<div class="amount-box"><div class="amount-input-row"><span class="pre">$</span>'+
         '<input class="amount" id="amt" type="number" inputmode="decimal" min="1" step="1" placeholder="10" /></div>'+
         '<div class="preset-row">'+[5,10,25,50,100].map(function(v){
@@ -172,7 +174,14 @@ input.amount:focus{ outline:none; border-bottom-color:var(--brand-2); }
 
     html += '<div class="alert" id="alert"></div>';
 
-    if (X && X.live && X.receiving){
+    if (kind==='stripe'){
+      if (DATA.stripe && DATA.stripe.live){
+        html += '<button class="btn btn-pay" id="payStripeBtn">Pagar con tarjeta</button>'+
+          '<div class="hint">Pago seguro con tarjeta procesado por Stripe. Te llevaremos a la página de pago de Stripe.</div>';
+      } else {
+        html += '<div class="soon">Los pagos con tarjeta no están disponibles para este enlace en este momento.</div>';
+      }
+    } else if (X && X.live && X.receiving){
       html += '<button class="btn btn-pay" id="payBtn">Pagar con USDC</button>'+
         '<div class="hint">Necesitas una billetera Web3 (MetaMask, Coinbase Wallet) en la red Base. '+
         'El pago se firma en tu billetera; SISMO911 nunca toca tus llaves.</div>';
@@ -181,6 +190,22 @@ input.amount:focus{ outline:none; border-bottom-color:var(--brand-2); }
     }
     card.innerHTML = html;
     wire();
+  }
+
+  // ── Stripe card checkout: create a session then redirect to Stripe-hosted page ─
+  async function onPayStripe(){
+    var btn = document.getElementById('payStripeBtn');
+    if (btn){ btn.disabled = true; btn.textContent = 'Redirigiendo…'; }
+    try {
+      var body = {};
+      var amt = document.getElementById('amt');
+      if (amt && amt.value) body.amount_usd = Number(amt.value);
+      var r = await fetch(DATA.stripe.checkoutUrl, { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify(body) });
+      var d = await r.json().catch(function(){ return {}; });
+      if (r.ok && d.ok && d.url){ window.location.href = d.url; return; }
+      showAlert(d.detail || d.error || 'No se pudo iniciar el pago con tarjeta.');
+    } catch(e){ showAlert('Error de red. Intenta de nuevo.'); }
+    if (btn){ btn.disabled = false; btn.textContent = 'Pagar con tarjeta'; }
   }
 
   function wire(){
@@ -194,6 +219,8 @@ input.amount:focus{ outline:none; border-bottom-color:var(--brand-2); }
     }
     var btn = document.getElementById('payBtn');
     if (btn) btn.addEventListener('click', onPay);
+    var sbtn = document.getElementById('payStripeBtn');
+    if (sbtn) sbtn.addEventListener('click', onPayStripe);
   }
 
   function showAlert(msg){ var a=document.getElementById('alert'); if(a){ a.textContent=msg; a.style.display='block'; } }
@@ -296,6 +323,12 @@ input.amount:focus{ outline:none; border-bottom-color:var(--brand-2); }
     .then(function(d){
       if (!d || !d.ok || !d.found || !d.link){ stateError('Enlace no encontrado', 'Este enlace de cobro no existe o fue desactivado.'); return; }
       DATA = d; document.title = (d.link.title || 'Pagar') + ' — SISMO911'; render();
+      // Stripe Checkout redirects back here with ?status=paid|cancel.
+      try {
+        var st = new URLSearchParams(location.search).get('status');
+        if (st === 'paid') showAlert('✅ ¡Pago recibido! Gracias. El cobro se confirmará automáticamente.');
+        else if (st === 'cancel') showAlert('Pago cancelado. Puedes intentarlo de nuevo cuando quieras.');
+      } catch(e){}
     })
     .catch(function(){ stateError('Error de red', 'No pudimos cargar el enlace. Revisa tu conexión.'); });
 })();

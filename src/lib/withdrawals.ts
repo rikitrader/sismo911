@@ -22,16 +22,27 @@ export const MIN_WITHDRAWAL_USD = 1;
 const last4 = (s: string) => (s || '').replace(/\s+/g, '').slice(-4);
 const maskMiddle = (s: string) => (s && s.length > 10 ? `${s.slice(0, 6)}…${s.slice(-4)}` : s);
 
-/** Available USD balance = settled x402 received minus money held by non-terminal withdrawals. */
+/** Available USD balance = settled x402 (USDC) + paid Stripe (card), both
+ *  USD-denominated, minus money held by non-terminal withdrawals. Stripe
+ *  receipts land in the platform account and are withdrawable via Connect; the
+ *  `stripe_payments` table may not exist on older schemas, so its read is
+ *  tolerant (treated as 0). */
 export async function computeBalance(env: Env, userId: string) {
   const recv: any = await env.DB.prepare(
     `SELECT COALESCE(SUM(amount_usd),0) AS usd FROM x402_payments WHERE payee_user_id = ? AND status = 'settled'`
   ).bind(userId).first();
+  let stripeUsd = 0;
+  try {
+    const sp: any = await env.DB.prepare(
+      `SELECT COALESCE(SUM(amount_usd),0) AS usd FROM stripe_payments WHERE payee_user_id = ? AND status = 'paid'`
+    ).bind(userId).first();
+    stripeUsd = Number(sp?.usd) || 0;
+  } catch { /* table absent on older schema → 0 */ }
   const held: any = await env.DB.prepare(
     `SELECT COALESCE(SUM(net_amount),0) AS usd FROM withdrawal_requests
       WHERE user_id = ? AND status IN ('pending_review','processing','completed')`
   ).bind(userId).first();
-  const gross = Number(recv?.usd) || 0;
+  const gross = (Number(recv?.usd) || 0) + stripeUsd;
   const committed = Number(held?.usd) || 0;
   const available = Math.round((gross - committed) * 100) / 100;
   return { gross_received_usd: gross, committed_usd: committed, available_usd: Math.max(0, available) };
@@ -63,8 +74,12 @@ export function maskDestination(type: WithdrawalMethod, raw: Record<string, unkn
       const addr = s('address');
       return { summary: `USDC ${maskMiddle(addr)}`, redacted: { address_masked: maskMiddle(addr) } };
     }
-    case 'stripe':
-      return { summary: 'Stripe (próximamente)', redacted: {} };
+    case 'stripe': {
+      // Destination is the user's verified Stripe Connect account (acct_…); store
+      // only the masked id, never anything sensitive — Stripe holds the KYC data.
+      const acct = s('account_id');
+      return { summary: `Stripe Connect ${maskMiddle(acct)}`.trim(), redacted: { account_masked: maskMiddle(acct) } };
+    }
     case 'cash':
     default:
       return { summary: 'Asistencia manual', redacted: { note: s('note').slice(0, 120) } };
