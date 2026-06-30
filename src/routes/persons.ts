@@ -69,6 +69,28 @@ function hospPerson(r: any, op: boolean): any {
   if (op) p.contact_phone = r.contact || null;
   return p;
 }
+// Synthesize a case-shaped object from a hospital_patients REGISTRY row (the
+// consolidated "Registro Maestro de Pacientes"). These federate into /casos as
+// id "hosp-<hp_id>" so the docket is the SINGLE SOURCE OF TRUTH for hospitalizados:
+// one place where every hospitalized person is browsable/searchable/filterable.
+// notes carries the hospital data (centro + observaciones) so it reads as the
+// per-case hospital comment. Cédula/phone are operator-only (PII).
+function hospRegistryCase(r: any, op: boolean): any {
+  const ms = Number(r.updated_ms) || Number(r.created_ms) || Date.now();
+  const estLabel = r.estado === 'fallecido' ? 'fallecido' : r.estado === 'alta' ? 'dado de alta' : 'hospitalizado';
+  const base: any = {
+    id: HOSP + r.id, case_number: hospCaseNo(r.id), full_name: r.full_name || 'Hospitalizado',
+    age: r.edad || null, sex: null, last_seen: r.hospital || null,
+    status: r.estado === 'fallecido' ? 'found_deceased' : (r.estado === 'alta' ? 'found_safe' : 'hospitalizado'),
+    incident_type: 'hospitalizado', review: 'approved', photo_url: null,
+    hospital_name: r.hospital || null, hospital_match: r.hospital || 'Registro hospitalario',
+    notes: `🏥 ${estLabel} en ${r.hospital || 'hospital no indicado'} (Registro Maestro de Pacientes).` + (r.observaciones ? ' ' + r.observaciones : ''),
+    source: 'hospital', source_updated: r.source_updated || null,
+    created_ms: ms, updated_ms: ms, docket_count: 0, evidence_count: 0, last_activity_ms: ms,
+  };
+  if (op) { base.contact_phone = r.telefono || null; base.cedula = r.cedula || null; }
+  return base;
+}
 const estadoToStatus = (e: string) =>
   e === 'localizado' ? 'found_safe'
   : e === 'aparecido' ? 'aparecido'
@@ -231,7 +253,12 @@ persons.get('/cases', async (c) => {
   // ---------- filters: native `persons` table ----------
   const pWhere: string[] = []; const pBind: unknown[] = [];
   if (q) { pWhere.push('(p.full_name LIKE ? OR p.last_seen LIKE ? OR p.case_number LIKE ?' + (op ? ' OR p.contact_phone LIKE ?' : '') + ')'); pBind.push(l, l, l); if (op) pBind.push(l); }
-  if (status && CASE_STATUSES.includes(status)) { pWhere.push('p.status = ?'); pBind.push(status); }
+  if (status === 'hospitalizado') {
+    // A hospitalizado case is one flagged on the case itself OR cross-linked to a
+    // hospitalizado patient in the registry (name-only matches stay status='missing'
+    // by design, so without this they'd never surface under the filter).
+    pWhere.push("(p.status='hospitalizado' OR p.id IN (SELECT matched_person_id FROM hospital_patients WHERE matched_person_id IS NOT NULL AND estado='hospitalizado'))");
+  } else if (status && CASE_STATUSES.includes(status)) { pWhere.push('p.status = ?'); pBind.push(status); }
   if (priority && ['alta', 'media', 'baja'].includes(priority)) { pWhere.push('p.priority = ?'); pBind.push(priority); }
   if (since > 0) { pWhere.push('p.created_ms >= ?'); pBind.push(since); }
   if (!op) { pWhere.push("p.review = 'approved'"); pWhere.push(`NOT ${personsPublicSuppressSql('p')}`); }  // public: approved + minor-protected hidden
@@ -252,12 +279,27 @@ persons.get('/cases', async (c) => {
   if (q) { fWhere.push('(nombre LIKE ? OR ubicacion LIKE ?' + (op ? ' OR contacto LIKE ?' : '') + ')'); fBind.push(l, l); if (op) fBind.push(l); }
   if (status === 'found_safe') fWhere.push("estado = 'localizado'");
   else if (status === 'aparecido') fWhere.push("estado = 'aparecido'");
-  else if (status === 'hospitalizado') fWhere.push("estado = 'hospitalizado'");
+  else if (status === 'hospitalizado') fWhere.push("(estado = 'hospitalizado' OR id IN (SELECT matched_persona_id FROM hospital_patients WHERE matched_persona_id IS NOT NULL AND estado='hospitalizado'))");
   else if (status === 'found_deceased') fWhere.push("estado = 'fallecido'");
   else if (status === 'missing') fWhere.push("estado NOT IN ('localizado','aparecido','hospitalizado','fallecido')");
   else if (status === 'unknown') fWhere.push('1=0');                                   // personas have no 'unknown' bucket
   if (since > 0) { fWhere.push('created_at >= ?'); fBind.push(since); }
   const fW = fWhere.length ? 'WHERE ' + fWhere.join(' AND ') : '';
+
+  // ---------- filters: hospital patient REGISTRY (single source of truth) ----------
+  // The consolidated "Registro Maestro de Pacientes" federates into the docket as
+  // hosp-<id> cases so /casos shows every hospitalized person (and /hospitales,
+  // which reads this same endpoint, works too). Only the UNMATCHED hospitalizados
+  // are added here — those already linked to a real expediente surface via that
+  // case (see the matched_* OR-clauses above), so nobody is double-counted.
+  // Included on the default view and the Hospitalizada filter; a priority/review/
+  // status-other filter excludes them (registry rows have no priority/review state).
+  const includeHosp = includeFam && (status === '' || status === 'hospitalizado') && !review;
+  const hWhere: string[] = ["estado = 'hospitalizado'", 'matched_person_id IS NULL', 'matched_persona_id IS NULL'];
+  const hBind: unknown[] = [];
+  if (q) { hWhere.push('(full_name LIKE ?' + (op ? ' OR cedula LIKE ?' : '') + ')'); hBind.push(l); if (op) hBind.push(l); }
+  if (since > 0) { hWhere.push('created_ms >= ?'); hBind.push(since); }
+  const hW = 'WHERE ' + hWhere.join(' AND ');
 
   // /casos is the REAL expediente docket: native `persons` + federated Familia
   // `personas` only. Crowdsourced hospital reports are NOT merged as pseudo-rows;
@@ -269,17 +311,19 @@ persons.get('/cases', async (c) => {
   const pCnt: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM persons p ${pW}`).bind(...pBind).first().catch(() => ({ n: 0 }));
   let fCnt: any = { n: 0 };
   if (includeFam) fCnt = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM personas ${fW}`).bind(...fBind).first().catch(() => ({ n: 0 }));
-  const total = (pCnt?.n || 0) + (fCnt?.n || 0);
+  let hCnt: any = { n: 0 };
+  if (includeHosp) hCnt = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM hospital_patients ${hW}`).bind(...hBind).first().catch(() => ({ n: 0 }));
+  const total = (pCnt?.n || 0) + (fCnt?.n || 0) + (hCnt?.n || 0);
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
   // ---------- page window: union of case ids ordered by the chosen key ----------
   // Only `recent`/`opened`/`name` can be ordered in SQL across both tables (the
   // triage score & movement count are computed on read); other sorts fall back to
   // recency here and are refined client-side within the page.
-  const SORT: Record<string, { p: string; f: string; dir: 'ASC' | 'DESC'; text?: boolean }> = {
-    recent: { p: 'p.updated_ms', f: 'updated_at', dir: 'DESC' },
-    opened: { p: 'p.created_ms', f: 'created_at', dir: 'DESC' },
-    name: { p: 'p.full_name', f: 'nombre', dir: 'ASC', text: true },
+  const SORT: Record<string, { p: string; f: string; h: string; dir: 'ASC' | 'DESC'; text?: boolean }> = {
+    recent: { p: 'p.updated_ms', f: 'updated_at', h: 'updated_ms', dir: 'DESC' },
+    opened: { p: 'p.created_ms', f: 'created_at', h: 'created_ms', dir: 'DESC' },
+    name: { p: 'p.full_name', f: 'nombre', h: 'full_name', dir: 'ASC', text: true },
   };
   const sk = SORT[sort] || SORT.recent;
   const orderBy = (sk.text ? `k COLLATE NOCASE ${sk.dir}` : `k ${sk.dir}`) + ', src ASC, id DESC';
@@ -287,13 +331,16 @@ persons.get('/cases', async (c) => {
     `SELECT id, src FROM (` +
     `SELECT p.id AS id, 0 AS src, ${sk.p} AS k FROM persons p ${pW}` +
     (includeFam ? ` UNION ALL SELECT ('fam-'||id) AS id, 1 AS src, ${sk.f} AS k FROM personas ${fW}` : '') +
+    (includeHosp ? ` UNION ALL SELECT ('hosp-'||id) AS id, 2 AS src, ${sk.h} AS k FROM hospital_patients ${hW}` : '') +
     `) ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
   const { results: pageRows } = await c.env.DB.prepare(unionSql)
-    .bind(...pBind, ...(includeFam ? fBind : []), pageSize, offset).all<any>();
+    .bind(...pBind, ...(includeFam ? fBind : []), ...(includeHosp ? hBind : []), pageSize, offset).all<any>();
   const order = (pageRows ?? []).map((r) => String(r.id));
   const personIds = (pageRows ?? []).filter((r) => r.src === 0).map((r) => String(r.id));
   const famIds = (pageRows ?? []).filter((r) => r.src === 1).map((r) => String(r.id));
   const famKeys = famIds.map((id) => id.slice(FAM.length));
+  const hospIds = (pageRows ?? []).filter((r) => r.src === 2).map((r) => String(r.id));
+  const hospKeys = hospIds.map((id) => id.slice(HOSP.length));
 
   // D1 caps bound parameters per query (~100) → hydrate the page's rows in chunks.
   const chunk = <T>(a: T[], n: number) => { const o: T[][] = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
@@ -369,6 +416,18 @@ persons.get('/cases', async (c) => {
     } catch (e: any) { console.error('[cases] familia bridge failed:', e?.message ?? e); }
   }
 
+  // ---------- hydrate hospital REGISTRY rows on this page ----------
+  let hospCases: any[] = [];
+  if (hospKeys.length) {
+    try {
+      const res = await c.env.DB.batch<any>(chunk(hospKeys, 90).map((ks) => c.env.DB.prepare(
+        `SELECT id, full_name, edad, cedula, telefono, hospital, estado, observaciones, source_updated, created_ms, updated_ms
+         FROM hospital_patients WHERE id IN (${ks.map(() => '?').join(',')})`
+      ).bind(...ks)));
+      hospCases = res.flatMap((r) => r.results ?? []).map((r: any) => hospRegistryCase(r, op));
+    } catch (e: any) { console.error('[cases] hospital registry bridge failed:', e?.message ?? e); }
+  }
+
   // ---------- cross-match badge: read persisted hospital_matches for this page ----------
   // The match is computed durably by the hospital-match backfill (cron-drained) and
   // stored in hospital_matches, so here we only join the page's case ids — cheap,
@@ -391,7 +450,7 @@ persons.get('/cases', async (c) => {
   // ---------- stitch back into the union order + live triage score ----------
   const nowMs = Date.now();
   const byId: any = {};
-  [...personCases, ...famCases].forEach((x) => byId[x.id] = x);
+  [...personCases, ...famCases, ...hospCases].forEach((x) => byId[x.id] = x);
   const cases = order.map((id) => byId[id]).filter(Boolean).map((x) => withScore(x, nowMs));
 
   // ---------- global summary (whole registry, not just this page) ----------
@@ -417,12 +476,27 @@ persons.get('/cases', async (c) => {
   // read-guard test still anchors it.
   const fsumSuppress = op ? '' : ` AND NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`;
   try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas WHERE moderation = 'approved'${fsumSuppress}`).first() || {}; } catch {}
+  // Hospital registry KPIs. `hospitalized` = every hospitalizado in the registry
+  // (the headline count). `hospUnmatched` = those NOT already on a real expediente;
+  // only these add to the docket `total` so the banner equals the pager on the
+  // default view (matched ones are already counted inside persons/personas).
+  let hospitalized = 0, hospUnmatched = 0;
+  try {
+    const hr: any = await c.env.DB.prepare(
+      `SELECT COUNT(*) AS all_n,
+              SUM(CASE WHEN matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_n
+         FROM hospital_patients WHERE estado='hospitalizado'`
+    ).first();
+    hospitalized = Number(hr?.all_n) || 0;
+    hospUnmatched = Number(hr?.unmatched_n) || 0;
+  } catch {}
   const summary = {
     missing: (sum?.missing || 0) + (fsum?.missing || 0),
     found_safe: (sum?.found_safe || 0) + (fsum?.found_safe || 0),
     deceased: (sum?.deceased || 0) + (fsum?.deceased || 0),
+    hospitalized,
     pending: sum?.pending || 0,
-    total: (sum?.total || 0) + (fsum?.total || 0),
+    total: (sum?.total || 0) + (fsum?.total || 0) + hospUnmatched,
   };
   c.header('Cache-Control', 'no-store'); c.header('Vary', 'Cookie');
   return c.json({ cases, summary, operator: op, page, pageSize, total, pages });
@@ -576,9 +650,18 @@ persons.get('/:id/docket', async (c) => {
   const id = c.req.param('id');
   // Hospital intake → full case profile (same shell as a person case, empty docket).
   if (isHosp(id)) {
+    const key = hospKey(id);
+    // Registry rows (hp_*) → the consolidated patient registry; legacy hosp ids → rav_reports.
+    if (key.startsWith('hp_')) {
+      const r: any = await c.env.DB.prepare(`SELECT * FROM hospital_patients WHERE id = ?`).bind(key).first();
+      if (!r) return c.notFound();
+      const scored = withScore(hospRegistryCase(r, op));
+      c.header('Cache-Control', 'no-store');
+      return c.json({ person: scored, event: null, docket: [], operator: op, hospital: true });
+    }
     const r: any = await c.env.DB.prepare(
       `SELECT * FROM rav_reports WHERE id = ? AND kind='hospital' AND coalesce(hidden,0)=0`,
-    ).bind(hospKey(id)).first();
+    ).bind(key).first();
     if (!r) return c.notFound();
     const person = hospPerson(r, op);
     const scored = withScore({ ...person, docket_count: 0, last_activity_ms: person.created_ms });
