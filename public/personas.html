@@ -116,7 +116,7 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
         <div class="gstat red"><div class="n" id="s_missing">—</div><div class="l">Buscadas</div></div>
         <div class="gstat green"><div class="n" id="s_found">—</div><div class="l">Reencontradas</div></div>
         <div class="gstat white"><div class="n" id="s_total">—</div><div class="l">Total registradas</div></div>
-        <div class="gstat white"><div class="n" id="s_photo">—</div><div class="l">Con foto</div></div>
+        <div class="gstat white"><div class="n" id="s_hosp">—</div><div class="l">Hospitalizados</div></div>
       </div>
     </div>
   </section>
@@ -256,7 +256,7 @@ const fmtFecha=p=>{ if(p.fecha)return String(p.fecha); if(p.updated_at){const d=
 const EDOS=['Amazonas','Anzoátegui','Apure','Aragua','Barinas','Bolívar','Carabobo','Cojedes','Delta Amacuro','Distrito Capital','Falcón','Guárico','La Guaira','Lara','Mérida','Miranda','Monagas','Nueva Esparta','Portuguesa','Sucre','Táchira','Trujillo','Yaracuy','Zulia'];
 $('fedo').insertAdjacentHTML('beforeend',EDOS.map(e=>`<option value="${e}">${e}</option>`).join(''));
 
-async function stats(){try{const d=await fetch('/api/persons/stats').then(r=>r.json());$('s_missing').textContent=Number(d.missing||0).toLocaleString('es');$('s_found').textContent=Number(d.found||0).toLocaleString('es');$('s_total').textContent=Number(d.total||0).toLocaleString('es');}catch{}}
+async function stats(){try{const d=await fetch('/api/persons/stats').then(r=>r.json());$('s_missing').textContent=Number(d.missing||0).toLocaleString('es');$('s_found').textContent=Number(d.found||0).toLocaleString('es');$('s_total').textContent=Number(d.total||0).toLocaleString('es');$('s_hosp').textContent=Number(d.hospitalized||0).toLocaleString('es');}catch{}}
 stats();
 
 // ---- vCard wall (filtered photo registry) ----
@@ -298,7 +298,7 @@ async function loadWall(reset){
   if(reset)wall.innerHTML='';
   wall.insertAdjacentHTML('beforeend',(d.photos||[]).map(vcard).join(''));
   if(!wall.children.length)wall.innerHTML='<p class="text-sm text-on-surface-variant col-span-full py-10 text-center" style="grid-column:1/-1">No hay personas que coincidan con estos filtros. Prueba ampliar la búsqueda.</p>';
-  if(typeof d.total==='number'){$('wallCount').textContent=d.total.toLocaleString('es');$('s_photo').textContent=d.total.toLocaleString('es');}
+  if(typeof d.total==='number'){$('wallCount').textContent=d.total.toLocaleString('es');}
   wCur=d.nextCursor;
   $('wallMore').innerHTML=wCur?'<button id="wMoreBtn" class="px-5 py-2.5 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>':'';
   const mb=$('wMoreBtn');if(mb)mb.onclick=()=>loadWall(false);
