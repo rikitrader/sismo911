@@ -10,18 +10,21 @@ import type { Env } from '../types';
 //                          (telemed_requests.status = 'completed') — a SISMO911-
 //                          native service; every completed request is a real
 //                          person attended through the platform.
-//   total = medical_consults. When 0, the UI shows "—" ("aún sin datos verificados").
+//     • persons_located_safe = distinct people an OPERATOR confirmed located/found
+//                          THROUGH the platform, recorded in the person_events
+//                          docket with source='operator' (kind='status_change',
+//                          status_to IN localizado|aparecido, review='approved').
+//   total = medical_consults + persons_located_safe. When 0, the UI shows "—".
 //
-// WHY missing-persons "located" is NOT counted (yet): the `personas` table is an
-//   IMPORT from an external dataset (desaparecidos-vzla). Its `estado` AND
-//   `localizado_nota` fields were backfilled by that import, so they do NOT prove
-//   SISMO911 facilitated the location — counting them FABRICATED impact (a live
-//   value of 12,422 → 2,810 came entirely from imported rows). The platform does
-//   record genuine locations (operator docket events), but separating those
-//   cleanly from imported state needs an explicit provenance signal (e.g. a
-//   launch-date cutoff or a `helped_via_platform` marker). Until that exists this
-//   component is DEFERRED, not faked. See the vault follow-up. No hardcoded/demo
-//   numbers anywhere — the value is purely the count of real platform records.
+// PROVENANCE (the anti-fabrication crux): the `personas` table is an IMPORT from an
+//   external dataset (desaparecidos-vzla), so its estado/localizado_nota are NOT
+//   proof SISMO911 helped (counting them gave a fabricated 12,422 → 2,810). The
+//   ONLY import-free signal is the docket's source='operator' events: the import
+//   created NO person_events, citizen reports use source='citizen', hospital
+//   ingestion uses source='hospital'. So source='operator' located events =
+//   genuinely operator-confirmed platform locations. Both operator flows now write
+//   one (persons.ts status change + familia.ts /localizar). No hardcoded/demo
+//   numbers — the value is purely the count of real platform records.
 //
 // Public, read-only, NO PII (counts only). Mounted at /api/impact.
 export const impact = new Hono<{ Bindings: Env }>();
@@ -44,17 +47,24 @@ impact.get('/personas-ayudadas', async (c) => {
     c.env,
     `SELECT COUNT(*) AS n FROM telemed_requests WHERE status = 'completed'`,
   );
-  const persons_located_safe = 0; // DEFERRED: imported-registry provenance unclear (see header).
+  // Distinct people an operator confirmed located through the platform docket.
+  // source='operator' is the import-free discriminator (see header).
+  const persons_located_safe = await count(
+    c.env,
+    `SELECT COUNT(DISTINCT person_id) AS n FROM person_events
+       WHERE kind = 'status_change' AND status_to IN ('localizado','aparecido')
+         AND source = 'operator' AND review = 'approved'`,
+  );
   const total = medical_consults + persons_located_safe;
   return c.json({
     ok: true,
     total, // REAL count from platform records; the UI renders "—" when total === 0
     breakdown: { medical_consults, persons_located_safe },
     definition:
-      'Personas con un resultado que SISMO911 facilitó de forma verificable: por ahora, ' +
-      'consultas de telemedicina completadas en la plataforma. Excluye datos importados/' +
-      'históricos y estimaciones de planificación. El conteo de personas localizadas se ' +
-      'incorporará cuando exista una señal de origen confiable en la plataforma.',
+      'Personas con un resultado que SISMO911 facilitó de forma verificable: consultas de ' +
+      'telemedicina completadas + personas que un operador confirmó como localizadas a través ' +
+      'del registro de la plataforma (eventos source=operator). Excluye datos importados/' +
+      'históricos y estimaciones de planificación. Solo registros reales de la plataforma.',
     as_of: Date.now(),
   });
 });
