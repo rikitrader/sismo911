@@ -6,7 +6,12 @@ import { impact } from '../src/routes/impact';
 // "Personas ayudadas" must ALWAYS be derived from records SISMO911 itself produced
 // — never a hardcoded constant and never the IMPORTED personas registry (whose
 // estado/localizado_nota were backfilled by an external import, not by SISMO911).
-const MIGRATIONS = ['migrations/0012_personas_registry.sql', 'migrations/0028_telemedicine.sql'];
+const MIGRATIONS = [
+  'migrations/0012_personas_registry.sql',
+  'migrations/0011_person_docket.sql',
+  'migrations/0012_docket_review.sql', // adds person_events.review
+  'migrations/0028_telemedicine.sql',
+];
 
 function setup() {
   const db: D1Mock = makeDb(MIGRATIONS);
@@ -22,6 +27,11 @@ const addConsult = (db: D1Mock, id: string, status: string) =>
   db.raw.prepare(`INSERT INTO telemed_requests (id, patient_name, status) VALUES (?,?,?)`).run(id, 'Paciente', status);
 const addPersona = (db: D1Mock, id: string, estado: string, nota: string | null = null) =>
   db.raw.prepare(`INSERT INTO personas (id, estado, localizado_nota) VALUES (?,?,?)`).run(id, estado, nota);
+// A docket event: only source='operator' status_change→located events count.
+let _ev = 0;
+const addEvent = (db: D1Mock, person_id: string, status_to: string, source: string, review = 'approved') =>
+  db.raw.prepare(`INSERT INTO person_events (id, person_id, kind, status_to, source, review, created_ms) VALUES (?,?,?,?,?,?,?)`)
+    .run('ev' + (++_ev), person_id, 'status_change', status_to, source, review, 1);
 
 describe('GET /api/impact/personas-ayudadas — real, auditable, never fake', () => {
   it('returns total 0 (→ UI shows "—") when there is NO verified data', async () => {
@@ -44,25 +54,40 @@ describe('GET /api/impact/personas-ayudadas — real, auditable, never fake', ()
     expect(j.total).toBe(2);
   });
 
+  it('counts ONLY operator-confirmed located persons from the docket', async () => {
+    const { db, app, env } = setup();
+    addEvent(db, 'p1', 'localizado', 'operator');   // counts
+    addEvent(db, 'p2', 'aparecido', 'operator');    // counts
+    addEvent(db, 'p1', 'localizado', 'operator');   // SAME person again → DISTINCT, still 1
+    addEvent(db, 'p3', 'localizado', 'citizen');    // excluded (public report)
+    addEvent(db, 'p4', 'localizado', 'hospital');   // excluded (hospital ingest)
+    addEvent(db, 'p5', 'fallecido', 'operator');    // excluded (not a "located" outcome)
+    addEvent(db, 'p6', 'localizado', 'operator', 'pending'); // excluded (unapproved)
+    const j = await get(app, env);
+    expect(j.breakdown.persons_located_safe).toBe(2); // p1 + p2, p1 not double-counted
+    expect(j.total).toBe(2);
+  });
+
   it('the IMPORTED personas registry can NEVER inflate the metric (anti-fabrication)', async () => {
     const { db, app, env } = setup();
-    // a large imported registry with every "positive" status + backfilled notes
+    // a large imported registry with every "positive" status + backfilled notes,
+    // but NO docket events (the import created none) → must contribute 0
     for (let i = 0; i < 100; i++) {
       addPersona(db, 'imp' + i, ['aparecido', 'localizado', 'hospitalizado'][i % 3], 'nota importada');
     }
     expect((await get(app, env)).total).toBe(0); // NONE of it counts → UI "—"
     expect((await get(app, env)).breakdown.persons_located_safe).toBe(0);
-    // only a real SISMO911 outcome moves the needle:
-    addConsult(db, 'c1', 'completed');
+    // only a real platform outcome moves the needle:
+    addEvent(db, 'real1', 'localizado', 'operator');
     expect((await get(app, env)).total).toBe(1);
   });
 
-  it('the value tracks real platform rows (data-derived, not a constant)', async () => {
+  it('the value tracks real platform rows across both components', async () => {
     const { db, app, env } = setup();
     expect((await get(app, env)).total).toBe(0);
     addConsult(db, 'c1', 'completed');
     expect((await get(app, env)).total).toBe(1);
-    addConsult(db, 'c2', 'completed');
+    addEvent(db, 'p1', 'localizado', 'operator');
     expect((await get(app, env)).total).toBe(2);
   });
 

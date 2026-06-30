@@ -253,11 +253,24 @@ familia.get('/person/:id', async (c) => {
 familia.post('/:id/localizar', async (c) => {
   if (!(await isOperator(c))) return c.json({ error: 'unauthorized', hint: 'Solo operadores pueden confirmar' }, 401);
   const b = await c.req.json().catch(() => ({} as any));
+  const id = c.req.param('id');
+  const nota = String(b?.nota ?? 'Marcada como localizada').slice(0, 300);
+  const now = Date.now();
   await c.env.DB.prepare(
     `UPDATE personas SET estado = 'localizado', localizado_nota = ?, updated_at = ? WHERE id = ?`
-  ).bind(String(b?.nota ?? 'Marcada como localizada').slice(0, 300), Date.now(), c.req.param('id')).run();
+  ).bind(nota, now, id).run();
+  // Record the operator-confirmed location in the docket (source='operator') so it
+  // becomes a VERIFIABLE platform-facilitated outcome — this is the only signal the
+  // "personas ayudadas" impact metric counts (the imported registry has no events).
+  try {
+    const actor = await getUserFromRequest(c.env, c).catch(() => null);
+    await c.env.DB.prepare(
+      `INSERT INTO person_events (id, person_id, kind, status_to, detail, source, actor, review, created_ms)
+       VALUES (?,?,?,?,?,?,?,?,?)`
+    ).bind(uid('pev'), id, 'status_change', 'localizado', nota, 'operator', actor?.email ?? actor?.id ?? null, 'approved', now).run();
+  } catch (e: any) { console.error('[localizar] docket log failed:', e?.message ?? e); }
   // Autonomous auto-update: found → case re-scores to 'baja' (MENOR) immediately.
-  await recomputeCaseScore(c.env, 'fam-' + c.req.param('id')).catch(() => {});
+  await recomputeCaseScore(c.env, 'fam-' + id).catch(() => {});
   return c.json({ ok: true, status: 'found_safe' });
 });
 
