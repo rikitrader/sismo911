@@ -28,7 +28,7 @@ export interface Scored {
   sector: string; parish: string; city: string; state: string;
   status: string; notes: string; conf: string; tier: number; confNum: number;
   lat: number; lon: number; soil: number; prior: number; mmi: number; vulnX: number; modeled: number;
-  source: string;
+  source: string; dpmProb?: number;
 }
 
 const MMI_MAP: Record<number, number> = { 5: 0.05, 6: 0.15, 7: 0.35, 8: 0.6, 9: 0.85, 10: 0.95 };
@@ -64,10 +64,14 @@ export function band(score: number): string {
     : score >= 20 ? 'BAJO' : 'MINIMO';
 }
 
-function modeled(sec: Sector, vf: number): number {
-  const haz = mmiToHaz(sec.mmi);
+// hazOverride: observed NASA Sentinel-1 DPM damage_probability for this footprint.
+// When present it replaces the MMI prior as the hazard term (a real observation
+// beats the shaking estimate) and lifts the satellite prior to the observed value.
+function modeled(sec: Sector, vf: number, hazOverride?: number): number {
+  const haz = hazOverride != null ? Math.max(mmiToHaz(sec.mmi), hazOverride) : mmiToHaz(sec.mmi);
+  const prior = hazOverride != null ? Math.max(sec.prior, hazOverride) : sec.prior;
   const phys = 100 * (1 - Math.pow(1 - haz, sec.soil * vf));
-  return Math.round(((1 - PRIOR_BLEND) * phys + PRIOR_BLEND * sec.prior * 100) * 10) / 10;
+  return Math.round(((1 - PRIOR_BLEND) * phys + PRIOR_BLEND * prior * 100) * 10) / 10;
 }
 
 export function scoreCurated(b: Curated, sec: Sector): Scored {
@@ -89,18 +93,25 @@ export function scoreCurated(b: Curated, sec: Sector): Scored {
   };
 }
 
-export function scoreOsm(o: Osm, sec: Sector): Scored {
+// dpm: observed NASA Sentinel-1 damage_probability for this footprint (0–1), if any.
+export function scoreOsm(o: Osm, sec: Sector, dpm?: number): Scored {
   const t = (o.type || '').toLowerCase();
   const vuln: Vuln = {};
   if (t.includes('apartments') || t.includes('residential') || t.includes('house')) vuln.midrise = 1;
   if (t === 'yes' || t === '') vuln.unknown_constr = 1;
   const vf = vulnFactor(vuln);
-  const m = modeled(sec, vf);
+  const observed = dpm != null && dpm > 0;
+  const m = modeled(sec, vf, observed ? dpm : undefined);
   return {
-    score: m, band: band(m), dq: 'MODELED+LOW_DATA', name: o.name, use: o.type || 'edificio',
+    score: m, band: band(m),
+    dq: observed ? 'OBSERVED-DPM' : 'MODELED+LOW_DATA',
+    name: o.name, use: o.type || 'edificio',
     addr: o.addr, sector: o.sector, parish: sec.parish, city: sec.city, state: sec.state,
-    status: 'DESCONOCIDO', notes: '', conf: 'LOW', tier: 3, confNum: 0.35,
+    status: observed ? 'DPM_DANADO' : 'DESCONOCIDO', notes: observed ? `NASA DPM p=${dpm}` : '',
+    // observed = NASA satellite (tier 2, like nasa_dpm in /api/casualties); modeled stays tier 3
+    conf: observed ? 'NASA-DPM' : 'LOW', tier: observed ? 2 : 3, confNum: observed ? 0.85 : 0.35,
     lat: o.lat, lon: o.lon, soil: sec.soil, prior: sec.prior, mmi: sec.mmi,
-    vulnX: Math.round(vf * 100) / 100, modeled: m, source: 'OSM/Overpass',
+    vulnX: Math.round(vf * 100) / 100, modeled: m, source: observed ? 'OSM + NASA Sentinel-1 DPM' : 'OSM/Overpass',
+    ...(observed ? { dpmProb: dpm } : {}),
   };
 }
