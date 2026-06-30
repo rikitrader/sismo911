@@ -85,9 +85,12 @@ function parseSheet(xml: string, shared: string[]): string[][] {
   const rowRe = /<row[^>]*>([\s\S]*?)<\/row>/g; let r: RegExpExecArray | null;
   while ((r = rowRe.exec(xml))) {
     const cells: string[] = [];
-    const cRe = /<c\b([^>]*)>([\s\S]*?)<\/c>|<c\b([^>]*)\/>/g; let c: RegExpExecArray | null;
+    // One regex per cell. `[^>]*?` is non-greedy and the `(?:/>|>…</c>)` alternation
+    // matches a SELF-CLOSING empty cell (`<c r="F5"/>`) before the open/close form —
+    // otherwise a greedy open-tag branch swallows the next cell and misaligns columns.
+    const cRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let c: RegExpExecArray | null;
     while ((c = cRe.exec(r[1]))) {
-      const attrs = c[1] || c[3] || '';
+      const attrs = c[1] || '';
       const body = c[2] || '';
       const ref = (/r="([A-Z]+\d+)"/.exec(attrs) || [])[1] || '';
       const t = (/t="([^"]+)"/.exec(attrs) || [])[1] || 'n';
