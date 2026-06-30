@@ -5074,6 +5074,17 @@ function renderRetFormFields(method) {
         <div class="form-helper">El operador coordinará contigo los detalles del pago en efectivo.</div>
         <div class="form-err" id="ret-f-cash-nota-err"></div>
       </div>`;
+  } else if (method === 'stripe') {
+    // Destination is the verified Stripe Connect account — no input needed.
+    specific = `
+      <div class="form-group">
+        <div class="readonly-display">
+          💳 Los fondos se enviarán a tu cuenta de Stripe conectada.
+          <span style="display:block;font-size:.71rem;color:var(--muted);margin-top:4px;">
+            El retiro queda en revisión y un operador lo procesa por Stripe — no es instantáneo.
+          </span>
+        </div>
+      </div>`;
   }
 
   const saveToggle = `
@@ -5216,6 +5227,12 @@ function captureRetFormData() {
       cash_nota: nota,
       destination_summary: 'Efectivo / asistencia manual',
       destination: { notas: nota },
+    });
+  } else if (_retMethod === 'stripe') {
+    // Destination is set server-side from the verified Connect account.
+    Object.assign(_retFormData, {
+      destination_summary: 'Stripe Connect (cuenta verificada)',
+      destination: {},
     });
   }
 }
@@ -5414,11 +5431,19 @@ function wireRetModal() {
     });
   });
 
-  document.getElementById('ret-s1-next').addEventListener('click', () => {
+  document.getElementById('ret-s1-next').addEventListener('click', async () => {
     if (!_retMethod) {
       const err = document.getElementById('ret-s1-err');
       if (err) { err.textContent = 'Selecciona un método para continuar.'; err.classList.add('show'); }
       return;
+    }
+    // Stripe payouts require a verified Connect account first (may redirect to Stripe).
+    if (_retMethod === 'stripe') {
+      const nextBtn = document.getElementById('ret-s1-next');
+      if (nextBtn) nextBtn.disabled = true;
+      const ready = await ensureStripeConnect();
+      if (nextBtn) nextBtn.disabled = false;
+      if (!ready) return;
     }
     retGoStep(2);
   });
@@ -5637,6 +5662,42 @@ async function loadPlatformStats() {
   } catch (e) {}
 }
 
+/* ── Stripe card rail (gated on /api/stripe/status; inert until live) ─────── */
+let STRIPE_LIVE = false;
+async function initStripeStatus() {
+  try {
+    const r = await fetch('/api/stripe/status', { credentials:'same-origin' });
+    const d = await r.json().catch(() => ({}));
+    STRIPE_LIVE = !!(d && d.live);
+  } catch(e) { STRIPE_LIVE = false; }
+  if (typeof KIND_CFG !== 'undefined' && KIND_CFG.stripe) KIND_CFG.stripe.live = STRIPE_LIVE;
+  const opt = document.querySelector('#pl-f-kind option[value="stripe"]');
+  if (opt) { opt.disabled = !STRIPE_LIVE; opt.textContent = STRIPE_LIVE ? 'Stripe · Tarjeta (en vivo)' : 'Stripe (no configurado)'; }
+  const rb = document.querySelector('[data-ret-method="stripe"]');
+  if (rb) {
+    rb.disabled = !STRIPE_LIVE;
+    const ico = rb.querySelector('.ret-method-icon'); if (ico) ico.style.opacity = STRIPE_LIVE ? '1' : '.35';
+    const note = rb.querySelector('.ret-method-note'); if (note) note.textContent = STRIPE_LIVE ? 'Tarjeta · Connect' : 'No configurado';
+  }
+}
+
+/* Ensure a payouts-enabled Stripe Connect account exists before a Stripe
+ * withdrawal. Returns true if ready; else kicks off onboarding (redirect) and
+ * returns false. Settlement still happens on the manual operator rail. */
+async function ensureStripeConnect() {
+  try {
+    const r = await fetch('/api/stripe/connect/status', { credentials:'same-origin' });
+    const d = await r.json().catch(() => ({}));
+    if (d && d.connected && d.account && d.account.payouts_enabled) return true;
+    toast('Te llevaremos a Stripe para completar la verificación…');
+    const o = await fetch('/api/stripe/connect/onboard', { method:'POST', credentials:'same-origin' });
+    const od = await o.json().catch(() => ({}));
+    if (o.ok && od.ok && od.url) { window.location.href = od.url; return false; }
+    toast(od.detail || od.error || 'No se pudo iniciar la conexión con Stripe.', 'error');
+  } catch(e) { toast('Error de red al conectar con Stripe.', 'error'); }
+  return false;
+}
+
 (async () => {
   /* 1. Auth gate */
   let meData;
@@ -5692,6 +5753,7 @@ async function loadPlatformStats() {
   loadPlatformStats();                   /* async: fills Inicio platform stats */
   wirePagosForm();
   loadPaymentLinks();                    /* async: populates Pagos + QR tabs */
+  initStripeStatus();                    /* async: enables Stripe link kind + withdrawal when live */
 
   /* Contabilidad + Retiros lazy-load on first view — handled inside switchTab(). */
   wireRetModal();

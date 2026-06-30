@@ -57,6 +57,11 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   // below (ninez:manage). Public GETs reach the official-only handlers.
   '/api/ninez',
   '/api/telemedicina', '/api/v1', '/api/voluntarios', '/api/x402', '/api/admin',
+  // Stripe card rail (Checkout + Connect). /api/stripe/checkout/:user/:slug and
+  // /api/stripe/webhook are public by design (a payer has no session; the webhook
+  // self-gates on the Stripe signature secret). /api/stripe/connect/* and /status
+  // self-authenticate via getUserFromRequest inside the handler (like /api/profile).
+  '/api/stripe',
   // Profile Command Center — every endpoint self-authenticates via
   // getUserFromRequest and is scoped to the caller's own user id (like /api/x402).
   '/api/profile',
