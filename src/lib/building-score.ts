@@ -16,11 +16,19 @@ export interface Sector {
 }
 export type Vuln = Partial<Record<
   'mision' | 'soft_story' | 'pre_code' | 'midrise' | 'lowrise' | 'informal' | 'unknown_constr', number>>;
-export interface Curated {
+// area/levels carried per building (resolved offline; area_src/lev_src = 'OSM' real | 'EST' estimated | 'NA').
+export interface CostInputs { area: number; levels: number; area_src: string; lev_src: string; }
+export interface Curated extends Partial<CostInputs> {
   name: string; use: string; sector: string; status: string;
   cas: string; conf: string; notes: string; src: string; vuln: Vuln;
 }
-export interface Osm { name: string; type: string; addr: string; sector: string; lat: number; lon: number; }
+export interface Osm extends Partial<CostInputs> {
+  name: string; type: string; addr: string; sector: string; lat: number; lon: number; use?: string;
+}
+export interface Cost {
+  areaM2: number; areaSrc: string; levels: number; levSrc: string; floorM2: number;
+  unitUsdM2: number; replacementUsd: number; damageRatio: number; repairUsd: number; costConf: string;
+}
 
 export interface Scored {
   score: number; band: string; dq: string;
@@ -28,7 +36,7 @@ export interface Scored {
   sector: string; parish: string; city: string; state: string;
   status: string; notes: string; conf: string; tier: number; confNum: number;
   lat: number; lon: number; soil: number; prior: number; mmi: number; vulnX: number; modeled: number;
-  source: string; dpmProb?: number;
+  source: string; dpmProb?: number; cost?: Cost;
 }
 
 const MMI_MAP: Record<number, number> = { 5: 0.05, 6: 0.15, 7: 0.35, 8: 0.6, 9: 0.85, 10: 0.95 };
@@ -59,6 +67,49 @@ export function vulnFactor(v: Vuln): number {
   return Math.max(0.6, Math.min(1.7, f));
 }
 
+// ===== COST MODEL: replacement + repair (REAL VE 2026 unit costs + FEMA HAZUS damage ratios) =====
+// Construction/replacement cost USD/m2 — Venezuela 2026 (materiales+mano de obra+honorarios, sin terreno).
+// Fuente: micasaenvenezuela.com 2026 (interior 400-700; Caracas 900-1500); proyectoscecor.com.
+const COST_USD_M2: Record<string, number> = {
+  'La Guaira': 700, 'Distrito Capital': 1000, 'Miranda': 1200, Aragua: 500, Yaracuy: 500, Carabobo: 550,
+};
+const DEFAULT_COST_M2 = 600;
+const MISION_COST_M2 = 450; // vivienda social, menor especificación
+const USE_MULT: Record<string, number> = {
+  SALUD: 1.5, HOTEL: 1.3, GOBIERNO: 1.25, IGLESIA: 1.2, ESCUELA: 1.15,
+  COMERCIAL: 1.0, RESIDENCIAL: 1.0, MISION_VIVIENDA: 1.0, CLUB: 1.0, BARRIO_INFORMAL: 0.6,
+};
+// FEMA HAZUS-MH central damage factors (% del costo de reemplazo): Slight 2, Moderate 10, Extensive 50, Complete 100.
+export function damageRatio(status: string, band: string): number {
+  const byStatus: Record<string, number> = {
+    COLAPSO_TOTAL: 1.0, COLAPSO_PARCIAL: 0.55, CONDENADO: 0.5, DANADO: 0.3, DPM_DANADO: 0.4,
+  };
+  if (status in byStatus) return byStatus[status];
+  const byBand: Record<string, number> = { CRITICO: 0.5, ALTO: 0.25, MODERADO: 0.1, BAJO: 0.03, MINIMO: 0.0 };
+  return byBand[band] ?? 0.1;
+}
+export function computeCost(
+  use: string, state: string, status: string, bandName: string, ci?: Partial<CostInputs>,
+): Cost | undefined {
+  if (use === 'INFRAESTRUCTURA') return undefined;
+  const area = ci?.area ?? 350;
+  const levels = ci?.levels ?? 3;
+  const areaSrc = ci?.area_src ?? 'EST';
+  const levSrc = ci?.lev_src ?? 'EST';
+  const floor = area * levels;
+  let unit = use === 'MISION_VIVIENDA' ? MISION_COST_M2 : (COST_USD_M2[state] ?? DEFAULT_COST_M2);
+  unit = Math.round(unit * (USE_MULT[use] ?? 1));
+  const replacementUsd = floor * unit;
+  const ratio = damageRatio(status, bandName);
+  const repairUsd = Math.round(replacementUsd * ratio);
+  const costConf = areaSrc === 'OSM' && levSrc === 'OSM' ? 'HIGH'
+    : areaSrc === 'EST' && levSrc === 'EST' ? 'LOW' : 'MEDIUM';
+  return {
+    areaM2: area, areaSrc, levels, levSrc, floorM2: floor,
+    unitUsdM2: unit, replacementUsd, damageRatio: ratio, repairUsd, costConf,
+  };
+}
+
 export function band(score: number): string {
   return score >= 80 ? 'CRITICO' : score >= 60 ? 'ALTO' : score >= 40 ? 'MODERADO'
     : score >= 20 ? 'BAJO' : 'MINIMO';
@@ -83,13 +134,15 @@ export function scoreCurated(b: Curated, sec: Sector): Scored {
   else if (b.status === 'DESCONOCIDO' && b.cas) { score = Math.max(m, 60); dq = 'DIRECT'; }
   else { score = m; dq = 'MODELED'; }
   if (sec.soil >= 1.5 || b.vuln.unknown_constr) dq += '+LOW_DATA';
+  const bandName = band(score);
   return {
-    score, band: band(score), dq, name: b.name, use: b.use,
+    score, band: bandName, dq, name: b.name, use: b.use,
     addr: `${b.sector}, ${sec.parish}, ${sec.city}, ${sec.state}`,
     sector: b.sector, parish: sec.parish, city: sec.city, state: sec.state,
     status: b.status, notes: b.cas || b.notes, conf: b.conf, tier, confNum,
     lat: sec.lat, lon: sec.lon, soil: sec.soil, prior: sec.prior, mmi: sec.mmi,
     vulnX: Math.round(vf * 100) / 100, modeled: m, source: b.src,
+    cost: computeCost(b.use, sec.state, b.status, bandName, b),
   };
 }
 
@@ -102,16 +155,20 @@ export function scoreOsm(o: Osm, sec: Sector, dpm?: number): Scored {
   const vf = vulnFactor(vuln);
   const observed = dpm != null && dpm > 0;
   const m = modeled(sec, vf, observed ? dpm : undefined);
+  const bandName = band(m);
+  const useCat = o.use || (t.includes('apartments') || t.includes('residential') || t.includes('house') ? 'RESIDENCIAL' : 'RESIDENCIAL');
+  const costStatus = observed ? 'DPM_DANADO' : '';
   return {
-    score: m, band: band(m),
+    score: m, band: bandName,
     dq: observed ? 'OBSERVED-DPM' : 'MODELED+LOW_DATA',
-    name: o.name, use: o.type || 'edificio',
+    name: o.name, use: useCat,
     addr: o.addr, sector: o.sector, parish: sec.parish, city: sec.city, state: sec.state,
     status: observed ? 'DPM_DANADO' : 'DESCONOCIDO', notes: observed ? `NASA DPM p=${dpm}` : '',
     // observed = NASA satellite (tier 2, like nasa_dpm in /api/casualties); modeled stays tier 3
     conf: observed ? 'NASA-DPM' : 'LOW', tier: observed ? 2 : 3, confNum: observed ? 0.85 : 0.35,
     lat: o.lat, lon: o.lon, soil: sec.soil, prior: sec.prior, mmi: sec.mmi,
     vulnX: Math.round(vf * 100) / 100, modeled: m, source: observed ? 'OSM + NASA Sentinel-1 DPM' : 'OSM/Overpass',
+    cost: computeCost(useCat, sec.state, costStatus, bandName, o),
     ...(observed ? { dpmProb: dpm } : {}),
   };
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  mmiToHaz, vulnFactor, band, scoreCurated, scoreOsm, PRIOR_BLEND,
+  mmiToHaz, vulnFactor, band, scoreCurated, scoreOsm, PRIOR_BLEND, damageRatio, computeCost,
   type Sector, type Curated, type Osm,
 } from '../src/lib/building-score';
 
@@ -111,5 +111,46 @@ describe('scoreOsm', () => {
     const sec = { ...coast, parish: 'Chacao', prior: 0.28 };
     const modeled = scoreOsm(o, sec).score;
     expect(scoreOsm(o, sec, 0.01).score).toBeGreaterThanOrEqual(modeled);
+  });
+});
+
+describe('cost model (replacement + repair)', () => {
+  it('damageRatio follows HAZUS: collapse=1.0, extensive=0.5, moderate band=0.1', () => {
+    expect(damageRatio('COLAPSO_TOTAL', 'CRITICO')).toBe(1.0);
+    expect(damageRatio('CONDENADO', 'ALTO')).toBe(0.5);
+    expect(damageRatio('', 'MODERADO')).toBe(0.1);
+    expect(damageRatio('DPM_DANADO', 'CRITICO')).toBe(0.4);
+  });
+
+  it('computeCost ties out: floor×unit = replacement; repair = replacement×ratio', () => {
+    const c = computeCost('RESIDENCIAL', 'La Guaira', 'COLAPSO_TOTAL', 'CRITICO',
+      { area: 500, levels: 8, area_src: 'OSM', lev_src: 'OSM' })!;
+    expect(c.floorM2).toBe(4000);          // 500 × 8
+    expect(c.unitUsdM2).toBe(700);         // La Guaira base, RESIDENCIAL ×1.0
+    expect(c.replacementUsd).toBe(2_800_000); // 4000 × 700
+    expect(c.repairUsd).toBe(2_800_000);   // ratio 1.0 for collapse
+    expect(c.costConf).toBe('HIGH');       // area + levels both real
+  });
+
+  it('use multiplier + state cost apply; estimated inputs → lower costConf', () => {
+    const hosp = computeCost('SALUD', 'Distrito Capital', '', 'MODERADO',
+      { area: 1000, levels: 4, area_src: 'EST', lev_src: 'OSM' })!;
+    expect(hosp.unitUsdM2).toBe(1500);     // 1000 × 1.5 (SALUD)
+    expect(hosp.repairUsd).toBe(Math.round(1000 * 4 * 1500 * 0.1));
+    expect(hosp.costConf).toBe('MEDIUM');  // one real, one estimated
+  });
+
+  it('infrastructure has no per-m² cost', () => {
+    expect(computeCost('INFRAESTRUCTURA', 'La Guaira', 'COLAPSO_TOTAL', 'CRITICO', { area: 10, levels: 1, area_src: 'NA', lev_src: 'NA' })).toBeUndefined();
+  });
+
+  it('scoreOsm attaches a bounded cost with repair ≤ replacement', () => {
+    const r = scoreOsm({
+      name: 'X', type: 'apartments', addr: 'a', sector: 'Los Corales', lat: 10.61, lon: -66.85,
+      use: 'RESIDENCIAL', area: 600, levels: 10, area_src: 'OSM', lev_src: 'OSM',
+    }, { ...coast, prior: 0.55 }, 0.99);
+    expect(r.cost).toBeDefined();
+    expect(r.cost!.repairUsd).toBeLessThanOrEqual(r.cost!.replacementUsd);
+    expect(r.cost!.replacementUsd).toBeGreaterThan(0);
   });
 });
