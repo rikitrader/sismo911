@@ -169,10 +169,18 @@ persons.get('/stats', async (c) => edgeCached(c, 60, async () => {
   // Federate the Familia (DESAP personas) registry so /personas reflects ALL cases.
   let f: any = {};
   try { f = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS found, SUM(CASE WHEN estado='hospitalizado' THEN 1 ELSE 0 END) AS hospitalized, COUNT(*) AS total FROM personas WHERE moderation = 'approved'`).first() || {}; } catch {}
+  // Hospitalizados headline = the hospital patient REGISTRY (the authoritative,
+  // comprehensive count of hospitalized people we have data on). The match cron
+  // links these to cases for the profile UX; we count the registry here so the
+  // figure is honest and not double-counted with the linked case statuses.
+  // Tolerant: the table may not exist yet on an un-migrated DB → 0.
+  let hp = 0;
+  try { const r: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM hospital_patients WHERE estado='hospitalizado'`).first(); hp = Number(r?.n) || 0; } catch {}
+  const caseHosp = (row?.hospitalized ?? 0) + (f?.hospitalized ?? 0);
   return {
     missing: (row?.missing ?? 0) + (f?.missing ?? 0),
     found: (row?.found ?? 0) + (f?.found ?? 0),
-    hospitalized: (row?.hospitalized ?? 0) + (f?.hospitalized ?? 0),
+    hospitalized: hp || caseHosp,   // registry count when present, else case-status count
     total: (row?.total ?? 0) + (f?.total ?? 0),
   };
 }));
