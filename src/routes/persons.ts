@@ -387,17 +387,28 @@ persons.get('/cases', async (c) => {
   const cases = order.map((id) => byId[id]).filter(Boolean).map((x) => withScore(x, nowMs));
 
   // ---------- global summary (whole registry, not just this page) ----------
+  // The banner KPIs MUST use the SAME public-visibility predicates as the paged
+  // `total` count above (review/moderation='approved' + minor-protected
+  // suppression). Otherwise the summary over-counts hidden/minor rows that aren't
+  // browsable, so "Expedientes" (summary.total) disagreed with the pager count on
+  // the default unfiltered view (81,844 vs 78,013) — the "different numbers
+  // everywhere" bug. Operators (op) see every row in both, so no filter for them.
+  const sumW = op ? '' : ` WHERE p.review='approved' AND NOT ${personsPublicSuppressSql('p')}`;
   const sum: any = await c.env.DB.prepare(
     `SELECT
-       SUM(CASE WHEN status='missing' THEN 1 ELSE 0 END) AS missing,
-       SUM(CASE WHEN status='found_safe' THEN 1 ELSE 0 END) AS found_safe,
-       SUM(CASE WHEN status='found_deceased' THEN 1 ELSE 0 END) AS deceased,
-       SUM(CASE WHEN review='pending' THEN 1 ELSE 0 END) AS pending,
+       SUM(CASE WHEN p.status='missing' THEN 1 ELSE 0 END) AS missing,
+       SUM(CASE WHEN p.status='found_safe' THEN 1 ELSE 0 END) AS found_safe,
+       SUM(CASE WHEN p.status='found_deceased' THEN 1 ELSE 0 END) AS deceased,
+       SUM(CASE WHEN p.review='pending' THEN 1 ELSE 0 END) AS pending,
        COUNT(*) AS total
-     FROM persons${op ? '' : " WHERE review='approved'"}`
+     FROM persons p${sumW}`
   ).first();
   let fsum: any = {};
-  try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas WHERE moderation = 'approved'`).first() || {}; } catch {}
+  // Public reads add the minor-protected suppression on top of the approved
+  // filter; the `moderation = 'approved'` literal stays verbatim so the #299/#300
+  // read-guard test still anchors it.
+  const fsumSuppress = op ? '' : ` AND NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`;
+  try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas WHERE moderation = 'approved'${fsumSuppress}`).first() || {}; } catch {}
   const summary = {
     missing: (sum?.missing || 0) + (fsum?.missing || 0),
     found_safe: (sum?.found_safe || 0) + (fsum?.found_safe || 0),
