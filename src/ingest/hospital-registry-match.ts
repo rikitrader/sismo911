@@ -86,7 +86,10 @@ export async function drainHospitalRegistryMatch(env: Env, opts: { pages?: numbe
       ).bind(String(r.id), high ? 'cedula' : 'name', conf, now, hit.id).run();
       idx.set(normName(hit.full_name), undefined as any);   // don't re-link this patient this tick
 
-      const evId = 'hpm_' + caseId.replace(/[^a-zA-Z0-9]/g, '').slice(-14) + '_' + hit.id.slice(-8);
+      // Stable docket-note id keyed by (case, patient identity) — NOT the volatile
+      // hp_ row id — so a re-sync/reload can't duplicate the tracer note.
+      const idTag = (hit.cedula || normName(hit.full_name)).replace(/[^a-zA-Z0-9]/g, '').slice(-12) || hit.id.slice(-8);
+      const evId = 'hpm_' + caseId.replace(/[^a-zA-Z0-9]/g, '').slice(-14) + '_' + idTag;
       const estLabel = hit.estado === 'fallecido' ? 'fallecido' : hit.estado === 'alta' ? 'dado de alta' : 'hospitalizado';
       const detail = `🏥 Registro hospitalario: ${hit.full_name} — ${estLabel} en ${hit.hospital} (Registro Maestro de Pacientes). ${high ? 'Cédula verificada.' : 'Coincidencia de nombre — verificar identidad.'}`;
 

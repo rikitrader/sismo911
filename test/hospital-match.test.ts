@@ -31,6 +31,21 @@ describe('mapSheetRows', () => {
     expect(patients[0].nombre).toBe('PEREZ JUAN');
     expect(patients[0].observaciones).toBe('Internado');
   });
+
+  it('maps cédula to the CÉDULA column — not "apellIDos" (real header)', () => {
+    const rows = [
+      ['REGISTRO MAESTRO'], ['Actualizado: 30JUN26 00:40h'], ['aviso'],
+      ['N°', 'HOSPITAL', 'APELLIDOS Y NOMBRES', 'EDAD', 'CÉDULA / ID', 'TELÉFONO', 'DIRECCIÓN', 'OBSERVACIONES'],
+      ['1', 'H Domingo Luciani', 'ABELLO MATILDE / ABELLO WILMARI', '36', '18134813', '0412', 'Petare', 'Fallecida | CONFLICTO'],
+    ];
+    const { patients } = mapSheetRows(rows);
+    expect(patients).toHaveLength(1);
+    expect(patients[0].nombre).toBe('ABELLO MATILDE / ABELLO WILMARI');
+    expect(patients[0].cedula).toBe('18134813');   // NOT the name
+    expect(patients[0].telefono).toBe('0412');
+    expect(patients[0].direccion).toBe('Petare');
+    expect(patients[0].observaciones).toContain('Fallecida');
+  });
 });
 
 describe('hospital-registry match cron (hybrid: name→pending, cédula→auto-status)', () => {

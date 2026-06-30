@@ -145,11 +145,14 @@ export function mapSheetRows(rows: string[][]): { source_updated: string; patien
     if (joined.includes('HOSPITAL') && joined.includes('OBSERVACIONES')) { h = i; break; }
   }
   if (h < 0) return { source_updated: sourceUpdated, patients: [] };
-  const head = (rows[h] || []).map((c) => String(c || '').toUpperCase());
+  // Accent-strip the header so 'CÉDULA' matches 'CEDULA'. Use precise tokens —
+  // NEVER 'ID' (it is a substring of "apellIDos" and would steal the cédula column).
+  const deacc = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+  const head = (rows[h] || []).map((c) => deacc(String(c || '')));
   const col = (...names: string[]) => head.findIndex((c) => names.some((n) => c.includes(n)));
-  const iH = col('HOSPITAL'), iN = col('APELLIDOS', 'NOMBRES', 'NOMBRE'), iE = col('EDAD'),
-        iC = col('CÉDULA', 'CEDULA', 'ID'), iT = col('TELÉFONO', 'TELEFONO'),
-        iD = col('DIRECCIÓN', 'DIRECCION'), iO = col('OBSERVAC');
+  const iH = col('HOSPITAL'), iN = col('APELLIDOS', 'NOMBRE'), iE = col('EDAD'),
+        iC = col('CEDULA', 'C.I'), iT = col('TELEFONO'),
+        iD = col('DIRECCION'), iO = col('OBSERVAC');
   const at = (row: string[], i: number) => (i >= 0 ? String(row[i] ?? '').trim() : '');
   const patients: RawPatient[] = [];
   for (let r = h + 1; r < rows.length; r++) {
