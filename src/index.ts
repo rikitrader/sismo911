@@ -24,6 +24,7 @@ import { oauth } from './routes/oauth';
 import { x402, wellKnownX402 } from './routes/x402';
 import { stripe } from './routes/stripe';
 import { profile } from './routes/profile';
+import { contactsPersonal } from './routes/contacts-personal';
 import { stepUpGuard } from './lib/stepup';
 import { support, appendInboundReply, inboundEmailEnabled } from './routes/support';
 import { extractRef, stripQuotedReply } from './lib/support';
@@ -346,6 +347,7 @@ app.route('/api/auth/oauth', oauth); // social login (Google OAuth) — public; 
 app.route('/api/x402', x402);        // x402 payment receiving: per-user wallet accepts USDC over HTTP (verify+settle via facilitator)
 app.route('/api/stripe', stripe);    // Stripe card rail: Checkout (receiving) + Connect (payout onboarding). Gated on isStripeLive; checkout/webhook public, connect/* self-auth
 app.route('/api/profile', profile);  // Profile Command Center: self-scoped profile/wallet/payments/accounting/withdrawals
+app.route('/api/profile', contactsPersonal); // Personal "Contactos" address book (self-scoped); /api/profile/contacts/* — distinct from the operator /api/contacts directory
 app.route('/api/support', support);   // Support ticket inbox ("Soporte"): citizen self-scoped + /admin/* ops:console-gated; inbound email threaded via email()
 app.route('/api/u', publicProfile);   // Public payment profile (behind a citizen's "Enlace público"): name + active links + avatar. Public, no PII.
 // x402 service discovery (public). Agents/clients read this to learn the network + pay-URL template.
