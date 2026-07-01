@@ -6,6 +6,7 @@
 // record via redaction.toPublicView. Defaults to Spanish; English on request.
 
 import type { CaseRecord, PublicStatus, QueryResult, ViewerRole } from './types';
+import type { UpdateResult } from './update';
 import { toPublicView } from './redaction';
 
 export interface BuildOpts {
@@ -106,6 +107,30 @@ const HELP_EN = [
   'I only reply with verified records. In groups sensitive data is hidden; for full detail, DM me (authorized operators only).',
 ].join('\n');
 
+// Operator-only write command help (appended to /ayuda for operators/admins).
+const OPERATOR_HELP_ES = [
+  '🛠️ Operadores — actualizar un caso desde el chat:',
+  '• /actualizar <ID> estado localizado — cambiar el estado (sin-contacto, localizado, aparecido, hospitalizado, fallecido)',
+  '• /actualizar <ID> nota "Visto en el refugio de Catia" — agregar una nota verificada al caso',
+  '• /actualizar <ID> ubicacion "Caracas, Distrito Capital" — actualizar la ubicación',
+  '• /actualizar <ID> contacto 0412-5551234 — actualizar el contacto',
+  '• /actualizar <ID> edad 34 — actualizar la edad',
+  '• /actualizar <ID> nombre "Juan Pérez Gómez" — corregir el nombre',
+  '• /actualizar <ID> aprobar  /  rechazar — publicar u ocultar un caso (solo nivel ejecutivo/admin)',
+  'Un campo por comando. Solo casos del registro de SISMO911 (no hospitales/oficiales).',
+].join('\n');
+const OPERATOR_HELP_EN = [
+  '🛠️ Operators — update a case from chat:',
+  '• /actualizar <ID> estado localizado — change status (sin-contacto, localizado, aparecido, hospitalizado, fallecido)',
+  '• /actualizar <ID> nota "Seen at the Catia shelter" — add a verified note to the case',
+  '• /actualizar <ID> ubicacion "Caracas, Distrito Capital" — update location',
+  '• /actualizar <ID> contacto 0412-5551234 — update contact',
+  '• /actualizar <ID> edad 34 — update age',
+  '• /actualizar <ID> nombre "Juan Pérez Gómez" — fix the name',
+  '• /actualizar <ID> aprobar  /  rechazar — publish or hide a case (executive/admin only)',
+  'One field per command. Only SISMO911-registry cases (not hospital/official).',
+].join('\n');
+
 /**
  * Full per-case block (the format an operator sees for every list item):
  * Caso · Estado · Ubicación general · Última verificación · Nivel · Ficha · Nota.
@@ -172,8 +197,12 @@ export function buildListMessages(
 export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): string {
   const es = opts.lang === 'es';
   switch (result.kind) {
-    case 'help':
-      return es ? HELP_ES : HELP_EN;
+    case 'help': {
+      const base = es ? HELP_ES : HELP_EN;
+      // Operators additionally see the write command (/actualizar). Public users don't.
+      if (opts.role !== 'public') return base + '\n\n' + (es ? OPERATOR_HELP_ES : OPERATOR_HELP_EN);
+      return base;
+    }
 
     case 'unauthorized':
       return es
@@ -281,5 +310,50 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
       }
       return lines.join('\n');
     }
+  }
+}
+
+const BAD_INPUT_ES: Record<string, string> = {
+  missing_id: 'Falta el ID del caso. Uso: /actualizar <ID> <campo> <valor>',
+  unknown_field: 'Campo no reconocido. Campos: estado, ubicacion, contacto, edad, nombre, nota — o aprobar / rechazar.',
+  missing_value: 'Falta el valor a asignar.',
+  bad_estado: 'Estado inválido. Usa: sin-contacto, localizado, aparecido, hospitalizado o fallecido.',
+  bad_edad: 'Edad inválida (debe ser un número entre 1 y 129).',
+};
+const BAD_INPUT_EN: Record<string, string> = {
+  missing_id: 'Missing case ID. Usage: /actualizar <ID> <field> <value>',
+  unknown_field: 'Unknown field. Fields: estado, ubicacion, contacto, edad, nombre, nota — or aprobar / rechazar.',
+  missing_value: 'Missing the value to set.',
+  bad_estado: 'Invalid status. Use: sin-contacto, localizado, aparecido, hospitalizado or fallecido.',
+  bad_edad: 'Invalid age (must be a number between 1 and 129).',
+};
+
+/** Deterministic chat text for an /actualizar outcome. */
+export function buildUpdateResponse(r: UpdateResult, opts: BuildOpts): string {
+  const es = opts.lang !== 'en';
+  switch (r.kind) {
+    case 'update_ok':
+      return es
+        ? `✅ Caso ${r.caseId} (${r.name}) actualizado: ${r.summary}.`
+        : `✅ Case ${r.caseId} (${r.name}) updated: ${r.summary}.`;
+    case 'update_forbidden':
+      if (r.reason === 'not_executive') {
+        return es
+          ? '⛔ Aprobar o rechazar un caso requiere nivel ejecutivo (admin).'
+          : '⛔ Approving or rejecting a case requires executive (admin) level.';
+      }
+      return es
+        ? '⛔ Solo operadores autorizados pueden actualizar casos.'
+        : '⛔ Only authorized operators can update cases.';
+    case 'update_bad_input':
+      return (es ? BAD_INPUT_ES : BAD_INPUT_EN)[r.reason] ?? (es ? 'Entrada inválida.' : 'Invalid input.');
+    case 'update_not_found':
+      return es ? 'No encontré ese caso.' : 'Case not found.';
+    case 'update_not_editable':
+      return es
+        ? 'Ese caso no se puede editar desde el chat (registro externo/oficial). Usa la consola web.'
+        : 'That case cannot be edited from chat (external/official registry). Use the web console.';
+    default:
+      return es ? 'Ocurrió un error al actualizar. Intenta de nuevo.' : 'An error occurred while updating. Try again.';
   }
 }

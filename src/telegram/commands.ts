@@ -11,7 +11,19 @@
 // A greeting or a bare mention ("hola", "@Vzla911bot") resolves to the welcome
 // (kind 'ayuda') so the bot can greet + list its commands.
 
-import type { CommandKind, ParsedCommand } from './types';
+import type { CommandKind, ParsedCommand, UpdateField } from './types';
+
+// /actualizar field/action aliases → canonical UpdateField. Spanish + English.
+const UPDATE_FIELDS: Record<string, UpdateField> = {
+  estado: 'estado', status: 'estado', estatus: 'estado',
+  ubicacion: 'ubicacion', 'ubicación': 'ubicacion', lugar: 'ubicacion', location: 'ubicacion',
+  contacto: 'contacto', telefono: 'contacto', 'teléfono': 'contacto', tel: 'contacto', phone: 'contacto', contact: 'contacto',
+  edad: 'edad', años: 'edad', anos: 'edad', age: 'edad',
+  nombre: 'nombre', name: 'nombre',
+  nota: 'nota', note: 'nota', comentario: 'nota', comment: 'nota',
+  aprobar: 'aprobar', aprueba: 'aprobar', publicar: 'aprobar', approve: 'aprobar', publish: 'aprobar',
+  rechazar: 'rechazar', rechaza: 'rechazar', ocultar: 'rechazar', reject: 'rechazar', hide: 'rechazar',
+};
 
 // Command aliases → canonical kind. Spanish first; English accepted too.
 const COMMANDS: Record<string, CommandKind> = {
@@ -29,6 +41,12 @@ const COMMANDS: Record<string, CommandKind> = {
   missing: 'missing',
   desaparecidos: 'missing',
   desaparecido: 'missing',
+  actualizar: 'actualizar',
+  actualiza: 'actualizar',
+  editar: 'actualizar',
+  modificar: 'actualizar',
+  update: 'actualizar',
+  edit: 'actualizar',
   ayuda: 'ayuda',
   help: 'ayuda',
   start: 'ayuda',
@@ -179,6 +197,24 @@ export function parseCommand(text: string): ParsedCommand {
   if (kind === 'caso' || kind === 'status') {
     const caseId = args.filter((t) => !t.startsWith('@')).join(' ').trim();
     return { kind, lang, caseId: caseId || undefined, raw };
+  }
+
+  // /actualizar <ID> <campo> <valor…>  (operator write command).
+  //   Grammar: first non-@ token = case id, second = field/action, the rest = value.
+  //   Also accepts `campo=valor` glued to the field token. aprobar/rechazar take no value.
+  if (kind === 'actualizar') {
+    const a = args.filter((t) => !t.startsWith('@'));
+    const caseId = (a[0] || '').trim();
+    let fieldTok = (a[1] || '').toLowerCase();
+    let value = a.slice(2).join(' ').trim();
+    // Support `campo=valor` as a single token.
+    if (fieldTok.includes('=')) {
+      const eq = fieldTok.indexOf('=');
+      value = `${fieldTok.slice(eq + 1)}${value ? ' ' + value : ''}`.trim();
+      fieldTok = fieldTok.slice(0, eq);
+    }
+    const updateField = UPDATE_FIELDS[fieldTok];
+    return { kind, lang, caseId: caseId || undefined, updateField, updateValue: value || undefined, raw };
   }
 
   // buscar / hospitalizados / missing: key/value walk with sensible defaults.
