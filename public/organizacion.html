@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organización — SISMO911</title>
+<meta name="description" content="Estructura organizacional de SISMO911: la cadena de mando según el Sistema de Comando de Incidentes (SCI/ICS) y los 22 roles de la plataforma, más la estructura operativa en vivo — departamentos, equipos y miembros — para el personal autorizado.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/organizacion">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Organización — SISMO911">
+<meta property="og:description" content="Cadena de mando SCI/ICS y los 22 roles de la plataforma, más la estructura operativa en vivo para el personal autorizado.">
+<meta property="og:url" content="https://sismo911.com/organizacion">
+<meta property="og:image" content="https://sismo911.com/og/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  :root{
+    --ff:'Helvetica Neue',Helvetica,Arial,sans-serif;
+    --navy:#00173a; --navy-2:#0a2a63; --ink:#0c1530; --muted:#5a6378; --faint:#8a93a8;
+    --bg:#f4f6fb; --card:#ffffff; --line:#e4e8f1; --line-2:#d3d9e8;
+    --crimson:#bb0027; --crit:#c8102e; --gold:#c9a227;
+    --shadow:0 1px 2px rgba(12,21,48,.05); --shadow-md:0 6px 24px rgba(12,21,48,.08); --shadow-lg:0 20px 60px rgba(0,23,58,.28);
+    --r:16px;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--ff);-webkit-font-smoothing:antialiased;font-style:normal}
+  i,em,cite,address,var,dfn,b,strong,h1,h2,h3,p,span,a,div{font-style:normal}
+  .num{font-variant-numeric:tabular-nums}
+  a{color:inherit}
+
+  .rm{max-width:1180px;margin:0 auto;padding:0 20px 72px}
+  @media(max-width:640px){.rm{padding:0 14px 56px}}
+
+  /* ===================== HERO ===================== */
+  .hero{position:relative;overflow:hidden;background:
+      radial-gradient(120% 140% at 88% -20%, rgba(201,162,39,.18), transparent 50%),
+      radial-gradient(120% 120% at 0% 0%, rgba(187,0,39,.20), transparent 46%),
+      linear-gradient(135deg,#00112e 0%, #082453 56%, #0a2a63 100%);
+    color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}
+  .hero::before{content:"";position:absolute;inset:0;opacity:.5;pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+    background-size:46px 46px;mask-image:radial-gradient(120% 90% at 50% 0%,#000 35%,transparent 78%)}
+  .hero .seis{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:120px;opacity:.5;pointer-events:none}
+  .hero-in{position:relative;max-width:1180px;margin:0 auto;padding:46px 20px 40px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:30px;align-items:center}
+  @media(max-width:860px){.hero-in{grid-template-columns:1fr;padding:34px 16px 30px;gap:24px}}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font:700 11px var(--ff);letter-spacing:.16em;text-transform:uppercase;color:#bcd0f4}
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px rgba(201,162,39,.22)}
+  .hero h1{font:800 clamp(32px,5.2vw,52px)/1.02 var(--ff);letter-spacing:-.025em;margin:14px 0 0}
+  .hero h1 .accent{color:#ffd24a}
+  .hero p.sub{font:400 clamp(14px,1.7vw,16.5px)/1.55 var(--ff);color:#cdd9f0;max-width:600px;margin:14px 0 0}
+  .hero .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
+  .hchip{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:8px 13px;font:600 12.5px var(--ff);color:#eaf0fb}
+  .hchip b{font:800 13px var(--ff)}
+  .hchip .sw{width:9px;height:9px;border-radius:50%}
+  .stamp{display:inline-flex;align-items:center;gap:7px;margin-top:16px;font:600 11.5px var(--ff);letter-spacing:.04em;color:#9fb2d6}
+  .stamp::before{content:"";width:7px;height:7px;border-radius:50%;background:#46d07f;box-shadow:0 0 0 4px rgba(70,208,127,.18)}
+
+  .crest-card{justify-self:end;display:flex;flex-direction:column;align-items:center;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:22px 26px;backdrop-filter:blur(2px);text-align:center}
+  @media(max-width:860px){.crest-card{justify-self:start}}
+  .crest-card svg{width:64px;height:64px}
+  .crest-card .n{font:800 30px/1 var(--ff);color:#fff;font-variant-numeric:tabular-nums}
+  .crest-card .l{font:600 11.5px var(--ff);letter-spacing:.05em;color:#9fb2d6;text-transform:uppercase}
+
+  /* ===================== SECTION HEADERS ===================== */
+  .section-h{display:flex;align-items:baseline;gap:14px;margin:44px 0 4px;flex-wrap:wrap}
+  .section-h h2{font:800 clamp(20px,2.6vw,26px)/1.1 var(--ff);letter-spacing:-.02em;margin:0}
+  .section-h .kbd{font:700 11px var(--ff);letter-spacing:.06em;text-transform:uppercase;color:var(--faint);border:1px solid var(--line-2);border-radius:999px;padding:5px 11px;background:#fff}
+  .lead{font:400 14.5px/1.6 var(--ff);color:var(--muted);max-width:760px;margin:12px 0 20px}
+
+  /* ===================== ICS COLUMNS ===================== */
+  .ics{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:16px;margin-top:8px}
+  .col{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  .col .ch{display:flex;align-items:center;gap:11px;padding:15px 16px;border-bottom:1px solid var(--line);border-top:4px solid var(--ac,#888)}
+  .col .ch .ci{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--ac) 12%,#fff);color:var(--ac);flex:none}
+  .col .ch .ci svg{width:20px;height:20px}
+  .col .ch h3{font:800 15px var(--ff);margin:0;letter-spacing:-.01em}
+  .col .ch .sub{font:600 11px var(--ff);color:var(--faint);letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+  .col .body{padding:10px 12px 14px;display:flex;flex-direction:column;gap:8px}
+  .role{border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:#fcfdff;transition:.14s}
+  .role:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
+  .role .rt{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .role .rn{font:800 13.5px var(--ff);letter-spacing:-.01em}
+  .role .rk{font:600 10.5px 'SFMono-Regular',ui-monospace,Menlo,monospace;color:var(--faint);background:#eef2f9;border-radius:6px;padding:2px 6px;white-space:nowrap}
+  .role .rd{font:400 12px/1.45 var(--ff);color:var(--muted);margin-top:5px}
+  .role .inh{display:inline-flex;flex-wrap:wrap;gap:5px;margin-top:8px;align-items:center}
+  .role .inh .lbl{font:700 9.5px var(--ff);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .role .inh .tag{font:700 10.5px var(--ff);color:var(--navy-2);background:#e9effd;border:1px solid #d5e0fb;border-radius:6px;padding:2px 7px}
+  .role.legacy{background:#fbfbfc;opacity:.92}
+  .role.legacy .rn{color:#4b5568}
+
+  /* ===================== LIVE OPERATIONAL ===================== */
+  .live-wrap{margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .live-head{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fbfcff,#f6f8fd)}
+  .live-head .li{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:#e7f5ec;color:#1f8a4c;flex:none}
+  .live-head h3{font:800 16px var(--ff);margin:0}
+  .live-head .st{margin-left:auto;font:700 11px var(--ff);letter-spacing:.05em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
+  .st.on{background:#e7f5ec;color:#1f8a4c;border:1px solid #bfe3cd}
+  .st.off{background:#f1f3f8;color:#6a7285;border:1px solid #dde2ec}
+  .live-body{padding:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .subh{font:800 12px var(--ff);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .subh .n{font:800 11px var(--ff);background:#eef2f9;color:var(--navy-2);border-radius:999px;padding:2px 8px}
+  .tree{display:flex;flex-direction:column;gap:6px}
+  .node{border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:#fcfdff;font:700 13px var(--ff)}
+  .node .c{display:flex;flex-direction:column;gap:6px;margin:8px 0 0 14px;padding-left:12px;border-left:2px solid var(--line-2)}
+  .node .c .node{background:#fff}
+  .team{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:#fcfdff}
+  .team .dot{width:11px;height:11px;border-radius:50%;flex:none;background:#94a3b8}
+  .team .tn{font:800 13px var(--ff)}
+  .team .meta{margin-left:auto;font:700 11px var(--ff);color:var(--faint);display:flex;gap:8px;align-items:center}
+  .team .cnt{background:#eef2f9;color:var(--navy-2);border-radius:999px;padding:2px 8px}
+  .team .pri{color:var(--gold)}
+  .signin{text-align:center;padding:26px 18px}
+  .signin p{font:400 14px/1.6 var(--ff);color:var(--muted);max-width:560px;margin:0 auto 16px}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:#fff;border-radius:11px;padding:11px 18px;font:800 13.5px var(--ff);text-decoration:none;box-shadow:var(--shadow-md)}
+  .btn svg{width:16px;height:16px}
+  .empty{font:400 13px var(--ff);color:var(--faint);padding:8px 2px}
+  .skel{height:38px;border-radius:10px;background:linear-gradient(90deg,#eef1f7,#f6f8fc,#eef1f7);background-size:200% 100%;animation:sh 1.2s infinite}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  .foot{font:400 12.5px/1.6 var(--ff);color:var(--faint);margin:34px 0 0;text-align:center;max-width:820px;margin-left:auto;margin-right:auto}
+  .foot b{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <!-- ===================== HERO ===================== -->
+  <header class="hero">
+    <div class="hero-in">
+      <div>
+        <span class="eyebrow"><span class="dot"></span> Estructura organizacional</span>
+        <h1>Organización <span class="accent">SISMO911</span></h1>
+        <p class="sub">Cómo se organiza la respuesta: la cadena de mando según el Sistema de Comando de Incidentes (SCI/ICS) y los roles operativos de la plataforma. Para el personal autorizado, la estructura operativa real — departamentos y equipos — aparece en vivo.</p>
+        <div class="chips">
+          <span class="hchip"><span class="sw" style="background:var(--crit)"></span><b>6</b> secciones</span>
+          <span class="hchip"><span class="sw" style="background:#46d07f"></span><b>22</b> roles</span>
+          <span class="hchip"><span class="sw" style="background:#ffd24a"></span>Modelo <b>SCI / ICS</b></span>
+        </div>
+        <div class="stamp">GOBERNANZA RBAC · «la IA propone, el humano responsable dispone»</div>
+      </div>
+      <div class="crest-card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ffd24a" stroke-width="1.7" aria-hidden="true"><path d="M12 2.5l8 3.2v5.1c0 4.6-3.2 8-8 9.7-4.8-1.7-8-5.1-8-9.7V5.7l8-3.2z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div><div class="n">org_sismo911</div><div class="l">Organización canónica</div></div>
+      </div>
+    </div>
+    <svg class="seis" viewBox="0 0 1180 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 78 L120 78 L150 78 L168 40 L186 108 L206 22 L226 92 L246 78 L520 78 L545 78 L562 52 L580 96 L598 30 L618 100 L640 64 L660 78 L980 78 L1010 78 L1028 48 L1046 100 L1064 36 L1084 90 L1104 78 L1180 78" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"/></svg>
+  </header>
+
+  <div class="rm">
+    <!-- ===================== ICS CHAIN OF COMMAND ===================== -->
+    <div class="section-h"><h2>Cadena de mando (SCI / ICS)</h2><span class="kbd">Doctrina · roles de la plataforma</span></div>
+    <p class="lead">SISMO911 organiza al personal según el Sistema de Comando de Incidentes: una estructura de Comando y cuatro secciones (Operaciones, Planificación, Logística y Finanzas/Administración), más los roles de sistema y acceso. Cada tarjeta es un rol real de control de acceso (RBAC) de la plataforma; «hereda» indica los permisos que el rol absorbe de otro.</p>
+    <section class="ics" id="ics"></section>
+
+    <!-- ===================== LIVE OPERATIONAL STRUCTURE ===================== -->
+    <div class="section-h"><h2>Estructura operativa</h2><span class="kbd" id="liveKbd">En vivo · personal autorizado</span></div>
+    <p class="lead">Los departamentos, equipos y miembros reales de la organización — provenientes directamente de la base de datos operativa. Esta información solo es visible para el personal con permisos de organización que haya iniciado sesión en la Consola.</p>
+    <div class="live-wrap">
+      <div class="live-head">
+        <span class="li"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <h3>Departamentos, equipos y miembros</h3>
+        <span class="st off" id="liveState">Verificando acceso…</span>
+      </div>
+      <div class="live-body" id="liveBody">
+        <div class="grid2">
+          <div><div class="subh">Departamentos</div><div class="tree"><div class="skel"></div><div class="skel" style="width:70%"></div><div class="skel" style="width:85%"></div></div></div>
+          <div><div class="subh">Equipos</div><div class="tree"><div class="skel"></div><div class="skel" style="width:60%"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="foot">SISMO911 — plataforma abierta de respuesta sísmica para Venezuela. La cadena de mando refleja el modelo de gobernanza (SCI/ICS + RBAC) de la plataforma; la estructura operativa en vivo refleja la dotación real de personal y solo se muestra al personal autorizado. Los datos de miembros nunca son públicos.</p>
+  </div>
+</main>
+
+<script>
+/* ---- ICS chain of command: real RBAC roles (migration 0047) grouped by ICS section ---- */
+const SECTIONS = [
+  { key:'comando', title:'Comando', sub:'Command Staff', ac:'#c8102e',
+    icon:'M12 2.5l8 3.2v5.1c0 4.6-3.2 8-8 9.7-4.8-1.7-8-5.1-8-9.7V5.7l8-3.2z',
+    roles:[
+      { k:'incident_commander', n:'Comandante de Incidente', d:'Autoridad de comando en el terreno.', inh:['dispatcher'] },
+      { k:'emergency_manager', n:'Gerente de Emergencias', d:'Coordina la respuesta ante incidentes entre módulos.', inh:['dispatcher'] },
+      { k:'operations_director', n:'Director de Operaciones', d:'Dirige las operaciones; gestiona personal, equipos y reportes.', inh:['emergency_manager'] },
+      { k:'owner', n:'Propietario', d:'Propietario de la organización.', inh:['super_admin'] },
+      { k:'super_admin', n:'Superadministrador', d:'Acceso total y sin restricciones a cada módulo y acción.', inh:[] },
+    ] },
+  { key:'operaciones', title:'Operaciones', sub:'Operations Section', ac:'#1f8a4c',
+    icon:'M3 11l19-9-9 19-2-8-8-2z',
+    roles:[
+      { k:'dispatcher', n:'Despachador', d:'Despacha unidades y asigna casos.', inh:[] },
+      { k:'medical_director', n:'Director Médico', d:'Supervisa las operaciones médicas y la telemedicina.', inh:['doctor'] },
+      { k:'doctor', n:'Médico', d:'Atiende pacientes; acceso completo a notas médicas.', inh:[] },
+      { k:'nurse', n:'Enfermero/a', d:'Cuidado de pacientes; acceso a notas médicas.', inh:[] },
+      { k:'paramedic', n:'Paramédico', d:'Respuesta médica en campo.', inh:[] },
+      { k:'call_center', n:'Central de Llamadas', d:'Recepción de reportes y llamadas.', inh:[] },
+      { k:'volunteer', n:'Voluntario', d:'Acceso operativo de lectura limitado.', inh:[] },
+    ] },
+  { key:'planificacion', title:'Planificación', sub:'Planning Section', ac:'#2563eb',
+    icon:'M4 4h12l4 4v12H4zM14 4v4h4M8 13h8M8 17h6',
+    roles:[
+      { k:'case_manager', n:'Gestor de Casos', d:'Es dueño del ciclo de vida del caso.', inh:[] },
+      { k:'support', n:'Soporte', d:'Personal de soporte, mayormente de lectura.', inh:[] },
+      { k:'read_only', n:'Solo Lectura', d:'Acceso de visualización en todos los módulos, sin escritura.', inh:[] },
+    ] },
+  { key:'logistica', title:'Logística', sub:'Logistics Section', ac:'#c9a227',
+    icon:'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12',
+    roles:[
+      { k:'logistics', n:'Logística', d:'Cadena de suministro y activos.', inh:[] },
+    ] },
+  { key:'finanzas', title:'Finanzas y Administración', sub:'Finance / Admin Section', ac:'#6d28d9',
+    icon:'M3 10h18M3 6h18v12H3zM7 15h4',
+    roles:[
+      { k:'finance', n:'Finanzas', d:'Donaciones, facturación y reportes financieros.', inh:[] },
+      { k:'hr', n:'Recursos Humanos', d:'Administración de la fuerza laboral.', inh:[] },
+    ] },
+  { key:'sistema', title:'Sistema y Acceso', sub:'System / Access', ac:'#64748b',
+    icon:'M16 18l6-6-6-6M8 6l-6 6 6 6',
+    roles:[
+      { k:'developer', n:'Desarrollador', d:'Integración técnica y acceso al sistema.', inh:[] },
+      { k:'guest', n:'Invitado', d:'Sin acceso administrativo.', inh:[] },
+      { k:'operator', n:'Operador (heredado)', d:'Rol de compatibilidad que mapea usuarios heredados; conserva los permisos por superficie.', inh:['emergency_manager','case_manager'], legacy:true },
+      { k:'citizen', n:'Ciudadano (heredado)', d:'Usuario público mapeado desde el rol heredado.', inh:[], legacy:true },
+    ] },
+];
+const ROLE_ES = Object.fromEntries(SECTIONS.flatMap(s=>s.roles.map(r=>[r.k,r.n])));
+const esc = (s)=>String(s).replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function renderICS(){
+  document.getElementById('ics').innerHTML = SECTIONS.map(sec=>`
+    <div class="col" style="--ac:${sec.ac}">
+      <div class="ch">
+        <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${sec.icon}" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div><h3>${sec.title}</h3><div class="sub">${sec.sub}</div></div>
+      </div>
+      <div class="body">
+        ${sec.roles.map(r=>`
+          <div class="role${r.legacy?' legacy':''}">
+            <div class="rt"><span class="rn">${esc(r.n)}</span><span class="rk">${esc(r.k)}</span></div>
+            <div class="rd">${esc(r.d)}</div>
+            ${r.inh&&r.inh.length?`<div class="inh"><span class="lbl">hereda</span>${r.inh.map(k=>`<span class="tag">${esc(ROLE_ES[k]||k)}</span>`).join('')}</div>`:''}
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+/* ---- Live operational structure: gated on /api/rbac/* (departments:read / teams:read + step-up MFA) ---- */
+async function renderLive(){
+  const body = document.getElementById('liveBody');
+  const state = document.getElementById('liveState');
+  const kbd = document.getElementById('liveKbd');
+  try{
+    const [dRes,tRes] = await Promise.all([
+      fetch('/api/rbac/departments?org_id=org_sismo911',{headers:{accept:'application/json'}}),
+      fetch('/api/rbac/teams?org_id=org_sismo911',{headers:{accept:'application/json'}}),
+    ]);
+    if(!dRes.ok || !tRes.ok) return signedOut(state,kbd,body);
+
+    const { tree=[] } = await dRes.json();
+    const { teams=[] } = await tRes.json();
+    // member counts per team (best-effort, gated on teams:read which we already passed)
+    const counts = await Promise.all(teams.map(async t=>{
+      try{ const r = await fetch(`/api/rbac/teams/${encodeURIComponent(t.id)}/members`,{headers:{accept:'application/json'}});
+           if(!r.ok) return 0; const j = await r.json(); return (j.members||[]).length; }
+      catch{ return 0; }
+    }));
+
+    state.className='st on'; state.textContent='Sesión autorizada';
+    kbd.textContent='En vivo · datos reales';
+
+    const deptTree = (nodes)=> nodes.length
+      ? `<div class="tree">${nodes.map(nodeHTML).join('')}</div>`
+      : `<div class="empty">Aún no se han definido departamentos.</div>`;
+    const teamList = teams.length
+      ? teams.map((t,i)=>`
+          <div class="team">
+            <span class="dot" style="background:${t.color?esc(t.color):'#94a3b8'}"></span>
+            <span class="tn">${esc(t.name)}</span>
+            <span class="meta">${t.priority?`<span class="pri">P${Number(t.priority)}</span>`:''}<span class="cnt">${counts[i]} ${counts[i]===1?'miembro':'miembros'}</span></span>
+          </div>`).join('')
+      : `<div class="empty">Aún no se han creado equipos.</div>`;
+
+    body.innerHTML = `
+      <div class="grid2">
+        <div><div class="subh">Departamentos <span class="n">${countNodes(tree)}</span></div>${deptTree(tree)}</div>
+        <div><div class="subh">Equipos <span class="n">${teams.length}</span></div><div class="tree">${teamList}</div></div>
+      </div>`;
+  }catch{ signedOut(state,kbd,body); }
+}
+function nodeHTML(n){
+  const kids = (n.children&&n.children.length)?`<div class="c">${n.children.map(nodeHTML).join('')}</div>`:'';
+  return `<div class="node">${esc(n.name)}${kids}</div>`;
+}
+function countNodes(nodes){ return nodes.reduce((a,n)=>a+1+countNodes(n.children||[]),0); }
+function signedOut(state,kbd,body){
+  state.className='st off'; state.textContent='Requiere iniciar sesión';
+  kbd.textContent='Personal autorizado';
+  body.innerHTML = `
+    <div class="signin">
+      <p>La estructura operativa en vivo — departamentos, equipos y sus miembros — solo se muestra al personal con permisos de organización. Inicia sesión en la Consola para verla.</p>
+      <a class="btn" href="/console">Abrir la Consola
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>`;
+}
+
+renderICS();
+renderLive();
+</script>
+</body>
+</html>
