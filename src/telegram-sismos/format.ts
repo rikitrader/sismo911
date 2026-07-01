@@ -54,7 +54,17 @@ export function parseSismosCommand(text: string): ParsedSismos {
 
 function fmtDate(ms: number | null | undefined): string {
   if (ms == null || !Number.isFinite(ms)) return '—';
-  return new Date(ms).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+  // Hora de Venezuela (America/Caracas, UTC-4, sin horario de verano) en formato
+  // local DD/MM/AAAA con a. m./p. m., para que se entienda de un vistazo.
+  const d = new Date(ms - 4 * 60 * 60_000); // shift UTC → hora VE (UTC-4)
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = d.getUTCFullYear();
+  const min = String(d.getUTCMinutes()).padStart(2, '0');
+  const h24 = d.getUTCHours();
+  const period = h24 < 12 ? 'a. m.' : 'p. m.';
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${dd}/${mm}/${yyyy}, ${h12}:${min} ${period} (hora Venezuela)`;
 }
 
 const ALERT_ES: Record<string, string> = { green: 'verde', yellow: 'amarilla', orange: 'naranja', red: 'roja' };
@@ -129,8 +139,8 @@ export function formatQuake(e: any, baseUrl = BASE): string {
 /** Compact one-liner for a list. */
 export function formatQuakeLine(e: any): string {
   const mag = e?.mag != null ? `M${e.mag}` : 'M—';
-  const depth = e?.depth_km != null ? `, ${Math.round(e.depth_km)} km` : '';
-  return `${quakeEmoji(e)} ${mag} — ${placeOf(e)} (${fmtDate(e?.time_ms)}${depth})`;
+  const depth = e?.depth_km != null ? ` · ${Math.round(e.depth_km)} km` : '';
+  return `${quakeEmoji(e)} ${mag} — ${placeOf(e)} · ${fmtDate(e?.time_ms)}${depth}`;
 }
 
 /** Recent-quakes list. */
