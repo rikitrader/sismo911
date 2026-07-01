@@ -16,8 +16,12 @@ describe('admin page shells are Worker-first (server-gated)', () => {
     const list = new Set(
       [...block.slice(0, block.indexOf(']')).matchAll(/"([^"]+)"/g)].map((m) => m[1]),
     );
+    // admin-*.html shells + other operator-gated page shells that are NOT
+    // admin-prefixed (e.g. the roster importer) but still must run the Worker
+    // auth gate before the edge serves them.
+    const OTHER_GATED_PAGES = ['importar.html'];
     const adminPages = readdirSync('public')
-      .filter((f) => /^admin-.*\.html$/.test(f))
+      .filter((f) => /^admin-.*\.html$/.test(f) || OTHER_GATED_PAGES.includes(f))
       .map((f) => '/' + f.replace(/\.html$/, ''));
     expect(adminPages.length).toBeGreaterThan(0);
     const uncovered = adminPages.filter((r) => !list.has(r));
