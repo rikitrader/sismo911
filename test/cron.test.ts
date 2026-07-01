@@ -9,7 +9,7 @@ import { CRON_GROUPS, jobsForCron } from '../src/cron';
 const ALL_JOB_NAMES = [
   'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync',
   'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match', 'hospital-registry-match',
-  'familia-photo-mirror', 'monitor-sheet', 'cases-sheet-sync', 'case-alerts', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
+  'familia-photo-mirror', 'monitor-sheet', 'cases-sheet-sync', 'case-alerts', 'personas-dedupe-fuzzyphone', 'bulk-import-sweep', 'rav-ingest', 'rav-stats', 'rav-verified',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
   'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe', 'rav-reports-dedupe-extid',
   'pacientes-rvz', 'sismos-bot-broadcast', 'botcommands-sync',
@@ -55,6 +55,7 @@ describe('cron groups', () => {
       'case-alerts',
       'personas-dedupe-fuzzyphone',
       'personas-phash-backfill-30',
+      'bulk-import-sweep',
     ]);
     expect(CRON_GROUPS['5 * * * *'].map((j) => j.name)).toEqual([
       'history-bootstrap',

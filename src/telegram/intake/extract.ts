@@ -61,7 +61,7 @@ function intOrNull(v: unknown): number | null {
   return Number.isFinite(n) && n > 0 && n < 130 ? Math.trunc(n) : null;
 }
 
-function normalize(obj: Record<string, unknown> | null): ExtractedRecord {
+export function normalize(obj: Record<string, unknown> | null): ExtractedRecord {
   if (!obj) return { ...EMPTY };
   const cedRaw = str(obj.cedula, 20);
   const cedula = cedRaw ? cedRaw.replace(/\D/g, '').slice(0, 9) || null : null;
@@ -76,8 +76,10 @@ function normalize(obj: Record<string, unknown> | null): ExtractedRecord {
   };
 }
 
-/** OCR the media to markdown via Workers AI toMarkdown (PDF + image). Empty string on failure. */
-export async function markdownFromMedia(env: Env, media: IntakeMedia): Promise<string> {
+/** OCR the media to markdown via Workers AI toMarkdown (PDF + image). Empty string on failure.
+ *  `maxChars` bounds the returned text: the single-record path keeps ~8k (one cédula/flyer),
+ *  the bulk roster path passes a much larger cap so a multi-page padrón isn't truncated. */
+export async function markdownFromMedia(env: Env, media: IntakeMedia, maxChars = 8000): Promise<string> {
   const ai = env.AI as unknown as {
     toMarkdown?: (
       files: Array<{ name: string; blob: Blob }>,
@@ -91,7 +93,7 @@ export async function markdownFromMedia(env: Env, media: IntakeMedia): Promise<s
     .catch(() => null);
   const first = Array.isArray(out) ? out[0] : null;
   if (!first || first.format !== 'markdown') return '';
-  return String(first.data || '').slice(0, 8000);
+  return String(first.data || '').slice(0, maxChars);
 }
 
 /** Extract structured fields. Never throws — returns EMPTY on any failure. */

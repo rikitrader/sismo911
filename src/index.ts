@@ -714,6 +714,21 @@ const serveConsole = async (c: any) => {
 app.get('/console', serveConsole);
 app.get('/console/', serveConsole);
 
+// Operator roster importer page (bulk padrón PDF → many draft expedientes).
+// Gated exactly like /console: authenticated + console-read capability. The
+// upload/status APIs it calls are independently gated (ops:console).
+const serveImportar = async (c: any) => {
+  const user = await getUserFromRequest(c.env, c).catch(() => null);
+  if (!user) return c.redirect('/login?next=/importar', 302);
+  if (!(await canEnterConsole(c, user))) {
+    const denied = await serveAsset(c, '/sin-acceso');
+    denied.headers.set('Cache-Control', 'no-store');
+    return new Response(denied.body, { status: 403, headers: denied.headers });
+  }
+  return serveAsset(c, '/importar');
+};
+app.get('/importar', serveImportar);
+
 // Root is host-branched (see run_worker_first '/'): the SUMINISTROS subdomain
 // serves the inventory SPA shell; every other host serves the DESAPARECIDOS
 // registry (the app's post-quake front door). The SUMINISTROS division is GATED

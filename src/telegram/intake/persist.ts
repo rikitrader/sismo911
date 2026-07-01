@@ -45,6 +45,10 @@ interface PersistInput {
   tgUserId: string | null;
   tgUsername: string | null;
   tgChatId: string | null;
+  // Bulk-roster extensions (single-person path leaves these unset → same behavior):
+  channel?: string; // ledger channel: 'telegram' (default) | 'console'
+  batchId?: string | null; // parent bulk_import_jobs.id when this row is one of many
+  rawKey?: string; // shared evidence key (the roster PDF) — skip the per-row R2 upload
 }
 
 /** Insert a pending citizen lead for a case. Returns the intel id. */
@@ -67,11 +71,16 @@ async function insertLead(env: Env, personId: string, f: ExtractedRecord, submit
 export async function persist(env: Env, input: PersistInput): Promise<IntakeResult> {
   const { submissionId, code, media, fields, match } = input;
   const now = Date.now();
+  const channel = input.channel ?? 'telegram';
   const submittedBy = input.tgUsername ? `@${input.tgUsername}` : input.tgUserId ? `tg:${input.tgUserId}` : null;
 
-  // Raw evidence copy (audit) — best-effort, any mime including PDF.
-  const rawKey = `${RAW_BUCKET_PREFIX}/${submissionId}.${extFor(media.mime)}`;
-  await env.PERSON_PHOTOS.put(rawKey, media.bytes, { httpMetadata: { contentType: media.mime } }).catch(() => {});
+  // Raw evidence copy (audit). Roster records pass a shared `rawKey` (the one
+  // uploaded padrón PDF) so we don't re-upload the whole document per person;
+  // the single-person path uploads its own bytes as before.
+  const rawKey = input.rawKey ?? `${RAW_BUCKET_PREFIX}/${submissionId}.${extFor(media.mime)}`;
+  if (!input.rawKey) {
+    await env.PERSON_PHOTOS.put(rawKey, media.bytes, { httpMetadata: { contentType: media.mime } }).catch(() => {});
+  }
 
   let outcome: IntakeResult['outcome'] = 'needs_review';
   let personId: string | null = null;
@@ -135,12 +144,12 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
 
   // Ledger row (always).
   await env.DB.prepare(
-    `INSERT INTO intake_submissions (id, channel, tg_user_id, tg_username, tg_chat_id, file_id, mime, r2_key, extracted_json, match_score, outcome, person_id, intel_id, note, created_ms)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO intake_submissions (id, channel, tg_user_id, tg_username, tg_chat_id, file_id, mime, r2_key, extracted_json, match_score, outcome, person_id, intel_id, note, batch_id, created_ms)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   )
     .bind(
       submissionId,
-      'telegram',
+      channel,
       input.tgUserId,
       input.tgUsername,
       input.tgChatId,
@@ -153,6 +162,7 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
       personId,
       intelId,
       note,
+      input.batchId ?? null,
       now,
     )
     .run()

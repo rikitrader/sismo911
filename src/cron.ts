@@ -41,6 +41,7 @@ import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
 import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
+import { sweepBulkJobs } from './bulk/import-job';
 import { runCaseAlerts } from './ingest/case-alerts';
 
 // Drain the hospital cross-match a bounded number of pages per tick (whole
@@ -155,6 +156,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // (:05/:30/:45) is how we go faster WITHOUT a 6th cron (account caps at 5).
     // :30 has budget: familia-photo-mirror is only ~50 fetches (~100 subrequests).
     { name: 'personas-phash-backfill-30', run: (env) => backfillPhashes(env, 400) },
+    // Bulk roster importer backstop: start any 'pending' job whose ingest tick
+    // died before waitUntil ran it, and flag long-stuck 'processing' jobs as
+    // error. Cheap D1-only when idle (a couple of indexed reads).
+    { name: 'bulk-import-sweep', run: (env) => sweepBulkJobs(env) },
   ],
   // :45 — social/web monitor + AI blog (external-fetch heavy) — now isolated, so
   // it always has a full subrequest budget. This is the job that used to fail.
