@@ -173,6 +173,10 @@ binding = "AI"
 name = "EMAIL"
 
 [vars]
+# "Casos CRM" Google Sheet that is the curated SOURCE OF TRUTH; the cron pulls it
+# into D1 (Sheet → D1). Sheet id is not a secret (it's in the share URL). The
+# GOOGLE_* OAuth creds that read it ARE Worker secrets.
+CASES_SHEET_ID = "1sE7L8BcZ0VmzmSUCbVh8DAOiDz3buYImUww_9GEaZwo"
 # Ops distribution address for operational alerts (SYS-02 cron-failure, etc.).
 # Plain address, not a secret. Comment out to disable operational email alerts.
 OPS_ALERT_EMAIL = "rikitrader@gmail.com"
