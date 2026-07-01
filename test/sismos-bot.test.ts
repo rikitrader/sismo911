@@ -68,7 +68,8 @@ describe('formatQuake', () => {
     expect(out).toContain('prof. 24 km');
     expect(out).toContain('MMI 5');
     expect(out).toContain('alerta naranja');
-    expect(out).toContain('2026-06-30 20:14 UTC');
+    // 20:14 UTC → 16:14 hora Venezuela (UTC-4) → 4:14 p. m.
+    expect(out).toContain('30/06/2026, 4:14 p. m. (hora Venezuela)');
     expect(out).toContain('https://earthquake.usgs.gov/us1');
     expect(out.startsWith('🟠')).toBe(true);
   });
