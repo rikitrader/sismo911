@@ -85,7 +85,7 @@ export type QueryResult =
   | { kind: 'need_more'; reason: 'partial_name' | 'phone_requires_admin' }
   | { kind: 'no_match' }
   | { kind: 'multiple'; count: number }
-  | { kind: 'list'; records: CaseRecord[] }
+  | { kind: 'list'; records: CaseRecord[]; query?: string }
   | { kind: 'match'; record: CaseRecord; detail?: 'full' | 'status' | 'summary' }
   | { kind: 'error' };
 
