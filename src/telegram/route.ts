@@ -17,6 +17,7 @@ import { parseCommand } from './commands';
 import { aiNormalizeIntent } from './intent';
 import { buildTelegramResponse, buildListMessages, buildUpdateResponse } from './responses';
 import { resolveUpdate } from './update';
+import { syncBotCommands, getRegisteredVersion } from './botcommands';
 import { redactSensitiveFields, isHiddenFromPublic } from '../adapters/sismo911-api';
 import {
   getCaseById,
@@ -158,7 +159,7 @@ function finalize(records: CaseRecord[], ctx: ResolveCtx, query?: string): Query
 export const telegram = new Hono<{ Bindings: BotEnv }>();
 
 // Health/status — no secrets, safe to expose. Confirms whether the bot is armed.
-telegram.get('/health', (c) => {
+telegram.get('/health', async (c) => {
   const cfg = readTelegramConfig(c.env);
   return c.json({
     ok: true,
@@ -166,6 +167,7 @@ telegram.get('/health', (c) => {
     groups: cfg?.allowedGroupIds.length ?? 0,
     admins: cfg?.adminUserIds.length ?? 0,
     ai: Boolean(c.env.AI),
+    commands_version: await getRegisteredVersion(c.env),
   });
 });
 
@@ -187,6 +189,12 @@ telegram.post('/webhook', async (c) => {
   if (!parsed.success) return c.json({ ok: true }); // ack malformed updates, do nothing
   const msg = parsed.data.message ?? parsed.data.edited_message;
   if (!msg) return c.json({ ok: true });
+
+  // Opportunistic: register/refresh the BotFather command menu once per version.
+  // KV-guarded (a cheap read on the hot path); fires the Telegram calls only when
+  // COMMANDS_VERSION changes, so the menu self-installs on the first message
+  // after a deploy without waiting for the cron.
+  c.executionCtx.waitUntil(syncBotCommands(c.env, cfg));
 
   const token = cfg.botToken;
   const chatId = msg.chat.id;
@@ -237,6 +245,16 @@ telegram.post('/webhook', async (c) => {
 
   // Everything past here is a text query; ack non-text, non-media updates.
   if (!msg.text) return c.json({ ok: true });
+
+  // Admin-only: force-reinstall the BotFather command menu on demand.
+  if (/^\/(menu|comandos_menu|registrar_comandos|setup_menu)\b/i.test(msg.text) && role === 'admin') {
+    const res = await syncBotCommands(c.env, cfg, { force: true });
+    const reply = res.ok
+      ? `✅ Menú de comandos reinstalado (v${res.version}, ${res.admins} operador(es)). Cierra y reabre el chat para verlo.`
+      : '⚠️ No pude reinstalar el menú de comandos. Revisa el token del bot.';
+    c.executionCtx.waitUntil(sendMessages(token, chatId, [reply]));
+    return c.json({ ok: true });
+  }
 
   // 5. Parse the command (deterministic first; AI only to fill gaps).
   let cmd = parseCommand(msg.text);

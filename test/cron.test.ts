@@ -12,7 +12,7 @@ const ALL_JOB_NAMES = [
   'familia-photo-mirror', 'monitor-sheet', 'case-alerts', 'personas-dedupe-fuzzyphone', 'rav-ingest', 'rav-stats', 'rav-verified',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
   'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe', 'rav-reports-dedupe-extid',
-  'pacientes-rvz', 'sismos-bot-broadcast',
+  'pacientes-rvz', 'sismos-bot-broadcast', 'botcommands-sync',
 ];
 
 describe('cron groups', () => {
