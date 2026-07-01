@@ -62,52 +62,78 @@ sismosBot.post('/webhook', async (c) => {
   const body = await c.req.json().catch(() => null);
   const parsed = TgUpdate.safeParse(body);
   if (!parsed.success) return c.json({ ok: true });
-  const msg = parsed.data.message ?? parsed.data.edited_message;
+  const upd = parsed.data;
+
+  // Membership change: when the bot is added/promoted in a channel or group, it
+  // auto-subscribes that chat to the live feed and posts a welcome. Removed →
+  // unsubscribe. This is how a CHANNEL becomes a live quake feed (channels don't
+  // send /commands the way DMs/groups do; the bot must be an admin to post).
+  if (upd.my_chat_member) {
+    const m = upd.my_chat_member;
+    const cid = m.chat.id;
+    const ctype = m.chat.type ?? '';
+    const status = m.new_chat_member?.status ?? '';
+    if (ctype === 'channel' || ctype === 'group' || ctype === 'supergroup') {
+      if (status === 'administrator' || status === 'creator' || status === 'member') {
+        await subscribe(c.env, cid, ctype);
+        c.executionCtx.waitUntil(
+          sendMessage(token, cid, `✅ SISMO911 en vivo activado aquí. Publicaré una alerta automática cuando ocurra un sismo significativo (M≥4.5).\n\n${HELP_SISMOS}`),
+        );
+      } else if (status === 'left' || status === 'kicked') {
+        await unsubscribe(c.env, cid);
+      }
+    }
+    return c.json({ ok: true });
+  }
+
+  // Interactive command from a DM, group, OR channel post.
+  const msg = upd.message ?? upd.edited_message ?? upd.channel_post ?? upd.edited_channel_post;
   if (!msg || !msg.text) return c.json({ ok: true });
 
-  const chatId = msg.chat.id;
-  const chatType = msg.chat.type ?? 'private';
-  const cmd = parseSismosCommand(msg.text);
+  const reply = await resolveCommand(c.env, msg.chat.id, msg.chat.type ?? 'private', msg.text);
+  c.executionCtx.waitUntil(sendMessage(token, msg.chat.id, reply));
+  return c.json({ ok: true });
+});
 
-  let reply: string;
+async function subscribe(env: SismosEnv, chatId: number | string, chatType: string): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO sismos_bot_subs (chat_id, chat_type, added_ms) VALUES (?,?,?)
+       ON CONFLICT(chat_id) DO UPDATE SET chat_type = excluded.chat_type`,
+  ).bind(String(chatId), chatType, Date.now()).run();
+}
+
+async function unsubscribe(env: SismosEnv, chatId: number | string): Promise<void> {
+  await env.DB.prepare(`DELETE FROM sismos_bot_subs WHERE chat_id = ?`).bind(String(chatId)).run();
+}
+
+/** Resolve a command (DM / group / channel post) to reply text. */
+async function resolveCommand(env: SismosEnv, chatId: number | string, chatType: string, text: string): Promise<string> {
+  const cmd = parseSismosCommand(text);
   try {
     switch (cmd.kind) {
       case 'ultimo': {
-        const [e] = await getEvents(c.env, 1);
-        reply = e ? formatQuake(e, c.env.PUBLIC_BASE_URL || undefined) : 'No hay sismos en el registro todavía.';
-        break;
+        const [e] = await getEvents(env, 1);
+        return e ? formatQuake(e, env.PUBLIC_BASE_URL || undefined) : 'No hay sismos en el registro todavía.';
       }
       case 'sismos': {
-        const events = await getEvents(c.env, cmd.count ?? 5);
-        reply = formatQuakeList(events);
-        break;
+        return formatQuakeList(await getEvents(env, cmd.count ?? 5));
       }
       case 'estado': {
-        const events = await getEvents(c.env, 100);
-        const threat = scoreThreat(events, Date.now());
-        reply = formatThreat(threat, events[0] ?? null);
-        break;
+        const events = await getEvents(env, 100);
+        return formatThreat(scoreThreat(events, Date.now()), events[0] ?? null);
       }
       case 'suscribir': {
-        await c.env.DB.prepare(
-          `INSERT INTO sismos_bot_subs (chat_id, chat_type, added_ms) VALUES (?,?,?)
-             ON CONFLICT(chat_id) DO UPDATE SET chat_type = excluded.chat_type`,
-        ).bind(String(chatId), chatType, Date.now()).run();
-        reply = '✅ Suscrito. Recibirás una alerta automática cuando ocurra un sismo significativo (M≥4.5). Usa /cancelar para dejar de recibirlas.';
-        break;
+        await subscribe(env, chatId, chatType);
+        return '✅ Suscrito. Recibirás una alerta automática cuando ocurra un sismo significativo (M≥4.5). Usa /cancelar para dejar de recibirlas.';
       }
       case 'cancelar': {
-        await c.env.DB.prepare(`DELETE FROM sismos_bot_subs WHERE chat_id = ?`).bind(String(chatId)).run();
-        reply = 'Suscripción cancelada. Ya no recibirás alertas automáticas. Usa /suscribir para reactivarlas.';
-        break;
+        await unsubscribe(env, chatId);
+        return 'Suscripción cancelada. Ya no recibirás alertas automáticas. Usa /suscribir para reactivarlas.';
       }
       default:
-        reply = HELP_SISMOS;
+        return HELP_SISMOS;
     }
   } catch {
-    reply = 'No pude obtener los datos sísmicos en este momento. Intenta de nuevo en un minuto.';
+    return 'No pude obtener los datos sísmicos en este momento. Intenta de nuevo en un minuto.';
   }
-
-  c.executionCtx.waitUntil(sendMessage(token, chatId, reply));
-  return c.json({ ok: true });
-});
+}

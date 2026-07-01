@@ -10,6 +10,7 @@ import {
   quakeEmoji,
   HELP_SISMOS,
 } from '../src/telegram-sismos/format';
+import { TgUpdate } from '../src/telegram/types';
 
 const quake = {
   id: 'us1',
@@ -98,6 +99,19 @@ describe('formatThreat', () => {
     expect(out).toContain('Máx. 48h: M5.8');
     expect(out).toContain('Fuentes: USGS, FUNVISIS');
     expect(out).toContain('Último sismo:');
+  });
+});
+
+describe('TgUpdate accepts channel + membership updates', () => {
+  it('parses a channel_post', () => {
+    const r = TgUpdate.safeParse({ update_id: 1, channel_post: { message_id: 1, chat: { id: -100123, type: 'channel' }, text: '/ultimo' } });
+    expect(r.success).toBe(true);
+    expect(r.success && r.data.channel_post?.text).toBe('/ultimo');
+  });
+  it('parses my_chat_member (bot promoted to admin in a channel)', () => {
+    const r = TgUpdate.safeParse({ update_id: 2, my_chat_member: { chat: { id: -100123, type: 'channel' }, new_chat_member: { status: 'administrator' } } });
+    expect(r.success).toBe(true);
+    expect(r.success && r.data.my_chat_member?.new_chat_member?.status).toBe('administrator');
   });
 });
 

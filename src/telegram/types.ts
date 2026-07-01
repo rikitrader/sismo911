@@ -142,11 +142,27 @@ export const TgMessage = z
   })
   .passthrough();
 
+// Bot membership change (added/removed/promoted in a chat or channel).
+export const TgChatMemberUpdated = z
+  .object({
+    chat: TgChat,
+    from: TgUser.optional(),
+    new_chat_member: z.object({ status: z.string() }).passthrough().optional(),
+  })
+  .passthrough();
+
 export const TgUpdate = z
   .object({
     update_id: z.number(),
     message: TgMessage.optional(),
     edited_message: TgMessage.optional(),
+    // Channel posts arrive as `channel_post` (not `message`), so a channel-feed
+    // bot must opt into them via allowed_updates AND read this field.
+    channel_post: TgMessage.optional(),
+    edited_channel_post: TgMessage.optional(),
+    // `my_chat_member` fires when the bot itself is added/removed/promoted — used
+    // to auto-subscribe a channel the moment the bot is made an admin there.
+    my_chat_member: TgChatMemberUpdated.optional(),
   })
   .passthrough();
 
