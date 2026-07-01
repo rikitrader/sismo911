@@ -680,15 +680,26 @@ for (const [routePath, assetPath] of Object.entries(PUBLIC_COMMAND_ASSETS)) {
 // public — it carries no data (every datum is gated at /api/rbac/*). "Can enter"
 // = holds any admin-read capability.
 const CONSOLE_BASELINE = ['users:read','roles:read','permissions:read','audit:read','security:read','sessions:read','organizations:read','feature_flags:read','login_history:read'];
-async function canEnterConsole(c: any): Promise<boolean> {
-  const user = await getUserFromRequest(c.env, c).catch(() => null);
+async function canEnterConsole(c: any, user: any): Promise<boolean> {
   if (!user) return false;
   if (user.role === 'admin') return true; // super_admin
   const perms = await getEffectivePermissions(c.env, user.id).catch(() => new Set<string>());
   return CONSOLE_BASELINE.some((p) => perms.has(p));
 }
 const serveConsole = async (c: any) => {
-  if (!(await canEnterConsole(c))) return c.redirect('/login?next=/console/', 302);
+  // Unauthenticated → /login. But an AUTHENTICATED user who merely lacks a
+  // console-read capability must NOT be sent to /login: login.html auto-redirects
+  // any authenticated user back to ?next (=/console/), which produced an infinite
+  // redirect loop (login ↔ /console/) — the same trap already fixed for the
+  // suministros '/' route above. Serve the 403 "sin acceso" page instead, which
+  // gives them a way out (cerrar sesión / ir al panel público).
+  const user = await getUserFromRequest(c.env, c).catch(() => null);
+  if (!user) return c.redirect('/login?next=/console/', 302);
+  if (!(await canEnterConsole(c, user))) {
+    const denied = await serveAsset(c, '/sin-acceso');
+    denied.headers.set('Cache-Control', 'no-store');
+    return new Response(denied.body, { status: 403, headers: denied.headers });
+  }
   return serveAsset(c, '/console/index.html');
 };
 app.get('/console', serveConsole);
