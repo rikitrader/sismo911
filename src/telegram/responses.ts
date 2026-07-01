@@ -5,7 +5,7 @@
 // same string. No LLM, no inference. Factual fields come straight from the DB
 // record via redaction.toPublicView. Defaults to Spanish; English on request.
 
-import type { PublicStatus, QueryResult, ViewerRole } from './types';
+import type { CaseRecord, PublicStatus, QueryResult, ViewerRole } from './types';
 import { toPublicView } from './redaction';
 
 export interface BuildOpts {
@@ -66,6 +66,25 @@ const HELP_EN = [
   'I only reply with verified records. In groups sensitive data is hidden; for full detail, DM me (authorized operators only).',
 ].join('\n');
 
+/**
+ * Full per-case block (the format an operator sees for every list item):
+ * Caso · Estado · Ubicación general · Última verificación · Nivel · Ficha · Nota.
+ * Unverified rows never assert a final status. No sensitive PII (public-tier).
+ */
+function caseBlock(record: CaseRecord, opts: BuildOpts): string {
+  const es = opts.lang === 'es';
+  const v = toPublicView(record, opts.role, false, opts.baseUrl);
+  if (v.status === 'PENDING_VERIFICATION') {
+    return es
+      ? `Caso: ${v.caseId}\nEstado: PENDING_VERIFICATION\nUbicación general: ${v.generalLocation ?? 'no disponible'}\nFicha: ${v.profileUrl}`
+      : `Case: ${v.caseId}\nStatus: PENDING_VERIFICATION\nGeneral location: ${v.generalLocation ?? 'not available'}\nProfile: ${v.profileUrl}`;
+  }
+  const next = NEXT_ACTION[v.status][opts.lang];
+  return es
+    ? `Caso: ${v.caseId}\nEstado: ${v.status}\nUbicación general: ${v.generalLocation ?? 'no disponible'}\nÚltima verificación: ${fmtDate(v.lastVerifiedMs)}\nNivel: ${v.verification}\nFicha: ${v.profileUrl}\nNota: ${next}`
+    : `Case: ${v.caseId}\nStatus: ${v.status}\nGeneral location: ${v.generalLocation ?? 'not available'}\nLast verified: ${fmtDate(v.lastVerifiedMs)}\nLevel: ${v.verification}\nProfile: ${v.profileUrl}\nNote: ${next}`;
+}
+
 /** Build the final chat text for a resolved query. Pure + total over QueryResult. */
 export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): string {
   const es = opts.lang === 'es';
@@ -111,18 +130,12 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
         : 'Several possible records were found. To protect privacy, send more data: date of birth, city, or case ID.';
 
     case 'list': {
-      // Operator view: EVERY match, numbered, with status + case link. The route
-      // splits this across Telegram messages when it exceeds the length limit.
-      const header = es
-        ? `Se encontraron ${result.records.length} registros:`
-        : `Found ${result.records.length} records:`;
-      const items = result.records.map((r, i) => {
-        const v = toPublicView(r, opts.role, false, opts.baseUrl);
-        const age = v.age != null ? `, ${v.age}` : '';
-        return `${i + 1}. ${v.name || '—'}${age} — ${v.status} [${v.caseId}]\n   ${v.profileUrl}`;
-      });
-      const footer = es ? 'Usa /caso <ID> para el detalle completo.' : 'Use /caso <ID> for full detail.';
-      return [header, '', ...items, '', footer].join('\n');
+      // Operator view: EVERY match rendered as a full case block. The route
+      // splits this across multiple Telegram messages when it is long.
+      const n = result.records.length;
+      const header = es ? `Se encontraron ${n} registros:` : `Found ${n} records:`;
+      const blocks = result.records.map((r, i) => `${i + 1}) ${caseBlock(r, opts)}`);
+      return [header, '', blocks.join('\n\n')].join('\n');
     }
 
     case 'error':

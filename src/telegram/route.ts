@@ -53,13 +53,16 @@ export function chunkText(text: string, max = TG_MAX): string[] {
 }
 
 async function sendMessage(token: string, chatId: number | string, text: string): Promise<void> {
-  // Split long operator lists across multiple Telegram messages (4096-char cap).
-  for (const chunk of chunkText(text)) {
+  // Split long operator lists across multiple Telegram messages (4096-char cap),
+  // pacing them (~350ms) to stay under Telegram's ~1 msg/sec-per-chat flood limit.
+  const chunks = chunkText(text);
+  for (let i = 0; i < chunks.length; i++) {
     await fetch(`${TG_API}/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: chunk, disable_web_page_preview: true }),
+      body: JSON.stringify({ chat_id: chatId, text: chunks[i], disable_web_page_preview: true }),
     }).catch(() => {});
+    if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 350));
   }
 }
 
@@ -265,8 +268,10 @@ telegram.post('/webhook', async (c) => {
     return c.json({ ok: true });
   }
 
-  // 9. Reply.
+  // 9. Reply. A long operator list is paced across several messages; send it in
+  //    the background (waitUntil) so we ack Telegram immediately and it doesn't retry.
   const baseUrl = c.env.PUBLIC_BASE_URL || 'https://sismo911.com';
-  await sendMessage(token, chatId, buildTelegramResponse(result, { lang: cmd.lang, role, canSeeSensitive, baseUrl }));
+  const reply = sendMessage(token, chatId, buildTelegramResponse(result, { lang: cmd.lang, role, canSeeSensitive, baseUrl }));
+  c.executionCtx.waitUntil(reply);
   return c.json({ ok: true });
 });
