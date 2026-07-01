@@ -110,6 +110,21 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
         ? 'Se encontraron varios posibles registros. Para proteger la privacidad, envía más datos: fecha de nacimiento, ciudad o ID de caso.'
         : 'Several possible records were found. To protect privacy, send more data: date of birth, city, or case ID.';
 
+    case 'list': {
+      // Operator view: EVERY match, numbered, with status + case link. The route
+      // splits this across Telegram messages when it exceeds the length limit.
+      const header = es
+        ? `Se encontraron ${result.records.length} registros:`
+        : `Found ${result.records.length} records:`;
+      const items = result.records.map((r, i) => {
+        const v = toPublicView(r, opts.role, false, opts.baseUrl);
+        const age = v.age != null ? `, ${v.age}` : '';
+        return `${i + 1}. ${v.name || '—'}${age} — ${v.status} [${v.caseId}]\n   ${v.profileUrl}`;
+      });
+      const footer = es ? 'Usa /caso <ID> para el detalle completo.' : 'Use /caso <ID> for full detail.';
+      return [header, '', ...items, '', footer].join('\n');
+    }
+
     case 'error':
       return es
         ? 'No pude completar la consulta de forma segura. Inténtalo de nuevo o contacta a un operador.'

@@ -32,12 +32,35 @@ type BotEnv = Env & TelegramEnv;
 
 const TG_API = 'https://api.telegram.org';
 
+const TG_MAX = 3900; // Telegram hard limit is 4096; leave headroom.
+
+/** Split text into ≤TG_MAX chunks at line boundaries (never mid-line). A single
+ *  over-long line is hard-split as a last resort. */
+export function chunkText(text: string, max = TG_MAX): string[] {
+  if (text.length <= max) return [text];
+  const chunks: string[] = [];
+  let cur = '';
+  for (const line of text.split('\n')) {
+    const piece = line.length > max ? line.slice(0, max) : line;
+    if (cur && cur.length + piece.length + 1 > max) {
+      chunks.push(cur);
+      cur = '';
+    }
+    cur = cur ? `${cur}\n${piece}` : piece;
+  }
+  if (cur) chunks.push(cur);
+  return chunks;
+}
+
 async function sendMessage(token: string, chatId: number | string, text: string): Promise<void> {
-  await fetch(`${TG_API}/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
-  }).catch(() => {});
+  // Split long operator lists across multiple Telegram messages (4096-char cap).
+  for (const chunk of chunkText(text)) {
+    await fetch(`${TG_API}/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: chunk, disable_web_page_preview: true }),
+    }).catch(() => {});
+  }
 }
 
 export interface ResolveCtx {
@@ -104,12 +127,19 @@ export async function resolveQuery(env: Env, cmd: ParsedCommand, ctx: ResolveCtx
 }
 
 /** Shared post-processing: hide protected records from public, then choose
- *  no_match / multiple / single. */
+ *  no_match / list / single. Operators (admin/authorized) get the FULL list of
+ *  matches so an emergency search never dead-ends on "send more"; the public is
+ *  still asked to narrow, to avoid dumping many people's names into a group. */
 function finalize(records: CaseRecord[], ctx: ResolveCtx): QueryResult {
   const recs = ctx.canSeeSensitive ? records : records.filter((r) => !isHiddenFromPublic(r));
   if (recs.length === 0) return { kind: 'no_match' };
-  if (recs.length > 1) return { kind: 'multiple', count: recs.length };
-  return { kind: 'match', record: redactSensitiveFields(recs[0], ctx.canSeeSensitive) };
+  if (recs.length === 1) {
+    return { kind: 'match', record: redactSensitiveFields(recs[0], ctx.canSeeSensitive), detail: 'summary' };
+  }
+  if (ctx.role !== 'public') {
+    return { kind: 'list', records: recs.map((r) => redactSensitiveFields(r, ctx.canSeeSensitive)) };
+  }
+  return { kind: 'multiple', count: recs.length };
 }
 
 export const telegram = new Hono<{ Bindings: BotEnv }>();
@@ -164,19 +194,22 @@ telegram.post('/webhook', async (c) => {
   const role = viewerRoleFor(userId, cfg);
   const canSeeSensitive = canViewSensitiveData(userId, chatId, chatType, cfg);
 
-  // 4. Abuse / rate limiting (per hashed user).
-  const abuse = await checkAbuse(c.env, userHash);
-  if (abuse.scraping) {
-    await auditTelegram(c.env, { event: 'abuse_suspected', chatId, chatType, userHash });
-    // Alert every admin once (best-effort).
-    for (const adminId of cfg.adminUserIds) {
-      await sendMessage(token, adminId, `⚠️ SISMO911 bot: patrón de scraping detectado (usuario ${userHash}, chat ${chatId}).`);
+  // 4. Abuse / rate limiting (per hashed user). Operators (admin/authorized) are
+  //    trusted and NEVER throttled — emergency searches must not be blocked. The
+  //    burst/scraping limits only apply to ordinary group members.
+  if (role === 'public') {
+    const abuse = await checkAbuse(c.env, userHash);
+    if (abuse.scraping) {
+      await auditTelegram(c.env, { event: 'abuse_suspected', chatId, chatType, userHash });
+      for (const adminId of cfg.adminUserIds) {
+        await sendMessage(token, adminId, `⚠️ SISMO911 bot: patrón de scraping detectado (usuario ${userHash}, chat ${chatId}).`);
+      }
     }
-  }
-  if (abuse.throttled) {
-    await auditTelegram(c.env, { event: 'rate_limited', chatId, chatType, userHash });
-    await sendMessage(token, chatId, buildTelegramResponse({ kind: 'rate_limited', retryAfterSec: abuse.retryAfterSec }, { lang: 'es', role, canSeeSensitive }));
-    return c.json({ ok: true });
+    if (abuse.throttled) {
+      await auditTelegram(c.env, { event: 'rate_limited', chatId, chatType, userHash });
+      await sendMessage(token, chatId, buildTelegramResponse({ kind: 'rate_limited', retryAfterSec: abuse.retryAfterSec }, { lang: 'es', role, canSeeSensitive }));
+      return c.json({ ok: true });
+    }
   }
 
   // 5. Parse the command (deterministic first; AI only to fill gaps).
@@ -212,7 +245,11 @@ telegram.post('/webhook', async (c) => {
     command: cmd.kind,
     matchStrength: result.kind === 'match' ? result.record.matchStrength : null,
     resultKind: result.kind,
-    resultCount: result.kind === 'multiple' ? result.count : result.kind === 'match' ? 1 : 0,
+    resultCount:
+      result.kind === 'multiple' ? result.count
+      : result.kind === 'list' ? result.records.length
+      : result.kind === 'match' ? 1
+      : 0,
     queryHash: fp,
   });
 

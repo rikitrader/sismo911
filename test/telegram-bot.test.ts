@@ -1,6 +1,7 @@
 // Auth, command-parsing, and response-builder tests for the Telegram bot.
 import { describe, it, expect } from 'vitest';
 import { parseCommand, tokenize } from '../src/telegram/commands';
+import { chunkText } from '../src/telegram/route';
 import {
   verifyWebhook,
   isRequestAuthorized,
@@ -218,6 +219,15 @@ describe('buildTelegramResponse', () => {
     expect(out).not.toContain('Nombre');
     expect(out).not.toContain('Ubicación');
   });
+  it('operator list shows every record, numbered, with status + link', () => {
+    const many = Array.from({ length: 5 }, (_, i) => ({ ...rec, internalId: `hp_${i}`, caseId: `HOSP-hp_${i}`, fullName: `Persona ${i}` }));
+    const out = buildTelegramResponse({ kind: 'list', records: many }, base);
+    expect(out).toMatch(/Se encontraron 5 registros/);
+    expect(out).toContain('1. Persona 0, 50 — HOSPITALIZED [HOSP-hp_0]');
+    expect(out).toContain('5. Persona 4, 50 — HOSPITALIZED [HOSP-hp_4]');
+    expect(out).toContain('/casos#caso=HOSP-hp_4');
+    expect(out).not.toContain('12345678'); // no PII in the list
+  });
 
   it('admin match (DM) includes the restricted detail block', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, { lang: 'es', role: 'admin', canSeeSensitive: true });
@@ -237,5 +247,18 @@ describe('buildTelegramResponse', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, { lang: 'en', role: 'public', canSeeSensitive: false });
     expect(out).toMatch(/Verified record/);
     expect(out).toMatch(/Status: HOSPITALIZED/);
+  });
+});
+
+describe('chunkText splits long replies for Telegram', () => {
+  it('keeps short text as one chunk', () => {
+    expect(chunkText('hola', 100)).toEqual(['hola']);
+  });
+  it('splits at line boundaries under the max', () => {
+    const lines = Array.from({ length: 50 }, (_, i) => `line ${i} ${'x'.repeat(80)}`).join('\n');
+    const chunks = chunkText(lines, 500);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const c of chunks) expect(c.length).toBeLessThanOrEqual(500);
+    expect(chunks.join('\n')).toBe(lines);
   });
 });
