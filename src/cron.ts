@@ -21,6 +21,8 @@ import { bootstrapHistory } from './ingest/usgs-history';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
 import { broadcastSismos } from './telegram-sismos/broadcast';
+import { readTelegramConfig } from './telegram/env';
+import { syncBotCommands } from './telegram/botcommands';
 import { ingestSosDamage } from './ingest/sos-damage';
 import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
 import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from './lib/clean';
@@ -173,6 +175,11 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // (Workers can't decode JPEG); this cron only does the SQL GROUP/delete, which
     // is safe-guarded to small clusters (2..6) so shared placeholders never merge.
     { name: 'personas-dedupe-dhash', run: (env) => drain(() => dedupePersonas(env, { mode: 'dhash', apply: true, limit: 400 })) },
+    // Register/refresh the Telegram command menu (BotFather setMyCommands).
+    // KV-guarded by COMMANDS_VERSION: a single KV read in steady state, ~5
+    // Telegram fetches only on the first tick after a version bump. No-op until
+    // the case-status bot is configured.
+    { name: 'botcommands-sync', run: async (env) => { const cfg = readTelegramConfig(env); return cfg ? syncBotCommands(env, cfg) : { skipped: true }; } },
   ],
   // :05 — one-time historical-archive bootstrap. Self-disabling via a KV flag
   // (`history:bootstrapped`): on a fresh/empty D1 it runs the full USGS backfill
