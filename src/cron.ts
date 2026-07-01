@@ -20,6 +20,7 @@ import { ingestFunvisis } from './ingest/funvisis-cron';
 import { bootstrapHistory } from './ingest/usgs-history';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
+import { broadcastSismos } from './telegram-sismos/broadcast';
 import { ingestSosDamage } from './ingest/sos-damage';
 import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
 import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from './lib/clean';
@@ -199,6 +200,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // REST pages), so there's budget. Together :05+:30+:45 hash ~950/hr → the
     // one-time ~58k backlog drains in ~2.6 days (vs ~16 at the :45-only 150/tick).
     { name: 'personas-phash-backfill-05', run: (env) => backfillPhashes(env, 400) },
+    // Push new significant quakes to the live-seismic Telegram bot's subscribers.
+    // Runs 5 min after the :00 USGS/FUNVISIS ingest so alerts are fresh. No-op
+    // until the bot is configured; KV-deduped, independent of quake-announce.
+    { name: 'sismos-bot-broadcast', run: broadcastSismos },
   ],
 };
 
