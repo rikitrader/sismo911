@@ -62,6 +62,12 @@ describe('hospital registry → /casos union', () => {
     expect(summary.hospitalized).toBe(2);              // both hospitalizado rows counted in the KPI
   });
 
+  it('KPI cards count the unmatched hospital fallecido/alta rows (not just persons/personas)', async () => {
+    const { summary } = await ids('limit=500');
+    expect(summary.deceased).toBe(1);   // hp_u_f federates as a hosp- fallecido → must reach the KPI
+    expect(summary.found_safe).toBe(1); // hp_u_a federates as a hosp- alta → must reach the KPI
+  });
+
   it('hosp- detail resolves to the registry row with its hospital comment', async () => {
     const { json } = await call(app, 'GET', '/api/persons/hosp-hp_u_h/docket', env);
     expect(json.person.status).toBe('hospitalizado');
