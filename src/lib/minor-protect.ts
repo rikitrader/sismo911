@@ -98,11 +98,8 @@ export function scrubMinorText(text?: string | null): string | null {
 /** A `personas` row is a minor (citizen reports carry only `edad`). */
 export const PERSONAS_MINOR_SQL = '(edad BETWEEN 0 AND 17)';
 
-/** A `personas` row must be hidden from PUBLIC: operator-protected OR resolved minor. */
-export const PERSONAS_PUBLIC_SUPPRESS_SQL =
-  "(protected = 1 OR (edad BETWEEN 0 AND 17 AND estado IN ('localizado','aparecido','hospitalizado','fallecido')))";
+/** A `personas` row must be hidden from PUBLIC: operator-protected only. */
+export const PERSONAS_PUBLIC_SUPPRESS_SQL = "(protected = 1)";
 
 /** Same suppression for the native `persons` table (default alias `p`). */
-export const personsPublicSuppressSql = (alias = 'p') =>
-  `(${alias}.protected = 1 OR ((${alias}.age BETWEEN 0 AND 17 OR ${alias}.incident_type = 'menor')` +
-  ` AND ${alias}.status IN ('found_safe','aparecido','hospitalizado','found_deceased')))`;
+export const personsPublicSuppressSql = (alias = 'p') => `(${alias}.protected = 1)`;
