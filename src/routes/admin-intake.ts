@@ -19,6 +19,7 @@ import { requirePermission, currentUser } from '../rbac/middleware';
 import { audit } from '../lib/audit';
 import { uid } from '../lib/db';
 import { summarize } from '../telegram/intake/persist';
+import { createBulkJob, processBulkJob } from '../bulk/import-job';
 import type { ExtractedRecord } from '../telegram/intake/types';
 
 export const adminIntake = new Hono<{ Bindings: Env }>();
@@ -98,6 +99,73 @@ adminIntake.get('/', requirePermission('ops:console'), async (c) => {
     .bind(...binds)
     .all<Row>();
   return c.json({ submissions: (results ?? []).map(dto) });
+});
+
+// --- Bulk roster importer (padrón / expediente PDF → many draft cases) --------
+// Registered BEFORE '/:id' so 'bulk' is never captured as a submission id.
+
+const MAX_BULK_BYTES = 60 * 1024 * 1024; // console has no Telegram 20 MB cap; bound to a sane 60 MB.
+
+interface BulkJobDto {
+  id: string;
+  code: string;
+  source: string;
+  status: string;
+  file_name: string | null;
+  total_records: number | null;
+  created_records: number;
+  matched_records: number;
+  needs_review_records: number;
+  error_records: number;
+  note: string | null;
+  created_ms: number;
+  updated_ms: number;
+}
+
+/** POST /api/admin/intake/bulk — upload a roster PDF (no 20 MB cap). Processes in the background. */
+adminIntake.post('/bulk', requirePermission('ops:console'), async (c) => {
+  const form = await c.req.formData().catch(() => null);
+  const file = form?.get('file');
+  // Duck-typed: a Blob-like FormData entry (File isn't a typed global in Workers types).
+  if (!file || typeof file === 'string' || typeof (file as Blob).arrayBuffer !== 'function') {
+    return c.json({ error: 'no_file', hint: 'Envía un PDF en el campo "file".' }, 400);
+  }
+  const blob = file as Blob & { name?: string };
+  const mime = blob.type || 'application/pdf';
+  if (mime !== 'application/pdf') return c.json({ error: 'pdf_only', hint: 'Solo se aceptan archivos PDF.' }, 400);
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  if (!bytes.byteLength) return c.json({ error: 'empty_file' }, 400);
+  if (bytes.byteLength > MAX_BULK_BYTES) return c.json({ error: 'too_large', hint: 'Máximo 60 MB.' }, 413);
+
+  const who = currentUser(c)?.email ?? currentUser(c)?.id ?? 'operador';
+  const job = await createBulkJob(c.env, { source: 'console', mime, bytes, fileName: blob.name || 'padron.pdf', submittedBy: who });
+  c.executionCtx.waitUntil(processBulkJob(c.env, job.jobId).catch(() => {}));
+  await audit(c, 'intake.bulk.upload', { jobId: job.jobId, code: job.code, bytes: bytes.byteLength });
+  return c.json({ ok: true, jobId: job.jobId, code: job.code });
+});
+
+/** GET /api/admin/intake/bulk — recent roster jobs. */
+adminIntake.get('/bulk', requirePermission('ops:console'), async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, code, source, status, file_name, total_records, created_records, matched_records,
+            needs_review_records, error_records, note, created_ms, updated_ms
+       FROM bulk_import_jobs ORDER BY created_ms DESC LIMIT 50`,
+  ).all<BulkJobDto>();
+  return c.json({ jobs: results ?? [] });
+});
+
+/** GET /api/admin/intake/bulk/:id — one job's live status (by job id or IMP- code). */
+adminIntake.get('/bulk/:id', requirePermission('ops:console'), async (c) => {
+  const key = c.req.param('id');
+  const job = await c.env.DB.prepare(
+    `SELECT id, code, source, status, file_name, total_records, created_records, matched_records,
+            needs_review_records, error_records, note, created_ms, updated_ms
+       FROM bulk_import_jobs WHERE id = ? OR code = ? LIMIT 1`,
+  )
+    .bind(key, key.toUpperCase())
+    .first<BulkJobDto>();
+  if (!job) return c.json({ error: 'not_found' }, 404);
+  return c.json({ job });
 });
 
 /** GET /api/admin/intake/:id — single submission (with live lead status). */

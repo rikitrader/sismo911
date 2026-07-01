@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Importar padrón · SISMO911</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <style>
+    :root { --bg:#0d1117; --panel:#161b22; --line:#30363d; --ink:#e6edf3; --dim:#9198a1; --amber:#f0a020; --amber-ink:#1a1206; --ok:#3fb950; --bad:#f85149; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:'Public Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif; line-height:1.5; }
+    .wrap { max-width:760px; margin:0 auto; padding:28px 18px 64px; }
+    .eyebrow { font:600 12px/1 ui-monospace,'JetBrains Mono',monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--amber); }
+    h1 { font-size:26px; margin:8px 0 6px; font-weight:800; }
+    p.sub { color:var(--dim); margin:0 0 22px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; margin:14px 0; }
+    label.file { display:flex; flex-direction:column; gap:10px; }
+    input[type=file] { color:var(--dim); font-size:14px; }
+    input[type=file]::file-selector-button { background:#21262d; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:8px 14px; margin-right:12px; cursor:pointer; }
+    button { background:var(--amber); color:var(--amber-ink); border:0; border-radius:9px; padding:11px 20px; font-weight:800; font-size:15px; cursor:pointer; margin-top:16px; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .hint { font-size:13px; color:var(--dim); margin-top:12px; }
+    .status { font:500 14px/1.5 ui-monospace,'JetBrains Mono',monospace; }
+    .row { display:flex; gap:18px; flex-wrap:wrap; margin-top:10px; }
+    .stat { background:#0d1117; border:1px solid var(--line); border-radius:9px; padding:10px 14px; min-width:96px; }
+    .stat b { display:block; font-size:22px; }
+    .stat span { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.08em; }
+    a { color:var(--amber); }
+    .muted { color:var(--dim); }
+    table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+    th,td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); }
+    th { color:var(--dim); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; }
+    .pill.done { background:rgba(63,185,80,.15); color:var(--ok); }
+    .pill.processing,.pill.pending { background:rgba(240,160,32,.15); color:var(--amber); }
+    .pill.error { background:rgba(248,81,73,.15); color:var(--bad); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="eyebrow">SISMO911 · Operadores</div>
+    <h1>Importar padrón de nombres</h1>
+    <p class="sub">Sube un PDF con muchos nombres (un padrón o expediente de varias páginas). El sistema lee cada nombre y crea un <strong>expediente en BORRADOR</strong> por persona. Nada se publica: quedan en la cola de revisión de <a href="/console">la consola</a>.</p>
+
+    <div class="card">
+      <label class="file">
+        <span class="muted">Archivo PDF (máx. 60&nbsp;MB)</span>
+        <input id="file" type="file" accept="application/pdf" />
+      </label>
+      <button id="go" disabled>Subir y procesar</button>
+      <div class="hint">Telegram limita los archivos a 20&nbsp;MB — por eso los padrones grandes se suben aquí. Un PDF con texto real (no una foto escaneada) se lee mucho mejor.</div>
+    </div>
+
+    <div class="card" id="statusCard" hidden>
+      <div class="status" id="status">—</div>
+      <div class="row" id="stats" hidden>
+        <div class="stat"><b id="s_total">0</b><span>Nombres</span></div>
+        <div class="stat"><b id="s_created">0</b><span>Borradores</span></div>
+        <div class="stat"><b id="s_matched">0</b><span>Coincidencias</span></div>
+        <div class="stat"><b id="s_review">0</b><span>Revisión</span></div>
+      </div>
+      <div class="hint" id="doneLink" hidden>Revisa y aprueba los borradores en <a href="/console">la consola de operadores</a>.</div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Importaciones recientes</div>
+      <table id="jobs"><thead><tr><th>Código</th><th>Archivo</th><th>Estado</th><th>Nombres</th><th>Borradores</th></tr></thead><tbody id="jobsBody"><tr><td colspan="5" class="muted">Cargando…</td></tr></tbody></table>
+    </div>
+  </div>
+  <script src="/importar.js"></script>
+</body>
+</html>
