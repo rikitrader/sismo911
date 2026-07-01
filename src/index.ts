@@ -700,7 +700,14 @@ const serveConsole = async (c: any) => {
     denied.headers.set('Cache-Control', 'no-store');
     return new Response(denied.body, { status: 403, headers: denied.headers });
   }
-  return serveAsset(c, '/console/index.html');
+  // Fetch the canonical directory URL, NOT '/console/index.html': with
+  // html_handling = "auto-trailing-slash" the Assets layer 307-redirects any
+  // '*/index.html' request to its clean directory URL ('/console/index.html' →
+  // '/console/'). Since '/console/' is run_worker_first, that 307 re-enters
+  // serveConsole → an infinite /console/ ↔ /console/ redirect loop for every
+  // AUTHORIZED user (ERR_TOO_MANY_REDIRECTS). Fetching '/console/' serves the
+  // index asset directly (200) with no redirect.
+  return serveAsset(c, '/console/');
 };
 app.get('/console', serveConsole);
 app.get('/console/', serveConsole);

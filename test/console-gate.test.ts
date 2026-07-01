@@ -27,9 +27,20 @@ function setup() {
   sess.run('tok_cit', 'usr_cit', now + 86_400_000, now);
   sess.run('tok_adm', 'usr_adm', now + 86_400_000, now);
 
-  // ASSETS stub: serveConsole serves /sin-acceso or /console/index.html from here.
+  // ASSETS stub that mirrors Cloudflare's html_handling="auto-trailing-slash":
+  // a request for '*/index.html' is 307-redirected to its clean directory URL.
+  // This is what turned serveAsset('/console/index.html') into an infinite loop,
+  // so the stub must reproduce it or the regression can't be caught.
   const env: any = makeEnv(db);
-  env.ASSETS = { fetch: async (req: Request) => new Response(`asset:${new URL(req.url).pathname}`, { status: 200 }) };
+  env.ASSETS = {
+    fetch: async (req: Request) => {
+      const p = new URL(req.url).pathname;
+      if (p.endsWith('/index.html')) {
+        return new Response(null, { status: 307, headers: { location: p.replace(/index\.html$/, '') } });
+      }
+      return new Response(`asset:${p}`, { status: 200 });
+    },
+  };
   return { env };
 }
 
@@ -52,10 +63,14 @@ describe('/console shell gate', () => {
     expect(await res.text()).toContain('/sin-acceso');
   });
 
-  it('AUTHORIZED admin → 200 console shell', async () => {
+  it('AUTHORIZED admin → 200 console shell, NOT a 307 index.html→dir redirect (no loop)', async () => {
     const { env } = setup();
     const res = await app.request('https://sismo911.com/console/', cookie('tok_adm'), env);
+    // Must serve the index asset directly. If serveConsole fetched
+    // '/console/index.html', the auto-trailing-slash Assets layer would 307 it
+    // back to '/console/' and loop forever — so assert a real 200, no redirect.
     expect(res.status).toBe(200);
-    expect(await res.text()).toContain('/console/index.html');
+    expect(res.headers.get('location')).toBeNull();
+    expect(await res.text()).toBe('asset:/console/');
   });
 });
