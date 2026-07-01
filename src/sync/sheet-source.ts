@@ -40,8 +40,10 @@ function mapRow(row: string[]): Governed | null {
   const fallecido = /^Fallecido/i.test(est) || hospCell === 'Fallecido' ? 1 : 0;
   const hospitalizado = hospCell === 'Sí' ? 1 : 0;
   return {
-    estado: (located || fallecido) ? 'localizado' : 'sin-contacto',   // personas enum
-    status: fallecido ? 'found_deceased' : located ? 'found_alive' : 'missing', // persons enum
+    // personas.estado must be the string the site RENDERS (estadoToStatus in familia.ts):
+    // fallecido→found_deceased, hospitalizado→hospitalizado, localizado→found_safe, else missing.
+    estado: fallecido ? 'fallecido' : hospitalizado ? 'hospitalizado' : located ? 'localizado' : 'sin-contacto',
+    status: fallecido ? 'found_deceased' : (hospitalizado || located) ? 'found_alive' : 'missing', // persons enum
     hospitalizado, fallecido,
     hospital: hospitalizado || fallecido ? (row[10] || '').trim() : '', // K = Hospital
     nombre: (row[C.NOMBRE] || '').trim(),

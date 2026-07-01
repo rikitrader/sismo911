@@ -41,16 +41,18 @@ export function isResolved(opts: { status?: string | null; estado?: string | nul
 
 /**
  * Should this case be hidden from PUBLIC (anonymous) surfaces entirely?
- *  - any operator-flagged `protected` case → responder-only;
- *  - a minor whose case is resolved → auto-suppressed (the alert is no longer needed).
- * Operators (signed in) are never suppressed — they see every case.
+ *
+ * DISASTER-ZONE RULE (operator policy): in an active mass-casualty response ALL
+ * case data is public so families can locate their people — including resolved
+ * minors (hospitalized/deceased), because hiding a found child stops a searching
+ * family from ever learning what happened. The ONLY records hidden from the
+ * public are operator-flagged `protected` cases. Operators always see everything.
  */
 export function isPublicSuppressed(opts: {
   age?: number | null; incidentType?: string | null;
   status?: string | null; estado?: string | null; protected?: number | boolean | null;
 }): boolean {
-  if (opts.protected) return true;
-  return isMinor(opts.age, opts.incidentType) && isResolved(opts);
+  return !!opts.protected;
 }
 
 /**
@@ -98,11 +100,8 @@ export function scrubMinorText(text?: string | null): string | null {
 /** A `personas` row is a minor (citizen reports carry only `edad`). */
 export const PERSONAS_MINOR_SQL = '(edad BETWEEN 0 AND 17)';
 
-/** A `personas` row must be hidden from PUBLIC: operator-protected OR resolved minor. */
-export const PERSONAS_PUBLIC_SUPPRESS_SQL =
-  "(protected = 1 OR (edad BETWEEN 0 AND 17 AND estado IN ('localizado','aparecido','hospitalizado','fallecido')))";
+/** A `personas` row must be hidden from PUBLIC: operator-protected only. */
+export const PERSONAS_PUBLIC_SUPPRESS_SQL = "(protected = 1)";
 
 /** Same suppression for the native `persons` table (default alias `p`). */
-export const personsPublicSuppressSql = (alias = 'p') =>
-  `(${alias}.protected = 1 OR ((${alias}.age BETWEEN 0 AND 17 OR ${alias}.incident_type = 'menor')` +
-  ` AND ${alias}.status IN ('found_safe','aparecido','hospitalizado','found_deceased')))`;
+export const personsPublicSuppressSql = (alias = 'p') => `(${alias}.protected = 1)`;
