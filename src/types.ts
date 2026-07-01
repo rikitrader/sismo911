@@ -176,6 +176,14 @@ export interface Env {
   ADMIN_TELEGRAM_USER_IDS?: string;    // comma-separated admin user ids — [vars]
   ALLOWED_TELEGRAM_USER_IDS?: string;  // optional extra authorized (non-admin) user ids — [vars]
   TELEGRAM_AI_MODEL?: string;          // optional Workers-AI model override for intent parsing — [vars]
+
+  // --- Live-seismic Telegram bot (src/telegram-sismos/*) --------------------
+  // A SEPARATE, PUBLIC bot: latest quakes / recent list / threat status +
+  // opt-in auto-alerts on significant new quakes. No allow-list (public,
+  // non-PII data); gated only by its webhook secret. Both are Worker Secrets.
+  // Inert until both are set.
+  SISMOS_BOT_TOKEN?: string;      // BotFather token for the live-seismic bot
+  SISMOS_WEBHOOK_SECRET?: string; // echoed in X-Telegram-Bot-Api-Secret-Token
 }
 
 export interface SeismicEvent {

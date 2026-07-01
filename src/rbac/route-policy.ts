@@ -83,6 +83,9 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   // is non-secret status metadata. Both are public from the RBAC middleware's view
   // (the route does its own auth + per-user rate limiting), like /api/stripe/webhook.
   '/api/telegram',
+  // Live-seismic bot: fully PUBLIC (non-PII quake data). POST /webhook self-gates
+  // on the Telegram secret-token header; GET /health is status metadata.
+  '/api/sismos-bot',
   // SUMINISTROS citizen enrollment + requests. Citizen endpoints self-auth via
   // getUserFromRequest (scoped to the caller's user_id); /admin/* self-gate with
   // ops:console — like /api/support. Distinct from /api/suministros (the operator
