@@ -40,9 +40,9 @@ describe('minor-protect — public detail (/api/familia/person/:id)', () => {
     expect(r.json.description).toContain('Cabello negro'); // prose kept
     expect(r.json.description).not.toContain('#5');     // house number redacted
   });
-  it('resolved minor: suppressed (404) for the public', async () => {
+  it('DISASTER-ZONE RULE: resolved minor is PUBLIC (200) so families can locate found/deceased children', async () => {
     const r = await call(app, 'GET', '/api/familia/person/kid-found', env);
-    expect(r.status).toBe(404);
+    expect(r.status).toBe(200);
   });
   it('operator-protected case: suppressed (404) for the public', async () => {
     const r = await call(app, 'GET', '/api/familia/person/kid-protected', env);
@@ -58,15 +58,15 @@ describe('minor-protect — public detail (/api/familia/person/:id)', () => {
 });
 
 describe('minor-protect — public list (/api/familia/persons)', () => {
-  it('drops resolved minors and protected cases; keeps missing minor (coarsened) + adults', async () => {
+  it('DISASTER-ZONE RULE: keeps resolved minors + missing minor (coarsened) + adults; drops ONLY protected', async () => {
     const r = await call(app, 'GET', '/api/familia/persons', env);
     expect(r.status).toBe(200);
     const ids = r.json.persons.map((p: any) => p.id);
     expect(ids).toContain('kid-missing');
     expect(ids).toContain('adult-missing');
     expect(ids).toContain('adult-found');
-    expect(ids).not.toContain('kid-found');      // resolved minor suppressed
-    expect(ids).not.toContain('kid-protected');  // operator-protected suppressed
+    expect(ids).toContain('kid-found');          // resolved minor now PUBLIC (disaster rule)
+    expect(ids).not.toContain('kid-protected');  // operator-protected still suppressed
     const kid = r.json.persons.find((p: any) => p.id === 'kid-missing');
     expect(kid.last_seen).toBe('Caracas');
   });

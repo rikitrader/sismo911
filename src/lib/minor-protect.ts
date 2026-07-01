@@ -41,16 +41,18 @@ export function isResolved(opts: { status?: string | null; estado?: string | nul
 
 /**
  * Should this case be hidden from PUBLIC (anonymous) surfaces entirely?
- *  - any operator-flagged `protected` case → responder-only;
- *  - a minor whose case is resolved → auto-suppressed (the alert is no longer needed).
- * Operators (signed in) are never suppressed — they see every case.
+ *
+ * DISASTER-ZONE RULE (operator policy): in an active mass-casualty response ALL
+ * case data is public so families can locate their people — including resolved
+ * minors (hospitalized/deceased), because hiding a found child stops a searching
+ * family from ever learning what happened. The ONLY records hidden from the
+ * public are operator-flagged `protected` cases. Operators always see everything.
  */
 export function isPublicSuppressed(opts: {
   age?: number | null; incidentType?: string | null;
   status?: string | null; estado?: string | null; protected?: number | boolean | null;
 }): boolean {
-  if (opts.protected) return true;
-  return isMinor(opts.age, opts.incidentType) && isResolved(opts);
+  return !!opts.protected;
 }
 
 /**

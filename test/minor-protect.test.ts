@@ -55,10 +55,10 @@ describe('minor-protect: isPublicSuppressed', () => {
     expect(isPublicSuppressed({ age: 8, status: 'missing' })).toBe(false);
     expect(isPublicSuppressed({ age: 8, estado: 'sin-contacto' })).toBe(false);
   });
-  it('a RESOLVED minor is auto-suppressed', () => {
-    expect(isPublicSuppressed({ age: 8, status: 'found_safe' })).toBe(true);
-    expect(isPublicSuppressed({ age: 15, estado: 'localizado' })).toBe(true);
-    expect(isPublicSuppressed({ age: null, incidentType: 'menor', estado: 'fallecido' })).toBe(true);
+  it('DISASTER-ZONE RULE: a resolved minor stays PUBLIC (families must locate found/deceased children)', () => {
+    expect(isPublicSuppressed({ age: 8, status: 'found_safe' })).toBe(false);
+    expect(isPublicSuppressed({ age: 15, estado: 'localizado' })).toBe(false);
+    expect(isPublicSuppressed({ age: null, incidentType: 'menor', estado: 'fallecido' })).toBe(false);
   });
   it('a resolved ADULT is NOT suppressed (families still see the resolution)', () => {
     expect(isPublicSuppressed({ age: 40, status: 'found_safe' })).toBe(false);
@@ -128,15 +128,14 @@ describe('minor-protect: SQL fragments stay in lockstep with the predicates', ()
   it('PERSONAS_MINOR_SQL matches the age bound', () => {
     expect(PERSONAS_MINOR_SQL).toContain(`BETWEEN 0 AND ${MINOR_MAX_AGE}`);
   });
-  it('personas suppression covers protected + resolved-minor', () => {
+  it('DISASTER-ZONE RULE: personas suppression covers ONLY protected (all case data public)', () => {
     expect(PERSONAS_PUBLIC_SUPPRESS_SQL).toContain('protected = 1');
-    expect(PERSONAS_PUBLIC_SUPPRESS_SQL).toContain("estado IN ('localizado','aparecido','hospitalizado','fallecido')");
+    expect(PERSONAS_PUBLIC_SUPPRESS_SQL).not.toContain('estado IN');
   });
-  it('persons suppression qualifies by the requested alias', () => {
+  it('persons suppression qualifies ONLY by protected, by the requested alias', () => {
     const sql = personsPublicSuppressSql('p');
     expect(sql).toContain('p.protected = 1');
-    expect(sql).toContain("p.incident_type = 'menor'");
-    expect(sql).toContain("p.status IN ('found_safe','aparecido','hospitalizado','found_deceased')");
+    expect(sql).not.toContain('status IN');
     expect(personsPublicSuppressSql('persons')).toContain('persons.protected = 1');
   });
 });
