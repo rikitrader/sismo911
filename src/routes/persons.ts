@@ -9,6 +9,9 @@ import { scoreCase } from '../lib/case-score';
 import { recomputeCaseScore } from '../lib/case-score-sync';
 import { edgeCached } from '../lib/edge-cache';
 import { isMinor, isPublicSuppressed, coarsenLocation, scrubMinorText, PERSONAS_PUBLIC_SUPPRESS_SQL, personsPublicSuppressSql } from '../lib/minor-protect';
+import { normalizeText, likeTerm } from '../lib/search-normalize';
+import { canonicalEstado, ESTADO_OPTIONS } from '../lib/ve-geo';
+import { backfillSearchFields, reindexRemaining, computeSearchFields } from '../lib/search-index';
 
 export const persons = new Hono<{ Bindings: Env }>();
 
@@ -80,7 +83,9 @@ function hospRegistryCase(r: any, op: boolean): any {
   const estLabel = r.estado === 'fallecido' ? 'fallecido' : r.estado === 'alta' ? 'dado de alta' : 'hospitalizado';
   const base: any = {
     id: HOSP + r.id, case_number: hospCaseNo(r.id), full_name: r.full_name || 'Hospitalizado',
-    age: r.edad || null, sex: null, last_seen: r.hospital || null,
+    // hospital `edad` is free-text ("34 años", "30-40", "") — parse to a number
+    // so the UI shows "34 años", not "NaN años" (age_num backs the age filter).
+    age: (parseInt(String(r.edad ?? ''), 10) || null), sex: null, last_seen: r.hospital || null,
     status: r.estado === 'fallecido' ? 'found_deceased' : (r.estado === 'alta' ? 'found_safe' : 'hospitalizado'),
     incident_type: 'hospitalizado', review: 'approved', photo_url: null,
     hospital_name: r.hospital || null, hospital_match: r.hospital || 'Registro hospitalario',
@@ -250,9 +255,58 @@ persons.get('/cases', async (c) => {
   const offset = (page - 1) * pageSize;
   const l = `%${q}%`;
 
+  // ---------- extended filters (accent-insensitive name, cédula, age, sex,
+  // estado/municipio, place, dates, photo, verified, source, linked) ----------
+  const name = (c.req.query('name') ?? '').trim();
+  const cedula = op ? (c.req.query('cedula') ?? '').trim() : '';       // PII → operators only
+  const sexQ = (c.req.query('sex') ?? '').trim().toUpperCase();        // M | F (persons only)
+  const isSexFilter = sexQ === 'M' || sexQ === 'F';
+  const estadoQ = canonicalEstado(c.req.query('estado'));              // '' when not a real estado
+  const muniQ = (c.req.query('municipio') ?? '').trim();
+  const place = (c.req.query('place') ?? '').trim();                   // hospital/refugio/morgue/última ubicación
+  const photo = (c.req.query('photo') ?? '').trim().toLowerCase();     // 'true' | 'false'
+  const verified = op ? (c.req.query('verified') ?? '').trim().toLowerCase() : ''; // op-only (public is always approved)
+  const sourceQ = (c.req.query('source') ?? '').trim();
+  const srcNorm = normalizeText(sourceQ);
+  const linked = (c.req.query('linked') ?? '').trim().toLowerCase();   // 'true' (has contact) | 'false'
+  const createdFrom = Math.max(0, Number(c.req.query('created_from') || 0) || 0);
+  const createdTo = Math.max(0, Number(c.req.query('created_to') || 0) || 0);
+  const updatedFrom = Math.max(0, Number(c.req.query('updated_from') || 0) || 0);
+  const updatedTo = Math.max(0, Number(c.req.query('updated_to') || 0) || 0);
+  const clampAge = (v: any) => { const n = Number(v); return Number.isFinite(n) && n >= 0 && n <= 130 ? Math.floor(n) : null; };
+  const ageExact = clampAge(c.req.query('age'));
+  const aMin = ageExact != null ? ageExact : clampAge(c.req.query('age_min'));
+  const aMax = ageExact != null ? ageExact : clampAge(c.req.query('age_max'));
+  const nameLikeRaw = name ? `%${name}%` : '';
+  const nameLikeNorm = likeTerm(name);
+  const estadoLike = estadoQ ? `%${estadoQ}%` : '';                    // raw-location LIKE fallback for un-backfilled rows
+  const muniLikeNorm = muniQ ? `%${normalizeText(muniQ)}%` : '';
+  const muniLikeRaw = muniQ ? `%${muniQ}%` : '';
+  const placeLike = place ? `%${place}%` : '';
+
   // ---------- filters: native `persons` table ----------
   const pWhere: string[] = []; const pBind: unknown[] = [];
-  if (q) { pWhere.push('(p.full_name LIKE ? OR p.last_seen LIKE ? OR p.case_number LIKE ?' + (op ? ' OR p.contact_phone LIKE ?' : '') + ')'); pBind.push(l, l, l); if (op) pBind.push(l); }
+  if (q) { pWhere.push('(p.name_norm LIKE ? OR p.full_name LIKE ? OR p.last_seen LIKE ? OR p.case_number LIKE ?' + (op ? ' OR p.contact_phone LIKE ?' : '') + ')'); pBind.push(likeTerm(q) || l, l, l, l); if (op) pBind.push(l); }
+  if (name) { pWhere.push('(p.name_norm LIKE ? OR p.full_name LIKE ?)'); pBind.push(nameLikeNorm || nameLikeRaw, nameLikeRaw); }
+  if (cedula) { pWhere.push('p.id IN (SELECT person_id FROM case_identity WHERE cedula LIKE ?)'); pBind.push(`%${cedula}%`); }
+  if (isSexFilter) { pWhere.push('UPPER(p.sex) = ?'); pBind.push(sexQ); }
+  if (aMin != null) { pWhere.push('p.age >= ?'); pBind.push(aMin); }
+  if (aMax != null) { pWhere.push('p.age <= ?'); pBind.push(aMax); }
+  if (estadoQ) { pWhere.push('(p.geo_estado = ? OR p.last_seen LIKE ?)'); pBind.push(estadoQ, estadoLike); }
+  if (muniQ) { pWhere.push('(p.geo_municipio LIKE ? OR p.last_seen LIKE ?)'); pBind.push(muniLikeNorm, muniLikeRaw); }
+  if (place) { pWhere.push('p.last_seen LIKE ?'); pBind.push(placeLike); }
+  if (createdFrom > 0) { pWhere.push('p.created_ms >= ?'); pBind.push(createdFrom); }
+  if (createdTo > 0) { pWhere.push('p.created_ms <= ?'); pBind.push(createdTo); }
+  if (updatedFrom > 0) { pWhere.push('p.updated_ms >= ?'); pBind.push(updatedFrom); }
+  if (updatedTo > 0) { pWhere.push('p.updated_ms <= ?'); pBind.push(updatedTo); }
+  if (photo === 'true') pWhere.push("((p.photo_url IS NOT NULL AND p.photo_url <> '') OR EXISTS (SELECT 1 FROM case_attachments a WHERE a.person_id = p.id AND a.kind = 'photo'))");
+  else if (photo === 'false') pWhere.push("((p.photo_url IS NULL OR p.photo_url = '') AND NOT EXISTS (SELECT 1 FROM case_attachments a WHERE a.person_id = p.id AND a.kind = 'photo'))");
+  if (verified === 'true') pWhere.push("p.review = 'approved'");
+  else if (verified === 'false') pWhere.push("p.review <> 'approved'");
+  if (linked === 'true') pWhere.push("(p.contact_phone IS NOT NULL AND p.contact_phone <> '')");
+  else if (linked === 'false') pWhere.push("(p.contact_phone IS NULL OR p.contact_phone = '')");
+  // persons rows have a synthetic source of 'operator' — a non-operator source filter drops them.
+  if (sourceQ) pWhere.push((srcNorm === 'operator' || srcNorm === 'registro' || srcNorm === 'expediente') ? '1=1' : '1=0');
   // A case carries a registry status (hospitalizado / alta→found_safe / fallecido→
   // found_deceased) when flagged on the case itself OR cross-linked to a registry
   // patient of that estado (name-only matches stay status='missing' by design, so
@@ -272,14 +326,33 @@ persons.get('/cases', async (c) => {
   // Familia priority lives in case_meta (not personas), so a priority filter can't
   // be expressed in SQL here — drop Familia rows when one is active so the paged
   // total stays consistent with what the operator filtered for.
-  const includeFam = !(priority && ['alta', 'media', 'baja'].includes(priority));
+  // personas carry no `sex` column, so a sex filter excludes them (like priority).
+  const includeFam = !(priority && ['alta', 'media', 'baja'].includes(priority)) && !isSexFilter;
   const fWhere: string[] = []; const fBind: unknown[] = [];
   // Public docket shows only APPROVED personas — mirrors p.review='approved' for
   // native cases. Without this, the cleaner's moderation='rejected' demotions had
   // NO effect on /casos: junk / spam / duplicate personas stayed visible no matter
   // what the cleaner did. Operators still see every row (no filter).
   if (!op) { fWhere.push("moderation = 'approved'"); fWhere.push(`NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`); }
-  if (q) { fWhere.push('(nombre LIKE ? OR ubicacion LIKE ?' + (op ? ' OR contacto LIKE ?' : '') + ')'); fBind.push(l, l); if (op) fBind.push(l); }
+  if (q) { fWhere.push('(name_norm LIKE ? OR nombre LIKE ? OR ubicacion LIKE ?' + (op ? ' OR contacto LIKE ?' : '') + ')'); fBind.push(likeTerm(q) || l, l, l); if (op) fBind.push(l); }
+  if (name) { fWhere.push('(name_norm LIKE ? OR nombre LIKE ?)'); fBind.push(nameLikeNorm || nameLikeRaw, nameLikeRaw); }
+  if (cedula) { fWhere.push("('fam-'||id) IN (SELECT person_id FROM case_identity WHERE cedula LIKE ?)"); fBind.push(`%${cedula}%`); }
+  if (aMin != null) { fWhere.push('edad >= ?'); fBind.push(aMin); }
+  if (aMax != null) { fWhere.push('edad <= ?'); fBind.push(aMax); }
+  if (estadoQ) { fWhere.push('(geo_estado = ? OR ubicacion LIKE ?)'); fBind.push(estadoQ, estadoLike); }
+  if (muniQ) { fWhere.push('(geo_municipio LIKE ? OR ubicacion LIKE ?)'); fBind.push(muniLikeNorm, muniLikeRaw); }
+  if (place) { fWhere.push('ubicacion LIKE ?'); fBind.push(placeLike); }
+  if (createdFrom > 0) { fWhere.push('created_at >= ?'); fBind.push(createdFrom); }
+  if (createdTo > 0) { fWhere.push('created_at <= ?'); fBind.push(createdTo); }
+  if (updatedFrom > 0) { fWhere.push('updated_at >= ?'); fBind.push(updatedFrom); }
+  if (updatedTo > 0) { fWhere.push('updated_at <= ?'); fBind.push(updatedTo); }
+  if (photo === 'true') fWhere.push("((foto_r2 IS NOT NULL AND foto_r2 <> '') OR (foto IS NOT NULL AND foto <> ''))");
+  else if (photo === 'false') fWhere.push("((foto_r2 IS NULL OR foto_r2 = '') AND (foto IS NULL OR foto = ''))");
+  if (verified === 'true') fWhere.push("moderation = 'approved'");
+  else if (verified === 'false') fWhere.push("moderation <> 'approved'");
+  if (linked === 'true') fWhere.push("(contacto IS NOT NULL AND contacto <> '')");
+  else if (linked === 'false') fWhere.push("(contacto IS NULL OR contacto = '')");
+  if (sourceQ) { if (srcNorm === 'familia') fWhere.push("(origen IS NULL OR origen = '')"); else { fWhere.push('origen LIKE ?'); fBind.push(`%${sourceQ}%`); } }
   if (status === 'found_safe') fWhere.push("(estado = 'localizado' OR id IN (SELECT matched_persona_id FROM hospital_patients WHERE matched_persona_id IS NOT NULL AND estado='alta'))");
   else if (status === 'aparecido') fWhere.push("estado = 'aparecido'");
   else if (status === 'hospitalizado') fWhere.push("(estado = 'hospitalizado' OR id IN (SELECT matched_persona_id FROM hospital_patients WHERE matched_persona_id IS NOT NULL AND estado='hospitalizado'))");
@@ -299,7 +372,10 @@ persons.get('/cases', async (c) => {
   // filters (the three real registry statuses; desconocido stays out — no actionable
   // status — and is reachable via /hospital/search). A priority/review/other-status
   // filter excludes the registry (registry rows have no priority/review state).
-  const hospStatuses = (includeFam && !review) ? (
+  // Registry rows carry no photo, no moderation state, and are unmatched by
+  // construction — so photo=true / verified / linked=true filters exclude them.
+  const hospBlocked = photo === 'true' || !!verified || linked === 'true';
+  const hospStatuses = (includeFam && !review && !hospBlocked) ? (
     status === '' ? ['hospitalizado', 'alta', 'fallecido']
     : status === 'hospitalizado' ? ['hospitalizado']
     : status === 'found_safe' ? ['alta']
@@ -308,8 +384,20 @@ persons.get('/cases', async (c) => {
   const includeHosp = hospStatuses.length > 0;
   const hWhere: string[] = [`estado IN (${hospStatuses.map(() => '?').join(',') || "''"})`, 'matched_person_id IS NULL', 'matched_persona_id IS NULL'];
   const hBind: unknown[] = [...hospStatuses];
-  if (q) { hWhere.push('(full_name LIKE ?' + (op ? ' OR cedula LIKE ?' : '') + ')'); hBind.push(l); if (op) hBind.push(l); }
+  if (q) { hWhere.push('(norm_name LIKE ? OR full_name LIKE ?' + (op ? ' OR cedula LIKE ?' : '') + ')'); hBind.push(likeTerm(q) || l, l); if (op) hBind.push(l); }
+  if (name) { hWhere.push('(norm_name LIKE ? OR full_name LIKE ?)'); hBind.push(nameLikeNorm || nameLikeRaw, nameLikeRaw); }
+  if (cedula) { hWhere.push('cedula LIKE ?'); hBind.push(`%${cedula}%`); }
+  if (aMin != null) { hWhere.push('age_num >= ?'); hBind.push(aMin); }   // free-text edad parsed to age_num
+  if (aMax != null) { hWhere.push('age_num <= ?'); hBind.push(aMax); }
+  if (estadoQ) { hWhere.push('(geo_estado = ? OR direccion LIKE ? OR hospital LIKE ?)'); hBind.push(estadoQ, estadoLike, estadoLike); }
+  if (muniQ) { hWhere.push('(geo_municipio LIKE ? OR direccion LIKE ?)'); hBind.push(muniLikeNorm, muniLikeRaw); }
+  if (place) { hWhere.push('(hospital LIKE ? OR direccion LIKE ?)'); hBind.push(placeLike, placeLike); }
   if (since > 0) { hWhere.push('created_ms >= ?'); hBind.push(since); }
+  if (createdFrom > 0) { hWhere.push('created_ms >= ?'); hBind.push(createdFrom); }
+  if (createdTo > 0) { hWhere.push('created_ms <= ?'); hBind.push(createdTo); }
+  if (updatedFrom > 0) { hWhere.push('updated_ms >= ?'); hBind.push(updatedFrom); }
+  if (updatedTo > 0) { hWhere.push('updated_ms <= ?'); hBind.push(updatedTo); }
+  if (sourceQ) { hWhere.push('source LIKE ?'); hBind.push(`%${sourceQ}%`); }
   const hW = 'WHERE ' + hWhere.join(' AND ');
 
   // /casos is the REAL expediente docket: native `persons` + federated Familia
@@ -511,8 +599,42 @@ persons.get('/cases', async (c) => {
     pending: sum?.pending || 0,
     total: (sum?.total || 0) + (fsum?.total || 0) + hospUnmatched,
   };
+  // ---------- filter metadata (drives the frontend controls + echoes applied) ----------
+  let sourceOptions: string[] = ['operator', 'familia', 'registro-maestro'];
+  try {
+    const { results } = await c.env.DB.prepare(
+      "SELECT DISTINCT origen AS s FROM personas WHERE origen IS NOT NULL AND origen <> '' ORDER BY origen LIMIT 40"
+    ).all<any>();
+    sourceOptions = [...sourceOptions, ...(results ?? []).map((r) => String(r.s))].filter((v, i, a) => a.indexOf(v) === i);
+  } catch { /* metadata is best-effort */ }
+  const filters = {
+    estados: ESTADO_OPTIONS,                         // [{slug,label}] for the <select>
+    statuses: ['missing', 'found_safe', 'aparecido', 'hospitalizado', 'found_deceased', 'unknown'],
+    sources: sourceOptions,
+    applied: {
+      q, name, status, priority, review,
+      sex: isSexFilter ? sexQ : '', cedula: cedula ? '***' : '',
+      estado: estadoQ, municipio: muniQ, place,
+      age_min: aMin, age_max: aMax,
+      photo, verified, source: sourceQ, linked,
+      created_from: createdFrom, created_to: createdTo, updated_from: updatedFrom, updated_to: updatedTo,
+      sort,
+    },
+  };
   c.header('Cache-Control', 'no-store'); c.header('Vary', 'Cookie');
-  return c.json({ cases, summary, operator: op, page, pageSize, total, pages });
+  return c.json({ cases, summary, operator: op, page, pageSize, total, pages, filters });
+});
+
+// POST /api/persons/reindex-search — backfill the structured search columns
+// (name_norm / geo_estado / geo_municipio / age_num) for un-indexed rows.
+// Operator-only. Idempotent + resumable: call repeatedly until {done:true};
+// the hourly cron also drains it. Body/query `batch` bounds the batch size.
+persons.post('/reindex-search', async (c) => {
+  if (!(await isOperator(c))) return c.json({ error: 'forbidden' }, 403);
+  const batch = Math.min(1000, Math.max(1, Number(c.req.query('batch') || 400) || 400));
+  const processed = await backfillSearchFields(c.env, batch);
+  const remaining = await reindexRemaining(c.env);
+  return c.json({ done: remaining === 0, processed, remaining });
 });
 
 // GET /api/persons/docket/queue — pending citizen-submitted updates awaiting
@@ -1126,14 +1248,18 @@ persons.post('/', async (c) => {
   if ((lat != null || lon != null) && !validLatLon(lat, lon)) return c.json({ error: 'bad_lat_lon' }, 400);
   const now = Date.now();
   const id = uid('per');
+  // Structured search fields — so a fresh citizen report is instantly filterable
+  // by name (accent-insensitive) + estado/municipio (the cron self-heals the rest).
+  const sf = computeSearchFields(b.full_name, b.last_seen);
   await c.env.DB.prepare(
-    `INSERT INTO persons (id, full_name, age, sex, last_seen, last_seen_lat, last_seen_lon, event_id, status, contact_phone, notes, photo_url, reported_by, review, created_ms, updated_ms)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO persons (id, full_name, age, sex, last_seen, last_seen_lat, last_seen_lon, event_id, status, contact_phone, notes, photo_url, reported_by, review, name_norm, geo_estado, geo_municipio, created_ms, updated_ms)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id, String(b.full_name).slice(0, 120), b.age ?? null, b.sex ?? null, b.last_seen ? String(b.last_seen).slice(0, 500) : null,
     blurCoord(lat, 2), blurCoord(lon, 2), b.event_id ?? null,
     b.status ?? 'missing', b.contact_phone ? String(b.contact_phone).slice(0, 40) : null, b.notes ? String(b.notes).slice(0, 2000) : null,
-    b.photo_url ? String(b.photo_url).slice(0, 500) : null, b.reported_by ? String(b.reported_by).slice(0, 120) : null, 'pending', now, now
+    b.photo_url ? String(b.photo_url).slice(0, 500) : null, b.reported_by ? String(b.reported_by).slice(0, 120) : null, 'pending',
+    sf.name_norm, sf.geo_estado, sf.geo_municipio, now, now
   ).run();
   await logDocket(c, id, 'report_filed', {
     status_to: b.status ?? 'missing',

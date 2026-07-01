@@ -58,11 +58,28 @@
   .fld.search .ic{position:absolute;left:12px;top:33px;color:var(--muted);font-size:15px;pointer-events:none}
   .dates{display:flex;gap:8px}
   .dates input{flex:1;min-width:0}
-  .filtfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .filtfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;flex-wrap:wrap}
   .reslabel{font:700 13px Inter;color:var(--navy)}
   .reslabel b{font-weight:800}
   .clearbtn{min-height:44px;font:700 12.5px Inter;color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:7px 14px;background:#fff}
   .clearbtn:hover{border-color:var(--navy);color:var(--navy)}
+  .ages{display:flex;gap:8px}
+  .ages input{flex:1;min-width:0}
+  /* status chips (single-select) */
+  .chiprow{margin-top:12px}
+  .chiprow>span.cl{display:block;font:800 10px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{font:700 12px Inter;color:var(--muted);background:#f4f6fb;border:1px solid var(--line);border-radius:999px;padding:8px 13px;cursor:pointer;transition:.12s;min-height:36px;display:inline-flex;align-items:center;gap:6px}
+  .chip:hover{border-color:#c3cee2;color:var(--navy)}
+  .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  /* segmented toggle (photo / vínculo / verificado) */
+  .seg{display:flex;background:#f4f6fb;border:1px solid var(--line);border-radius:10px;overflow:hidden;min-height:44px}
+  .seg button{flex:1;padding:8px 10px;font:700 12px Inter;color:var(--muted);background:transparent;border:none;cursor:pointer;white-space:nowrap}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button.on{background:var(--navy);color:#fff}
+  /* error state */
+  .wallerr{grid-column:1/-1;text-align:center;padding:34px 16px;color:var(--muted);font:500 14px Inter}
+  .wallerr button{margin-top:12px;min-height:42px;font:700 13px Inter;color:#fff;background:var(--red);border:none;border-radius:9px;padding:9px 18px;cursor:pointer}
 
   /* ---- vCard wall ---- */
   .wall{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
@@ -159,27 +176,79 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
       <div class="fld search">
         <label for="fq">Buscar</label>
         <span class="ic">🔎</span>
-        <input id="fq" type="search" autocomplete="off" placeholder="Nombre, lugar o referencia…">
+        <input id="fq" type="search" autocomplete="off" placeholder="Nombre, lugar o № de caso…">
       </div>
       <div class="fld">
         <label for="fedo">Estado</label>
         <select id="fedo"><option value="">Todos los estados</option></select>
       </div>
       <div class="fld">
-        <label for="flugar">Ciudad / Edificio</label>
+        <label for="flugar">Ciudad / Municipio / Edificio</label>
         <input id="flugar" autocomplete="off" placeholder="Ej: Catia La Mar, Edif. Belo Horizonte">
       </div>
       <div class="fld">
-        <label>Fecha de registro (desde / hasta)</label>
-        <div class="dates"><input id="fdesde" type="date" aria-label="Desde"><input id="fhasta" type="date" aria-label="Hasta"></div>
+        <label for="fsex">Sexo</label>
+        <select id="fsex"><option value="">Todos</option><option value="M">Masculino</option><option value="F">Femenino</option></select>
       </div>
       <div class="fld">
-        <label for="fstatus">Estado del caso</label>
-        <select id="fstatus"><option value="">Todos</option><option value="missing">Buscadas</option><option value="found_safe">Reencontradas</option><option value="aparecido">Aparecieron</option><option value="hospitalizado">Hospitalizadas</option><option value="found_deceased">Fallecidas</option></select>
+        <label>Edad (mín / máx)</label>
+        <div class="ages"><input id="fagemin" type="number" min="0" max="130" inputmode="numeric" placeholder="mín" aria-label="Edad mínima"><input id="fagemax" type="number" min="0" max="130" inputmode="numeric" placeholder="máx" aria-label="Edad máxima"></div>
+      </div>
+      <div class="fld">
+        <label for="fsource">Fuente</label>
+        <select id="fsource"><option value="">Todas las fuentes</option></select>
+      </div>
+      <div class="fld">
+        <label>Foto</label>
+        <div class="seg" id="fphoto" role="group" aria-label="Filtrar por foto">
+          <button type="button" data-v="true" class="on">Con foto</button>
+          <button type="button" data-v="false">Sin foto</button>
+          <button type="button" data-v="">Todas</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label>Vínculo familiar</label>
+        <div class="seg" id="flinked" role="group" aria-label="Filtrar por vínculo de contacto">
+          <button type="button" data-v="" class="on">Todos</button>
+          <button type="button" data-v="true">Con contacto</button>
+          <button type="button" data-v="false">Sin contacto</button>
+        </div>
+      </div>
+      <div class="fld" id="fldVerif" style="display:none">
+        <label>Verificado <span style="color:var(--red)">· operador</span></label>
+        <div class="seg" id="fverified" role="group" aria-label="Filtrar por verificación">
+          <button type="button" data-v="" class="on">Todos</button>
+          <button type="button" data-v="true">Verificados</button>
+          <button type="button" data-v="false">Sin verificar</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label for="fsort">Ordenar</label>
+        <select id="fsort"><option value="recent">Recientes</option><option value="opened">Fecha de apertura</option><option value="name">Nombre (A–Z)</option></select>
+      </div>
+      <div class="fld">
+        <label>Fecha de registro (desde / hasta)</label>
+        <div class="dates"><input id="fdesde" type="date" aria-label="Registro desde"><input id="fhasta" type="date" aria-label="Registro hasta"></div>
+      </div>
+      <div class="fld">
+        <label>Fecha de actualización (desde / hasta)</label>
+        <div class="dates"><input id="fudesde" type="date" aria-label="Actualización desde"><input id="fuhasta" type="date" aria-label="Actualización hasta"></div>
+      </div>
+    </div>
+    <div class="chiprow">
+      <span class="cl">Estado del caso</span>
+      <div class="chips" id="fstatus" role="group" aria-label="Filtrar por estado del caso">
+        <button type="button" class="chip on" data-v="">Todas</button>
+        <button type="button" class="chip" data-v="missing">Desaparecida</button>
+        <button type="button" class="chip" data-v="found_safe">Localizada</button>
+        <button type="button" class="chip" data-v="aparecido">Apareció</button>
+        <button type="button" class="chip" data-v="hospitalizado">Hospitalizada</button>
+        <button type="button" class="chip" data-v="found_deceased">Fallecida</button>
+        <button type="button" class="chip" data-v="unknown">Sin identificar</button>
       </div>
     </div>
     <div class="filtfoot">
-      <div class="reslabel"><b id="wallCount">—</b> resultado(s)</div>
+      <span id="wallCount" class="reslabel">—</span>
       <button id="clearFilters" class="clearbtn" type="button">✕ Limpiar filtros</button>
     </div>
   </section>
@@ -189,19 +258,6 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
     <div id="wall" class="wall"></div>
     <div id="wallMore" class="flex justify-center mt-6"></div>
   </section>
-
-  <!-- ===== Secondary: full registry incl. sin foto ===== -->
-  <details class="panel p-4">
-    <summary class="font-display font-bold text-primary cursor-pointer">Ver todos los casos (incluye registros sin foto)</summary>
-    <div class="flex flex-wrap gap-2 my-3">
-      <input id="allq" placeholder="Buscar nombre o lugar…" class="flex-1 min-w-[180px] border border-outline-variant rounded-lg px-3 py-2 text-sm">
-      <select id="allstatus" class="border border-outline-variant rounded-lg px-3 py-2 text-sm" style="width:auto">
-        <option value="">Todos</option><option value="missing">Buscadas</option><option value="found_safe">A salvo</option><option value="aparecido">Apareció</option><option value="hospitalizado">Hospitalizada</option><option value="found_deceased">Fallecida</option>
-      </select>
-    </div>
-    <div id="allList" class="divide-y divide-outline-variant/40"></div>
-    <div id="allMore" class="flex justify-center mt-4"></div>
-  </details>
 
   <!-- ===== Report ===== -->
   <details class="panel p-4">
@@ -247,20 +303,24 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch
 })();
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=id=>document.getElementById(id);
-const ST={missing:['Buscada','#c8102e'],found_safe:['A salvo','#1f8a4c'],aparecido:['Apareció','#1f8a4c'],hospitalizado:['Hospitalizada','#1d4ed8'],found_deceased:['Fallecida','#5a5f6a'],unknown:['Sin datos','#7a8096']};
-// Direct link to a person's case page (expediente).
-const caseUrl=p=>'/casos#caso='+encodeURIComponent(p.kind==='case'?p.id:'fam-'+p.id);
-const fmtFecha=p=>{ if(p.fecha)return String(p.fecha); if(p.updated_at){const d=new Date(Number(p.updated_at));if(!isNaN(d))return d.toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'});} return ''; };
-
-// Venezuelan states for the estado filter (matched as substring against freeform location).
-const EDOS=['Amazonas','Anzoátegui','Apure','Aragua','Barinas','Bolívar','Carabobo','Cojedes','Delta Amacuro','Distrito Capital','Falcón','Guárico','La Guaira','Lara','Mérida','Miranda','Monagas','Nueva Esparta','Portuguesa','Sucre','Táchira','Trujillo','Yaracuy','Zulia'];
-$('fedo').insertAdjacentHTML('beforeend',EDOS.map(e=>`<option value="${e}">${e}</option>`).join(''));
+// Canonical status → Spanish label + badge colour (matches /casos).
+const ST={missing:['Desaparecida','#c8102e'],found_safe:['Localizada','#1f8a4c'],aparecido:['Apareció','#1f8a4c'],hospitalizado:['Hospitalizada','#1d4ed8'],found_deceased:['Fallecida','#5a5f6a'],unknown:['Sin identificar','#7a8096']};
+// Direct link to a person's case page (expediente). The unified /api/persons/cases
+// endpoint already returns the full case id (fam-…, hosp-… or a native expediente id).
+const caseUrl=c=>'/casos#caso='+encodeURIComponent(c.id);
+const fmtFecha=c=>{ const ms=c.updated_ms||c.created_ms; if(!ms)return ''; const d=new Date(Number(ms)); return isNaN(d)?'':d.toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'numeric'}); };
+// Human labels for the Fuente <select> (raw origen strings fall through as-is).
+const SRC_LBL={operator:'Operador (expediente)',familia:'Familia',theempire:'The Empire','registro-maestro':'Registro Maestro',hospital:'Registro hospitalario'};
+const srcLabel=s=>SRC_LBL[s]||String(s).replace(/[-_]/g,' ').replace(/^\w/,m=>m.toUpperCase());
+// yyyy-mm-dd date input → epoch ms (end=true pushes to end-of-day for `_to` bounds).
+const dateMs=(v,end)=>{ if(!v)return null; const d=new Date(v+'T00:00:00'); if(isNaN(d))return null; return d.getTime()+(end?86399999:0); };
 
 async function stats(){try{const d=await fetch('/api/persons/stats?t='+Math.floor(Date.now()/60000)).then(r=>r.json());$('s_missing').textContent=Number(d.missing||0).toLocaleString('es');$('s_found').textContent=Number(d.found||0).toLocaleString('es');$('s_total').textContent=Number(d.total||0).toLocaleString('es');$('s_hosp').textContent=Number(d.hospitalized||0).toLocaleString('es');}catch{}}
 stats();
 
-// ---- vCard wall (filtered photo registry) ----
-let wCur=null,wLoading=false;
+// ---- Unified full-database gallery (/api/persons/cases) ----
+// Searches operator cases + Familia registry + hospital registry in one query.
+let wPage=1,wPages=1,wTotal=0,wLoading=false,metaLoaded=false,OP=false;
 function vcard(p){
   const [lbl,col]=ST[p.status]||ST.unknown;
   const link=caseUrl(p);
@@ -278,63 +338,77 @@ function vcard(p){
       <span class="cta">🗂 Ver expediente →</span>
     </div></a>`;
 }
+// Single-select control readers (segmented toggles + status chips).
+const segVal=id=>{const b=$(id).querySelector('button.on');return b?b.dataset.v:'';};
+const chipVal=()=>{const b=$('fstatus').querySelector('.chip.on');return b?b.dataset.v:'';};
 function wallParams(){
-  const qs=new URLSearchParams({limit:'30'});
+  const qs=new URLSearchParams({limit:'60',page:String(wPage)});
   const q=$('fq').value.trim(); if(q)qs.set('q',q);
-  const edo=$('fedo').value; if(edo)qs.set('edo',edo);
-  const lugar=$('flugar').value.trim(); if(lugar)qs.set('lugar',lugar);
-  const desde=$('fdesde').value; if(desde)qs.set('desde',desde);
-  const hasta=$('fhasta').value; if(hasta)qs.set('hasta',hasta);
-  const st=$('fstatus').value; if(st)qs.set('status',st);
-  if(wCur)qs.set('cursor',wCur);
+  const edo=$('fedo').value; if(edo)qs.set('estado',edo);
+  const lugar=$('flugar').value.trim(); if(lugar)qs.set('place',lugar);
+  const sex=$('fsex').value; if(sex)qs.set('sex',sex);
+  const amin=$('fagemin').value.trim(); if(amin!=='')qs.set('age_min',amin);
+  const amax=$('fagemax').value.trim(); if(amax!=='')qs.set('age_max',amax);
+  const src=$('fsource').value; if(src)qs.set('source',src);
+  const st=chipVal(); if(st)qs.set('status',st);
+  const ph=segVal('fphoto'); if(ph)qs.set('photo',ph);
+  const lk=segVal('flinked'); if(lk)qs.set('linked',lk);
+  const vr=segVal('fverified'); if(vr)qs.set('verified',vr);
+  const cf=dateMs($('fdesde').value,false); if(cf)qs.set('created_from',String(cf));
+  const ct=dateMs($('fhasta').value,true); if(ct)qs.set('created_to',String(ct));
+  const uf=dateMs($('fudesde').value,false); if(uf)qs.set('updated_from',String(uf));
+  const ut=dateMs($('fuhasta').value,true); if(ut)qs.set('updated_to',String(ut));
+  qs.set('sort',$('fsort').value);
+  qs.set('t',String(Math.floor(Date.now()/60000)));   // 1-min freshness bucket bypasses the 4h /api CDN pin
   return qs;
+}
+// Populate the estado + fuente selects from the endpoint's filter metadata (once).
+function fillMeta(f){
+  if(metaLoaded||!f)return; metaLoaded=true;
+  if(Array.isArray(f.estados))$('fedo').insertAdjacentHTML('beforeend',f.estados.map(e=>`<option value="${esc(e.slug)}">${esc(e.label)}</option>`).join(''));
+  if(Array.isArray(f.sources))$('fsource').insertAdjacentHTML('beforeend',f.sources.map(s=>`<option value="${esc(s)}">${esc(srcLabel(s))}</option>`).join(''));
 }
 async function loadWall(reset){
   if(wLoading)return; wLoading=true;
   const wall=$('wall');
-  if(reset){wCur=null;wall.innerHTML=Array.from({length:8},()=>'<div class="skl"></div>').join('');}
-  const qs=wallParams();
-  const d=await fetch('/api/familia/gallery?'+qs.toString()).then(r=>r.json()).catch(()=>({photos:[]}));
+  if(reset){wPage=1;wall.innerHTML=Array.from({length:8},()=>'<div class="skl"></div>').join('');}
+  let d;
+  try{ d=await fetch('/api/persons/cases?'+wallParams().toString()).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}); }
+  catch(err){
+    if(reset)wall.innerHTML='<div class="wallerr">No se pudo cargar el registro. Revisa tu conexión e inténtalo de nuevo.<br><button type="button" id="wRetry">Reintentar</button></div>';
+    const rb=$('wRetry'); if(rb)rb.onclick=()=>loadWall(true);
+    $('wallMore').innerHTML=''; wLoading=false; return;
+  }
+  OP=!!d.operator;
+  $('fldVerif').style.display=OP?'':'none';   // verified control is operator-only
+  fillMeta(d.filters);
+  wPage=Number(d.page)||wPage; wPages=Number(d.pages)||1; wTotal=Number(d.total)||0;
   if(reset)wall.innerHTML='';
-  wall.insertAdjacentHTML('beforeend',(d.photos||[]).map(vcard).join(''));
-  if(!wall.children.length)wall.innerHTML='<p class="text-sm text-on-surface-variant col-span-full py-10 text-center" style="grid-column:1/-1">No hay personas que coincidan con estos filtros. Prueba ampliar la búsqueda.</p>';
-  if(typeof d.total==='number'){$('wallCount').textContent=d.total.toLocaleString('es');}
-  wCur=d.nextCursor;
-  $('wallMore').innerHTML=wCur?'<button id="wMoreBtn" class="px-5 py-2.5 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>':'';
-  const mb=$('wMoreBtn');if(mb)mb.onclick=()=>loadWall(false);
+  wall.insertAdjacentHTML('beforeend',(d.cases||[]).map(vcard).join(''));
+  if(!wall.children.length)wall.innerHTML='<p class="wallerr">No hay personas que coincidan con estos filtros. Prueba ampliar la búsqueda.</p>';
+  $('wallCount').textContent=wTotal.toLocaleString('es')+' resultado'+(wTotal===1?'':'s');
+  $('wallMore').innerHTML=(wPage<wPages)?`<button id="wMoreBtn" class="px-5 py-2.5 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más · página ${wPage} de ${wPages}</button>`:'';
+  const mb=$('wMoreBtn'); if(mb)mb.onclick=()=>{wPage++;loadWall(false);};
   wLoading=false;
 }
+// ---- wire every control to the backend ----
 let wt;
 const reWall=()=>{clearTimeout(wt);wt=setTimeout(()=>loadWall(true),300);};
-['fq','flugar'].forEach(id=>$(id).addEventListener('input',reWall));
-['fedo','fstatus','fdesde','fhasta'].forEach(id=>$(id).addEventListener('change',()=>loadWall(true)));
-$('clearFilters').onclick=()=>{['fq','flugar','fdesde','fhasta'].forEach(id=>$(id).value='');$('fedo').value='';$('fstatus').value='';loadWall(true);};
-loadWall(true);
-
-// ---- Secondary: full registry incl. sin foto (/api/familia/persons) ----
-const ST2={missing:['Buscada','bg-warning'],found_safe:['A salvo','bg-safe'],aparecido:['Apareció','bg-safe'],hospitalizado:['Hospitalizada','bg-primary'],found_deceased:['Fallecida','bg-on-surface-variant'],unknown:['Sin datos','bg-outline-variant']};
-let aCur=null,aLoading=false,allLoaded=false;
-async function loadAll(reset){
-  if(aLoading)return; aLoading=true;
-  if(reset){aCur=null;$('allList').innerHTML='';}
-  const q=$('allq').value.trim(),st=$('allstatus').value;
-  const qs=new URLSearchParams({limit:'30'}); if(q)qs.set('q',q); if(st)qs.set('status',st); if(aCur)qs.set('cursor',aCur);
-  const d=await fetch('/api/familia/persons?'+qs.toString()).then(r=>r.json()).catch(()=>({persons:[]}));
-  const html=(d.persons||[]).map(p=>{const[l,cl]=ST2[p.status]||ST2.unknown;const link=caseUrl(p);
-    return `<a href="${link}" class="flex items-center gap-3 py-2.5 hover:bg-surface-container/40 -mx-1 px-1 rounded">
-      <div class="w-11 h-11 rounded-lg overflow-hidden bg-surface-container shrink-0">${p.photo_url?`<img src="${p.photo_url}" loading="lazy" class="w-full h-full object-cover" data-fb-parent="<div class='w-full h-full grid place-items-center text-on-surface-variant'>👤</div>">`:'<div class="w-full h-full grid place-items-center text-on-surface-variant">👤</div>'}</div>
-      <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(p.full_name||'Sin nombre')}${p.age?', '+Number(p.age):''}</div><div class="text-xs text-on-surface-variant truncate">${esc(p.last_seen||'')}</div></div>
-      <span class="${cl} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">${l}</span></a>`;}).join('');
-  $('allList').insertAdjacentHTML('beforeend',html);
-  if(!$('allList').children.length)$('allList').innerHTML='<p class="text-sm text-on-surface-variant py-4">Sin resultados.</p>';
-  aCur=d.nextCursor;
-  $('allMore').innerHTML=aCur?'<button id="allMoreBtn" class="px-4 py-2 rounded-lg border border-outline-variant text-sm font-display font-semibold hover:bg-surface-container">Cargar más</button>':'';
-  const mb=$('allMoreBtn');if(mb)mb.onclick=()=>loadAll(false);
-  aLoading=false;
+['fq','flugar','fagemin','fagemax'].forEach(id=>$(id).addEventListener('input',reWall));
+['fedo','fsex','fsource','fsort','fdesde','fhasta','fudesde','fuhasta'].forEach(id=>$(id).addEventListener('change',()=>loadWall(true)));
+function wireSingle(id,sel){
+  const box=$(id);
+  box.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!box.contains(b))return;box.querySelectorAll(sel).forEach(x=>x.classList.remove('on'));b.classList.add('on');loadWall(true);});
 }
-let at;$('allq').oninput=()=>{clearTimeout(at);at=setTimeout(()=>loadAll(true),300);};
-$('allstatus').onchange=()=>loadAll(true);
-[...document.querySelectorAll('details')].forEach(d=>{if(d.querySelector('#allList'))d.addEventListener('toggle',()=>{if(d.open&&!allLoaded){allLoaded=true;loadAll(true);}});});
+wireSingle('fphoto','button'); wireSingle('flinked','button'); wireSingle('fverified','button'); wireSingle('fstatus','.chip');
+const setSingle=(id,sel,v)=>$(id).querySelectorAll(sel).forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+$('clearFilters').onclick=()=>{
+  ['fq','flugar','fagemin','fagemax','fdesde','fhasta','fudesde','fuhasta'].forEach(id=>$(id).value='');
+  $('fedo').value=''; $('fsex').value=''; $('fsource').value=''; $('fsort').value='recent';
+  setSingle('fphoto','button','true'); setSingle('flinked','button',''); setSingle('fverified','button',''); setSingle('fstatus','.chip','');
+  loadWall(true);
+};
+loadWall(true);
 
 // ---- Report form ----
 $('f').onsubmit=async e=>{e.preventDefault();const msg=$('msg');const name=$('full_name').value.trim();

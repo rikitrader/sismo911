@@ -15,6 +15,7 @@ import { isSafePublicUrl } from '../lib/sanitize';
 import { sendEmail } from '../lib/email';
 import { caseRegisteredEmail } from '../lib/email-catalog';
 import { isMinor, isPublicSuppressed, coarsenLocation, scrubMinorText, PERSONAS_PUBLIC_SUPPRESS_SQL, personsPublicSuppressSql } from '../lib/minor-protect';
+import { computeSearchFields } from '../lib/search-index';
 
 // Missing-persons registry (/familia). Reads the `personas` dataset in the main
 // (sismo911) D1 database; photos live in the DESAP_FOTOS R2 bucket (keyed by foto_r2).
@@ -351,9 +352,10 @@ familia.post('/persons', async (c) => {
     foto_r2 = `fotos/${id}.jpg`;
     await c.env.DESAP_FOTOS.put(foto_r2, gate.file.bytes, { httpMetadata: { contentType: `image/${gate.file.detectedType}` } });
   }
+  const sf = computeSearchFields(g.nombre, g.last_seen);
   await c.env.DB.prepare(
-    `INSERT INTO personas (id, nombre, edad, ubicacion, descripcion, contacto, foto_r2, estado, moderation, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO personas (id, nombre, edad, ubicacion, descripcion, contacto, foto_r2, estado, moderation, name_norm, geo_estado, geo_municipio, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id, String(g.nombre).slice(0, 120), g.age ?? null,
     // ubicacion/descripcion/contacto are NOT NULL — coalesce missing to '' (a
@@ -361,7 +363,7 @@ familia.post('/persons', async (c) => {
     g.last_seen ? String(g.last_seen).slice(0, 200) : '',
     g.notes ? String(g.notes).slice(0, 1000) : '',
     g.contact_phone ? String(g.contact_phone).slice(0, 80) : '',
-    foto_r2, 'sin-contacto', 'pending', now, now
+    foto_r2, 'sin-contacto', 'pending', sf.name_norm, sf.geo_estado, sf.geo_municipio, now, now
   ).run();
   await recordClean(c.env, c, { correlationId: gate.correlationId, surface: 'persona', destTable: 'personas', destId: id, r2Key: foto_r2 ?? undefined, score: gate.score, payloadHash: gate.payloadHash });
   // MP-01: if the reporter gave an email (optional field, NOT passed through the

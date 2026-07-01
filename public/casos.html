@@ -247,6 +247,35 @@
   /* Lightweight toast for share feedback (mobile + desktop) */
   #s911-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);background:#0a1c3d;color:#fff;font:600 13.5px Inter;padding:11px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;max-width:90vw;text-align:center;word-break:break-word}
   #s911-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---- Advanced filter panel ---- */
+  .filtbtn{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line-2);border-radius:10px;padding:9px 12px;font:600 13px Inter;color:var(--ink)}
+  .filtbtn:hover{border-color:#9db4e6}
+  .filtbtn.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .filtbtn .fcount{font:700 11px 'JetBrains Mono';background:var(--red);color:#fff;border-radius:999px;padding:1px 7px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{font:700 12px Inter;padding:7px 13px;border-radius:999px;border:1px solid var(--line-2);background:var(--panel);color:var(--muted);cursor:pointer;white-space:nowrap}
+  .chip:hover{border-color:#9db4e6;color:var(--ink)}
+  .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .filters{display:none;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px;margin:0 0 14px}
+  .filters.open{display:block}
+  .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px 14px}
+  .fgroup{display:flex;flex-direction:column;gap:6px}
+  .fgroup > .lab{font:800 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .fgroup input,.fgroup select{width:100%;min-height:40px;border:1px solid var(--line-2);border-radius:9px;padding:8px 10px;font:500 13.5px Inter;background:#fff;color:var(--ink);outline:none}
+  .fgroup input:focus,.fgroup select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,95,208,.13)}
+  .frow{display:flex;gap:8px}.frow input{flex:1;min-width:0}
+  .seg3{display:inline-flex;background:var(--panel);border:1px solid var(--line-2);border-radius:9px;overflow:hidden;min-height:40px}
+  .seg3 button{padding:8px 11px;font:600 12px Inter;color:var(--muted);background:transparent;border:none;border-right:1px solid var(--line-2)}
+  .seg3 button:last-child{border-right:none}
+  .seg3 button.on{background:var(--navy);color:#fff}
+  .filters .fspan2{grid-column:span 2}
+  @media(max-width:560px){.filters .fspan2{grid-column:auto}}
+  .filtfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px}
+  .resetbtn{font:700 12.5px Inter;color:var(--red);border:1px solid var(--line-2);border-radius:9px;padding:8px 14px;background:#fff}
+  .resetbtn:hover{border-color:var(--red)}
+  .errbox{display:none;text-align:center;padding:22px 16px;color:var(--crit);background:#fff;border:1px solid #f3c3c3;border-radius:12px;margin:0 0 14px}
+  .errbox button{margin-top:10px;font:700 12.5px Inter;color:#fff;background:var(--crit);border:none;border-radius:9px;padding:8px 16px;cursor:pointer}
 </style>
 <script>addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;
 if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}
@@ -309,14 +338,20 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
     </div>
 
     <div class="toolbar">
-      <select id="f_status" class="sel">
-        <option value="">Todos los estados</option>
+      <button class="filtbtn" id="filtBtn" type="button" aria-expanded="false" aria-controls="filters" title="Filtros avanzados">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M3 5h18M6 12h12M10 19h4" stroke-linecap="round"/></svg>
+        Filtros <span class="fcount" id="fcount" style="display:none">0</span>
+      </button>
+      <div class="chips" id="statusChips" role="group" aria-label="Filtrar por estado del caso"></div>
+      <!-- Hidden state holder for status (driven by the chips above; load() reads this) -->
+      <select id="f_status" class="sel" style="display:none" aria-hidden="true">
+        <option value="">Todos</option>
         <option value="missing">Desaparecida</option>
-        <option value="found_safe">Localizada (a salvo)</option>
+        <option value="found_safe">Localizada</option>
         <option value="aparecido">Apareció</option>
         <option value="hospitalizado">Hospitalizada</option>
         <option value="found_deceased">Fallecida</option>
-        <option value="unknown">Sin datos</option>
+        <option value="unknown">No identificado</option>
       </select>
       <select id="f_prio" class="sel" style="display:none">
         <option value="">Toda prioridad</option>
@@ -340,6 +375,30 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
       </div>
       <span id="count" class="pill-count"></span>
     </div>
+
+    <section class="filters" id="filters" aria-label="Filtros avanzados">
+      <div class="fgrid">
+        <div class="fgroup fspan2"><span class="lab">Nombre / referencia</span><input id="f_name" type="search" autocomplete="off" placeholder="Nombre completo o referencia…"></div>
+        <div class="fgroup" id="f_cedula_wrap" style="display:none"><span class="lab">Cédula</span><input id="f_cedula" autocomplete="off" placeholder="V-12345678"></div>
+        <div class="fgroup"><span class="lab">Sexo</span><select id="f_sex"><option value="">Todos</option><option value="M">Masculino</option><option value="F">Femenino</option></select></div>
+        <div class="fgroup"><span class="lab">Edad (mín / máx)</span><div class="frow"><input id="f_age_min" type="number" min="0" max="120" inputmode="numeric" placeholder="mín"><input id="f_age_max" type="number" min="0" max="120" inputmode="numeric" placeholder="máx"></div></div>
+        <div class="fgroup"><span class="lab">Estado</span><select id="f_estado"><option value="">Todos los estados</option></select></div>
+        <div class="fgroup"><span class="lab">Municipio</span><input id="f_muni" autocomplete="off" placeholder="Ej: Catia La Mar"></div>
+        <div class="fgroup fspan2"><span class="lab">Hospital / refugio / última ubicación</span><input id="f_place" autocomplete="off" placeholder="Ej: Hospital Vargas, Refugio Naiguatá…"></div>
+        <div class="fgroup"><span class="lab">Foto</span><div class="seg3" id="f_photo"><button type="button" data-v="" class="on">Todas</button><button type="button" data-v="true">Con foto</button><button type="button" data-v="false">Sin foto</button></div></div>
+        <div class="fgroup"><span class="lab">Contacto vinculado</span><div class="seg3" id="f_linked"><button type="button" data-v="" class="on">Todos</button><button type="button" data-v="true">Con contacto</button><button type="button" data-v="false">Sin contacto</button></div></div>
+        <div class="fgroup"><span class="lab">Fuente / origen</span><select id="f_source"><option value="">Todas</option></select></div>
+        <div class="fgroup" id="f_verified_wrap" style="display:none"><span class="lab">Verificación</span><div class="seg3" id="f_verified"><button type="button" data-v="" class="on">Todos</button><button type="button" data-v="true">Verificado</button><button type="button" data-v="false">Sin verificar</button></div></div>
+        <div class="fgroup"><span class="lab">Fecha de registro</span><div class="frow"><input id="f_cfrom" type="date" aria-label="Registro desde"><input id="f_cto" type="date" aria-label="Registro hasta"></div></div>
+        <div class="fgroup"><span class="lab">Última actualización</span><div class="frow"><input id="f_ufrom" type="date" aria-label="Actualización desde"><input id="f_uto" type="date" aria-label="Actualización hasta"></div></div>
+      </div>
+      <div class="filtfoot">
+        <span id="count2" class="pill-count"></span>
+        <button class="resetbtn" id="f_reset" type="button">✕ Limpiar todos los filtros</button>
+      </div>
+    </section>
+
+    <div class="errbox" id="errBox"></div>
 
     <div class="tri-legend" title="Sistema de priorización tipo triage FEMA, calculado automáticamente a partir del estado, vulnerabilidad, el sismo y el tiempo.">
       <span style="font-weight:800;color:var(--ink);letter-spacing:.02em">Triage:</span>
@@ -565,19 +624,61 @@ function renderRows(){
   $('#count').textContent=`${shown.toLocaleString('es')} expediente${shown===1?'':'s'}`;
   tb.querySelectorAll('tr[data-id]').forEach(r=>r.addEventListener('click',()=>openCase(r.dataset.id)));
 }
+// --- filter helpers ---
+const val=id=>{const e=$(id);return e?String(e.value||'').trim():'';};
+const dms=(id,end)=>{const v=val(id);if(!v)return '';const t=new Date(v+'T00:00:00').getTime();if(isNaN(t))return '';return String(end?t+86399999:t);};
+const segVal=id=>{const e=$(id+' button.on');return e?e.dataset.v:'';};
+// Build the full query string from every filter control.
+function filterParams(){
+  const p=new URLSearchParams();
+  const set=(k,v)=>{if(v!==''&&v!=null)p.set(k,v);};
+  set('q',val('#q')); set('name',val('#f_name'));
+  if(OP)set('cedula',val('#f_cedula'));
+  set('status',val('#f_status'));
+  if(OP&&$('#f_prio').value)set('priority',$('#f_prio').value);
+  set('sex',val('#f_sex')); set('age_min',val('#f_age_min')); set('age_max',val('#f_age_max'));
+  set('estado',val('#f_estado')); set('municipio',val('#f_muni')); set('place',val('#f_place'));
+  set('photo',segVal('#f_photo')); set('linked',segVal('#f_linked')); set('source',val('#f_source'));
+  if(OP)set('verified',segVal('#f_verified'));
+  set('created_from',dms('#f_cfrom')); set('created_to',dms('#f_cto',true));
+  set('updated_from',dms('#f_ufrom')); set('updated_to',dms('#f_uto',true));
+  set('sort',$('#f_sort').value);
+  return p;
+}
+// How many advanced filters are active (for the badge on the Filtros button).
+function activeFilterCount(){
+  const keys=['#f_name','#f_cedula','#f_sex','#f_age_min','#f_age_max','#f_estado','#f_muni','#f_place','#f_source','#f_cfrom','#f_cto','#f_ufrom','#f_uto'];
+  let n=keys.filter(k=>val(k)).length;
+  if(segVal('#f_photo'))n++; if(segVal('#f_linked'))n++; if(OP&&segVal('#f_verified'))n++;
+  return n;
+}
+let METALOADED=false;
+function populateMeta(f){
+  if(METALOADED||!f)return; METALOADED=true;
+  const es=$('#f_estado'); if(es&&Array.isArray(f.estados)){f.estados.forEach(o=>{const opt=document.createElement('option');opt.value=o.slug;opt.textContent=o.label;es.appendChild(opt);});}
+  const sr=$('#f_source'); if(sr&&Array.isArray(f.sources)){f.sources.forEach(s=>{const opt=document.createElement('option');opt.value=s;opt.textContent=s;sr.appendChild(opt);});}
+}
 async function load(){
   skeletonRows();
-  const p=new URLSearchParams();
-  if($('#q').value.trim())p.set('q',$('#q').value.trim());
-  if($('#f_status').value)p.set('status',$('#f_status').value);
-  if(OP&&$('#f_prio').value)p.set('priority',$('#f_prio').value);
-  p.set('sort',$('#f_sort').value);
+  $('#errBox').style.display='none';
+  const p=filterParams();
   p.set('page',PAGE); p.set('limit',PAGESIZE);
   p.set('t',String(Math.floor(Date.now()/60000)));   // 1-min freshness bucket — bypass the 4h CDN pin on /api/* so the KPIs reflect live data
-  let data={};
-  try{ data=await (await api('persons/cases?'+p.toString())).json(); }catch{ data={cases:[],summary:{}}; }
-  const {cases=[],summary={},operator=false,page=1,pages=1,total=0}=data;
+  let data;
+  try{ const r=await api('persons/cases?'+p.toString()); if(!r.ok)throw new Error('http '+r.status); data=await r.json(); }
+  catch(e){
+    $('#rows').innerHTML='';
+    $('#errBox').style.display='block';
+    $('#errBox').innerHTML='<div style="font-weight:700">No se pudieron cargar los expedientes.</div><div class="sub" style="margin-top:4px">Revisa tu conexión e inténtalo de nuevo.</div><button type="button" id="errRetry">Reintentar</button>';
+    $('#errRetry').addEventListener('click',load);
+    $('#count').textContent=''; return;
+  }
+  const {cases=[],summary={},operator=false,page=1,pages=1,total=0,filters=null}=data;
   OP=!!operator; ALL=cases; PAGE=page; PAGES=pages; TOTAL=total;
+  populateMeta(filters);
+  if(OP){$('#f_verified_wrap').style.display='';$('#f_cedula_wrap').style.display='';}
+  const fc=activeFilterCount(); $('#fcount').style.display=fc?'':'none'; $('#fcount').textContent=fc;
+  $('#count2').textContent=`${(total||cases.length).toLocaleString('es')} resultado${(total||cases.length)===1?'':'s'}`;
   $('#s_missing').textContent=(summary.missing??0).toLocaleString('es');
   $('#s_safe').textContent=(summary.found_safe??0).toLocaleString('es');
   $('#s_dead').textContent=(summary.deceased??0).toLocaleString('es');
@@ -1185,6 +1286,35 @@ $('#q').addEventListener('input',()=>deb(reload));
 $('#f_status').addEventListener('change',reload);
 $('#f_prio').addEventListener('change',reload);
 $('#f_sort').addEventListener('change',reload);   // sort is applied server-side across the whole registry
+
+/* ---------------- ADVANCED FILTERS WIRING ---------------- */
+// Status chips (single-select) drive the hidden #f_status select.
+const STATUS_CHIPS=[['','Todas'],['missing','Desaparecida'],['found_safe','Localizada'],['aparecido','Apareció'],['hospitalizado','Hospitalizada'],['found_deceased','Fallecida'],['unknown','No identificado']];
+(function initStatusChips(){
+  const host=$('#statusChips'); if(!host)return;
+  host.innerHTML=STATUS_CHIPS.map(([v,l])=>`<button type="button" class="chip${v===''?' on':''}" data-v="${v}">${l}</button>`).join('');
+  host.querySelectorAll('.chip').forEach(ch=>ch.addEventListener('click',()=>{
+    host.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    ch.classList.add('on'); $('#f_status').value=ch.dataset.v; reload();
+  }));
+})();
+// Segmented 3-way toggles (photo / linked / verified).
+function initSeg(id){const host=$(id);if(!host)return;host.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{host.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');reload();}));}
+['#f_photo','#f_linked','#f_verified'].forEach(initSeg);
+// Filtros panel toggle.
+$('#filtBtn').addEventListener('click',()=>{const o=$('#filters').classList.toggle('open');$('#filtBtn').classList.toggle('on',o);$('#filtBtn').setAttribute('aria-expanded',o?'true':'false');});
+// Text inputs (debounced) + selects/dates (immediate).
+['#f_name','#f_cedula','#f_muni','#f_place','#f_age_min','#f_age_max'].forEach(id=>{const e=$(id);if(e)e.addEventListener('input',()=>deb(reload));});
+['#f_sex','#f_estado','#f_source','#f_cfrom','#f_cto','#f_ufrom','#f_uto'].forEach(id=>{const e=$(id);if(e)e.addEventListener('change',reload);});
+// Reset every advanced filter back to defaults.
+$('#f_reset').addEventListener('click',()=>{
+  ['#f_name','#f_cedula','#f_muni','#f_place','#f_age_min','#f_age_max','#f_cfrom','#f_cto','#f_ufrom','#f_uto'].forEach(id=>{const e=$(id);if(e)e.value='';});
+  ['#f_sex','#f_estado','#f_source'].forEach(id=>{const e=$(id);if(e)e.value='';});
+  ['#f_photo','#f_linked','#f_verified'].forEach(id=>{const h=$(id);if(h){h.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===''));}});
+  $('#statusChips').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.v===''));
+  $('#f_status').value=''; $('#q').value='';
+  reload();
+});
 $('#pgGo').addEventListener('click',()=>goPage(+$('#pgInput').value));
 $('#pgInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();goPage(+$('#pgInput').value);}});
 document.addEventListener('keydown',e=>{
