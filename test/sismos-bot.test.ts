@@ -7,7 +7,10 @@ import {
   formatQuakeList,
   formatThreat,
   formatQuakeAlert,
+  formatColorChart,
+  quakeAction,
   quakeEmoji,
+  LEVELS,
   HELP_SISMOS,
 } from '../src/telegram-sismos/format';
 import { TgUpdate } from '../src/telegram/types';
@@ -115,12 +118,41 @@ describe('TgUpdate accepts channel + membership updates', () => {
   });
 });
 
+describe('color chart + action guidance', () => {
+  it('/colores is parsed (aliases)', () => {
+    expect(parseSismosCommand('/colores').kind).toBe('colores');
+    expect(parseSismosCommand('/leyenda').kind).toBe('colores');
+    expect(parseSismosCommand('escala').kind).toBe('colores');
+  });
+  it('the chart lists every level with an emoji + action', () => {
+    const chart = formatColorChart();
+    expect(chart).toMatch(/Escala de alerta/);
+    for (const l of LEVELS.slice(1)) {
+      expect(chart).toContain(l.emoji);
+      expect(chart).toContain(l.label);
+    }
+    expect(chart).toMatch(/EVAC[UÚ]A/i); // the red-level evacuate action
+  });
+  it('quakeAction escalates from stay → prepare → evacuate', () => {
+    expect(quakeAction({ mag: 3.0 })).toMatch(/Sin acción/);
+    expect(quakeAction({ mag: 4.8 })).toMatch(/Atención/);
+    expect(quakeAction({ mag: 5.7 })).toMatch(/Prepárate para salir/);
+    expect(quakeAction({ mag: 7.0 })).toMatch(/EVAC[UÚ]A/i);
+    expect(quakeAction({ alert: 'red', mag: 3 })).toMatch(/EVAC[UÚ]A/i); // PAGER overrides magnitude
+  });
+  it('estado includes a "qué hacer" action line', () => {
+    const threat = { level: 4, label: 'Alto', score: 95, reason: 'M6.5', max_mag_48h: 6.5, recent_6h: 8, sources: ['USGS'] };
+    expect(formatThreat(threat, quake)).toMatch(/Qué hacer:.*EVAC[UÚ]A/i);
+  });
+});
+
 describe('formatQuakeAlert + help', () => {
-  it('alert leads with the siren + guidance link', () => {
+  it('alert leads with the siren + guidance link + action', () => {
     const a = formatQuakeAlert(quake);
     expect(a).toMatch(/ALERTA SÍSMICA/);
     expect(a).toContain('Sismo M5.8 — La Guaira');
     expect(a).toContain('/guia');
+    expect(a).toMatch(/Prepárate para salir/); // M5.8 → orange-tier action
   });
   it('help lists every command', () => {
     for (const c of ['/ultimo', '/sismos', '/estado', '/suscribir', '/cancelar', '/ayuda']) {
