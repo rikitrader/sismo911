@@ -10,7 +10,7 @@ import {
   viewerRoleFor,
   timingSafeEqual,
 } from '../src/telegram/auth';
-import { buildTelegramResponse } from '../src/telegram/responses';
+import { buildTelegramResponse, buildListMessages } from '../src/telegram/responses';
 import type { TelegramConfig } from '../src/telegram/env';
 import type { CaseRecord, TelegramMessage } from '../src/telegram/types';
 import { parseIdList } from '../src/telegram/env';
@@ -192,6 +192,20 @@ describe('buildTelegramResponse', () => {
     expect(out).not.toContain('Vargas');
     expect(out).not.toContain('Jose Garcia'); // name is not a public field
   });
+  it('splits a long list into messages that EACH restart at 1) with a (parte i/total) header', () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({ ...rec, internalId: `hp_${i}`, caseId: `HOSP-hp_${i}`, fullName: `Persona ${i}` }));
+    const msgs = buildListMessages(many, base, 'MARIA DELGADO');
+    expect(msgs.length).toBeGreaterThan(1);
+    msgs.forEach((m, i) => {
+      expect(m).toContain(`(parte ${i + 1}/${msgs.length})`);
+      expect(m).toContain('«MARIA DELGADO» — 40 registros'); // total reflects the whole search
+      expect(m).toMatch(/\n1\) Caso:/); // every message restarts numbering at 1)
+    });
+  });
+  it('single-page list has no "parte" label', () => {
+    const [msg] = buildListMessages([rec], base, 'Jose');
+    expect(msg).not.toContain('parte');
+  });
   it('respects a custom baseUrl for the profile link', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, { ...base, baseUrl: 'https://sismo911.com' });
     expect(out).toContain('https://sismo911.com/casos#caso=HOSP-hp_1');
@@ -221,15 +235,13 @@ describe('buildTelegramResponse', () => {
   });
   it('operator list shows every record as a FULL block (no PII)', () => {
     const many = Array.from({ length: 5 }, (_, i) => ({ ...rec, internalId: `hp_${i}`, caseId: `HOSP-hp_${i}`, fullName: `Persona ${i}` }));
-    const out = buildTelegramResponse({ kind: 'list', records: many }, base);
-    expect(out).toMatch(/Se encontraron 5 registros/);
-    // each record shows the full block fields + numbered
-    expect(out).toContain('1) Caso: HOSP-hp_0');
-    expect(out).toContain('5) Caso: HOSP-hp_4');
-    expect((out.match(/Estado: HOSPITALIZED/g) || []).length).toBe(5);
-    expect((out.match(/Ubicación general:/g) || []).length).toBe(5);
-    expect((out.match(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_/g) || []).length).toBe(5);
-    expect(out).not.toContain('12345678'); // no PII in the list
+    const [msg] = buildListMessages(many, base, 'MARIA DELGADO');
+    expect(msg).toMatch(/🔎 «MARIA DELGADO» — 5 registros:/);
+    expect(msg).toContain('1) Caso: HOSP-hp_0');
+    expect(msg).toContain('5) Caso: HOSP-hp_4');
+    expect((msg.match(/Estado: HOSPITALIZED/g) || []).length).toBe(5);
+    expect((msg.match(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_/g) || []).length).toBe(5);
+    expect(msg).not.toContain('12345678'); // no PII in the list
   });
 
   it('admin match (DM) includes the restricted detail block', () => {

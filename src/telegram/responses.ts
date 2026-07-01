@@ -85,6 +85,49 @@ function caseBlock(record: CaseRecord, opts: BuildOpts): string {
     : `Case: ${v.caseId}\nStatus: ${v.status}\nGeneral location: ${v.generalLocation ?? 'not available'}\nLast verified: ${fmtDate(v.lastVerifiedMs)}\nLevel: ${v.verification}\nProfile: ${v.profileUrl}\nNote: ${next}`;
 }
 
+const LIST_PAGE_MAX = 3500; // per-message char budget (Telegram cap is 4096)
+
+/**
+ * Render an operator match-list as one or MORE Telegram messages. Each message
+ * is self-contained: its own header (`🔎 «query» — N registros (parte i/total)`)
+ * and its items renumbered from 1). So every new search — and every continuation
+ * message — restarts the numbering, tied to that search's items.
+ */
+export function buildListMessages(
+  records: Parameters<typeof caseBlock>[0][],
+  opts: BuildOpts,
+  query?: string,
+): string[] {
+  const es = opts.lang === 'es';
+  const blocks = records.map((r) => caseBlock(r, opts));
+  // Paginate blocks by char budget (keep whole blocks together).
+  const pages: string[][] = [];
+  let cur: string[] = [];
+  let curLen = 0;
+  for (const b of blocks) {
+    const add = b.length + 6; // numbering prefix + separators
+    if (cur.length && curLen + add > LIST_PAGE_MAX) {
+      pages.push(cur);
+      cur = [];
+      curLen = 0;
+    }
+    cur.push(b);
+    curLen += add;
+  }
+  if (cur.length) pages.push(cur);
+  if (!pages.length) pages.push([]);
+
+  const total = pages.length;
+  const q = query ? `«${query}» — ` : '';
+  const noun = (n: number) => (es ? `registro${n === 1 ? '' : 's'}` : `record${n === 1 ? '' : 's'}`);
+  return pages.map((pageBlocks, pi) => {
+    const part = total > 1 ? (es ? ` (parte ${pi + 1}/${total})` : ` (part ${pi + 1}/${total})`) : '';
+    const header = `🔎 ${q}${records.length} ${noun(records.length)}${part}:`;
+    const numbered = pageBlocks.map((b, i) => `${i + 1}) ${b}`); // restart at 1) each message
+    return [header, '', numbered.join('\n\n')].join('\n');
+  });
+}
+
 /** Build the final chat text for a resolved query. Pure + total over QueryResult. */
 export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): string {
   const es = opts.lang === 'es';
@@ -129,14 +172,10 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
         ? 'Se encontraron varios posibles registros. Para proteger la privacidad, envía más datos: fecha de nacimiento, ciudad o ID de caso.'
         : 'Several possible records were found. To protect privacy, send more data: date of birth, city, or case ID.';
 
-    case 'list': {
-      // Operator view: EVERY match rendered as a full case block. The route
-      // splits this across multiple Telegram messages when it is long.
-      const n = result.records.length;
-      const header = es ? `Se encontraron ${n} registros:` : `Found ${n} records:`;
-      const blocks = result.records.map((r, i) => `${i + 1}) ${caseBlock(r, opts)}`);
-      return [header, '', blocks.join('\n\n')].join('\n');
-    }
+    case 'list':
+      // Rendered as one-or-more messages by buildListMessages (each self-numbered
+      // + its own header). Joined here only for non-route callers.
+      return buildListMessages(result.records, opts, result.query).join('\n\n');
 
     case 'error':
       return es

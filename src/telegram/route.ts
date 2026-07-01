@@ -15,7 +15,7 @@ import { TgUpdate, type CaseRecord, type ParsedCommand, type QueryResult, type V
 import { verifyWebhook, isRequestAuthorized, canViewSensitiveData, viewerRoleFor } from './auth';
 import { parseCommand } from './commands';
 import { aiNormalizeIntent } from './intent';
-import { buildTelegramResponse } from './responses';
+import { buildTelegramResponse, buildListMessages } from './responses';
 import { redactSensitiveFields, isHiddenFromPublic } from '../adapters/sismo911-api';
 import {
   getCaseById,
@@ -50,6 +50,14 @@ export function chunkText(text: string, max = TG_MAX): string[] {
   }
   if (cur) chunks.push(cur);
   return chunks;
+}
+
+/** Send several messages in order, paced to respect Telegram's per-chat limit. */
+async function sendMessages(token: string, chatId: number | string, msgs: string[]): Promise<void> {
+  for (let i = 0; i < msgs.length; i++) {
+    await sendMessage(token, chatId, msgs[i]);
+    if (i < msgs.length - 1) await new Promise((r) => setTimeout(r, 350));
+  }
 }
 
 async function sendMessage(token: string, chatId: number | string, text: string): Promise<void> {
@@ -109,19 +117,19 @@ export async function resolveQuery(env: Env, cmd: ParsedCommand, ctx: ResolveCtx
       if (!cmd.name && !cmd.cedula) return { kind: 'bad_input' };
       if (cmd.partialName) return { kind: 'need_more', reason: 'partial_name' };
       const recs = await searchHospitalized(env, { name: cmd.name, cedula: cmd.cedula });
-      return finalize(recs, ctx);
+      return finalize(recs, ctx, cmd.name);
     }
     if (cmd.kind === 'missing') {
       if (!cmd.name) return { kind: 'bad_input' };
       if (cmd.partialName) return { kind: 'need_more', reason: 'partial_name' };
       const recs = await searchMissing(env, { name: cmd.name });
-      return finalize(recs, ctx);
+      return finalize(recs, ctx, cmd.name);
     }
     // buscar by name.
     if (cmd.name) {
       if (cmd.partialName) return { kind: 'need_more', reason: 'partial_name' };
       const recs = await searchPersonByName(env, { name: cmd.name, dob: cmd.dob }, ctx.nowMs);
-      return finalize(recs, ctx);
+      return finalize(recs, ctx, cmd.name);
     }
     return { kind: 'bad_input' };
   } catch {
@@ -133,14 +141,14 @@ export async function resolveQuery(env: Env, cmd: ParsedCommand, ctx: ResolveCtx
  *  no_match / list / single. Operators (admin/authorized) get the FULL list of
  *  matches so an emergency search never dead-ends on "send more"; the public is
  *  still asked to narrow, to avoid dumping many people's names into a group. */
-function finalize(records: CaseRecord[], ctx: ResolveCtx): QueryResult {
+function finalize(records: CaseRecord[], ctx: ResolveCtx, query?: string): QueryResult {
   const recs = ctx.canSeeSensitive ? records : records.filter((r) => !isHiddenFromPublic(r));
   if (recs.length === 0) return { kind: 'no_match' };
   if (recs.length === 1) {
     return { kind: 'match', record: redactSensitiveFields(recs[0], ctx.canSeeSensitive), detail: 'summary' };
   }
   if (ctx.role !== 'public') {
-    return { kind: 'list', records: recs.map((r) => redactSensitiveFields(r, ctx.canSeeSensitive)) };
+    return { kind: 'list', records: recs.map((r) => redactSensitiveFields(r, ctx.canSeeSensitive)), query };
   }
   return { kind: 'multiple', count: recs.length };
 }
@@ -268,10 +276,16 @@ telegram.post('/webhook', async (c) => {
     return c.json({ ok: true });
   }
 
-  // 9. Reply. A long operator list is paced across several messages; send it in
-  //    the background (waitUntil) so we ack Telegram immediately and it doesn't retry.
+  // 9. Reply. An operator list is sent as multiple self-numbered messages (each
+  //    restarts at 1) with its own «query» — N (parte i/total) header); everything
+  //    else is a single message. Sent in the background (waitUntil) so we ack
+  //    Telegram immediately and it doesn't retry.
   const baseUrl = c.env.PUBLIC_BASE_URL || 'https://sismo911.com';
-  const reply = sendMessage(token, chatId, buildTelegramResponse(result, { lang: cmd.lang, role, canSeeSensitive, baseUrl }));
-  c.executionCtx.waitUntil(reply);
+  const opts = { lang: cmd.lang, role, canSeeSensitive, baseUrl };
+  const msgs =
+    result.kind === 'list'
+      ? buildListMessages(result.records, opts, result.query)
+      : [buildTelegramResponse(result, opts)];
+  c.executionCtx.waitUntil(sendMessages(token, chatId, msgs));
   return c.json({ ok: true });
 });
