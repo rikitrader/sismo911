@@ -278,6 +278,43 @@
   .resetbtn:hover{border-color:var(--red)}
   .errbox{display:none;text-align:center;padding:22px 16px;color:var(--crit);background:#fff;border:1px solid #f3c3c3;border-radius:12px;margin:0 0 14px}
   .errbox button{margin-top:10px;font:700 12.5px Inter;color:#fff;background:var(--crit);border:none;border-radius:9px;padding:8px 16px;cursor:pointer}
+  /* ---- Per-case media gallery ---- */
+  .galgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
+  .gal-item{position:relative;display:block;padding:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#fff;cursor:zoom-in;height:132px;text-align:left}
+  .gal-item:hover{border-color:var(--navy-2,#2a63b8);box-shadow:0 3px 12px rgba(10,28,61,.12)}
+  .gal-thumb-img{width:100%;height:100%;object-fit:cover;display:block}
+  .gal-thumb-ph,.gal-thumb-doc{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;text-align:center;color:var(--ink);background:linear-gradient(160deg,#f4f7fc,#e8eef7)}
+  .gal-ic{font-size:32px;line-height:1}
+  .gal-fn{font:600 11px Inter;color:var(--muted);word-break:break-word;line-height:1.25}
+  .gal-badge{position:absolute;top:6px;font:800 8.5px Inter;letter-spacing:.03em;padding:2px 6px;border-radius:6px;color:#fff;text-transform:uppercase;z-index:2}
+  .gal-badge.pend{left:6px;background:var(--amber,#e57200)}
+  .gal-badge.main{right:6px;background:var(--navy,#0a2c61)}
+  .gal-badge.kind{left:6px;bottom:6px;top:auto;background:rgba(10,28,61,.82)}
+  /* Lightbox */
+  .cvlb{position:fixed;inset:0;z-index:10000;display:none;flex-direction:column;background:rgba(6,14,30,.94);backdrop-filter:blur(3px)}
+  .cvlb.on{display:flex}
+  .cvlb-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;color:#fff;background:rgba(0,10,26,.6);flex-wrap:wrap}
+  .cvlb-count{font:800 13px Inter;color:#9fc0ff;font-variant-numeric:tabular-nums;flex:0 0 auto}
+  .cvlb-name{font:600 13px Inter;color:#e6eefb;flex:1 1 120px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cvlb-tools{display:flex;gap:6px;flex:0 0 auto}
+  .cvlb-btn{width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;border-radius:9px;font:700 17px Inter;cursor:pointer;transition:background .15s}
+  .cvlb-btn:hover{background:rgba(255,255,255,.2)}
+  .cvlb-btn.cvlb-x{background:rgba(200,16,46,.85);border-color:transparent}
+  .cvlb-btn[hidden]{display:none}
+  .cvlb-stage{flex:1;min-height:0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .cvlb-img{max-width:96%;max-height:96%;object-fit:contain;transform-origin:center center;transition:transform .08s ease-out;cursor:grab;user-select:none;-webkit-user-drag:none;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  .cvlb-img.grabbing{cursor:grabbing;transition:none}
+  .cvlb-frame{width:min(1000px,94%);height:94%;border:0;border-radius:8px;background:#fff}
+  .cvlb-media{max-width:94%;max-height:94%;border-radius:8px}
+  .cvlb-doc,.cvlb-audio{display:flex;flex-direction:column;align-items:center;gap:14px;color:#fff;text-align:center;padding:24px}
+  .cvlb-ic-lg{font-size:72px}
+  .cvlb-fn{font:600 15px Inter;color:#e6eefb;max-width:80vw;word-break:break-word}
+  .cvlb-dl{font:700 13px Inter;color:#fff;background:var(--red,#c8102e);padding:11px 20px;border-radius:10px;text-decoration:none}
+  .cvlb-nav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:64px;border:0;background:rgba(255,255,255,.1);color:#fff;font:400 32px Inter;cursor:pointer;z-index:3;border-radius:10px}
+  .cvlb-nav:hover{background:rgba(255,255,255,.22)}
+  .cvlb-prev{left:12px}.cvlb-next{right:12px}
+  .cvlb-nav[hidden]{display:none}
+  @media(max-width:560px){.cvlb-nav{width:38px;height:52px;font-size:26px}.cvlb-frame{width:98%}}
 </style>
 <script>addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;
 if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}
@@ -480,6 +517,25 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
 
 </div>
 </main>
+
+<!-- Per-case media lightbox: zoom/pan images, read PDFs/docs inline, print & export -->
+<div id="cvLb" class="cvlb" role="dialog" aria-modal="true" aria-label="Visor de fotos y documentos" aria-hidden="true">
+  <div class="cvlb-bar">
+    <span class="cvlb-count" id="cvLbCount">—</span>
+    <span class="cvlb-name" id="cvLbName"></span>
+    <span class="cvlb-tools">
+      <button type="button" class="cvlb-btn" id="cvLbZout" data-act="galZoomOut" title="Alejar" aria-label="Alejar">−</button>
+      <button type="button" class="cvlb-btn" id="cvLbZin" data-act="galZoomIn" title="Acercar" aria-label="Acercar">+</button>
+      <button type="button" class="cvlb-btn" id="cvLbReset" data-act="galReset" title="Ajustar a pantalla" aria-label="Ajustar">⤢</button>
+      <button type="button" class="cvlb-btn" data-act="galPrint" title="Imprimir" aria-label="Imprimir">🖨</button>
+      <button type="button" class="cvlb-btn" data-act="galDownload" title="Descargar" aria-label="Descargar">⬇</button>
+      <button type="button" class="cvlb-btn cvlb-x" data-act="galClose" title="Cerrar (Esc)" aria-label="Cerrar">✕</button>
+    </span>
+  </div>
+  <button type="button" class="cvlb-nav cvlb-prev" data-act="galPrev" title="Anterior" aria-label="Anterior">‹</button>
+  <div class="cvlb-stage" id="cvLbStage"></div>
+  <button type="button" class="cvlb-nav cvlb-next" data-act="galNext" title="Siguiente" aria-label="Siguiente">›</button>
+</div>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -801,20 +857,83 @@ function startChrono(ms){
   const tick=()=>{const el=document.getElementById('cv_chrono');if(!el){clearInterval(CHRONO_T);CHRONO_T=null;return;}el.textContent=fmtChrono(ms);};
   tick();CHRONO_T=setInterval(tick,1000);
 }
-// Public citizen "aportes" (documents/photos): load approved (+pending for operators).
-async function loadAportes(id){
-  const g=document.getElementById('aportgrid');if(!g)return;
+// ---- Per-case media gallery (photos + documents) ----
+// Aggregates the case's main photo + every approved photo/document into one
+// zoomable, printable, downloadable gallery. Operators load via /attachments
+// (all case evidence incl. pending); the public loads via /aportes (approved
+// citizen contributions only). Serving/minor-protection is enforced server-side.
+var GAL=[];              // current case media: [{id,kind,url,filename,source,review,mime,isMain}]
+function galIsImg(m){return m.kind==='photo'||String(m.mime||'').indexOf('image/')===0;}
+function galIsPdf(m){return String(m.mime||'').indexOf('pdf')>=0||/\.pdf$/i.test(m.filename||'');}
+function galIsVid(m){return m.kind==='video'||String(m.mime||'').indexOf('video/')===0;}
+function galIsAud(m){return m.kind==='voice'||m.kind==='audio'||String(m.mime||'').indexOf('audio/')===0;}
+function galIcon(m){return galIsPdf(m)?'📄':galIsVid(m)?'🎬':galIsAud(m)?'🎧':m.kind==='gps'?'📍':'📄';}
+function galKindLbl(m){return galIsPdf(m)?'PDF':galIsVid(m)?'Video':galIsAud(m)?'Audio':m.kind==='gps'?'GPS':'Doc';}
+async function loadGallery(id,mainPhoto){
+  const g=document.getElementById('galgrid');if(!g)return;
+  GAL=[];
+  if(mainPhoto)GAL.push({url:mainPhoto,kind:'photo',filename:'Foto principal',source:'expediente',review:'approved',isMain:true});
+  const ep=OP?'attachments':'aportes';
   try{
-    const d=await (await api('persons/'+encodeURIComponent(id)+'/aportes')).json();
-    const items=(d&&d.items)||[];
-    if(!items.length){g.innerHTML='<div style="grid-column:1/-1;color:var(--muted);font:500 13px Inter">Aún no hay documentos aportados.</div>';return;}
-    g.innerHTML=items.map(a=>{
-      const url='/api/persons/'+encodeURIComponent(id)+'/aportes/'+encodeURIComponent(a.id)+'/file';
-      const pend=a.review==='pending'?'<span style="position:absolute;top:5px;left:5px;font:700 9px Inter;background:var(--amber,#e57200);color:#fff;padding:2px 5px;border-radius:5px">POR REVISAR</span>':'';
-      if(a.kind==='photo')return`<a href="${url}" target="_blank" rel="noopener" style="position:relative;display:block;border-radius:10px;overflow:hidden;border:1px solid var(--line)">${pend}<img src="${url}" loading="lazy" style="width:100%;height:120px;object-fit:cover;display:block"></a>`;
-      return`<a href="${url}" target="_blank" rel="noopener" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;height:120px;border-radius:10px;border:1px solid var(--line);background:#fff;text-decoration:none;color:var(--ink);padding:8px;text-align:center">${pend}<div style="font-size:30px">📄</div><div style="font:600 11px Inter;margin-top:6px;word-break:break-word">${esc((a.filename||a.category||'Documento')).slice(0,28)}</div></a>`;
-    }).join('');
-  }catch{g.innerHTML='<div style="grid-column:1/-1;color:var(--muted)">No se pudieron cargar los aportes.</div>';}
+    const d=await (await api('persons/'+encodeURIComponent(id)+'/'+ep)).json();
+    const items=(d&&(d.items||d.attachments))||[];
+    items.forEach(a=>GAL.push({
+      id:a.id,kind:a.kind||'document',mime:a.content_type||'',
+      url:'/api/persons/'+encodeURIComponent(id)+'/'+ep+'/'+encodeURIComponent(a.id)+'/file',
+      filename:a.filename||a.category||'Documento',source:a.source||'ciudadano',review:a.review||'approved',
+    }));
+  }catch{}
+  renderGallery();
+}
+function renderGallery(){
+  const g=document.getElementById('galgrid');if(!g)return;
+  const cnt=document.getElementById('galcount'),dl=document.getElementById('galdlall');
+  if(cnt)cnt.textContent=GAL.length?'· '+GAL.length:'';
+  if(dl)dl.style.display=GAL.length>1?'':'none';
+  if(!GAL.length){g.innerHTML='<div style="grid-column:1/-1;color:var(--muted);font:500 13px Inter">No hay fotos ni documentos para este caso todavía.</div>';return;}
+  g.innerHTML=GAL.map((m,i)=>{
+    const pend=m.review==='pending'?'<span class="gal-badge pend">Por revisar</span>':'';
+    const main=m.isMain?'<span class="gal-badge main">Principal</span>':'';
+    const inner=galIsImg(m)
+      ? `<img src="${esc(m.url)}" loading="lazy" class="gal-thumb-img" data-fb-html="<div class='gal-thumb-doc'><div class='gal-ic'>🖼️</div><div class='gal-fn'>${esc((m.filename||'Imagen')).slice(0,26)}</div></div>">`
+      : `<div class="gal-thumb-doc"><div class="gal-ic">${galIcon(m)}</div><div class="gal-fn">${esc((m.filename||'Documento')).slice(0,30)}</div></div>`+`<span class="gal-badge kind">${galKindLbl(m)}</span>`;
+    return `<button type="button" class="gal-item" data-act="galOpen" data-a1="${i}" title="${esc(m.filename||'')}">${pend}${main}${inner}</button>`;
+  }).join('');
+}
+// Lightbox: zoom/pan for images, inline reader for PDF/text, player for A/V.
+var galIdx=0,galZoom=1,galX=0,galY=0,galDragging=false,galSX=0,galSY=0;
+function lbOpen(){return document.getElementById('cvLb').classList.contains('on');}
+function galApply(){const im=document.getElementById('cvLbImg');if(im)im.style.transform='translate('+galX+'px,'+galY+'px) scale('+galZoom+')';}
+function galRender(){
+  const m=GAL[galIdx];if(!m)return;const stage=document.getElementById('cvLbStage');
+  document.getElementById('cvLbCount').textContent=(galIdx+1)+' / '+GAL.length;
+  document.getElementById('cvLbName').textContent=m.filename||'';
+  galZoom=1;galX=0;galY=0;
+  const img=galIsImg(m),zoomable=img;
+  ['cvLbZin','cvLbZout','cvLbReset'].forEach(id=>{const b=document.getElementById(id);if(b)b.hidden=!zoomable;});
+  document.querySelectorAll('.cvlb-nav').forEach(b=>b.hidden=GAL.length<2);
+  if(img){stage.innerHTML='<img id="cvLbImg" class="cvlb-img" src="'+esc(m.url)+'" alt="'+esc(m.filename||'')+'">';galApply();}
+  else if(galIsVid(m))stage.innerHTML='<video class="cvlb-media" src="'+esc(m.url)+'" controls autoplay playsinline></video>';
+  else if(galIsAud(m))stage.innerHTML='<div class="cvlb-audio"><div class="cvlb-ic-lg">🎧</div><audio src="'+esc(m.url)+'" controls autoplay></audio><div class="cvlb-fn">'+esc(m.filename||'')+'</div></div>';
+  else if(galIsPdf(m))stage.innerHTML='<iframe class="cvlb-frame" src="'+esc(m.url)+'#view=FitH" title="'+esc(m.filename||'documento')+'"></iframe>';
+  else stage.innerHTML='<div class="cvlb-doc"><div class="cvlb-ic-lg">📄</div><div class="cvlb-fn">'+esc(m.filename||'Documento')+'</div><a class="cvlb-dl" href="'+esc(m.url)+'" download="'+esc(m.filename||'documento')+'" target="_blank" rel="noopener">Abrir / descargar</a></div>';
+}
+function galOpen(i){galIdx=+i||0;const lb=document.getElementById('cvLb');lb.classList.add('on');lb.setAttribute('aria-hidden','false');galRender();}
+function galClose(){const lb=document.getElementById('cvLb');lb.classList.remove('on');lb.setAttribute('aria-hidden','true');document.getElementById('cvLbStage').innerHTML='';}
+function galPrev(){if(GAL.length<2)return;galIdx=(galIdx-1+GAL.length)%GAL.length;galRender();}
+function galNext(){if(GAL.length<2)return;galIdx=(galIdx+1)%GAL.length;galRender();}
+function galZoomIn(){galZoom=Math.min(galZoom*1.35,8);galApply();}
+function galZoomOut(){galZoom=Math.max(galZoom/1.35,1);if(galZoom<=1){galX=0;galY=0;}galApply();}
+function galReset(){galZoom=1;galX=0;galY=0;galApply();}
+function galDownload(){const m=GAL[galIdx];if(!m)return;const a=document.createElement('a');a.href=m.url;a.download=(m.filename||'archivo');a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();}
+function galDownloadAll(){GAL.forEach((m,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=m.url;a.download=(m.filename||('archivo-'+(i+1)));a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();},i*350));}
+function galPrint(){
+  const m=GAL[galIdx];if(!m)return;
+  if(galIsImg(m)){
+    const w=window.open('','_blank');if(!w){toast&&toast('Permite ventanas emergentes para imprimir');return;}
+    w.document.write('<html><head><title>'+esc(m.filename||'Imagen')+'</title><style>*{margin:0}img{max-width:100%;height:auto;display:block;margin:auto}</style></head><body><img src="'+esc(m.url)+'" onload="window.focus();window.print();"></body></html>');
+    w.document.close();
+  } else { window.open(m.url,'_blank','noopener'); } // PDFs/docs print from the browser viewer
 }
 // Operator-only contact blob (e.g. "Wuimberly Morales, +584122344014, frandybelg@gmail.com")
 // is stored in one field. Parse out a name, phone and email so the phone is tap-to-call
@@ -952,12 +1071,11 @@ function renderCase(d){
     </div>
   </div>`;
 
-  /* ---- EVIDENCIA ---- */
-  const evc=p.evidence_count||0;
+  /* ---- EVIDENCIA / GALERÍA ---- */
   $('#p_evidencia').innerHTML=`<div class="card">
-    <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z M4 15l5-5 4 4 3-3 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>Documentos y fotos aportados</h3>
-    <p style="font:500 13px Inter;color:var(--muted);margin:-2px 0 12px">Fotos, volantes o documentos que ayuden a identificar o ubicar a la persona. ${OP?'Como operador, tus aportes se publican de inmediato.':'Lo que subas quedará visible tras la revisión de un moderador.'}</p>
-    <div id="aportgrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px">Cargando…</div>
+    <h3 style="justify-content:space-between"><span style="display:inline-flex;gap:8px;align-items:center"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z M4 15l5-5 4 4 3-3 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>Galería del caso · fotos y documentos <span id="galcount" style="font:700 12px Inter;color:var(--muted)"></span></span><button type="button" id="galdlall" data-act="galDownloadAll" style="display:none;font:700 12px Inter;color:var(--navy);border:1px solid var(--line-2);border-radius:9px;padding:7px 12px;background:#fff;cursor:pointer">⬇ Descargar todo</button></h3>
+    <p style="font:500 13px Inter;color:var(--muted);margin:-2px 0 12px">Toca cualquier archivo para ampliarlo: puedes hacer zoom, leer, imprimir o descargar cada imagen y documento. ${OP?'Como operador ves también la evidencia interna del expediente.':'Lo que subas quedará visible tras la revisión de un moderador.'}</p>
+    <div id="galgrid" class="galgrid" style="margin-bottom:16px">Cargando…</div>
     <form id="aportf" class="contrib">
       <label style="font:700 11px Inter;color:var(--muted);text-transform:uppercase">Archivo (imagen, PDF o documento · máx 8 MB)</label>
       <input type="file" name="file" accept="image/*,application/pdf,.txt" required style="display:block;margin:6px 0 10px">
@@ -967,7 +1085,7 @@ function renderCase(d){
     </form>
     ${OP?'<div class="note" style="margin-top:14px;font:500 12px Inter;color:var(--muted)">La evidencia interna confidencial (no pública) se gestiona desde la Consola del operador.</div>':''}
   </div>`;
-  loadAportes(p.id);
+  loadGallery(p.id,p.photo_url);
   const af=document.getElementById('aportf'),am=document.getElementById('aportmsg');
   af.addEventListener('submit',async ev=>{
     ev.preventDefault();
@@ -979,7 +1097,7 @@ function renderCase(d){
     try{
       const r=await api('persons/'+encodeURIComponent(p.id)+'/aportes',{method:'POST',body:fd});
       const j=await r.json();
-      if(r.ok){am.style.display='block';am.style.color='var(--green)';am.textContent=j.review==='approved'?'✓ Aporte publicado.':'✓ Subido. Aparecerá tras la revisión de un moderador.';af.reset();loadAportes(p.id);}
+      if(r.ok){am.style.display='block';am.style.color='var(--green)';am.textContent=j.review==='approved'?'✓ Aporte publicado.':'✓ Subido. Aparecerá tras la revisión de un moderador.';af.reset();loadGallery(p.id,p.photo_url);}
       else{am.style.display='block';am.style.color='var(--red)';am.textContent=j.error==='rate_limited'?'Demasiados envíos. Intenta más tarde.':(j.error==='file_too_large'?'El archivo es muy grande.':(j.error==='unsupported_file_type'?'Tipo de archivo no permitido.':'No se pudo subir.'));btn.disabled=false;btn.textContent='Subir aporte';}
     }catch{am.style.display='block';am.style.color='var(--red)';am.textContent='Error de red.';btn.disabled=false;btn.textContent='Subir aporte';}
   });
@@ -1320,9 +1438,29 @@ $('#f_reset').addEventListener('click',()=>{
 $('#pgGo').addEventListener('click',()=>goPage(+$('#pgInput').value));
 $('#pgInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();goPage(+$('#pgInput').value);}});
 document.addEventListener('keydown',e=>{
+  // Lightbox owns the keyboard while open: Esc closes IT (not the case view),
+  // arrows navigate, +/- zoom images.
+  if(lbOpen()){
+    if(e.key==='Escape'){e.preventDefault();galClose();}
+    else if(e.key==='ArrowLeft')galPrev();
+    else if(e.key==='ArrowRight')galNext();
+    else if(e.key==='+'||e.key==='=')galZoomIn();
+    else if(e.key==='-'||e.key==='_')galZoomOut();
+    return;
+  }
   if(e.key==='/'&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='TEXTAREA'&&!$('#caseView').classList.contains('show')){e.preventDefault();$('#q').focus();}
   if(e.key==='Escape'&&$('#caseView').classList.contains('show')){history.pushState({},'','/casos');showList();}
 });
+// Lightbox stage interactions: wheel-zoom images, drag-to-pan, click backdrop to close.
+(function(){
+  var stage=document.getElementById('cvLbStage');if(!stage)return;
+  stage.addEventListener('wheel',function(e){var m=GAL[galIdx];if(!m||!galIsImg(m))return;e.preventDefault();if(e.deltaY<0)galZoomIn();else galZoomOut();},{passive:false});
+  stage.addEventListener('mousedown',function(e){var im=document.getElementById('cvLbImg');if(!im||galZoom<=1)return;galDragging=true;galSX=e.clientX-galX;galSY=e.clientY-galY;im.classList.add('grabbing');e.preventDefault();});
+  window.addEventListener('mousemove',function(e){if(!galDragging)return;galX=e.clientX-galSX;galY=e.clientY-galSY;galApply();});
+  window.addEventListener('mouseup',function(){if(!galDragging)return;galDragging=false;var im=document.getElementById('cvLbImg');if(im)im.classList.remove('grabbing');});
+  stage.addEventListener('click',function(e){if(e.target===stage)galClose();}); // click empty area closes
+  document.getElementById('cvLb').querySelector('.cvlb-bar').addEventListener('dblclick',function(){galReset();});
+})();
 
 /* boot */
 (async()=>{
@@ -1338,6 +1476,16 @@ var ACTIONS={
   setTab:function(t){setTab(t);},
   toggleProtect:function(id,want){toggleProtect(id,want);},
   subscribe:function(caseId){subscribeCase(caseId);},
+  galOpen:function(i){galOpen(i);},
+  galClose:function(){galClose();},
+  galPrev:function(){galPrev();},
+  galNext:function(){galNext();},
+  galZoomIn:function(){galZoomIn();},
+  galZoomOut:function(){galZoomOut();},
+  galReset:function(){galReset();},
+  galPrint:function(){galPrint();},
+  galDownload:function(){galDownload();},
+  galDownloadAll:function(){galDownloadAll();},
   __rmClosest:function(sel,el){var n=el&&el.closest(sel);if(n)n.remove();}
 };
 async function subscribeCase(caseId){
