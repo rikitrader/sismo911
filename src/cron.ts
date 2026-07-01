@@ -29,6 +29,7 @@ import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from './lib/cle
 import { dedupePersonas, dedupeRavReports } from './lib/dedupe';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
+import { syncCasesSheetToD1 } from './sync/sheet-source';
 import { ingestBlog } from './ingest/blog-cron';
 import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestRavSafe } from './ingest/rav-cron';
 import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
@@ -139,6 +140,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   '30 * * * *': [
     { name: 'familia-photo-mirror', run: mirrorFamiliaPhotos },
     { name: 'monitor-sheet', run: syncMonitorSheet },
+    // Sheet-as-source-of-truth: pull the curated "Casos CRM" sheet into D1 (one
+    // bounded 4k-row pass per tick, drains via KV cursor; dedup runs on wrap).
+    // No-op until CASES_SHEET_ID + GOOGLE_* creds are set.
+    { name: 'cases-sheet-sync', run: syncCasesSheetToD1 },
     // Email subscribers when a case they follow changes (status / new verified
     // lead / data). Scans only cases with active subs; the AI summary + email
     // send fire ONLY on a real change, so a quiet tick is ~cheap D1 reads. Rides

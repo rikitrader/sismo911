@@ -70,6 +70,8 @@ export interface Env {
   APIFY_IG_ACTOR?: string;
   MONITOR_WEBHOOK_SECRET?: string; // shared secret for the Apify webhook
   MONITOR_SHEET_ID?: string;       // Google Sheet to mirror into
+  CASES_SHEET_ID?: string;         // "Casos CRM" sheet that is the source of truth (Sheet → D1 sync)
+  SHEET_SYNC_ENABLED?: string;     // '1' arms the hourly cron to APPLY sheet→D1 (fail-closed; endpoints work regardless)
   FUNDING_SHEET_ID?: string;       // Business-plan sheet for the live /api/funding feed
   GOOGLE_REFRESH_TOKEN?: string;
   GOOGLE_CLIENT_ID?: string;
