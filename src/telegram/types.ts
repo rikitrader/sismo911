@@ -132,6 +132,14 @@ export const TgChat = z
   })
   .passthrough();
 
+// Media the intake bot ingests: photos (multiple sizes) and PDF/image documents.
+export const TgPhotoSize = z
+  .object({ file_id: z.string(), file_unique_id: z.string().optional(), file_size: z.number().optional() })
+  .passthrough();
+export const TgDocument = z
+  .object({ file_id: z.string(), file_name: z.string().optional(), mime_type: z.string().optional(), file_size: z.number().optional() })
+  .passthrough();
+
 export const TgMessage = z
   .object({
     message_id: z.number().optional(),
@@ -139,6 +147,9 @@ export const TgMessage = z
     chat: TgChat,
     date: z.number().optional(),
     text: z.string().max(4096).optional(),
+    caption: z.string().max(4096).optional(),
+    photo: z.array(TgPhotoSize).optional(),
+    document: TgDocument.optional(),
   })
   .passthrough();
 

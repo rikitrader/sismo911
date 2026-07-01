@@ -27,6 +27,7 @@ import {
 } from '../adapters/sismo911-api';
 import { auditTelegram, checkAbuse, queryFingerprint } from './audit';
 import { hashId } from './hash';
+import { isIntakeMessage, handleIntake } from './intake';
 
 type BotEnv = Env & TelegramEnv;
 
@@ -184,7 +185,7 @@ telegram.post('/webhook', async (c) => {
   const parsed = TgUpdate.safeParse(body);
   if (!parsed.success) return c.json({ ok: true }); // ack malformed updates, do nothing
   const msg = parsed.data.message ?? parsed.data.edited_message;
-  if (!msg || !msg.text) return c.json({ ok: true });
+  if (!msg) return c.json({ ok: true });
 
   const token = cfg.botToken;
   const chatId = msg.chat.id;
@@ -222,6 +223,19 @@ telegram.post('/webhook', async (c) => {
       return c.json({ ok: true });
     }
   }
+
+  // 4.5 Media intake: a photo or PDF/image document runs the extraction pipeline
+  //     (download → Workers-AI OCR → structure → match existing case or create a
+  //     pending DRAFT → notify operator + reply). Handled in the background so we
+  //     ack Telegram immediately; the sender is answered via the Bot API.
+  if (isIntakeMessage(msg)) {
+    await auditTelegram(c.env, { event: 'query', chatId, chatType, userHash, command: 'intake', resultKind: 'intake' });
+    c.executionCtx.waitUntil(handleIntake(c.env, cfg, msg));
+    return c.json({ ok: true });
+  }
+
+  // Everything past here is a text query; ack non-text, non-media updates.
+  if (!msg.text) return c.json({ ok: true });
 
   // 5. Parse the command (deterministic first; AI only to fill gaps).
   let cmd = parseCommand(msg.text);
