@@ -85,7 +85,8 @@ export type QueryResult =
   | { kind: 'need_more'; reason: 'partial_name' | 'phone_requires_admin' }
   | { kind: 'no_match' }
   | { kind: 'multiple'; count: number }
-  | { kind: 'match'; record: CaseRecord }
+  | { kind: 'list'; records: CaseRecord[] }
+  | { kind: 'match'; record: CaseRecord; detail?: 'full' | 'status' | 'summary' }
   | { kind: 'error' };
 
 // ---- Parsed command shape (command parser → adapter) ------------------------

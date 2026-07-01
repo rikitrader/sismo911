@@ -21,7 +21,10 @@ import { normalizeCedula, namesRoughlyMatch } from '../lib/identity';
 import { coarsenLocation, isMinor, isPublicSuppressed } from '../lib/minor-protect';
 
 const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
-const MAX_RESULTS = 12; // hard ceiling so a broad name can't fan out / scrape
+// Ceiling per query. High enough that an operator's emergency search returns
+// EVERY match (the response is split across Telegram messages when long); public
+// viewers never receive a list, so this is not a scraping surface for them.
+const MAX_RESULTS = 100;
 
 // ---- input normalization ----------------------------------------------------
 

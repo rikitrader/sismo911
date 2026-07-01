@@ -217,6 +217,20 @@ describe('resolveQuery end-to-end (no_match / multiple / single)', () => {
     const r = await resolveQuery(env(data), { kind: 'status', lang: 'es', caseId: 'EXP-2026-0100', raw: '' }, ctx);
     expect(r.kind).toBe('match');
   });
+  it('OPERATORS get the FULL list of matches (public gets asked to narrow)', async () => {
+    const cmd = { kind: 'buscar' as const, lang: 'es' as const, name: 'Carlos Ramirez', raw: '' };
+    const asPublic = await resolveQuery(env(data), cmd, { canSeeSensitive: false, role: 'public', nowMs: NOW });
+    const asAdmin = await resolveQuery(env(data), cmd, { canSeeSensitive: true, role: 'admin', nowMs: NOW });
+    expect(asPublic.kind).toBe('multiple');
+    expect(asAdmin.kind).toBe('list');
+    expect(asAdmin.kind === 'list' && asAdmin.records.length).toBe(2);
+  });
+  it('/caso requests the full detail view, /status the short one', async () => {
+    const caso = await resolveQuery(env(data), { kind: 'caso', lang: 'es', caseId: 'EXP-2026-0100', raw: '' }, ctx);
+    const status = await resolveQuery(env(data), { kind: 'status', lang: 'es', caseId: 'EXP-2026-0100', raw: '' }, ctx);
+    expect(caso.kind === 'match' && caso.detail).toBe('full');
+    expect(status.kind === 'match' && status.detail).toBe('status');
+  });
   it('phone search is refused for a non-privileged viewer', async () => {
     const r = await resolveQuery(env(data), { kind: 'buscar', lang: 'es', phone: '+584141234567', raw: '' }, ctx);
     expect(r).toEqual({ kind: 'need_more', reason: 'phone_requires_admin' });

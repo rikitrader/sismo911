@@ -1,6 +1,7 @@
 // Auth, command-parsing, and response-builder tests for the Telegram bot.
 import { describe, it, expect } from 'vitest';
 import { parseCommand, tokenize } from '../src/telegram/commands';
+import { chunkText } from '../src/telegram/route';
 import {
   verifyWebhook,
   isRequestAuthorized,
@@ -195,6 +196,38 @@ describe('buildTelegramResponse', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, { ...base, baseUrl: 'https://sismo911.com' });
     expect(out).toContain('https://sismo911.com/casos#caso=HOSP-hp_1');
   });
+  it("/caso (detail:full) shows name + age + link, still no sensitive PII in a group", () => {
+    const out = buildTelegramResponse({ kind: 'match', record: rec, detail: 'full' }, base);
+    expect(out).toMatch(/Detalle del caso/);
+    expect(out).toContain('Nombre: Jose Garcia');
+    expect(out).toContain('Edad: 50');
+    expect(out).toMatch(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_1/);
+    expect(out).not.toContain('12345678'); // cédula still hidden in a group
+    expect(out).not.toContain('Vargas');
+  });
+  it("/caso (detail:full) as admin DM adds the operator block", () => {
+    const out = buildTelegramResponse({ kind: 'match', record: rec, detail: 'full' }, { lang: 'es', role: 'admin', canSeeSensitive: true });
+    expect(out).toContain('Nombre: Jose Garcia');
+    expect(out).toContain('12345678');
+    expect(out).toContain('Hospital Vargas');
+  });
+  it('/status (detail:status) is a short status line with the link', () => {
+    const out = buildTelegramResponse({ kind: 'match', record: rec, detail: 'status' }, base);
+    expect(out).toMatch(/Caso: HOSP-hp_1/);
+    expect(out).toMatch(/Estado: HOSPITALIZED/);
+    expect(out).toMatch(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_1/);
+    expect(out).not.toContain('Nombre');
+    expect(out).not.toContain('Ubicación');
+  });
+  it('operator list shows every record, numbered, with status + link', () => {
+    const many = Array.from({ length: 5 }, (_, i) => ({ ...rec, internalId: `hp_${i}`, caseId: `HOSP-hp_${i}`, fullName: `Persona ${i}` }));
+    const out = buildTelegramResponse({ kind: 'list', records: many }, base);
+    expect(out).toMatch(/Se encontraron 5 registros/);
+    expect(out).toContain('1. Persona 0, 50 — HOSPITALIZED [HOSP-hp_0]');
+    expect(out).toContain('5. Persona 4, 50 — HOSPITALIZED [HOSP-hp_4]');
+    expect(out).toContain('/casos#caso=HOSP-hp_4');
+    expect(out).not.toContain('12345678'); // no PII in the list
+  });
 
   it('admin match (DM) includes the restricted detail block', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, { lang: 'es', role: 'admin', canSeeSensitive: true });
@@ -214,5 +247,18 @@ describe('buildTelegramResponse', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, { lang: 'en', role: 'public', canSeeSensitive: false });
     expect(out).toMatch(/Verified record/);
     expect(out).toMatch(/Status: HOSPITALIZED/);
+  });
+});
+
+describe('chunkText splits long replies for Telegram', () => {
+  it('keeps short text as one chunk', () => {
+    expect(chunkText('hola', 100)).toEqual(['hola']);
+  });
+  it('splits at line boundaries under the max', () => {
+    const lines = Array.from({ length: 50 }, (_, i) => `line ${i} ${'x'.repeat(80)}`).join('\n');
+    const chunks = chunkText(lines, 500);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const c of chunks) expect(c.length).toBeLessThanOrEqual(500);
+    expect(chunks.join('\n')).toBe(lines);
   });
 });
