@@ -15,7 +15,8 @@ import { TgUpdate, type CaseRecord, type ParsedCommand, type QueryResult, type V
 import { verifyWebhook, isRequestAuthorized, canViewSensitiveData, viewerRoleFor } from './auth';
 import { parseCommand } from './commands';
 import { aiNormalizeIntent } from './intent';
-import { buildTelegramResponse, buildListMessages } from './responses';
+import { buildTelegramResponse, buildListMessages, buildUpdateResponse } from './responses';
+import { resolveUpdate } from './update';
 import { redactSensitiveFields, isHiddenFromPublic } from '../adapters/sismo911-api';
 import {
   getCaseById,
@@ -255,6 +256,25 @@ telegram.post('/webhook', async (c) => {
         cmd.partialName = cmd.name.replace(/\s+/g, '').length < 3;
       }
     }
+  }
+
+  // 5.5 Operator WRITE path: /actualizar edits an existing case. Authorized here
+  //     (role !== 'public'; aprobar/rechazar require admin) and again in
+  //     resolveUpdate. Never runs against public/hospital registries. Audited.
+  if (cmd.kind === 'actualizar') {
+    const actor = `tg:${userId ?? 'anon'}`;
+    const upd = await resolveUpdate(c.env, cmd, { role, actor });
+    await auditTelegram(c.env, {
+      event: 'query',
+      chatId,
+      chatType,
+      userHash,
+      command: 'actualizar',
+      resultKind: upd.kind,
+    });
+    const text = buildUpdateResponse(upd, { lang: cmd.lang, role, canSeeSensitive });
+    c.executionCtx.waitUntil(sendMessages(token, chatId, [text]));
+    return c.json({ ok: true });
   }
 
   // 6. Resolve against verified DB data.

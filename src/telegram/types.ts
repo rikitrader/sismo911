@@ -96,8 +96,14 @@ export type CommandKind =
   | 'status'
   | 'hospitalizados'
   | 'missing'
+  | 'actualizar'
   | 'ayuda'
   | 'unknown';
+
+// Canonical fields/actions the operator write command (/actualizar) can apply.
+// 'aprobar' | 'rechazar' are executive-tier (admin) only; the rest are editable
+// by any authorized operator.
+export type UpdateField = 'estado' | 'ubicacion' | 'contacto' | 'edad' | 'nombre' | 'nota' | 'aprobar' | 'rechazar';
 
 export interface ParsedCommand {
   kind: CommandKind;
@@ -110,6 +116,10 @@ export interface ParsedCommand {
   city?: string;
   // True when the name looks partial (single token / too short) → require more.
   partialName?: boolean;
+  // /actualizar: which field/action to apply and its new value (value empty for
+  // aprobar/rechazar). caseId carries the target case id.
+  updateField?: UpdateField;
+  updateValue?: string;
   raw: string;
 }
 
