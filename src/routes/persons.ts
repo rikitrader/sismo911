@@ -580,21 +580,31 @@ persons.get('/cases', async (c) => {
   // fallecido) NOT already on a real expediente; only these federate as hosp- cases,
   // so adding them to `total` keeps the banner equal to the pager on the default view
   // (matched ones are already counted inside persons/personas).
-  let hospitalized = 0, hospUnmatched = 0;
+  // `unmatched_deceased` / `unmatched_alta` mirror the fallecido/alta rows the
+  // federation surfaces as hosp- cases; they MUST feed the deceased/found_safe
+  // KPIs or those cards under-count the docket (the "Fallecidos confirmados: 1"
+  // bug — hosp-<id> fallecidas showed as cases but never in the KPI).
+  let hospitalized = 0, hospUnmatched = 0, hospDeceased = 0, hospSafe = 0;
   try {
     const hr: any = await c.env.DB.prepare(
       `SELECT SUM(CASE WHEN estado='hospitalizado' THEN 1 ELSE 0 END) AS hosp_all,
               SUM(CASE WHEN estado IN ('hospitalizado','alta','fallecido')
-                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_n
+                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_n,
+              SUM(CASE WHEN estado='fallecido'
+                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_deceased,
+              SUM(CASE WHEN estado='alta'
+                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_alta
          FROM hospital_patients`
     ).first();
     hospitalized = Number(hr?.hosp_all) || 0;
     hospUnmatched = Number(hr?.unmatched_n) || 0;
+    hospDeceased = Number(hr?.unmatched_deceased) || 0;
+    hospSafe = Number(hr?.unmatched_alta) || 0;
   } catch {}
   const summary = {
     missing: (sum?.missing || 0) + (fsum?.missing || 0),
-    found_safe: (sum?.found_safe || 0) + (fsum?.found_safe || 0),
-    deceased: (sum?.deceased || 0) + (fsum?.deceased || 0),
+    found_safe: (sum?.found_safe || 0) + (fsum?.found_safe || 0) + hospSafe,
+    deceased: (sum?.deceased || 0) + (fsum?.deceased || 0) + hospDeceased,
     hospitalized,
     pending: sum?.pending || 0,
     total: (sum?.total || 0) + (fsum?.total || 0) + hospUnmatched,
