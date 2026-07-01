@@ -42,6 +42,7 @@
       { label: 'Centro Humanitario', href: '/humanitario', m: ['/humanitario'], d: 'M12 21a9 9 0 100-18 9 9 0 000 18zm0-18c2.6 2.7 2.6 15.3 0 18M3 12h18' },
       { label: 'Capas COP', href: '/layers', m: ['/layers'], d: 'M4 6l8-4 8 4-8 4-8-4zm0 6 8 4 8-4m-16 6 8 4 8-4' },
       { label: 'Satélite IA', href: '/satellite', m: ['/satellite'], d: 'M11 3a8 8 0 108 8M3 21l6-6M14 10l6-6' },
+      { label: 'Ionosfera TEC', href: 'https://vzla-tec-map.rikitrader.workers.dev/', m: [], ext: true, d: 'M4.9 11a10 10 0 0 1 14.2 0M8.5 14.5a5 5 0 0 1 7 0M12 18h.01' },
       { label: 'Dashboard', href: '/dashboard', m: ['/dashboard'], d: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z' },
       { label: 'Alertas', href: '/alertas', m: ['/alertas'], d: 'M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z' },
       { label: 'Alerta PAGER', href: '/pager', m: ['/pager'], d: 'M12 3l8 4v5c0 4.5-3.1 7.9-8 9-4.9-1.1-8-4.5-8-9V7l8-4z' },
@@ -206,7 +207,7 @@
       <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;background:rgba(255,255,255,.20);color:#fff">${icon(it.d)}</span>
       ${it.label}</a>`;
     }
-    return `<a href="${it.href}" style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;font:600 13.5px Inter,sans-serif;text-decoration:none;${on ? 'background:rgba(0,23,58,.06);color:' + NAVY : 'color:' + VARIANT}" onmouseover="if(!${on})this.style.background='#eeeef0'" onmouseout="if(!${on})this.style.background='transparent'">
+    return `<a href="${it.href}"${it.ext ? ' target="_blank" rel="noopener"' : ''} style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;font:600 13.5px Inter,sans-serif;text-decoration:none;${on ? 'background:rgba(0,23,58,.06);color:' + NAVY : 'color:' + VARIANT}" onmouseover="if(!${on})this.style.background='#eeeef0'" onmouseout="if(!${on})this.style.background='transparent'">
       <span class="s911-chip" style="width:32px;height:32px;display:grid;place-items:center;border-radius:10px;flex:0 0 auto;${on ? 'background:' + NAVY + ';color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)' : 'background:rgba(0,23,58,.10);color:' + NAVY}">${icon(it.d)}</span>
       ${it.label}</a>`;
   };
@@ -407,7 +408,7 @@
 
   // ── Slim site footer (desktop only) — the "rest of the pages" the condensed top
   // bar doesn't show. Mobile keeps the burger drawer (which already lists them all). ─
-  const fcol = (title, items) => `<div class="s911-fcol"><h4>${title}</h4>${items.map((it) => `<a href="${it.href}">${it.label}</a>`).join('')}</div>`;
+  const fcol = (title, items) => `<div class="s911-fcol"><h4>${title}</h4>${items.map((it) => `<a href="${it.href}"${it.ext ? ' target="_blank" rel="noopener"' : ''}>${it.label}</a>`).join('')}</div>`;
   const footer = document.createElement('footer');
   footer.id = 's911-footer';
   footer.innerHTML = `
