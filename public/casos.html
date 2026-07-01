@@ -73,9 +73,11 @@
   @media(max-width:560px){.pager{justify-content:center}.pager .info{order:3;width:100%;text-align:center}}
 
   /* ---- KPI tiles ---- */
-  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:14px}
-  @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}}
-  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  /* Full-width, auto-reflowing KPI banner: cards always fill the row (1fr) and
+     wrap to fewer columns as the viewport narrows — ~5-6 across on desktop, 3 on
+     tablet, down to 1 per row on a phone — with no fixed column count to leave
+     gaps. The 180px min track is what drives the reflow (no media queries needed). */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px}
   .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 13px;box-shadow:var(--shadow);position:relative}
   .kpi .v{font:800 26px/1 'Public Sans';letter-spacing:-.01em}
   .kpi .l{font:600 11px Inter;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.04em}
