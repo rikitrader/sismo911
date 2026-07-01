@@ -21,6 +21,7 @@ import { FeatureFlagsPage } from './pages/FeatureFlags';
 import { SecurityPage } from './pages/Security';
 import { SupportInboxPage } from './pages/SupportInbox';
 import { SumSolicitudesPage } from './pages/SumSolicitudes';
+import { IntakeReviewPage } from './pages/IntakeReview';
 import { rbac } from './api';
 
 const COLLAPSE_KEY = 'sismo-admin-nav-collapsed';
@@ -39,6 +40,7 @@ function PageRouter({ route }: { route: string }) {
     case 'sessions': return <SessionsPage />;
     case 'security': return <SecurityPage />;
     case 'support': return <SupportInboxPage />;
+    case 'intake': return <IntakeReviewPage />;
     case 'sum-solicitudes': return <SumSolicitudesPage />;
     case 'dashboard':
     default: return <DashboardPage />;
