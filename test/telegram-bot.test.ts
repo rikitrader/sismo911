@@ -219,13 +219,16 @@ describe('buildTelegramResponse', () => {
     expect(out).not.toContain('Nombre');
     expect(out).not.toContain('Ubicación');
   });
-  it('operator list shows every record, numbered, with status + link', () => {
+  it('operator list shows every record as a FULL block (no PII)', () => {
     const many = Array.from({ length: 5 }, (_, i) => ({ ...rec, internalId: `hp_${i}`, caseId: `HOSP-hp_${i}`, fullName: `Persona ${i}` }));
     const out = buildTelegramResponse({ kind: 'list', records: many }, base);
     expect(out).toMatch(/Se encontraron 5 registros/);
-    expect(out).toContain('1. Persona 0, 50 — HOSPITALIZED [HOSP-hp_0]');
-    expect(out).toContain('5. Persona 4, 50 — HOSPITALIZED [HOSP-hp_4]');
-    expect(out).toContain('/casos#caso=HOSP-hp_4');
+    // each record shows the full block fields + numbered
+    expect(out).toContain('1) Caso: HOSP-hp_0');
+    expect(out).toContain('5) Caso: HOSP-hp_4');
+    expect((out.match(/Estado: HOSPITALIZED/g) || []).length).toBe(5);
+    expect((out.match(/Ubicación general:/g) || []).length).toBe(5);
+    expect((out.match(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_/g) || []).length).toBe(5);
     expect(out).not.toContain('12345678'); // no PII in the list
   });
 
