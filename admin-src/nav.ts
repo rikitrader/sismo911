@@ -14,6 +14,7 @@ export const NAV: NavItem[] = [
   { id: 'invitations', label: 'Invitaciones', icon: 'mail', desc: 'Invitar usuarios por correo, SMS o QR' },
   { id: 'approvals', label: 'Aprobaciones', icon: 'userCheck', desc: 'Aprobar o rechazar usuarios pendientes' },
   { id: 'support', label: 'Soporte', icon: 'inbox', desc: 'Tickets de soporte de los ciudadanos' },
+  { id: 'intake', label: 'Intake Telegram', icon: 'eye', desc: 'Revisar fotos y PDF recibidos por el bot de Telegram' },
   { id: 'sum-solicitudes', label: 'Solicitudes Suministros', icon: 'inbox', desc: 'Aprobar solicitudes de acceso a Suministros' },
   { id: 'roles', label: 'Roles', icon: 'roles', desc: 'Roles y herencia de permisos' },
   { id: 'permissions', label: 'Permisos', icon: 'permissions', desc: 'Catálogo de permisos' },
