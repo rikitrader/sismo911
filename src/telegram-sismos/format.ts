@@ -9,6 +9,7 @@ export type SismosCommand =
   | 'ultimo'
   | 'sismos'
   | 'estado'
+  | 'colores'
   | 'suscribir'
   | 'cancelar'
   | 'ayuda'
@@ -23,6 +24,7 @@ const ALIASES: Record<string, SismosCommand> = {
   ultimo: 'ultimo', último: 'ultimo', last: 'ultimo', latest: 'ultimo',
   sismos: 'sismos', quakes: 'sismos', recientes: 'sismos', recent: 'sismos', lista: 'sismos',
   estado: 'estado', status: 'estado', nivel: 'estado', alerta: 'estado',
+  colores: 'colores', leyenda: 'colores', escala: 'colores', colors: 'colores', legend: 'colores', chart: 'colores', niveles: 'colores',
   suscribir: 'suscribir', suscribirme: 'suscribir', subscribe: 'suscribir', alertas: 'suscribir', seguir: 'suscribir',
   cancelar: 'cancelar', unsubscribe: 'cancelar', stop: 'cancelar', detener: 'cancelar',
   ayuda: 'ayuda', help: 'ayuda', start: 'ayuda', menu: 'ayuda', comandos: 'ayuda', commands: 'ayuda',
@@ -56,6 +58,40 @@ function fmtDate(ms: number | null | undefined): string {
 }
 
 const ALERT_ES: Record<string, string> = { green: 'verde', yellow: 'amarilla', orange: 'naranja', red: 'roja' };
+
+// Civil-protection alert scale. Index = scoreThreat level (0 = sin datos, 1-4).
+// Each level carries a clear "qué hacer" action from stay-put → evacuate.
+export interface LevelInfo { emoji: string; label: string; desc: string; action: string; }
+export const LEVELS: LevelInfo[] = [
+  { emoji: '⚪', label: 'Sin datos', desc: 'Sin información sísmica reciente.', action: 'Mantente informado.' },
+  { emoji: '🟢', label: 'Normal (nivel 1)', desc: 'Actividad sísmica baja o sin sismos relevantes.', action: 'Sin acción especial. Ten tu kit de emergencia y tu plan familiar listos.' },
+  { emoji: '🟡', label: 'Moderado (nivel 2)', desc: 'Sismos leves o enjambre menor; posibles réplicas.', action: 'Atención. Revisa tu plan y tu ruta de salida; asegura objetos que puedan caer.' },
+  { emoji: '🟠', label: 'Elevado (nivel 3)', desc: 'Sismo fuerte reciente o réplicas frecuentes; riesgo de daños.', action: 'Prepárate para salir: aléjate de estructuras dañadas, ventanas y postes; ten a mano documentos y kit; define tu punto de encuentro.' },
+  { emoji: '🔴', label: 'Alto (nivel 4)', desc: 'Peligro alto (sismo mayor, alerta PAGER roja, o riesgo de tsunami/deslizamiento).', action: '¡EVACÚA AHORA! Sal de los edificios y de las zonas de riesgo (costa por tsunami, laderas por deslizamiento). Muévete a terreno abierto y seguro, FUERA del rango de peligro. Sigue a Protección Civil.' },
+];
+
+/** Recommended action for a single quake, by PAGER alert (or magnitude). */
+export function quakeAction(e: any): string {
+  const a = String(e?.alert ?? '').toLowerCase();
+  const m = Number(e?.mag) || 0;
+  if (a === 'red' || m >= 6.5) return LEVELS[4].action;
+  if (a === 'orange' || m >= 5.5) return '⚠️ Prepárate para salir: aléjate de estructuras dañadas y ventanas; ten lista tu ruta y tu punto de encuentro.';
+  if (a === 'yellow' || m >= 4.5) return 'Atención: mantén la calma y prepárate para réplicas; revisa tu entorno por daños.';
+  return 'Sin acción especial. Mantente informado.';
+}
+
+/** The color/alert scale with what-to-do guidance (the /colores chart). */
+export function formatColorChart(): string {
+  const rows = LEVELS.slice(1).map((l) => `${l.emoji} ${l.label}\n   ${l.desc}\n   👉 ${l.action}`);
+  return [
+    '🎨 Escala de alerta sísmica — SISMO911',
+    '',
+    ...rows,
+    '',
+    'En cada sismo el color viene de la alerta PAGER (USGS): 🟢 verde · 🟡 amarilla · 🟠 naranja · 🔴 roja. Si no hay alerta, se estima por la magnitud (M≥6 🔴 · M≥5 🟠 · M≥4 🟡).',
+    'Guía completa: https://sismo911.com/guia',
+  ].join('\n');
+}
 
 /** Severity emoji: PAGER alert if present, else derived from magnitude. */
 export function quakeEmoji(e: any): string {
@@ -118,12 +154,15 @@ export function formatThreat(threat: any, latest: any | null): string {
     lines.push('Último sismo:');
     lines.push(formatQuakeLine(latest));
   }
+  const lvl = LEVELS[threat?.level ?? 0] ?? LEVELS[0];
+  lines.push('');
+  lines.push(`👉 Qué hacer: ${lvl.action}`);
   return lines.join('\n');
 }
 
-/** Push message when a new significant quake lands. */
+/** Push message when a new quake lands (includes the what-to-do action). */
 export function formatQuakeAlert(e: any, baseUrl = BASE): string {
-  return `🚨 ALERTA SÍSMICA\n${formatQuake(e, baseUrl)}\n\nSi lo sentiste: mantén la calma, aléjate de estructuras dañadas y prepárate para réplicas. Guía: ${baseUrl}/guia`;
+  return `🚨 ALERTA SÍSMICA\n${formatQuake(e, baseUrl)}\n\n👉 ${quakeAction(e)}\n\nGuía: ${baseUrl}/guia`;
 }
 
 export const HELP_SISMOS = [
@@ -133,6 +172,7 @@ export const HELP_SISMOS = [
   '• /ultimo — el sismo más reciente',
   '• /sismos [n] — últimos n sismos (máx. 20)',
   '• /estado — estado/alerta sísmica actual',
+  '• /colores — escala de colores y qué hacer en cada nivel',
   '• /suscribir — recibir alertas automáticas de sismos fuertes',
   '• /cancelar — dejar de recibir alertas',
   '• /ayuda — mostrar esta ayuda',

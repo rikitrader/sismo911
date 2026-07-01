@@ -8,7 +8,10 @@
 import type { Env } from '../types';
 import { formatQuakeAlert } from './format';
 
-const THRESHOLD = 4.5; // M≥4.5 is "felt / worth an alert" for VE
+// Two tiers: a channel is a full "live signal" feed (gets ALL quakes ≥ CHANNEL_FLOOR),
+// while DMs/groups only get significant ones (≥ ALERT_THRESHOLD) so they aren't spammed.
+const ALERT_THRESHOLD = 4.5; // "felt / worth an alert" → sent to everyone
+const CHANNEL_FLOOR = 2.5;   // channels also receive smaller quakes (live feed)
 const WINDOW_MS = 3 * 60 * 60 * 1000; // consider quakes from the last 3h
 const KV_KEY = 'sismosbot:announced'; // separate from mov:announced_quakes
 const TG_API = 'https://api.telegram.org';
@@ -43,8 +46,8 @@ export async function broadcastSismos(env: Env): Promise<BroadcastReport> {
     `SELECT id, mag, place, place_es, depth_km, mmi, alert, tsunami, time_ms, url
        FROM events
       WHERE mag >= ? AND time_ms >= ? AND dup_of IS NULL
-      ORDER BY time_ms ASC LIMIT 20`,
-  ).bind(THRESHOLD, since).all<any>();
+      ORDER BY time_ms ASC LIMIT 30`,
+  ).bind(CHANNEL_FLOOR, since).all<any>();
   const quakes = results ?? [];
   if (!quakes.length) return { quakes: 0, subscribers: 0, sent: 0 };
 
@@ -53,21 +56,25 @@ export async function broadcastSismos(env: Env): Promise<BroadcastReport> {
   const fresh = quakes.filter((e) => !seenSet.has(e.id));
   if (!fresh.length) return { quakes: 0, subscribers: 0, sent: 0 };
 
-  const subsRes = await env.DB.prepare(`SELECT chat_id FROM sismos_bot_subs`).all<any>();
-  const subs = (subsRes.results ?? []).map((r) => String(r.chat_id));
+  const subsRes = await env.DB.prepare(`SELECT chat_id, chat_type FROM sismos_bot_subs`).all<any>();
+  const subs = (subsRes.results ?? []).map((r) => ({ id: String(r.chat_id), channel: r.chat_type === 'channel' }));
+  const channelSubs = subs.filter((s) => s.channel);
+  const allSubs = subs;
 
   const baseUrl = (env as any).PUBLIC_BASE_URL || 'https://sismo911.com';
   let sent = 0;
   for (const e of fresh) {
+    // ≥ ALERT_THRESHOLD → everyone; smaller → channels only (the live feed).
+    const recipients = Number(e.mag) >= ALERT_THRESHOLD ? allSubs : channelSubs;
     const text = formatQuakeAlert(e, baseUrl);
-    for (const chatId of subs) {
-      if (await send(token, chatId, text)) sent++;
+    for (const s of recipients) {
+      if (await send(token, s.id, text)) sent++;
       await new Promise((r) => setTimeout(r, 40)); // gentle global pacing
     }
-    seenSet.add(e.id);
+    seenSet.add(e.id); // mark seen even if no recipient, so it isn't reconsidered
   }
 
-  // Keep the last 300 announced ids (mirrors quake-announce's bounded cache).
-  await env.CACHE.put(KV_KEY, JSON.stringify(Array.from(seenSet).slice(-300)));
+  // Keep the last 400 announced ids (mirrors quake-announce's bounded cache).
+  await env.CACHE.put(KV_KEY, JSON.stringify(Array.from(seenSet).slice(-400)));
   return { quakes: fresh.length, subscribers: subs.length, sent };
 }

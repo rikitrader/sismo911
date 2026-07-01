@@ -18,6 +18,7 @@ import {
   formatQuake,
   formatQuakeList,
   formatThreat,
+  formatColorChart,
   HELP_SISMOS,
 } from './format';
 
@@ -122,6 +123,8 @@ async function resolveCommand(env: SismosEnv, chatId: number | string, chatType:
         const events = await getEvents(env, 100);
         return formatThreat(scoreThreat(events, Date.now()), events[0] ?? null);
       }
+      case 'colores':
+        return formatColorChart();
       case 'suscribir': {
         await subscribe(env, chatId, chatType);
         return '✅ Suscrito. Recibirás una alerta automática cuando ocurra un sismo significativo (M≥4.5). Usa /cancelar para dejar de recibirlas.';
