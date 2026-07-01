@@ -60,7 +60,9 @@ export async function resolveQuery(env: Env, cmd: ParsedCommand, ctx: ResolveCtx
       const rec = await getCaseById(env, cmd.caseId);
       if (!rec) return { kind: 'no_match' };
       if (!ctx.canSeeSensitive && isHiddenFromPublic(rec)) return { kind: 'no_match' };
-      return { kind: 'match', record: redactSensitiveFields(rec, ctx.canSeeSensitive) };
+      // /caso → full detail (name, age, + operator block in DM); /status → short.
+      const detail = cmd.kind === 'status' ? 'status' : 'full';
+      return { kind: 'match', record: redactSensitiveFields(rec, ctx.canSeeSensitive), detail };
     }
 
     // Phone is sensitive → operators only.

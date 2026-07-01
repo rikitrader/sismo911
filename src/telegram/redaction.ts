@@ -29,6 +29,12 @@ export function profileUrlFor(record: CaseRecord, baseUrl: string = DEFAULT_BASE
 
 export interface PublicView {
   caseId: string;
+  // Subject's display name + age. PUBLIC-tier: the /casos board and /familia
+  // gallery already publish the name+age of non-suppressed cases (protected and
+  // resolved-minor cases never reach here — the adapter hides them from public).
+  // Shown only in the FULL (/caso) view; the summary/status views omit the name.
+  name: string;
+  age: number | null;
   status: PublicStatus;
   verification: VerificationLevel;
   generalLocation: string | null;
@@ -59,6 +65,8 @@ export function toPublicView(
 ): PublicView {
   const view: PublicView = {
     caseId: record.caseId,
+    name: record.fullName,
+    age: record.age,
     status: record.publicStatus,
     verification: record.verification,
     // General location is already coarsened in the adapter; re-coarsen defensively.

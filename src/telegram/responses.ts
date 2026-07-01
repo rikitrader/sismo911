@@ -117,17 +117,30 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
 
     case 'match': {
       const view = toPublicView(result.record, opts.role, opts.canSeeSensitive, opts.baseUrl);
+      const mode = result.detail ?? 'summary';
+
+      // /status → short status line (no detail body).
+      if (mode === 'status') {
+        return es
+          ? `Caso: ${view.caseId}\nEstado: ${view.status}\nNivel: ${view.verification}\nFicha: ${view.profileUrl}`
+          : `Case: ${view.caseId}\nStatus: ${view.status}\nLevel: ${view.verification}\nProfile: ${view.profileUrl}`;
+      }
+
       // Unverified record → never assert a final status (but still link the case).
       if (view.status === 'PENDING_VERIFICATION') {
+        const nameLine = mode === 'full' ? (es ? `\nNombre: ${view.name}` : `\nName: ${view.name}`) : '';
         return es
-          ? `Existe un registro pendiente, pero aún no está verificado.\nCaso: ${view.caseId}\nEstado público: PENDING_VERIFICATION.\nFicha: ${view.profileUrl}`
-          : `A record exists but is not yet verified.\nCase: ${view.caseId}\nPublic status: PENDING_VERIFICATION.\nProfile: ${view.profileUrl}`;
+          ? `Existe un registro pendiente, pero aún no está verificado.\nCaso: ${view.caseId}${nameLine}\nEstado público: PENDING_VERIFICATION.\nFicha: ${view.profileUrl}`
+          : `A record exists but is not yet verified.\nCase: ${view.caseId}${nameLine}\nPublic status: PENDING_VERIFICATION.\nProfile: ${view.profileUrl}`;
       }
       const next = NEXT_ACTION[view.status][opts.lang];
+      const full = mode === 'full';
       const lines = es
         ? [
-            'Registro verificado:',
+            full ? 'Detalle del caso:' : 'Registro verificado:',
             `Caso: ${view.caseId}`,
+            ...(full ? [`Nombre: ${view.name}`] : []),
+            ...(full && view.age != null ? [`Edad: ${view.age}`] : []),
             `Estado: ${view.status}`,
             `Ubicación general: ${view.generalLocation ?? 'no disponible'}`,
             `Última verificación: ${fmtDate(view.lastVerifiedMs)}`,
@@ -136,8 +149,10 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
             `Nota: ${next}`,
           ]
         : [
-            'Verified record:',
+            full ? 'Case detail:' : 'Verified record:',
             `Case: ${view.caseId}`,
+            ...(full ? [`Name: ${view.name}`] : []),
+            ...(full && view.age != null ? [`Age: ${view.age}`] : []),
             `Status: ${view.status}`,
             `General location: ${view.generalLocation ?? 'not available'}`,
             `Last verified: ${fmtDate(view.lastVerifiedMs)}`,

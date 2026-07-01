@@ -195,6 +195,29 @@ describe('buildTelegramResponse', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, { ...base, baseUrl: 'https://sismo911.com' });
     expect(out).toContain('https://sismo911.com/casos#caso=HOSP-hp_1');
   });
+  it("/caso (detail:full) shows name + age + link, still no sensitive PII in a group", () => {
+    const out = buildTelegramResponse({ kind: 'match', record: rec, detail: 'full' }, base);
+    expect(out).toMatch(/Detalle del caso/);
+    expect(out).toContain('Nombre: Jose Garcia');
+    expect(out).toContain('Edad: 50');
+    expect(out).toMatch(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_1/);
+    expect(out).not.toContain('12345678'); // cédula still hidden in a group
+    expect(out).not.toContain('Vargas');
+  });
+  it("/caso (detail:full) as admin DM adds the operator block", () => {
+    const out = buildTelegramResponse({ kind: 'match', record: rec, detail: 'full' }, { lang: 'es', role: 'admin', canSeeSensitive: true });
+    expect(out).toContain('Nombre: Jose Garcia');
+    expect(out).toContain('12345678');
+    expect(out).toContain('Hospital Vargas');
+  });
+  it('/status (detail:status) is a short status line with the link', () => {
+    const out = buildTelegramResponse({ kind: 'match', record: rec, detail: 'status' }, base);
+    expect(out).toMatch(/Caso: HOSP-hp_1/);
+    expect(out).toMatch(/Estado: HOSPITALIZED/);
+    expect(out).toMatch(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_1/);
+    expect(out).not.toContain('Nombre');
+    expect(out).not.toContain('Ubicación');
+  });
 
   it('admin match (DM) includes the restricted detail block', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, { lang: 'es', role: 'admin', canSeeSensitive: true });
