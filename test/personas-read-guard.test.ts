@@ -8,8 +8,12 @@ import { readFileSync } from 'node:fs';
 // path — this test FAILS if any of them is removed.
 const GUARDS: Array<[file: string, marker: string, where: string]> = [
   ['src/routes/persons.ts', `if (!op) { fWhere.push("moderation = 'approved'");`, '/casos federation (public)'],
-  ['src/routes/persons.ts', `hospitalized, COUNT(*) AS total FROM personas WHERE moderation = 'approved'`, '/api/persons/stats counters'],
-  ['src/routes/persons.ts', `deceased, COUNT(*) AS total FROM personas WHERE moderation = 'approved'`, '/casos summary counters'],
+  // /api/persons/stats no longer has its own personas SQL — it delegates to the
+  // shared, moderation-guarded registrySummary() (asserted here), whose personas
+  // counter is anchored by the '/casos summary counters' guard just below. So the
+  // /personas banner cannot regain an unguarded count without failing this test.
+  ['src/routes/persons.ts', `const s = await registrySummary(c.env, false);`, '/api/persons/stats delegates to moderation-guarded registrySummary'],
+  ['src/routes/persons.ts', `deceased, COUNT(*) AS total FROM personas WHERE moderation = 'approved'`, '/casos + /stats summary counters (shared registrySummary)'],
   ['src/routes/persons.ts', `FROM personas WHERE moderation = 'approved' AND nombre LIKE ?`, 'federated name search'],
   ['src/routes/familia.ts', `if (!op) { base.push("moderation = 'approved'");`, '/api/familia/persons list'],
   ['src/routes/familia.ts', `['foto_r2 IS NOT NULL', "moderation = 'approved'"`, '/api/familia/gallery'],

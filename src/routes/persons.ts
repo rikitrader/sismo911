@@ -183,32 +183,85 @@ async function logDocket(
   }
 }
 
-// GET /api/persons/stats — live missing/found counters (approved only).
-persons.get('/stats', async (c) => edgeCached(c, 60, async () => {
-  const row: any = await c.env.DB.prepare(
+// registrySummary — the SINGLE source of truth for the headline registry counts
+// shown on BOTH /personas (via /api/persons/stats) and /casos (via
+// /api/persons/cases). Computing it in ONE place guarantees the two pages can
+// never disagree — this fixes the "different number on /personas vs /casos" bug
+// (81,844 vs 82,033), which happened because /stats and the /cases summary had
+// each grown their own divergent SQL. It federates the three registries with the
+// SAME public-visibility predicates as the browsable docket (review/moderation
+// ='approved' + minor suppression) so summary.total always equals the /casos
+// pager total on the default unfiltered view:
+//   • persons           — native operator case files
+//   • personas          — Familia (DESAP) crowd registry
+//   • hospital_patients — only the UNMATCHED rows (matched ones are already
+//     counted inside persons/personas, so adding them would double-count).
+// Operators (op=true) see every row (no suppression), mirroring the docket.
+async function registrySummary(
+  env: any, op: boolean,
+): Promise<{ missing: number; found_safe: number; deceased: number; hospitalized: number; pending: number; total: number }> {
+  const sumW = op ? '' : ` WHERE p.review='approved' AND NOT ${personsPublicSuppressSql('p')}`;
+  const sum: any = await env.DB.prepare(
     `SELECT
-       SUM(CASE WHEN status='missing' THEN 1 ELSE 0 END) AS missing,
-       SUM(CASE WHEN status IN ('found_safe','aparecido','hospitalizado','found_deceased') THEN 1 ELSE 0 END) AS found,
-       SUM(CASE WHEN status='hospitalizado' THEN 1 ELSE 0 END) AS hospitalized,
+       SUM(CASE WHEN p.status='missing' THEN 1 ELSE 0 END) AS missing,
+       SUM(CASE WHEN p.status='found_safe' THEN 1 ELSE 0 END) AS found_safe,
+       SUM(CASE WHEN p.status='found_deceased' THEN 1 ELSE 0 END) AS deceased,
+       SUM(CASE WHEN p.review='pending' THEN 1 ELSE 0 END) AS pending,
        COUNT(*) AS total
-     FROM persons WHERE review='approved'`
+     FROM persons p${sumW}`
   ).first();
-  // Federate the Familia (DESAP personas) registry so /personas reflects ALL cases.
-  let f: any = {};
-  try { f = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS found, SUM(CASE WHEN estado='hospitalizado' THEN 1 ELSE 0 END) AS hospitalized, COUNT(*) AS total FROM personas WHERE moderation = 'approved'`).first() || {}; } catch {}
-  // Hospitalizados headline = the hospital patient REGISTRY (the authoritative,
-  // comprehensive count of hospitalized people we have data on). The match cron
-  // links these to cases for the profile UX; we count the registry here so the
-  // figure is honest and not double-counted with the linked case statuses.
-  // Tolerant: the table may not exist yet on an un-migrated DB → 0.
-  let hp = 0;
-  try { const r: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM hospital_patients WHERE estado='hospitalizado'`).first(); hp = Number(r?.n) || 0; } catch {}
-  const caseHosp = (row?.hospitalized ?? 0) + (f?.hospitalized ?? 0);
+  // Public reads add the minor-protected suppression on top of the approved
+  // filter; the `moderation = 'approved'` literal stays verbatim so the #299/#300
+  // read-guard test still anchors it.
+  let fsum: any = {};
+  const fsumSuppress = op ? '' : ` AND NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`;
+  try { fsum = await env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas WHERE moderation = 'approved'${fsumSuppress}`).first() || {}; } catch {}
+  // Hospital registry KPIs. `hospitalized` = every hospitalizado in the registry
+  // (the headline count). `hospUnmatched` = registry people (hospitalizado/alta/
+  // fallecido) NOT already on a real expediente; only these federate as hosp- cases,
+  // so adding them to `total` keeps the banner equal to the pager on the default view
+  // (matched ones are already counted inside persons/personas). `unmatched_deceased`
+  // / `unmatched_alta` feed the deceased/found_safe KPIs or those cards under-count.
+  let hospitalized = 0, hospUnmatched = 0, hospDeceased = 0, hospSafe = 0;
+  try {
+    const hr: any = await env.DB.prepare(
+      `SELECT SUM(CASE WHEN estado='hospitalizado' THEN 1 ELSE 0 END) AS hosp_all,
+              SUM(CASE WHEN estado IN ('hospitalizado','alta','fallecido')
+                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_n,
+              SUM(CASE WHEN estado='fallecido'
+                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_deceased,
+              SUM(CASE WHEN estado='alta'
+                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_alta
+         FROM hospital_patients`
+    ).first();
+    hospitalized = Number(hr?.hosp_all) || 0;
+    hospUnmatched = Number(hr?.unmatched_n) || 0;
+    hospDeceased = Number(hr?.unmatched_deceased) || 0;
+    hospSafe = Number(hr?.unmatched_alta) || 0;
+  } catch {}
   return {
-    missing: (row?.missing ?? 0) + (f?.missing ?? 0),
-    found: (row?.found ?? 0) + (f?.found ?? 0),
-    hospitalized: hp || caseHosp,   // registry count when present, else case-status count
-    total: (row?.total ?? 0) + (f?.total ?? 0),
+    missing: (sum?.missing || 0) + (fsum?.missing || 0),
+    found_safe: (sum?.found_safe || 0) + (fsum?.found_safe || 0) + hospSafe,
+    deceased: (sum?.deceased || 0) + (fsum?.deceased || 0) + hospDeceased,
+    hospitalized,
+    pending: sum?.pending || 0,
+    total: (sum?.total || 0) + (fsum?.total || 0) + hospUnmatched,
+  };
+}
+
+// GET /api/persons/stats — live registry counters for the /personas banner.
+// Derived from the SAME canonical registrySummary() that powers the /casos
+// banner, so "Total registradas" (/personas) always equals "Expedientes"
+// (/casos). Public view (op=false): the endpoint is edge-cached and shared
+// across anonymous visitors, so it must match the public docket, never an
+// operator's wider count.
+persons.get('/stats', async (c) => edgeCached(c, 60, async () => {
+  const s = await registrySummary(c.env, false);
+  return {
+    missing: s.missing,          // Buscadas
+    found: s.found_safe,         // Reencontradas (a salvo) — mirrors /casos "Localizada a salvo"
+    hospitalized: s.hospitalized,
+    total: s.total,              // Total registradas == /casos "Expedientes"
   };
 }));
 
@@ -553,62 +606,12 @@ persons.get('/cases', async (c) => {
   const cases = order.map((id) => byId[id]).filter(Boolean).map((x) => withScore(x, nowMs));
 
   // ---------- global summary (whole registry, not just this page) ----------
-  // The banner KPIs MUST use the SAME public-visibility predicates as the paged
-  // `total` count above (review/moderation='approved' + minor-protected
-  // suppression). Otherwise the summary over-counts hidden/minor rows that aren't
-  // browsable, so "Expedientes" (summary.total) disagreed with the pager count on
-  // the default unfiltered view (81,844 vs 78,013) — the "different numbers
-  // everywhere" bug. Operators (op) see every row in both, so no filter for them.
-  const sumW = op ? '' : ` WHERE p.review='approved' AND NOT ${personsPublicSuppressSql('p')}`;
-  const sum: any = await c.env.DB.prepare(
-    `SELECT
-       SUM(CASE WHEN p.status='missing' THEN 1 ELSE 0 END) AS missing,
-       SUM(CASE WHEN p.status='found_safe' THEN 1 ELSE 0 END) AS found_safe,
-       SUM(CASE WHEN p.status='found_deceased' THEN 1 ELSE 0 END) AS deceased,
-       SUM(CASE WHEN p.review='pending' THEN 1 ELSE 0 END) AS pending,
-       COUNT(*) AS total
-     FROM persons p${sumW}`
-  ).first();
-  let fsum: any = {};
-  // Public reads add the minor-protected suppression on top of the approved
-  // filter; the `moderation = 'approved'` literal stays verbatim so the #299/#300
-  // read-guard test still anchors it.
-  const fsumSuppress = op ? '' : ` AND NOT ${PERSONAS_PUBLIC_SUPPRESS_SQL}`;
-  try { fsum = await c.env.DB.prepare(`SELECT SUM(CASE WHEN estado NOT IN('localizado','aparecido','hospitalizado','fallecido') THEN 1 ELSE 0 END) AS missing, SUM(CASE WHEN estado IN('localizado','aparecido','hospitalizado') THEN 1 ELSE 0 END) AS found_safe, SUM(CASE WHEN estado='fallecido' THEN 1 ELSE 0 END) AS deceased, COUNT(*) AS total FROM personas WHERE moderation = 'approved'${fsumSuppress}`).first() || {}; } catch {}
-  // Hospital registry KPIs. `hospitalized` = every hospitalizado in the registry
-  // (the headline count). `hospUnmatched` = registry people (hospitalizado/alta/
-  // fallecido) NOT already on a real expediente; only these federate as hosp- cases,
-  // so adding them to `total` keeps the banner equal to the pager on the default view
-  // (matched ones are already counted inside persons/personas).
-  // `unmatched_deceased` / `unmatched_alta` mirror the fallecido/alta rows the
-  // federation surfaces as hosp- cases; they MUST feed the deceased/found_safe
-  // KPIs or those cards under-count the docket (the "Fallecidos confirmados: 1"
-  // bug — hosp-<id> fallecidas showed as cases but never in the KPI).
-  let hospitalized = 0, hospUnmatched = 0, hospDeceased = 0, hospSafe = 0;
-  try {
-    const hr: any = await c.env.DB.prepare(
-      `SELECT SUM(CASE WHEN estado='hospitalizado' THEN 1 ELSE 0 END) AS hosp_all,
-              SUM(CASE WHEN estado IN ('hospitalizado','alta','fallecido')
-                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_n,
-              SUM(CASE WHEN estado='fallecido'
-                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_deceased,
-              SUM(CASE WHEN estado='alta'
-                       AND matched_person_id IS NULL AND matched_persona_id IS NULL THEN 1 ELSE 0 END) AS unmatched_alta
-         FROM hospital_patients`
-    ).first();
-    hospitalized = Number(hr?.hosp_all) || 0;
-    hospUnmatched = Number(hr?.unmatched_n) || 0;
-    hospDeceased = Number(hr?.unmatched_deceased) || 0;
-    hospSafe = Number(hr?.unmatched_alta) || 0;
-  } catch {}
-  const summary = {
-    missing: (sum?.missing || 0) + (fsum?.missing || 0),
-    found_safe: (sum?.found_safe || 0) + (fsum?.found_safe || 0) + hospSafe,
-    deceased: (sum?.deceased || 0) + (fsum?.deceased || 0) + hospDeceased,
-    hospitalized,
-    pending: sum?.pending || 0,
-    total: (sum?.total || 0) + (fsum?.total || 0) + hospUnmatched,
-  };
+  // Single source of truth shared with /api/persons/stats (the /personas banner)
+  // so the two pages can never disagree. It uses the SAME public-visibility
+  // predicates as the paged `total` above (review/moderation='approved' + minor
+  // suppression), so summary.total equals the pager count on the default view —
+  // and equals /personas "Total registradas". See registrySummary() above.
+  const summary = await registrySummary(c.env, op);
   // ---------- filter metadata (drives the frontend controls + echoes applied) ----------
   let sourceOptions: string[] = ['operator', 'familia', 'registro-maestro'];
   try {
