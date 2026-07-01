@@ -201,9 +201,9 @@ if(t.hasAttribute("data-fb-parent")){t.style.display="none";if(t.parentNode)t.pa
       <div class="fld">
         <label>Foto</label>
         <div class="seg" id="fphoto" role="group" aria-label="Filtrar por foto">
-          <button type="button" data-v="true" class="on">Con foto</button>
+          <button type="button" data-v="true">Con foto</button>
           <button type="button" data-v="false">Sin foto</button>
-          <button type="button" data-v="">Todas</button>
+          <button type="button" data-v="" class="on">Todas</button>
         </div>
       </div>
       <div class="fld">
@@ -405,7 +405,7 @@ const setSingle=(id,sel,v)=>$(id).querySelectorAll(sel).forEach(b=>b.classList.t
 $('clearFilters').onclick=()=>{
   ['fq','flugar','fagemin','fagemax','fdesde','fhasta','fudesde','fuhasta'].forEach(id=>$(id).value='');
   $('fedo').value=''; $('fsex').value=''; $('fsource').value=''; $('fsort').value='recent';
-  setSingle('fphoto','button','true'); setSingle('flinked','button',''); setSingle('fverified','button',''); setSingle('fstatus','.chip','');
+  setSingle('fphoto','button',''); setSingle('flinked','button',''); setSingle('fverified','button',''); setSingle('fstatus','.chip','');
   loadWall(true);
 };
 loadWall(true);
