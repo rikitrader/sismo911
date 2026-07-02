@@ -458,6 +458,10 @@ app.get('/flota/track', (c) => c.env.ASSETS.fetch(new Request(new URL('/flota-tr
 app.get('/refugios', (c) => c.env.ASSETS.fetch(new Request(new URL('/refugios.html', c.req.url))));
 // Edificios — building damage + cost dashboard (public): map + scores + addresses + repair/replacement cost.
 app.get('/edificios', (c) => c.env.ASSETS.fetch(new Request(new URL('/edificios.html', c.req.url))));
+// Forensic per-building profile ("expediente" court-case dossier). Clean URL
+// /edificio/:id serves the static shell; edificio.html reads the id and hydrates
+// from GET /api/buildings/reported/:id.
+app.get('/edificio/:id', (c) => c.env.ASSETS.fetch(new Request(new URL('/edificio.html', c.req.url))));
 // Niñez y Protección (public): official-only aggregated child/vulnerable shelter data.
 app.get('/ninez', (c) => c.env.ASSETS.fetch(new Request(new URL('/ninez.html', c.req.url))));
 // Niñez operator editor (gated as an /admin page → login redirect; writes need ninez:manage).
