@@ -92,7 +92,8 @@
     <div class="card pad stat"><div class="n num" id="s_total">—</div><div class="l">Edificios evaluados</div></div>
     <div class="card pad stat"><div class="n num" id="s_crit">—</div><div class="l">En estado crítico</div></div>
     <div class="card pad stat"><div class="n num" id="s_dpm">—</div><div class="l">Daño NASA observado</div></div>
-    <div class="card pad stat"><div class="n num" id="s_rep">—</div><div class="l">Colapsos confirmados</div></div>
+    <div class="card pad stat" style="border-color:#f04438"><div class="n num" id="s_rep" style="color:#d92d20">—</div><div class="l">Colapsos confirmados (reales)</div></div>
+    <div class="card pad stat" style="border-color:var(--ops-accent-soft)"><div class="n num" id="s_reported">—</div><div class="l">Edificios reportados con daño</div></div>
     <div class="card pad stat"><div class="n num" id="s_repair">—</div><div class="l">Costo reparación (estim.)</div></div>
     <div class="card pad stat"><div class="n num" id="s_repl">—</div><div class="l">Costo reemplazo (estim.)</div></div>
   </div>
@@ -144,7 +145,7 @@
       <h2>📷 Edificios reportados con fotos</h2>
       <span id="repSum" style="font-size:12px;color:var(--ops-muted)"></span>
     </div>
-    <div style="font-size:11px;color:var(--ops-muted);margin:4px 0 10px">Reportes ciudadanos de campo con <b>galería de fotos</b>, dirección y costo estimado de daño, sincronizados cada hora desde <b>terremotovenezuela.com</b>. Clic en una tarjeta para ver todas las fotos. Los marcadores <span style="color:var(--ops-accent)">●</span> en el mapa de arriba son estos edificios.</div>
+    <div style="font-size:11px;color:var(--ops-muted);margin:4px 0 10px">Reportes ciudadanos de campo con <b>galería de fotos</b>, dirección y costo estimado de daño, agrupados y deduplicados de <b>terremotovenezuela.com</b> + el mapa de <b><a href="/danos" style="color:var(--ops-accent)">/danos</a></b> (sosvenezuela2026.com), sincronizados cada hora. Clic en una tarjeta para ver todas las fotos, o abre el <b>expediente</b> completo. Los marcadores <span style="color:var(--ops-accent)">●</span> en el mapa de arriba son estos edificios.</div>
     <div class="filters" style="margin-bottom:10px">
       <div><label class="f">Buscar</label><input id="rf_q" placeholder="Nombre, dirección, ciudad…" /></div>
       <div><label class="f">Daño</label><select id="rf_dmg"><option value="">Todos</option><option value="total">Colapso total</option><option value="severo">Severo</option><option value="parcial">Parcial</option></select></div>
@@ -300,7 +301,7 @@
   }
 
   // ── Reported buildings (terremotovenezuela.com) — photos + gallery ───────────
-  var REP=[], repShown=60, repLayer, LB={photos:[],i:0,name:''};
+  var REP=[], REP_META={}, repShown=60, repLayer, LB={photos:[],i:0,name:''};
   var DMGC={total:'#d92d20',severo:'#f04438',parcial:'#f5c518'};
   var DMGL={total:'Colapso total',severo:'Severo',parcial:'Parcial'};
   function repFiltered(){
@@ -333,8 +334,12 @@
   }
   function renderRep(){
     var rows=repFiltered();
+    var m=REP_META||{};
     document.getElementById('repSum').textContent=rows.length+' edificios · '+
-      rows.filter(function(b){return b.mediaCount>0;}).length+' con fotos';
+      rows.filter(function(b){return b.mediaCount>0;}).length+' con fotos'+
+      (m.collapsed!=null?' · '+fmtN(m.collapsed)+' colapsos':'')+
+      (m.from_danos?' · '+fmtN(m.from_tv||0)+' de terremotovenezuela + '+fmtN(m.from_danos)+' de /danos':'')+
+      (m.people_trapped?' · '+fmtN(m.people_trapped)+' atrapados':'');
     var grid=document.getElementById('repGrid');
     grid.innerHTML=rows.slice(0,repShown).map(repCard).join('')||
       '<div style="color:var(--ops-muted);font-size:13px;padding:14px">Sin edificios reportados que coincidan.</div>';
@@ -386,7 +391,16 @@
       var d=await fetch('/api/buildings/reported?limit=3000&t='+Math.floor(Date.now()/60000)).then(function(x){return x.json();});
       REP=d.buildings||[];
       if(!REP.length){ document.getElementById('rep').style.display='none'; return; }
+      // Wire the KPI stat cards to REAL reported building damage (pooled tv + /danos).
+      var el;
+      if((el=document.getElementById('s_rep'))) el.textContent=fmtN(d.collapsed||0);
+      if((el=document.getElementById('s_reported'))) el.textContent=fmtN(d.total||REP.length);
+      if(d.costs_usd){
+        if((el=document.getElementById('s_repair'))) el.textContent=fmtUsd(d.costs_usd.repair);
+        if((el=document.getElementById('s_repl'))) el.textContent=fmtUsd(d.costs_usd.replacement);
+      }
       fillSelect('rf_state',[...new Set(REP.map(function(b){return b.state;}).filter(Boolean))],'Todos');
+      REP_META=d;
       ['rf_q','rf_dmg','rf_state','rf_ver'].forEach(function(id){ var el=document.getElementById(id); el.addEventListener(id==='rf_q'?'input':'change',function(){repShown=60;renderRep();}); });
       document.getElementById('repMore').addEventListener('click',function(){ repShown+=60; renderRep(); });
       renderRep();

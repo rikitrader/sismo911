@@ -100,6 +100,10 @@ export interface TvBuilding {
   hasMissing: boolean; notes: string; source: string;
   photo: string | null; media: string[]; mediaCount: number;
   cost?: Cost; updatedAt: string | null;
+  // pooled/enrichment fields (from /danos sos_damage)
+  triage?: string | null;        // rojo | naranja | amarillo | verde (Venezuela damage triage)
+  peopleTrapped?: number;        // people_trapped from a structural-damage report
+  sources?: string[];            // provenance when a building is confirmed by >1 feed
 }
 
 const STATUS_SCORE: Record<string, number> = {
@@ -142,6 +146,81 @@ export function mapTvBuilding(row: any): TvBuilding {
     media, mediaCount: media.length,
     cost, updatedAt: row.tv_updated_at || row.updated_at || row.last_updated_at || null,
   };
+}
+
+// ── /danos pooling (sos_damage) ───────────────────────────────────────────────
+// The /danos map (table sos_damage, aggregated by sosvenezuela2026.com incl.
+// terremotovenezuela) carries building-damage reports with a Venezuela triage
+// color (rojo/naranja/amarillo/verde), verification, coords, and people_trapped.
+// We pool the building categories into the reported-buildings inventory.
+export interface SosDamageRow {
+  id: string; category: string; severity: string | null; verification: string | null;
+  title: string | null; description: string | null; lat: number | null; lng: number | null;
+  municipio: string | null; parroquia: string | null; building_type: string | null;
+  people_trapped: number | null; source_url: string | null; image_url: string | null;
+  created_at: string | null;
+}
+
+// Building-damage categories we treat as buildings.
+export const SOS_BUILDING_CATEGORIES = ['collapsed_building', 'damaged_building'];
+
+// category + triage color → damage_level (total | severo | parcial).
+export function sosDamageLevel(category: string, severity: string | null): string {
+  if (category === 'collapsed_building') return 'total';
+  const s = (severity || '').toLowerCase();
+  if (s === 'rojo' || s === 'naranja') return 'severo';
+  return 'parcial'; // amarillo | verde | unknown
+}
+
+export function mapSosDamageBuilding(row: SosDamageRow): TvBuilding {
+  const damageLevel = sosDamageLevel(row.category, row.severity);
+  const city = row.municipio || '';
+  const state = tvState(city);
+  const status = tvStatus(damageLevel);
+  const score = STATUS_SCORE[status] ?? 62;
+  const bandName = band(score);
+  const cost = computeCost('RESIDENCIAL', state, status, bandName, undefined);
+  const media = row.image_url ? [row.image_url] : [];
+  return {
+    id: row.id,
+    name: row.title || 'Edificio sin nombre',
+    addr: [row.parroquia, row.municipio].filter(Boolean).join(', '),
+    city, zone: row.parroquia || '', state,
+    lat: row.lat ?? null, lon: row.lng ?? null,
+    damageLevel, status, band: bandName,
+    verified: row.verification === 'official_verified' || row.verification === 'community_confirmed',
+    hasMissing: (row.people_trapped ?? 0) > 0,
+    notes: row.description || '', source: 'sosvenezuela2026.com',
+    photo: row.image_url || null, media, mediaCount: media.length,
+    cost, updatedAt: row.created_at ?? null,
+    triage: row.severity ?? null, peopleTrapped: row.people_trapped ?? 0,
+    sources: ['sosvenezuela2026.com'],
+  };
+}
+
+// Merge terremotovenezuela buildings (rich galleries) with /danos sos_damage
+// reports (triage + coords + people_trapped + 159 extra buildings). Dedupe by id:
+// tv wins for galleries/name, but adopts sos coords when missing and carries the
+// triage color + trapped count + a combined provenance list.
+export function poolReportedBuildings(tv: TvBuilding[], sos: TvBuilding[]): TvBuilding[] {
+  const byId = new Map<string, TvBuilding>();
+  for (const b of tv) byId.set(b.id, { ...b, sources: [b.source] });
+  for (const s of sos) {
+    const existing = byId.get(s.id);
+    if (existing) {
+      // enrich the terremotovenezuela row with /danos signal
+      existing.triage = s.triage ?? existing.triage ?? null;
+      existing.peopleTrapped = Math.max(existing.peopleTrapped ?? 0, s.peopleTrapped ?? 0);
+      if (existing.lat == null && s.lat != null) { existing.lat = s.lat; existing.lon = s.lon; }
+      if (!existing.verified && s.verified) existing.verified = true;
+      if (existing.mediaCount === 0 && s.photo) { existing.photo = existing.photo || s.photo; existing.media = s.media; existing.mediaCount = s.mediaCount; }
+      if (!existing.sources) existing.sources = [existing.source];
+      if (!existing.sources.includes('sosvenezuela2026.com')) existing.sources.push('sosvenezuela2026.com');
+    } else {
+      byId.set(s.id, s);
+    }
+  }
+  return [...byId.values()];
 }
 
 function safeArr(s: any): string[] {
