@@ -97,6 +97,7 @@ export type CommandKind =
   | 'hospitalizados'
   | 'missing'
   | 'actualizar'
+  | 'evaluar'
   | 'muro'
   | 'ayuda'
   | 'unknown';
@@ -126,6 +127,11 @@ export interface ParsedCommand {
   statusShortcut?: boolean;
   // /muro: free text to publish on the public wall (empty → show latest posts).
   muroText?: string;
+  // /evaluar (operator write): building query + Eng evaluation level/status/note.
+  evalQuery?: string;
+  evalLevel?: number;
+  evalStatus?: string;
+  evalNote?: string;
   raw: string;
 }
 

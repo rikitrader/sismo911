@@ -158,6 +158,12 @@ const OPERATOR_HELP_ES = [
   '• /actualizar <ID o nombre> aprobar  /  rechazar — publicar u ocultar un caso (solo nivel ejecutivo/admin)',
   '• /aprobar ITK-XXXX  /  /rechazar ITK-XXXX — aprobar u ocultar un envío del bot por su código de recibo (admin)',
   'Un campo por comando. Solo casos del registro de SISMO911 (no hospitales/oficiales).',
+  '',
+  '🏗️ Operadores — evaluación estructural de un edificio (Eng N1/N2/N3, evento firmado):',
+  '• /evaluar "Bahía del mar" n1 en_curso Inspección exterior iniciada — cambiar el estado del nivel',
+  '• /evaluar Tanaguarena n1 completada Marcado verde, habitable — completar un nivel',
+  '• /evaluar Costamar n2 Grieta diagonal en machón — solo agregar una nota firmada',
+  'Estados: pendiente · en_curso · completada · bloqueada. Regla: el nivel N exige N-1 completado.',
   'Los envíos de un ADMINISTRADOR (foto/PDF/padrón) se publican de inmediato, sin aprobación pendiente.',
 ].join('\n');
 const OPERATOR_HELP_EN = [
@@ -501,4 +507,38 @@ export function buildMuroMentions(query: string, posts: MuroPost[], opts: BuildO
     ? `🧱 Menciones de «${escapeHtml(query)}» en el Muro de Emergencia (mensajes públicos SIN verificar):`
     : `🧱 Mentions of "${escapeHtml(query)}" on the public Emergency Wall (UNVERIFIED public posts):`;
   return ['', header, ...posts.map((p) => muroLine(p, base))].join('\n');
+}
+
+// ---- /evaluar (operator write) ----------------------------------------------
+import type { EvaluarResult } from './evaluar';
+
+const EVAL_BAD_INPUT_ES: Record<string, string> = {
+  falta_edificio: 'Falta el edificio. Uso: /evaluar <edificio> n1|n2|n3 [estado] [nota]',
+  falta_nivel: 'Falta el nivel de evaluación (n1, n2 o n3). Ej: /evaluar "Bahía del mar" n1 en_curso',
+  falta_contenido: 'Agrega un estado (pendiente, en_curso, completada, bloqueada) o una nota. Ej: /evaluar Tanaguarena n1 completada Marcado verde',
+};
+
+export function buildEvaluarResponse(r: EvaluarResult, opts: BuildOpts): string {
+  const base = opts.baseUrl || 'https://sismo911.com';
+  switch (r.kind) {
+    case 'eval_ok': {
+      const st = r.status ? ` → <b>${escapeHtml(r.status.replace('_', ' '))}</b>` : '';
+      const nota = r.note ? `\n📝 ${escapeHtml(r.note)}` : '';
+      return `✅ Evaluación N${r.level} de <b>${escapeHtml(r.name)}</b>${st} registrada y firmada ✍ <code>${escapeHtml(r.signature.slice(0, 12))}…</code>${nota}\n📋 ${base}/edificio/${encodeURIComponent(r.buildingId)}`;
+    }
+    case 'eval_forbidden':
+      return '⛔ Solo operadores autorizados pueden registrar eventos de evaluación.';
+    case 'eval_bad_input':
+      return EVAL_BAD_INPUT_ES[r.reason] ?? 'Entrada inválida. Uso: /evaluar <edificio> n1|n2|n3 [estado] [nota]';
+    case 'eval_not_found':
+      return `No encontré un edificio que coincida con «${escapeHtml(r.query)}». Busca el nombre exacto en ${base}/edificios.`;
+    case 'eval_ambiguous': {
+      const list = r.candidates.map((c) => `• <b>${escapeHtml(c.name)}</b>`).join('\n');
+      return `Encontré varios edificios con ese nombre. Repite el comando con el nombre EXACTO (entre comillas):\n${list}`;
+    }
+    case 'eval_order':
+      return `⛔ ${escapeHtml(r.reason)}. Completa el nivel anterior primero (o registra una nota sin estado).`;
+    case 'eval_error':
+      return 'No se pudo registrar el evento de evaluación. Inténtalo de nuevo.';
+  }
 }

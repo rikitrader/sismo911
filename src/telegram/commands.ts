@@ -43,6 +43,9 @@ const COMMANDS: Record<string, CommandKind> = {
   desaparecido: 'missing',
   actualizar: 'actualizar',
   actualiza: 'actualizar',
+  evaluar: 'evaluar',
+  evaluacion: 'evaluar',
+  'evaluación': 'evaluar',
   editar: 'actualizar',
   modificar: 'actualizar',
   update: 'actualizar',
@@ -73,6 +76,16 @@ const STATUS_SHORTCUTS: Record<string, string> = {
   aparecido: 'aparecido', aparecida: 'aparecido',
   hospitalizado: 'hospitalizado', hospitalizada: 'hospitalizado',
   fallecido: 'fallecido', fallecida: 'fallecido',
+};
+
+// /evaluar status tokens → canonical building_eval_events status.
+const EVAL_STATUS_ALIASES: Record<string, string> = {
+  pendiente: 'pendiente',
+  en_curso: 'en_curso', 'en-curso': 'en_curso', encurso: 'en_curso',
+  iniciada: 'en_curso', iniciado: 'en_curso', iniciar: 'en_curso',
+  completada: 'completada', completado: 'completada', completa: 'completada',
+  terminada: 'completada', terminado: 'completada', lista: 'completada', listo: 'completada',
+  bloqueada: 'bloqueada', bloqueado: 'bloqueada', bloquear: 'bloqueada',
 };
 
 // English command words / keywords that flip the reply language to English.
@@ -222,6 +235,9 @@ export function parseCommand(text: string): ParsedCommand {
   if (known) {
     kind = known;
     args = tokens.slice(1);
+    // /evaluar is a WRITE command → SLASH-ONLY (a sentence starting with the
+    // bare word "evaluar" must never write; it stays a free-text search).
+    if (kind === 'evaluar' && !isSlash) kind = 'buscar';
   } else if (isSlash) {
     // Unknown slash command → show the welcome/help rather than erroring.
     return { kind: 'ayuda', lang: detectLang(raw, EN_COMMANDS.has(cmdWord)), raw };
@@ -243,6 +259,29 @@ export function parseCommand(text: string): ParsedCommand {
   if (kind === 'caso' || kind === 'status') {
     const caseId = args.filter((t) => !t.startsWith('@')).join(' ').trim();
     return { kind, lang, caseId: caseId || undefined, raw };
+  }
+
+  // /evaluar <edificio…> n<1|2|3> [estado] [nota…]  (operator write command).
+  //   Grammar: everything before the level token (n1/n2/n3 or "nivel 2") is the
+  //   building query; an optional status word follows; the rest is the nota.
+  if (kind === 'evaluar') {
+    const a = args.filter((t) => !t.startsWith('@'));
+    let li = -1; let evalLevel: number | undefined;
+    for (let i = 0; i < a.length; i++) {
+      const m = /^n(?:ivel)?[-_]?([123])$/i.exec(a[i]);
+      if (m) { li = i; evalLevel = Number(m[1]); break; }
+      if (/^nivel$/i.test(a[i]) && /^[123]$/.test(a[i + 1] ?? '')) { li = i; evalLevel = Number(a[i + 1]); a.splice(i + 1, 1); break; }
+    }
+    const evalQuery = (li >= 0 ? a.slice(0, li) : a).join(' ').trim();
+    let rest = li >= 0 ? a.slice(li + 1) : [];
+    let evalStatus: string | undefined;
+    if (rest.length) {
+      const st = EVAL_STATUS_ALIASES[rest[0].toLowerCase()];
+      if (st) { evalStatus = st; rest = rest.slice(1); }
+      else if (/^en$/i.test(rest[0]) && /^curso$/i.test(rest[1] ?? '')) { evalStatus = 'en_curso'; rest = rest.slice(2); }
+    }
+    const evalNote = rest.join(' ').trim() || undefined;
+    return { kind, lang, evalQuery: evalQuery || undefined, evalLevel, evalStatus, evalNote, raw };
   }
 
   // /actualizar <ID o nombre> <campo> <valor…>  (operator write command).

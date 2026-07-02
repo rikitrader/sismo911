@@ -15,8 +15,9 @@ import { TgUpdate, type CaseRecord, type ParsedCommand, type QueryResult, type V
 import { verifyWebhook, isRequestAuthorized, canViewSensitiveData, viewerRoleFor } from './auth';
 import { parseCommand } from './commands';
 import { aiNormalizeIntent } from './intent';
-import { buildTelegramResponse, buildListMessages, buildUpdateResponse, buildMuroPostResponse, buildMuroLatestResponse, buildMuroMentions } from './responses';
+import { buildTelegramResponse, buildListMessages, buildUpdateResponse, buildMuroPostResponse, buildMuroLatestResponse, buildMuroMentions, buildEvaluarResponse } from './responses';
 import { resolveUpdate } from './update';
+import { resolveEvaluar } from './evaluar';
 import { postToMuro, searchMuroMentions, latestMuroPosts, muroDisplayName } from './muro';
 import { maybeRespondOnMuro } from './muro-responder';
 import { syncBotCommands, getRegisteredVersion } from './botcommands';
@@ -339,6 +340,25 @@ telegram.post('/webhook', async (c) => {
       resultKind: upd.kind,
     });
     const text = buildUpdateResponse(upd, { lang: cmd.lang, role, canSeeSensitive });
+    c.executionCtx.waitUntil(sendMessages(token, chatId, [text]));
+    return c.json({ ok: true });
+  }
+
+  // 5.55 Operator WRITE path: /evaluar logs a SIGNED Eng N1/2/3 evaluation
+  //      event for a building (field engineers report from chat). Operator-only
+  //      (public senders get a polite refusal); same signed trail as the web UI.
+  if (cmd.kind === 'evaluar') {
+    const actor = `tg:${userId ?? 'anon'}`;
+    const ev = await resolveEvaluar(c.env, cmd, { role, actor, actorName: muroDisplayName(msg.from) });
+    await auditTelegram(c.env, {
+      event: 'query',
+      chatId,
+      chatType,
+      userHash,
+      command: 'evaluar',
+      resultKind: ev.kind,
+    });
+    const text = buildEvaluarResponse(ev, { lang: cmd.lang, role, canSeeSensitive, baseUrl: c.env.PUBLIC_BASE_URL || 'https://sismo911.com' });
     c.executionCtx.waitUntil(sendMessages(token, chatId, [text]));
     return c.json({ ok: true });
   }
