@@ -1972,7 +1972,7 @@ async function loadInv(){
     const cad=row.caducidad_ms?Number(row.caducidad_ms):null;
     const dias=cad?Math.floor((cad-now)/86400000):null;
     const cls=cad&&cad<now?'vencido':dias!=null&&dias<=30?'por-vencer':row.cantidad!=null&&row.stock_min!=null&&row.cantidad<=row.stock_min?'bajo':'';
-    return `<tr class="row ${cls}">
+    return `<tr class="row ${cls}" data-act="invOpenProducto" data-a1="${esc(row.producto_id)}" title="Ver ficha del producto">
       <td class="font-semibold text-[12px]">${esc(row.producto_nombre||'—')}</td>
       <td class="mono text-[11px]">${esc(row.codigo||'—')}</td>
       <td class="text-[12px]">${esc(row.categoria_nombre||'—')}</td>
@@ -1987,6 +1987,8 @@ async function loadInv(){
 }
 $('#fi_buscar').onclick=loadInv;
 $('#fi_q').onkeydown=e=>{if(e.key==='Enter')loadInv();};
+// Click on an Existencias row → open the full product ficha (same flow as the barcode scanner).
+function invOpenProducto(id){if(!id)return;gotoTab('catalogo');setTimeout(()=>openProducto(id),120);}
 
 // ── Tablero ──
 async function loadTablero(){
@@ -3896,7 +3898,7 @@ function exportCSV(){
 }
 
 // ── Register new dispatcher actions (ACTIONS read at event-time) ──
-Object.assign(ACTIONS,{gotoTab:gotoTab,scrollToMap:scrollToMap,abrirRecepcion:abrirRecepcion,nuevoTransfer:nuevoTransfer,genEnlacePago:genEnlacePago,copyPay:copyPay,bellSeeAll:bellSeeAll,nuevoCreate:nuevoCreate,openUbic:openUbic,closeUbic:udClose,udRecibir:udRecibir,udDoRecibir:udDoRecibir,udDespachar:udDespachar,udDoDespachar:udDoDespachar,udTrasladar:udTrasladar,udDoTrasladar:udDoTrasladar,udConteo:udConteo,udDoConteo:udDoConteo,openKit:openKit,kitClose:kitClose,kitCancel:kitCancel,kitEdit:kitEdit,kitDelete:kitDelete,kitRmLinea:kitRmLinea,kitAddBlank:kitAddBlank});
+Object.assign(ACTIONS,{invOpenProducto:invOpenProducto,gotoTab:gotoTab,scrollToMap:scrollToMap,abrirRecepcion:abrirRecepcion,nuevoTransfer:nuevoTransfer,genEnlacePago:genEnlacePago,copyPay:copyPay,bellSeeAll:bellSeeAll,nuevoCreate:nuevoCreate,openUbic:openUbic,closeUbic:udClose,udRecibir:udRecibir,udDoRecibir:udDoRecibir,udDespachar:udDespachar,udDoDespachar:udDoDespachar,udTrasladar:udTrasladar,udDoTrasladar:udDoTrasladar,udConteo:udConteo,udDoConteo:udDoConteo,openKit:openKit,kitClose:kitClose,kitCancel:kitCancel,kitEdit:kitEdit,kitDelete:kitDelete,kitRmLinea:kitRmLinea,kitAddBlank:kitAddBlank});
 
 // ── Wire top-bar controls ──
 (function(){
