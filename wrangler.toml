@@ -81,6 +81,7 @@ run_worker_first = [
   "/blog/*",
   "/sitemap-blog.xml",
   "/sitemap-desaparecidos.xml",
+  "/sitemap-edificios.xml",
   "/plan",
   "/plan/*",
   "/admin",

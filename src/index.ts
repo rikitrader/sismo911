@@ -463,6 +463,28 @@ app.get('/edificios', (c) => c.env.ASSETS.fetch(new Request(new URL('/edificios.
 // Panorama de la emergencia (public): live counters + AI summary + satellite
 // structural-damage map, mirrored hourly from CIVIS/Copernicus into our D1.
 app.get('/panorama', (c) => c.env.ASSETS.fetch(new Request(new URL('/panorama.html', c.req.url))));
+// Buildings sitemap: one URL per expediente across the three pooled feeds
+// (tv_buildings + sos_damage buildings + sat_edificaciones), deduped by id.
+// Same KV-cached pattern as /sitemap-desaparecidos.xml (6 h TTL).
+app.get('/sitemap-edificios.xml', async (c) => {
+  const KEY = 'sitemap:edificios';
+  const cached = await c.env.CACHE.get(KEY).catch(() => null);
+  if (cached) return c.body(cached, 200, { 'content-type': 'application/xml; charset=utf-8' });
+  const seen = new Set<string>();
+  const urls: string[] = ['  <url><loc>https://sismo911.com/edificios</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>'];
+  const add = (id: unknown, last?: unknown) => {
+    const i = String(id ?? ''); if (!i || seen.has(i)) return; seen.add(i);
+    const lm = last ? String(last).slice(0, 10) : '';
+    urls.push(`  <url><loc>https://sismo911.com/edificio/${encodeURIComponent(i)}</loc>${/^\d{4}-\d{2}-\d{2}$/.test(lm) ? `<lastmod>${lm}</lastmod>` : ''}<changefreq>daily</changefreq><priority>0.5</priority></url>`);
+  };
+  try { const r = await c.env.DB.prepare(`SELECT id, tv_updated_at AS u FROM tv_buildings LIMIT 20000`).all(); for (const x of (r.results ?? []) as any[]) add(x.id, x.u); } catch { /* feed optional */ }
+  try { const r = await c.env.DB.prepare(`SELECT id, created_at AS u FROM sos_damage WHERE category IN ('collapsed_building','damaged_building') LIMIT 20000`).all(); for (const x of (r.results ?? []) as any[]) add(x.id, x.u); } catch { /* feed optional */ }
+  try { const r = await c.env.DB.prepare(`SELECT id, updated_ms AS u FROM sat_edificaciones LIMIT 20000`).all(); for (const x of (r.results ?? []) as any[]) add(x.id, x.u ? new Date(Number(x.u)).toISOString() : undefined); } catch { /* feed optional */ }
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`;
+  await c.env.CACHE.put(KEY, xml, { expirationTtl: 21600 }).catch(() => {});
+  return c.body(xml, 200, { 'content-type': 'application/xml; charset=utf-8' });
+});
+
 // Forensic per-building profile ("expediente" court-case dossier). Clean URL
 // /edificio/:id serves the static shell; edificio.html reads the id and hydrates
 // from GET /api/buildings/reported/:id.

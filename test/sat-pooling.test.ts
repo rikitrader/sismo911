@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  satDamageLevel, mapSatEdificacion, poolSatellite, groundDistM, satMatchOf,
-  SAT_MATCH_M, SAT_SOURCE, type SatEdifRow, type TvBuilding,
+  satDamageLevel, mapSatEdificacion, poolSatellite, groundDistM, satMatchOf, zoneTokens,
+  SAT_MATCH_M, SAT_DUP_BAND_M, SAT_SOURCE, type SatEdifRow, type TvBuilding,
 } from '../src/lib/tv-buildings';
 
 // Satellite layer (sat_edificaciones: Copernicus EMS + AI4G) cross-matched into
@@ -113,5 +113,45 @@ describe('poolSatellite', () => {
     expect(m.distM).toBe(12);
     expect(m.mapsUrl).toContain('maps.google');
     expect(m.oficial).toBe(true);
+  });
+});
+
+describe('possible-duplicate band (60–150 m)', () => {
+  it('59 m → enriches the building, no new row, no flag', () => {
+    const out = poolSatellite([bld()], [sat({ lat: 10.6005 })]); // ~55 m
+    expect(out.length).toBe(1);
+    expect(out[0].sat).toBeTruthy();
+    expect(out[0].possibleDuplicateOf ?? null).toBeNull();
+  });
+  it('~100 m → satellite-only row FLAGGED as possible duplicate', () => {
+    const out = poolSatellite([bld()], [sat({ id: 's-dup', lat: 10.6009 })]); // ~100 m
+    expect(out.length).toBe(2);
+    const sb = out[1];
+    expect(sb.id).toBe('s-dup');
+    expect(sb.possibleDuplicateOf).toBeTruthy();
+    expect(sb.possibleDuplicateOf!.id).toBe('b-1');
+    expect(sb.possibleDuplicateOf!.distM).toBeGreaterThan(SAT_MATCH_M);
+    expect(sb.possibleDuplicateOf!.distM).toBeLessThanOrEqual(SAT_DUP_BAND_M);
+  });
+  it('~200 m → satellite-only row clean (outside the band)', () => {
+    const out = poolSatellite([bld()], [sat({ id: 's-clean', lat: 10.6018 })]); // ~200 m
+    expect(out.length).toBe(2);
+    expect(out[1].possibleDuplicateOf ?? null).toBeNull();
+  });
+});
+
+describe('zoneTokens', () => {
+  it('extracts meaningful accent-stripped tokens, drops generic words', () => {
+    expect(zoneTokens('Edificación satélite — Caraballeda / La Guaira', 'Residential'))
+      .toEqual(['caraballeda', 'guaira']);
+  });
+  it('caps at 6 and dedupes', () => {
+    const t = zoneTokens('Macuto Macuto Tanaguarena Naiguatá Carayaca Catia Maiquetía Caruao');
+    expect(t.length).toBeLessThanOrEqual(6);
+    expect(new Set(t).size).toBe(t.length);
+    expect(t).toContain('naiguata');
+  });
+  it('empty input → empty list', () => {
+    expect(zoneTokens(null, undefined, '')).toEqual([]);
   });
 });

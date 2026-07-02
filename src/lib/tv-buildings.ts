@@ -105,6 +105,9 @@ export interface TvBuilding {
   peopleTrapped?: number;        // people_trapped from a structural-damage report
   sources?: string[];            // provenance when a building is confirmed by >1 feed
   sat?: SatMatch | null;         // satellite confirmation (Copernicus EMS / AI4G, ≤SAT_MATCH_M)
+  // satellite-only rows whose nearest reported building sits in the 60–150 m band:
+  // probably the same physical structure counted twice — flagged, never dropped.
+  possibleDuplicateOf?: { id: string; name: string; distM: number } | null;
 }
 
 const STATUS_SCORE: Record<string, number> = {
@@ -232,6 +235,7 @@ export function poolReportedBuildings(tv: TvBuilding[], sos: TvBuilding[]): TvBu
 // HAZUS reconstruction cost count in the same inventory and each gets its own
 // expediente card at /edificio/:id.
 export const SAT_MATCH_M = 60;
+export const SAT_DUP_BAND_M = 150;
 export const SAT_SOURCE = 'Copernicus EMS + AI4G (satélite, vía CIVIS)';
 
 export interface SatEdifRow {
@@ -301,7 +305,7 @@ export function groundDistM(lat1: number, lon1: number, lat2: number, lon2: numb
 // ENRICHED in place (nearest sat point wins, verified upgraded, provenance
 // appended); unmatched sat points are APPENDED as satellite-only buildings.
 // Conservation: result.length === pooled.length + unmatched sat count.
-export function poolSatellite(pooled: TvBuilding[], sats: SatEdifRow[], maxM = SAT_MATCH_M): TvBuilding[] {
+export function poolSatellite(pooled: TvBuilding[], sats: SatEdifRow[], maxM = SAT_MATCH_M, dupBandM = SAT_DUP_BAND_M): TvBuilding[] {
   const located = pooled.filter((b) => b.lat != null && b.lon != null);
   const extra: TvBuilding[] = [];
   for (const s of sats) {
@@ -309,7 +313,7 @@ export function poolSatellite(pooled: TvBuilding[], sats: SatEdifRow[], maxM = S
     let best: TvBuilding | null = null; let bestD = Infinity;
     for (const b of located) {
       // cheap prefilter: ~0.001° ≈ 110 m
-      if (Math.abs((b.lat as number) - s.lat) > 0.0015 || Math.abs((b.lon as number) - s.lng) > 0.0015) continue;
+      if (Math.abs((b.lat as number) - s.lat) > 0.002 || Math.abs((b.lon as number) - s.lng) > 0.002) continue;
       const dM = groundDistM(b.lat as number, b.lon as number, s.lat, s.lng);
       if (dM < bestD) { bestD = dM; best = b; }
     }
@@ -319,10 +323,22 @@ export function poolSatellite(pooled: TvBuilding[], sats: SatEdifRow[], maxM = S
       if (!best.sources) best.sources = [best.source];
       if (!best.sources.includes(SAT_SOURCE)) best.sources.push(SAT_SOURCE);
     } else {
-      extra.push(mapSatEdificacion(s));
+      const sb = mapSatEdificacion(s);
+      if (best && bestD <= dupBandM) sb.possibleDuplicateOf = { id: best.id, name: best.name, distM: Math.round(bestD) };
+      extra.push(sb);
     }
   }
   return [...pooled, ...extra];
+}
+
+// ── Zone-token extraction for case suggestions ────────────────────────────────
+// Meaningful location tokens (≥4 chars, accent-stripped, generic building words
+// removed) from a satellite building's zona/name — used to SUGGEST nearby cases
+// by last-seen text, never to auto-attach.
+const ZONE_STOP = new Set(['edificio', 'edificacion', 'satelite', 'zona', 'sector', 'venezuela', 'estado', 'municipio', 'parroquia', 'unclassified', 'residential']);
+export function zoneTokens(...parts: (string | null | undefined)[]): string[] {
+  const text = parts.filter(Boolean).join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return [...new Set(text.split(/[^a-zñ]+/).filter((t) => t.length >= 4 && !ZONE_STOP.has(t)))].slice(0, 6);
 }
 
 function safeArr(s: any): string[] {

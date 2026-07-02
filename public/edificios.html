@@ -308,9 +308,9 @@
         : (r.sectorReports ? '<span style="color:var(--ops-muted)">'+fmtN(r.sectorReports)+' reportados en el sector</span>' : '<span style="color:var(--ops-muted)">—</span>');
       return '<tr class="row" data-lat="'+r.lat+'" data-lon="'+r.lon+'">'+
         '<td><span class="chip" style="background:'+col+'">'+esc(r.priority)+'</span><div style="font-size:10px;color:var(--ops-muted);margin-top:2px">SAR '+r.sarScore+'</div></td>'+
-        '<td><b>'+esc(r.name)+'</b><div style="font-size:11px;color:var(--ops-muted)">'+esc(r.sector)+', '+esc(r.state)+'</div></td>'+
-        '<td>'+esc(r.sevLabel)+'</td>'+
-        '<td class="num">'+fmtN(r.occupantsEst)+'</td>'+
+        '<td><b>'+esc(r.name)+'</b>'+(r.satOnly?' <span class="tag" style="color:#22c55e;border-color:#22c55e">🛰️ SAT</span>':'')+'<div style="font-size:11px;color:var(--ops-muted)">'+esc(r.sector)+', '+esc(r.state)+(r.satOnly&&r.id?' · <a href="/edificio/'+encodeURIComponent(r.id)+'" style="color:var(--ops-accent)">expediente →</a>':'')+'</div></td>'+
+        '<td>'+esc(r.sevLabel)+(r.satOnly?'<div style="font-size:10px;color:var(--ops-muted)">Copernicus/AI4G</div>':'')+'</td>'+
+        '<td class="num">'+fmtN(r.occupantsEst)+(r.satOnly?'<div style="font-size:10px;color:var(--ops-muted)">est. defecto</div>':'')+'</td>'+
         '<td>'+miss+'</td></tr>';
     }).join('')||'<tr><td colspan="5" style="padding:14px;color:var(--ops-muted)">Sin edificios en triage.</td></tr>';
     document.querySelectorAll('#sarBody tr.row').forEach(function(tr){
@@ -372,6 +372,7 @@
         '<div class="ad">'+esc(b.addr||b.city)+'</div>'+
         '<div class="cost">Reparación estim. '+cost+'</div>'+
         (b.eval?'<div style="margin-top:5px"><span class="tag" style="background:'+(EVALC[b.eval.status]||'#5b6781')+';border-color:transparent;color:#fff;font-weight:800">EVAL '+(b.eval.activeLevel?'N'+b.eval.activeLevel:'✓')+' · '+esc(EVALL[b.eval.status]||b.eval.status)+'</span> <span style="font-size:10.5px;color:var(--ops-muted)">'+b.eval.events+' evento'+(b.eval.events===1?'':'s')+' firmados</span></div>':'')+
+        (b.possibleDuplicateOf?'<div style="margin-top:5px"><span class="tag" style="color:#f5c518;border-color:#f5c518">⚠ posible duplicado · a '+esc(b.possibleDuplicateOf.distM)+' m de '+esc(b.possibleDuplicateOf.name)+'</span></div>':'')+
         caseHtml+
         '<a class="tag" href="/edificio/'+encodeURIComponent(b.id)+'" style="display:inline-block;margin-top:7px;padding:4px 10px;text-decoration:none;border-color:var(--ops-accent-soft);color:var(--ops-accent-fg);background:var(--ops-accent-soft)">📋 Ver expediente →</a>'+
       '</div></div>';
@@ -385,7 +386,8 @@
       (m.from_danos?' · '+fmtN(m.from_tv||0)+' de terremotovenezuela + '+fmtN(m.from_danos)+' de /danos':'')+
       (m.people_trapped?' · '+fmtN(m.people_trapped)+' atrapados':'')+
       (m.sat_confirmed?' · '+fmtN(m.sat_confirmed)+' confirmados por satélite 🛰️':'')+
-      (m.sat_only?' · '+fmtN(m.sat_only)+' solo-satélite':'');
+      (m.sat_only?' · '+fmtN(m.sat_only)+' solo-satélite':'')+
+      (m.sat_possible_dup?' · '+fmtN(m.sat_possible_dup)+' posibles duplicados ⚠':'');
     var grid=document.getElementById('repGrid');
     grid.innerHTML=rows.slice(0,repShown).map(repCard).join('')||
       '<div style="color:var(--ops-muted);font-size:13px;padding:14px">Sin edificios reportados que coincidan.</div>';
