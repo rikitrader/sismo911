@@ -176,6 +176,9 @@ binding = "AI"
 name = "EMAIL"
 
 [vars]
+# CIVIS Venezuela "atendidos" API base — public, no key. The hourly civis-atendidos
+# cron pulls civisvenezuela.com/api/atendidos into hospital_patients. Host only.
+CIVIS_API_BASE = "https://civisvenezuela.com"
 # "Casos CRM" Google Sheet that is the curated SOURCE OF TRUTH; the cron pulls it
 # into D1 (Sheet → D1). Sheet id is not a secret (it's in the share URL). The
 # GOOGLE_* OAuth creds that read it ARE Worker secrets.

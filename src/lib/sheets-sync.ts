@@ -23,6 +23,46 @@ export async function googleAccessToken(env: Env): Promise<string | null> {
 
 const SEV_ES: Record<string, string> = { critical: '🔴 Crítico', alert: '🟠 Alerta', info: '🟡 Info' };
 
+const HP_ESTADO_ES: Record<string, string> = {
+  hospitalizado: '🟠 Hospitalizado', alta: '🟢 De alta', fallecido: '⚫ Fallecido', desconocido: '⚪ Desconocido',
+};
+
+// Mirror the hospital_patients registry (Cruz Roja feed + CIVIS atendidos) into
+// the "Hospital" tab of the Google Sheet. Best-effort + additive: a no sheet-id /
+// no-token / API failure returns 0 and never throws, so it can never break a cron
+// tick. Newest-first, bounded to the most recent 5000 rows.
+export async function syncHospitalSheet(env: Env): Promise<number> {
+  const sheetId = env.HOSPITAL_SHEET_ID || env.MONITOR_SHEET_ID;
+  if (!sheetId) return 0;
+  const token = await googleAccessToken(env);
+  if (!token) return 0;
+
+  const { results } = await env.DB.prepare(
+    `SELECT full_name, hospital, estado, edad, sexo, cedula, observaciones, source, source_ref, updated_ms
+     FROM hospital_patients ORDER BY updated_ms DESC LIMIT 5000`
+  ).all<any>();
+  const rows = (results ?? []).map((r) => [
+    r.updated_ms ? new Date(r.updated_ms).toISOString().replace('T', ' ').slice(0, 16) : '',
+    r.full_name ?? '', r.hospital ?? '', HP_ESTADO_ES[r.estado] ?? r.estado ?? '',
+    r.edad ?? '', r.sexo ?? '', r.cedula ?? '', String(r.observaciones ?? '').slice(0, 500),
+    r.source ?? '', r.source_ref ?? '',
+  ]);
+
+  const tab = encodeURIComponent('Hospital');
+  const auth = { authorization: `Bearer ${token}` };
+  const header = [['Actualizado', 'Nombre', 'Centro', 'Estado', 'Edad', 'Sexo', 'Cédula', 'Observaciones', 'Fuente', 'Código']];
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tab}!A1?valueInputOption=RAW`, {
+    method: 'PUT', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify({ values: header }),
+  }).catch(() => {});
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tab}!A2:J5001:clear`, { method: 'POST', headers: auth }).catch(() => {});
+  if (rows.length) {
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tab}!A2?valueInputOption=RAW`, {
+      method: 'PUT', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify({ values: rows }),
+    });
+  }
+  return rows.length;
+}
+
 const SOS_ES: Record<string, string> = { active: '🔴 Activo', acknowledged: '🟠 Atendiendo', resolved: '🟢 Resuelto' };
 
 // Mirror the emergency SOS table into the "SOS" tab of the same monitor sheet.

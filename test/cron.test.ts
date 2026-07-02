@@ -7,7 +7,8 @@ import { CRON_GROUPS, jobsForCron } from '../src/cron';
 // per hour), every job has a runner, and the cron keys match wrangler.toml.
 
 const ALL_JOB_NAMES = [
-  'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync',
+  'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync', 'civis-atendidos',
+  'hospital-sheet',
   'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match', 'hospital-registry-match',
   'familia-photo-mirror', 'monitor-sheet', 'cases-sheet-sync', 'case-alerts', 'personas-dedupe-fuzzyphone', 'bulk-import-sweep', 'tv-buildings', 'rav-ingest', 'rav-stats', 'rav-verified',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
@@ -51,6 +52,7 @@ describe('cron groups', () => {
     expect(CRON_GROUPS['30 * * * *'].map((j) => j.name)).toEqual([
       'familia-photo-mirror',
       'monitor-sheet',
+      'hospital-sheet',
       'cases-sheet-sync',
       'case-alerts',
       'personas-dedupe-fuzzyphone',
