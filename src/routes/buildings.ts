@@ -12,6 +12,11 @@ import {
   type TvBuilding, type SosDamageRow, type SatEdifRow, type SatMatch,
 } from '../lib/tv-buildings';
 import { fetchCaseReports, persistedCases, persistedCasesByBuilding } from '../lib/building-cases';
+import {
+  EVAL_STATUSES, EVAL_KINDS, EVAL_KIND_LABELS, summarizeEval, signEvent,
+  verifyEventSignature, levelOrderViolation, levelStatusMap, type EvalEventRow,
+} from '../lib/building-eval';
+import { getUserFromRequest } from '../lib/auth';
 import sectorsRaw from '../data/buildings/sectors.json';
 import curatedRaw from '../data/buildings/curated.json';
 import osmRaw from '../data/buildings/osm.json';
@@ -279,9 +284,29 @@ buildings.get('/reported', async (c) => {
     // 4) attach the persisted case links (building_cases): every case name feeds the
     //    /edificios listing and deep-links to its full case profile (/casos#caso=<id>).
     const caseLinks = await persistedCasesByBuilding(c.env);
+    // Eng N1/2/3 evaluation chips: one pass over building_eval_events (small table),
+    // grouped per building via summarizeEval — only buildings WITH events get `eval`.
+    const evalByBuilding: Record<string, { events: number; activeLevel: number | null; status: string }> = {};
+    try {
+      const er = await c.env.DB.prepare(
+        `SELECT id, building_id, level, status, event_kind, actor_name, voids_event_id, created_at
+           FROM building_eval_events ORDER BY created_at DESC, id DESC`,
+      ).all();
+      const byB: Record<string, EvalEventRow[]> = {};
+      for (const e of (er.results ?? []) as unknown as EvalEventRow[]) (byB[e.building_id] ||= []).push(e);
+      for (const [bid, rows] of Object.entries(byB)) {
+        const s = summarizeEval(rows);
+        const active = s.levels.find((l) => l.level === s.currentLevel);
+        evalByBuilding[bid] = {
+          events: s.eventCount,
+          activeLevel: s.currentLevel,
+          status: active?.status ?? 'completada', // currentLevel null ⇒ all three completada
+        };
+      }
+    } catch { /* table not migrated yet — no chips */ }
     const pooled = poolSatellite(
       poolReportedBuildings(tvRows.map(mapTvBuilding), sosRows.map(mapSosDamageBuilding)), satRows,
-    ).map((b) => ({ ...b, cases: caseLinks[b.id] ?? [] }));
+    ).map((b) => ({ ...b, cases: caseLinks[b.id] ?? [], eval: evalByBuilding[b.id] ?? null }));
 
     let mapped = pooled;
     if (q.damage) mapped = mapped.filter((b) => b.damageLevel.toLowerCase() === q.damage!.toLowerCase());
@@ -488,14 +513,23 @@ buildings.get('/reported/:id', async (c) => {
       label: `Daño ${satConfirmed.severidad === 'colapso' ? 'por colapso' : 'grave'} confirmado por satélite (Copernicus EMS / AI4G${satConfirmed.distM ? ` · a ${satConfirmed.distM} m` : ''})`,
     });
     for (const d of docs) if (d.published_at) timeline.push({ at: d.published_at, kind: d.kind, label: d.title || d.kind });
+
+    // Engineering-evaluation layer (Eng Nivel 1/2/3): PM pipeline + signed events.
+    // Its events also feed the forensic timeline so the Cronología is complete.
+    const evaluation = await evalSummary(c.env, id);
+    for (const ev of evaluation.events) timeline.push({
+      at: ev.created_at,
+      kind: 'eval',
+      label: `N${ev.level} · ${EVAL_KIND_LABELS[ev.event_kind] || ev.event_kind}` +
+        (ev.status ? ` → ${ev.status.replace('_', ' ')}` : '') +
+        (ev.signed_by ? ` · ✍ ${ev.signed_by}` : '') +
+        (ev.voided ? ' (anulado)' : ''),
+    });
     timeline.sort((a, z) => (z.at || '').localeCompare(a.at || ''));
 
     // Group docs by the tab they belong to.
     const docsByKind: Record<string, any[]> = {};
     for (const d of docs) (docsByKind[d.kind] ||= []).push(d);
-
-    // Engineering-evaluation layer (Eng Nivel 1/2/3): PM pipeline + signed events.
-    const evaluation = await evalSummary(c.env, id);
 
     return {
       building: b,
@@ -566,46 +600,24 @@ buildings.delete('/reported/:id/cases/:caseId', async (c) => {
 // ── Engineering-evaluation layer (Eng Nivel 1/2/3) — PM tracking ──────────────
 // ATC-20-inspired evaluation pipeline per building, tracked as SIGNED events
 // (server computes a SHA-256 over the canonical payload at insert → tamper-evident
-// trail). Reads are public (PII-free operational status); writes are operator-gated
-// centrally (route-policy isBuildingsWrite → damage:moderate).
-const EVAL_LEVEL_META = [
-  { level: 1, name: 'Nivel 1 — Evaluación Rápida', desc: 'Triage exterior tipo ATC-20: marcado habitable / uso restringido / inseguro' },
-  { level: 2, name: 'Nivel 2 — Evaluación Detallada', desc: 'Inspección detallada interior/exterior por inspector certificado' },
-  { level: 3, name: 'Nivel 3 — Evaluación de Ingeniería', desc: 'Evaluación estructural completa por ingeniero (CIV) con memoria de cálculo' },
-] as const;
-const EVAL_STATUSES = new Set(['pendiente', 'en_curso', 'completada', 'bloqueada']);
-const EVAL_KINDS = new Set(['inicio', 'inspeccion', 'hallazgo', 'documento', 'cambio_estado', 'firma', 'nota']);
+// trail; GET /eval/verify recomputes them). Pure logic lives in lib/building-eval.
+// Reads are public (PII-free operational status); writes are operator-gated
+// centrally (route-policy isBuildingsWrite → damage:moderate) AND stamped with
+// the authenticated user (accountability — the signer is not just free text).
+const EVAL_SELECT =
+  `SELECT id, building_id, level, status, event_kind, note, actor_name, actor_role, signed_by,
+          user_id, user_name, voids_event_id, signature, created_at
+     FROM building_eval_events WHERE building_id = ? ORDER BY created_at DESC, id DESC`;
+
+async function fetchEvalRows(env: Env, buildingId: string): Promise<EvalEventRow[]> {
+  try {
+    const r = await env.DB.prepare(EVAL_SELECT).bind(buildingId).all();
+    return (r.results ?? []) as unknown as EvalEventRow[];
+  } catch { return []; } // fail-soft if the table isn't migrated yet
+}
 
 async function evalSummary(env: Env, buildingId: string) {
-  let rows: any[] = [];
-  try {
-    const r = await env.DB.prepare(
-      `SELECT id, level, status, event_kind, note, actor_name, actor_role, signed_by, signature, created_at
-         FROM building_eval_events WHERE building_id = ? ORDER BY created_at DESC, id DESC`,
-    ).bind(buildingId).all();
-    rows = (r.results ?? []) as any[];
-  } catch { rows = []; } // fail-soft if the table isn't migrated yet
-  const levels = EVAL_LEVEL_META.map((m) => {
-    const evs = rows.filter((e) => Number(e.level) === m.level);
-    const status = (evs.find((e) => e.status)?.status as string | undefined) ?? 'pendiente';
-    return {
-      ...m,
-      status,
-      events: evs.length,
-      lastAt: evs[0]?.created_at ?? null,
-      assignee: (evs.find((e) => e.actor_name)?.actor_name as string | undefined) ?? null,
-    };
-  });
-  const done = levels.filter((l) => l.status === 'completada').length;
-  const current = levels.find((l) => l.status === 'en_curso') ?? levels.find((l) => l.status !== 'completada') ?? null;
-  return {
-    levels,
-    currentLevel: current?.level ?? null,
-    progress: Math.round((done / levels.length) * 100),
-    events: rows,
-    eventCount: rows.length,
-    note: 'Seguimiento operativo de evaluación estructural por niveles (inspirado en ATC-20). Eventos firmados con hash SHA-256 — trazabilidad, no peritaje oficial.',
-  };
+  return summarizeEval(await fetchEvalRows(env, buildingId));
 }
 
 // ── GET /api/buildings/reported/:id/eval — public read: pipeline + signed events ──
@@ -615,10 +627,29 @@ buildings.get('/reported/:id/eval', async (c) => {
   return c.json(await evalSummary(c.env, c.req.param('id')));
 });
 
+// ── GET /api/buildings/reported/:id/eval/verify — public: recompute signatures ──
+// Transparency endpoint: recomputes every stored SHA-256 from the stored fields
+// and reports mismatches. A voided or annulment event still verifies (append-only).
+buildings.get('/reported/:id/eval/verify', async (c) => {
+  const limited = await rateLimit(c.env, c, 'buildings_eval_verify', 30, 60);
+  if (limited) return limited;
+  const rows = await fetchEvalRows(c.env, c.req.param('id'));
+  const invalid: number[] = [];
+  for (const e of rows) if (!(await verifyEventSignature(e))) invalid.push(Number(e.id));
+  return c.json({ total: rows.length, valid: rows.length - invalid.length, invalid });
+});
+
 // ── POST /api/buildings/reported/:id/eval/events — operator: signed tracking event ──
-// Body: { level: 1|2|3, status?, event_kind?, note?, actor_name?, actor_role?, signed_by? }.
+// Body: { level: 1|2|3, status?, event_kind?, note?, actor_name?, actor_role?,
+//         signed_by?, voids_event_id? (event_kind 'anulacion' only) }.
+// Enforces level order (starting/completing N requires N-1..1 completada → 409)
+// and stamps the authenticated RBAC user into the row + signature.
 buildings.post('/reported/:id/eval/events', async (c) => {
   const id = c.req.param('id');
+  // The central gate already required damage:moderate; re-resolve the session
+  // user to STAMP identity on the event (same idiom as contacts-personal).
+  const me = await getUserFromRequest(c.env, c).catch(() => null);
+  if (!me) return c.json({ error: 'no autenticado' }, 401);
   const body = await c.req.json().catch(() => ({} as any));
   const level = Number(body.level);
   if (![1, 2, 3].includes(level)) return c.json({ error: 'level debe ser 1, 2 o 3' }, 400);
@@ -629,21 +660,48 @@ buildings.post('/reported/:id/eval/events', async (c) => {
   const note = clamp(body.note, 2000);
   const actorName = clamp(body.actor_name, 120);
   const actorRole = clamp(body.actor_role, 120);
-  const signedBy = clamp(body.signed_by, 120) ?? actorName;
+  const signedBy = clamp(body.signed_by, 120) ?? actorName ?? clamp(me.name || me.email, 120);
   // The building must exist in one of the three feeds (typo can't mint a dangling trail).
   let bld = await c.env.DB.prepare(`SELECT id FROM tv_buildings WHERE id = ?`).bind(id).first();
   if (!bld) bld = await c.env.DB.prepare(`SELECT id FROM sos_damage WHERE id = ?`).bind(id).first().catch(() => null);
   if (!bld) bld = await c.env.DB.prepare(`SELECT id FROM sat_edificaciones WHERE id = ?`).bind(id).first().catch(() => null);
   if (!bld) return c.json({ error: 'not_found', id }, 404);
+
+  const rows = await fetchEvalRows(c.env, id);
+  const summary = summarizeEval(rows);
+
+  // Annulment: must reference an existing, non-annulment event of THIS building.
+  let voids: number | null = null;
+  if (kind === 'anulacion') {
+    voids = Number(body.voids_event_id);
+    const target = rows.find((e) => Number(e.id) === voids);
+    if (!voids || !target) return c.json({ error: 'voids_event_id debe referir a un evento existente de este edificio' }, 400);
+    if (target.event_kind === 'anulacion') return c.json({ error: 'una anulación no puede anularse' }, 400);
+  } else if (body.voids_event_id != null) {
+    return c.json({ error: "voids_event_id solo aplica a event_kind 'anulacion'" }, 400);
+  }
+
+  // Workflow order: starting/completing level N requires all lower levels completada.
+  const violation = levelOrderViolation(levelStatusMap(summary), level, status);
+  if (violation) return c.json({ error: violation }, 409);
+
   const createdAt = new Date().toISOString();
-  const payload = [id, level, status ?? '', kind, note ?? '', actorName ?? '', actorRole ?? '', signedBy ?? '', createdAt].join('|');
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
-  const signature = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const ev: EvalEventRow = {
+    building_id: id, level, status, event_kind: kind, note,
+    actor_name: actorName, actor_role: actorRole, signed_by: signedBy,
+    user_id: me.id, user_name: clamp(me.name || me.email, 120), voids_event_id: voids,
+    created_at: createdAt,
+  };
+  const signature = await signEvent(ev);
   await c.env.DB.prepare(
-    `INSERT INTO building_eval_events (building_id, level, status, event_kind, note, actor_name, actor_role, signed_by, signature, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`,
-  ).bind(id, level, status, kind, note, actorName, actorRole, signedBy, signature, createdAt).run();
-  return c.json({ ok: true, building_id: id, level, status, event_kind: kind, signed_by: signedBy, signature, created_at: createdAt }, 201);
+    `INSERT INTO building_eval_events
+       (building_id, level, status, event_kind, note, actor_name, actor_role, signed_by,
+        user_id, user_name, voids_event_id, signature, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  ).bind(id, level, status, kind, note, actorName, actorRole, signedBy,
+         ev.user_id, ev.user_name, voids, signature, createdAt).run();
+  return c.json({ ok: true, building_id: id, level, status, event_kind: kind, signed_by: signedBy,
+                  user_name: ev.user_name, voids_event_id: voids, signature, created_at: createdAt }, 201);
 });
 
 // ── GET /api/buildings/sectors — sector registry (soil/MMI/prior) ─────────────

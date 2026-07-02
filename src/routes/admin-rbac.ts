@@ -23,6 +23,7 @@ import { assertGrantable } from '../rbac/grant-guard';
 import { redactRow, loadFieldPolicies } from '../rbac/field-policy';
 import { isAllowedOrigin, requestIp } from '../lib/security';
 import { randomToken, sha256hex, sendEmail, resetEmail } from '../lib/email';
+import { summarizeEval, type EvalEventRow } from '../lib/building-eval';
 
 export const adminRbac = new Hono<{ Bindings: Env }>();
 
@@ -580,4 +581,49 @@ adminRbac.get('/dashboard', requireAnyPermission('security:read', 'audit:read', 
     failedLogins24h: Number(failed?.n ?? 0),
     recentInvitations: Number(invites?.n ?? 0),
   });
+});
+
+// ── GET /api/rbac/evaluaciones — console: Eng N1/2/3 evaluation overview ──────
+// One row per building that has signed eval-tracking events (building_eval_events):
+// per-level status, progress, last signer. Feeds the /console "Evaluaciones" page;
+// deep links open the public dossier /edificio/:id (Evaluación tab). Gated with the
+// same permission that guards eval writes (damage:moderate).
+adminRbac.get('/evaluaciones', requirePermission('damage:moderate'), async (c) => {
+  let rows: EvalEventRow[] = [];
+  try {
+    const r = await c.env.DB.prepare(
+      `SELECT id, building_id, level, status, event_kind, note, actor_name, actor_role,
+              signed_by, user_name, voids_event_id, created_at
+         FROM building_eval_events ORDER BY created_at DESC, id DESC`,
+    ).all();
+    rows = (r.results ?? []) as unknown as EvalEventRow[];
+  } catch { rows = []; } // table not migrated yet → empty overview
+  const byBuilding: Record<string, EvalEventRow[]> = {};
+  for (const e of rows) (byBuilding[e.building_id] ||= []).push(e);
+  const ids = Object.keys(byBuilding);
+  const names: Record<string, string> = {};
+  if (ids.length) {
+    const ph = ids.map(() => '?').join(',');
+    try {
+      for (const n of ((await c.env.DB.prepare(`SELECT id, name FROM tv_buildings WHERE id IN (${ph})`).bind(...ids).all()).results ?? []) as any[]) names[n.id] = n.name;
+    } catch { /* soft */ }
+    try {
+      for (const n of ((await c.env.DB.prepare(`SELECT id, title FROM sos_damage WHERE id IN (${ph})`).bind(...ids).all()).results ?? []) as any[]) if (!names[n.id]) names[n.id] = n.title;
+    } catch { /* soft */ }
+  }
+  const evaluaciones = ids.map((bid) => {
+    const s = summarizeEval(byBuilding[bid]);
+    const last = s.events[0];
+    return {
+      building_id: bid,
+      name: names[bid] ?? bid,
+      levels: Object.fromEntries(s.levels.map((l) => [l.level, l.status])) as Record<string, string>,
+      progress: s.progress,
+      currentLevel: s.currentLevel,
+      events: s.eventCount,
+      lastAt: last?.created_at ?? null,
+      lastBy: last?.signed_by ?? last?.user_name ?? null,
+    };
+  }).sort((a, z) => (z.lastAt || '').localeCompare(a.lastAt || ''));
+  return c.json({ evaluaciones });
 });
