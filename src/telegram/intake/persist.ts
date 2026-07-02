@@ -49,17 +49,21 @@ interface PersistInput {
   channel?: string; // ledger channel: 'telegram' (default) | 'console'
   batchId?: string | null; // parent bulk_import_jobs.id when this row is one of many
   rawKey?: string; // shared evidence key (the roster PDF) — skip the per-row R2 upload
+  // ADMIN submitter: publish immediately (persona approved, lead verified,
+  // ledger outcome 'approved') instead of holding for operator review.
+  autoApprove?: boolean;
 }
 
-/** Insert a pending citizen lead for a case. Returns the intel id. */
-async function insertLead(env: Env, personId: string, f: ExtractedRecord, submittedBy: string | null, evidenceKey: string, now: number): Promise<string> {
+/** Insert a citizen lead for a case ('pending', or 'verified' for an admin
+ *  auto-approved submission). Returns the intel id. */
+async function insertLead(env: Env, personId: string, f: ExtractedRecord, submittedBy: string | null, evidenceKey: string, now: number, status: 'pending' | 'verified' = 'pending'): Promise<string> {
   const intelId = uid('intl');
   const detail = `${summarize(f)}\n\n[Evidencia Telegram: ${evidenceKey}]`.slice(0, 2000);
   await env.DB.prepare(
     `INSERT INTO case_intel (id, person_id, type, url, platform, title, detail, lat, lon, source, status, submitted_by, created_ms, updated_ms)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   )
-    .bind(intelId, personId, 'doc', null, 'telegram', 'Documento recibido por Telegram', detail, null, null, 'citizen', 'pending', submittedBy, now, now)
+    .bind(intelId, personId, 'doc', null, 'telegram', 'Documento recibido por Telegram', detail, null, null, status === 'verified' ? 'operator' : 'citizen', status, submittedBy, now, now)
     .run();
   return intelId;
 }
@@ -82,6 +86,7 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
     await env.PERSON_PHOTOS.put(rawKey, media.bytes, { httpMetadata: { contentType: media.mime } }).catch(() => {});
   }
 
+  const autoApprove = !!input.autoApprove;
   let outcome: IntakeResult['outcome'] = 'needs_review';
   let personId: string | null = null;
   let intelId: string | null = null;
@@ -91,10 +96,11 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
     if (match.personId) {
       // Attach to the existing case.
       personId = match.personId;
-      intelId = await insertLead(env, personId, fields, submittedBy, rawKey, now);
+      intelId = await insertLead(env, personId, fields, submittedBy, rawKey, now, autoApprove ? 'verified' : 'pending');
       outcome = 'matched';
-      note =
-        match.reason === 'cedula'
+      note = autoApprove
+        ? `Coincide con un caso existente. Lead verificado automáticamente (envío de administrador).`
+        : match.reason === 'cedula'
           ? `Coincide por cédula con un caso existente. Lead pendiente de verificación.`
           : `Posible coincidencia por nombre (${Math.round(match.score * 100)}%). Lead pendiente de verificación.`;
     } else if (fields.nombre) {
@@ -122,7 +128,7 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
           fields.contacto ?? '',
           fotoR2,
           'sin-contacto',
-          'pending',
+          autoApprove ? 'approved' : 'pending',
           'telegram',
           sf.name_norm,
           sf.geo_estado,
@@ -132,9 +138,11 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
         )
         .run();
       personId = `fam-${pid}`;
-      intelId = await insertLead(env, personId, fields, submittedBy, rawKey, now);
+      intelId = await insertLead(env, personId, fields, submittedBy, rawKey, now, autoApprove ? 'verified' : 'pending');
       outcome = 'created';
-      note = 'Nuevo caso BORRADOR creado (sin verificar). Un operador lo revisará antes de publicarlo.';
+      note = autoApprove
+        ? 'Caso creado y PUBLICADO de inmediato (envío de administrador).'
+        : 'Nuevo caso BORRADOR creado (sin verificar). Un operador lo revisará antes de publicarlo.';
     }
   } catch (e) {
     outcome = 'error';
@@ -142,7 +150,10 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
     console.warn('[tg-intake] persist failed', submissionId, (e as Error)?.message ?? e);
   }
 
-  // Ledger row (always).
+  // Ledger row (always). An admin auto-approved submission is recorded as
+  // 'approved' (same value the /aprobar flow writes) so it never appears in
+  // the operator review queue (OPEN_OUTCOMES).
+  const autoApproved = autoApprove && (outcome === 'created' || outcome === 'matched');
   await env.DB.prepare(
     `INSERT INTO intake_submissions (id, channel, tg_user_id, tg_username, tg_chat_id, file_id, mime, r2_key, extracted_json, match_score, outcome, person_id, intel_id, note, batch_id, created_ms)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -158,7 +169,7 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
       rawKey,
       JSON.stringify(fields),
       match.personId ? match.score : null,
-      outcome,
+      autoApproved ? 'approved' : outcome,
       personId,
       intelId,
       note,
@@ -168,5 +179,5 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
     .run()
     .catch((e) => console.warn('[tg-intake] ledger insert failed', submissionId, (e as Error)?.message ?? e));
 
-  return { submissionId, code, outcome, personId, intelId, fields, score: match.score, note };
+  return { submissionId, code, outcome, personId, intelId, fields, score: match.score, note, autoApproved };
 }

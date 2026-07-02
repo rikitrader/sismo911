@@ -39,8 +39,9 @@ export async function notifyOperators(env: Env, cfg: TelegramConfig, r: IntakeRe
   if (!cfg.adminUserIds.length) return;
   const base = env.PUBLIC_BASE_URL || 'https://sismo911.com';
   const link = r.personId ? `${base}/familia?caso=${r.personId.replace(/^fam-/, '')}` : `${base}/console`;
-  const head =
-    r.outcome === 'matched'
+  const head = r.autoApproved
+    ? '✅ Intake Telegram — PUBLICADO (envío de administrador)'
+    : r.outcome === 'matched'
       ? '🔗 Intake Telegram — coincide con caso'
       : r.outcome === 'created'
         ? '🆕 Intake Telegram — nuevo BORRADOR'
@@ -49,8 +50,9 @@ export async function notifyOperators(env: Env, cfg: TelegramConfig, r: IntakeRe
           : '⚠️ Intake Telegram — error';
   // One-tap moderation for a fresh draft: the operator can approve/reject right
   // here with the code (admin-tier /aprobar|/rechazar ITK-XXXX handled in route.ts).
+  // Auto-approved admin submissions need no action (/rechazar still works to undo).
   const actions =
-    r.outcome === 'created' || r.outcome === 'matched'
+    !r.autoApproved && (r.outcome === 'created' || r.outcome === 'matched')
       ? [`Aprobar:  /aprobar ${r.code}`, `Rechazar: /rechazar ${r.code}`]
       : [];
   const msg = [
@@ -71,6 +73,16 @@ export async function notifyOperators(env: Env, cfg: TelegramConfig, r: IntakeRe
 /** Build the receipt the submitter sees. */
 export function buildReceipt(r: IntakeResult): string {
   const lines = [`✅ Recibido. Tu código de seguimiento es <b>${escapeHtml(r.code)}</b>.`];
+  if (r.autoApproved) {
+    // Admin submission — already live, no review step.
+    lines.push(
+      r.outcome === 'matched'
+        ? 'Relacioné tu envío con el caso existente y quedó <b>verificado</b> (nivel administrador — sin aprobación pendiente).'
+        : 'Caso creado y <b>publicado de inmediato</b> (nivel administrador — sin aprobación pendiente).',
+    );
+    lines.push('Gracias por ayudar. SISMO911 no reemplaza a las autoridades: para emergencias llama al 911.');
+    return lines.join('\n');
+  }
   switch (r.outcome) {
     case 'matched':
       lines.push('Relacionamos tu envío con un caso existente. Un operador lo verificará.');

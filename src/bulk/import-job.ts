@@ -19,6 +19,7 @@ import { uid } from '../lib/db';
 import { extractRoster } from '../telegram/intake/roster';
 import { matchCase } from '../telegram/intake/match';
 import { persist } from '../telegram/intake/persist';
+import { parseIdList } from '../telegram/env';
 import type { IntakeMedia } from '../telegram/intake/types';
 
 const R2_PREFIX = 'intake/bulk';
@@ -122,6 +123,12 @@ export async function processBulkJob(env: Env, jobId: string): Promise<BulkSumma
     // Per-person media carries no bytes (evidence is the shared roster PDF at job.r2_key).
     const lightMedia: IntakeMedia = { ...media, bytes: new Uint8Array() };
 
+    // A roster sent by a Telegram ADMIN publishes immediately (no operator
+    // approval step) — same rule as the single-photo intake. Console uploads
+    // keep the review queue (its UI exists precisely to vet bulk OCR output).
+    const adminIds = parseIdList((env as Env & { ADMIN_TELEGRAM_USER_IDS?: string }).ADMIN_TELEGRAM_USER_IDS);
+    const autoApprove = job.source !== 'console' && !!job.tg_user_id && adminIds.includes(job.tg_user_id);
+
     for (const fields of records) {
       const submissionId = uid('itk');
       const code = `ITK-${submissionId.slice(4).toUpperCase()}`;
@@ -138,6 +145,7 @@ export async function processBulkJob(env: Env, jobId: string): Promise<BulkSumma
         channel,
         batchId: jobId,
         rawKey: job.r2_key ?? undefined,
+        autoApprove,
       });
       if (r.outcome === 'matched') matched++;
       else if (r.outcome === 'created') created++;
