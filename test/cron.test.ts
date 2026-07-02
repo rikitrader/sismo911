@@ -14,7 +14,7 @@ const ALL_JOB_NAMES = [
   'civis-desaparecidos',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
   'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe', 'rav-reports-dedupe-extid',
-  'pacientes-rvz', 'sismos-bot-broadcast', 'botcommands-sync', 'civis-extras',
+  'pacientes-rvz', 'sismos-bot-broadcast', 'botcommands-sync', 'civis-extras', 'civis-edificaciones',
 ];
 
 describe('cron groups', () => {

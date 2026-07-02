@@ -48,6 +48,9 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   '/api/acopio', '/api/agencias', '/api/aid-orgs', '/api/alerts', '/api/auth',
   '/api/blog', '/api/botiquin', '/api/buildings', '/api/campaigns', '/api/campaigns-mine', '/api/chat', '/api/checkins',
   '/api/comms', '/api/contacts', '/api/damage', '/api/danos-estructurales',
+  // Panorama de la emergencia — public read-only aggregates mirrored hourly from
+  // CIVIS (satellite edificaciones + live stats snapshot). GET-only, no PII.
+  '/api/panorama',
   '/api/donations', '/api/e', '/api/emergencia', '/api/facilities', '/api/familia',
   '/api/funding', '/api/humanitarian', '/api/mascotas', '/api/monitor',
   '/api/persons', '/api/push', '/api/rav', '/api/rbac', '/api/refugios', '/api/casualties', '/api/reports',

@@ -42,6 +42,7 @@ import { ingestCivisDesaparecidos } from './ingest/civis-desaparecidos';
 import { ingestTvBuildings } from './ingest/tv-buildings-cron';
 import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
 import { ingestCivisExtras } from './ingest/civis-extras';
+import { ingestCivisEdificaciones } from './ingest/civis-edificaciones';
 import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
@@ -139,6 +140,13 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // Cross-reference the hospital_patients REGISTRY ↔ cases: link + tracer note
     // (cédula-confirmed → auto status). Cursor-drained, converges over ticks.
     { name: 'hospital-registry-match', run: (env) => drainHospitalRegistryMatch(env) },
+    // CIVIS satellite damage + live stats — HOURLY. /api/edificaciones →
+    // sat_edificaciones (Copernicus EMS verified + Microsoft AI4G, ~975 rows)
+    // + /api/estadisticas + /api/panorama → civis_stats_snapshots. Feeds
+    // /panorama and the Satélite section on /edificios. Light: ~3 fetches +
+    // ~11 D1 batches. Seated here (:05 is at the 10-job group cap). Lifts the
+    // PR #607 deferral of /api/edificaciones as its own evidence class.
+    { name: 'civis-edificaciones', run: ingestCivisEdificaciones },
   ],
   // :30 — photo mirroring (external fetch + R2 puts, the heaviest) plus the
   // sheet sync and fuzzyphone dedupe. Keep RAV off this trigger: together these
