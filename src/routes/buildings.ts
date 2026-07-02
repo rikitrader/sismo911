@@ -6,7 +6,10 @@ import {
   scoreCurated, scoreOsm, computeSar, linkLiveMissing, estimateOccupants,
   type Sector, type Curated, type Osm, type Scored, type Sar, type MissingReport, PRIOR_BLEND,
 } from '../lib/building-score';
-import { mapTvBuilding, type TvBuilding } from '../lib/tv-buildings';
+import {
+  mapTvBuilding, mapSosDamageBuilding, poolReportedBuildings, SOS_BUILDING_CATEGORIES,
+  type TvBuilding, type SosDamageRow,
+} from '../lib/tv-buildings';
 import sectorsRaw from '../data/buildings/sectors.json';
 import curatedRaw from '../data/buildings/curated.json';
 import osmRaw from '../data/buildings/osm.json';
@@ -225,11 +228,13 @@ buildings.get('/sar/summary', async (c) => {
   });
 });
 
-// ── GET /api/buildings/reported — real citizen-reported buildings WITH photos ─
-// Mirror of terremotovenezuela.com (ingested hourly into tv_buildings). Each row
-// carries its address, a HAZUS replacement/repair cost, and a PHOTO GALLERY
-// (media[]). Distinct from the modeled curated/OSM inventory above. ?damage= (total|
-// severo|parcial) ?verified=1 ?withPhotos=1 ?state= ?q= ?limit=
+// ── GET /api/buildings/reported — real reported buildings WITH photos ─────────
+// Pooled inventory of REAL citizen-reported damaged buildings from two feeds,
+// deduped by id: terremotovenezuela.com (rich photo galleries → tv_buildings) +
+// the /danos structural-damage map (sos_damage: collapsed_building / damaged_building
+// with Venezuela triage color + coords + people_trapped). Each row carries its
+// address, a HAZUS replacement/repair cost, damage level, and a PHOTO GALLERY.
+// ?damage=(total|severo|parcial) ?verified=1 ?withPhotos=1 ?state= ?q= ?limit=
 buildings.get('/reported', async (c) => {
   const limited = await rateLimit(c.env, c, 'buildings_reported', 60, 60);
   if (limited) return limited;
@@ -239,7 +244,8 @@ buildings.get('/reported', async (c) => {
   };
   const limit = Math.min(Math.max(Number(c.req.query('limit')) || 2000, 1), 5000);
   return edgeCached(c, 300, async () => {
-    let rows: any[] = [];
+    // 1) terremotovenezuela.com (galleries)
+    let tvRows: any[] = [];
     try {
       const res = await c.env.DB.prepare(
         `SELECT id, name, address, city, zone, lat, lng, damage_level, status,
@@ -247,28 +253,54 @@ buildings.get('/reported', async (c) => {
                 tv_created_at, tv_updated_at
            FROM tv_buildings ORDER BY tv_updated_at DESC LIMIT 5000`,
       ).all();
-      rows = (res.results ?? []) as any[];
-    } catch { rows = []; }
-    let mapped: TvBuilding[] = rows.map(mapTvBuilding);
+      tvRows = (res.results ?? []) as any[];
+    } catch { tvRows = []; }
+    // 2) /danos structural-damage map (sos_damage building categories)
+    let sosRows: SosDamageRow[] = [];
+    try {
+      const ph = SOS_BUILDING_CATEGORIES.map(() => '?').join(',');
+      const res = await c.env.DB.prepare(
+        `SELECT id, category, severity, verification, title, description, lat, lng,
+                municipio, parroquia, building_type, people_trapped, source_url, image_url, created_at
+           FROM sos_damage WHERE category IN (${ph}) ORDER BY created_at DESC LIMIT 5000`,
+      ).bind(...SOS_BUILDING_CATEGORIES).all();
+      sosRows = (res.results ?? []) as unknown as SosDamageRow[];
+    } catch { sosRows = []; }
+
+    // 3) pool + dedupe by id (tv galleries win; /danos adds triage/coords/trapped + new buildings)
+    const pooled = poolReportedBuildings(tvRows.map(mapTvBuilding), sosRows.map(mapSosDamageBuilding));
+
+    let mapped = pooled;
     if (q.damage) mapped = mapped.filter((b) => b.damageLevel.toLowerCase() === q.damage!.toLowerCase());
     if (q.state) mapped = mapped.filter((b) => b.state.toLowerCase() === q.state!.toLowerCase());
     if (q.verified) mapped = mapped.filter((b) => b.verified);
     if (q.withPhotos) mapped = mapped.filter((b) => b.mediaCount > 0);
     if (q.q) mapped = mapped.filter((b) => (b.name + ' ' + b.addr + ' ' + b.city).toLowerCase().includes(q.q));
-    const mappedAll: TvBuilding[] = rows.map(mapTvBuilding);
-    const withCoords = mapped.filter((b) => b.lat != null && b.lon != null).length;
-    const withPhotos = mapped.filter((b) => b.mediaCount > 0).length;
+    // rank: collapses first, then severity, then buildings that have photos
+    const rank = (b: TvBuilding) => (b.damageLevel === 'total' ? 3 : b.damageLevel === 'severo' ? 2 : 1) * 10 + (b.mediaCount > 0 ? 1 : 0);
+    mapped.sort((a, z) => rank(z) - rank(a));
+
+    const withCoords = pooled.filter((b) => b.lat != null && b.lon != null).length;
+    const withPhotos = pooled.filter((b) => b.mediaCount > 0).length;
+    const sumRepair = Math.round(pooled.reduce((s, b) => s + (b.cost?.repairUsd ?? 0), 0));
+    const sumRepl = Math.round(pooled.reduce((s, b) => s + (b.cost?.replacementUsd ?? 0), 0));
     return {
       event: METHODOLOGY.event,
-      source: 'terremotovenezuela.com',
+      source: 'terremotovenezuela.com + sosvenezuela2026.com (/danos)',
+      sources: ['terremotovenezuela.com', 'sosvenezuela2026.com'],
       count: mapped.length,
-      total: mappedAll.length,
+      total: pooled.length,
+      from_tv: tvRows.length,
+      from_danos: sosRows.length,
       with_coords: withCoords,
       with_photos: withPhotos,
+      collapsed: pooled.filter((b) => b.damageLevel === 'total').length,
+      people_trapped: pooled.reduce((s, b) => s + (b.peopleTrapped ?? 0), 0),
+      costs_usd: { repair: sumRepair, replacement: sumRepl },
       by_damage: {
-        total: mappedAll.filter((b) => b.damageLevel === 'total').length,
-        severo: mappedAll.filter((b) => b.damageLevel === 'severo').length,
-        parcial: mappedAll.filter((b) => b.damageLevel === 'parcial').length,
+        total: pooled.filter((b) => b.damageLevel === 'total').length,
+        severo: pooled.filter((b) => b.damageLevel === 'severo').length,
+        parcial: pooled.filter((b) => b.damageLevel === 'parcial').length,
       },
       cost_note: 'Costo estimado por daño (HAZUS + costos reales VE 2026). Área/pisos desconocidos para reportes ciudadanos → confianza BAJA. No es tasación.',
       buildings: mapped.slice(0, limit),
@@ -294,9 +326,20 @@ buildings.get('/reported/:id', async (c) => {
             main_photo_url, media_urls, general_source, notes, has_missing_persons,
             tv_created_at, tv_updated_at FROM tv_buildings WHERE id = ?`,
   ).bind(id).first();
-  if (!row) return c.json({ error: 'not_found', id }, 404);
+  // Fall back to the /danos structural-damage feed for buildings that only exist there.
+  let sosRow: any = null;
+  if (!row) {
+    try {
+      sosRow = await c.env.DB.prepare(
+        `SELECT id, category, severity, verification, title, description, lat, lng,
+                municipio, parroquia, building_type, people_trapped, source_url, image_url, created_at
+           FROM sos_damage WHERE id = ? AND category IN ('collapsed_building','damaged_building')`,
+      ).bind(id).first();
+    } catch { sosRow = null; }
+  }
+  if (!row && !sosRow) return c.json({ error: 'not_found', id }, 404);
   return edgeCached(c, 120, async () => {
-    const b = mapTvBuilding(row);
+    const b = row ? mapTvBuilding(row) : mapSosDamageBuilding(sosRow as SosDamageRow);
 
     // Forensic record + evidence docs (soft-referenced; may not exist yet).
     let profile: any = null; let docs: any[] = [];
@@ -366,7 +409,8 @@ buildings.get('/reported/:id', async (c) => {
     // Forensic timeline — chronological chain of custody / evidence events.
     const timeline: { at: string; kind: string; label: string }[] = [];
     if (b.updatedAt) timeline.push({ at: b.updatedAt, kind: 'report', label: 'Última actualización del reporte de campo' });
-    if (row.tv_created_at) timeline.push({ at: String(row.tv_created_at), kind: 'report', label: 'Reporte ciudadano registrado' });
+    const createdAt = (row?.tv_created_at ?? sosRow?.created_at) as string | undefined;
+    if (createdAt) timeline.push({ at: String(createdAt), kind: 'report', label: 'Reporte ciudadano registrado' });
     if (structure.lastInspectionAt) timeline.push({ at: structure.lastInspectionAt, kind: 'inspection', label: 'Inspección técnica' });
     for (const d of docs) if (d.published_at) timeline.push({ at: d.published_at, kind: d.kind, label: d.title || d.kind });
     timeline.sort((a, z) => (z.at || '').localeCompare(a.at || ''));
