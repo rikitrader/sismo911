@@ -251,14 +251,14 @@ async function registrySummary(
 
 // GET /api/persons/stats — live registry counters for the /personas banner.
 // Derived from the SAME canonical registrySummary() that powers the /casos
-// banner, so "Total registradas" (/personas) always equals "Expedientes"
+// banner, so "Total Reportadas" (/personas) always equals "Expedientes"
 // (/casos). Public view (op=false): the endpoint is edge-cached and shared
 // across anonymous visitors, so it must match the public docket, never an
 // operator's wider count.
 persons.get('/stats', async (c) => edgeCached(c, 60, async () => {
   const s = await registrySummary(c.env, false);
   return {
-    missing: s.missing,          // Buscadas
+    missing: s.missing,          // Reporte de Buscadas
     found: s.found_safe,         // Reencontradas (a salvo) — mirrors /casos "Localizada a salvo"
     hospitalized: s.hospitalized,
     total: s.total,              // Total registradas == /casos "Expedientes"
@@ -610,7 +610,7 @@ persons.get('/cases', async (c) => {
   // so the two pages can never disagree. It uses the SAME public-visibility
   // predicates as the paged `total` above (review/moderation='approved' + minor
   // suppression), so summary.total equals the pager count on the default view —
-  // and equals /personas "Total registradas". See registrySummary() above.
+  // and equals /personas "Total Reportadas". See registrySummary() above.
   const summary = await registrySummary(c.env, op);
   // ---------- filter metadata (drives the frontend controls + echoes applied) ----------
   let sourceOptions: string[] = ['operator', 'familia', 'registro-maestro'];
