@@ -427,6 +427,9 @@ buildings.get('/reported/:id', async (c) => {
     const docsByKind: Record<string, any[]> = {};
     for (const d of docs) (docsByKind[d.kind] ||= []).push(d);
 
+    // Engineering-evaluation layer (Eng Nivel 1/2/3): PM pipeline + signed events.
+    const evaluation = await evalSummary(c.env, id);
+
     return {
       building: b,
       structure,
@@ -442,6 +445,7 @@ buildings.get('/reported/:id', async (c) => {
       docsByKind,
       docCount: docs.length,
       timeline,
+      evaluation,
       profileEnriched: !!profile,
       event: METHODOLOGY.event,
       methodology: METHODOLOGY,
@@ -452,7 +456,8 @@ buildings.get('/reported/:id', async (c) => {
 
 // ── POST /api/buildings/reported/:id/cases — operator: attach a case ──────────
 // Body: { case_id, case_name? }. Writes under /api/buildings are operator-gated
-// centrally (route-policy ADMIN_WRITE_PREFIXES); handlers assume an authed writer.
+// centrally (route-policy isBuildingsWrite → damage:moderate); handlers assume an
+// authed writer.
 // Validates the building exists and the case id resolves in persons / personas
 // (fam-) before persisting, so a typo can't mint a dangling attachment.
 buildings.post('/reported/:id/cases', async (c) => {
@@ -485,6 +490,88 @@ buildings.delete('/reported/:id/cases/:caseId', async (c) => {
     `DELETE FROM building_cases WHERE building_id = ? AND case_id = ?`,
   ).bind(id, caseId).run();
   return c.json({ ok: true, building_id: id, case_id: caseId, removed: r.meta?.changes ?? 0 });
+});
+
+// ── Engineering-evaluation layer (Eng Nivel 1/2/3) — PM tracking ──────────────
+// ATC-20-inspired evaluation pipeline per building, tracked as SIGNED events
+// (server computes a SHA-256 over the canonical payload at insert → tamper-evident
+// trail). Reads are public (PII-free operational status); writes are operator-gated
+// centrally (route-policy isBuildingsWrite → damage:moderate).
+const EVAL_LEVEL_META = [
+  { level: 1, name: 'Nivel 1 — Evaluación Rápida', desc: 'Triage exterior tipo ATC-20: marcado habitable / uso restringido / inseguro' },
+  { level: 2, name: 'Nivel 2 — Evaluación Detallada', desc: 'Inspección detallada interior/exterior por inspector certificado' },
+  { level: 3, name: 'Nivel 3 — Evaluación de Ingeniería', desc: 'Evaluación estructural completa por ingeniero (CIV) con memoria de cálculo' },
+] as const;
+const EVAL_STATUSES = new Set(['pendiente', 'en_curso', 'completada', 'bloqueada']);
+const EVAL_KINDS = new Set(['inicio', 'inspeccion', 'hallazgo', 'documento', 'cambio_estado', 'firma', 'nota']);
+
+async function evalSummary(env: Env, buildingId: string) {
+  let rows: any[] = [];
+  try {
+    const r = await env.DB.prepare(
+      `SELECT id, level, status, event_kind, note, actor_name, actor_role, signed_by, signature, created_at
+         FROM building_eval_events WHERE building_id = ? ORDER BY created_at DESC, id DESC`,
+    ).bind(buildingId).all();
+    rows = (r.results ?? []) as any[];
+  } catch { rows = []; } // fail-soft if the table isn't migrated yet
+  const levels = EVAL_LEVEL_META.map((m) => {
+    const evs = rows.filter((e) => Number(e.level) === m.level);
+    const status = (evs.find((e) => e.status)?.status as string | undefined) ?? 'pendiente';
+    return {
+      ...m,
+      status,
+      events: evs.length,
+      lastAt: evs[0]?.created_at ?? null,
+      assignee: (evs.find((e) => e.actor_name)?.actor_name as string | undefined) ?? null,
+    };
+  });
+  const done = levels.filter((l) => l.status === 'completada').length;
+  const current = levels.find((l) => l.status === 'en_curso') ?? levels.find((l) => l.status !== 'completada') ?? null;
+  return {
+    levels,
+    currentLevel: current?.level ?? null,
+    progress: Math.round((done / levels.length) * 100),
+    events: rows,
+    eventCount: rows.length,
+    note: 'Seguimiento operativo de evaluación estructural por niveles (inspirado en ATC-20). Eventos firmados con hash SHA-256 — trazabilidad, no peritaje oficial.',
+  };
+}
+
+// ── GET /api/buildings/reported/:id/eval — public read: pipeline + signed events ──
+buildings.get('/reported/:id/eval', async (c) => {
+  const limited = await rateLimit(c.env, c, 'buildings_eval', 90, 60);
+  if (limited) return limited;
+  return c.json(await evalSummary(c.env, c.req.param('id')));
+});
+
+// ── POST /api/buildings/reported/:id/eval/events — operator: signed tracking event ──
+// Body: { level: 1|2|3, status?, event_kind?, note?, actor_name?, actor_role?, signed_by? }.
+buildings.post('/reported/:id/eval/events', async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json().catch(() => ({} as any));
+  const level = Number(body.level);
+  if (![1, 2, 3].includes(level)) return c.json({ error: 'level debe ser 1, 2 o 3' }, 400);
+  const clamp = (v: unknown, n: number) => { const s = String(v ?? '').trim(); return s ? s.slice(0, n) : null; };
+  const status = clamp(body.status, 20);
+  if (status && !EVAL_STATUSES.has(status)) return c.json({ error: 'status inválido' }, 400);
+  const kind = EVAL_KINDS.has(String(body.event_kind)) ? String(body.event_kind) : 'nota';
+  const note = clamp(body.note, 2000);
+  const actorName = clamp(body.actor_name, 120);
+  const actorRole = clamp(body.actor_role, 120);
+  const signedBy = clamp(body.signed_by, 120) ?? actorName;
+  // The building must exist in one of the two feeds (typo can't mint a dangling trail).
+  let bld = await c.env.DB.prepare(`SELECT id FROM tv_buildings WHERE id = ?`).bind(id).first();
+  if (!bld) bld = await c.env.DB.prepare(`SELECT id FROM sos_damage WHERE id = ?`).bind(id).first().catch(() => null);
+  if (!bld) return c.json({ error: 'not_found', id }, 404);
+  const createdAt = new Date().toISOString();
+  const payload = [id, level, status ?? '', kind, note ?? '', actorName ?? '', actorRole ?? '', signedBy ?? '', createdAt].join('|');
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+  const signature = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  await c.env.DB.prepare(
+    `INSERT INTO building_eval_events (building_id, level, status, event_kind, note, actor_name, actor_role, signed_by, signature, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+  ).bind(id, level, status, kind, note, actorName, actorRole, signedBy, signature, createdAt).run();
+  return c.json({ ok: true, building_id: id, level, status, event_kind: kind, signed_by: signedBy, signature, created_at: createdAt }, 201);
 });
 
 // ── GET /api/buildings/sectors — sector registry (soil/MMI/prior) ─────────────
