@@ -148,6 +148,13 @@ export interface Env {
   // parses + re-ingests it; configurable so the source can change without a redeploy. (in [vars])
   HOSPITAL_FEED_URL?: string;
 
+  // CIVIS Venezuela "atendidos" API base (civisvenezuela.com/api/atendidos). Public,
+  // no key. Overridable so the source host can change without a redeploy. (in [vars])
+  CIVIS_API_BASE?: string;
+  // Google Sheet to mirror the hospital_patients registry into (falls back to
+  // MONITOR_SHEET_ID when unset). (in [vars])
+  HOSPITAL_SHEET_ID?: string;
+
   // --- DB Ingestion Gatekeeper (src/security/*) -----------------------------
   // All optional: the gate has safe built-in defaults and degrades gracefully.
   // Cloudflare Turnstile server secret (verify the public widget token). When

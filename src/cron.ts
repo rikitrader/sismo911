@@ -28,7 +28,7 @@ import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
 import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from './lib/clean';
 import { dedupePersonas, dedupeRavReports } from './lib/dedupe';
 import { ingestSocialMonitor } from './ingest/social-monitor';
-import { syncMonitorSheet, syncSosSheet } from './lib/sheets-sync';
+import { syncMonitorSheet, syncSosSheet, syncHospitalSheet } from './lib/sheets-sync';
 import { syncCasesSheetToD1 } from './sync/sheet-source';
 import { ingestBlog } from './ingest/blog-cron';
 import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestRavSafe } from './ingest/rav-cron';
@@ -37,6 +37,7 @@ import { sweepCaseScores } from './lib/case-score-sync';
 import { backfillHospitalMatches } from './ingest/hospital-match';
 import { drainHospitalRegistryMatch } from './ingest/hospital-registry-match';
 import { ingestHospitalRegistry } from './ingest/hospital-registry-sync';
+import { ingestCivisAtendidos } from './ingest/civis-atendidos';
 import { ingestTvBuildings } from './ingest/tv-buildings-cron';
 import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
 import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
@@ -142,6 +143,9 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   '30 * * * *': [
     { name: 'familia-photo-mirror', run: mirrorFamiliaPhotos },
     { name: 'monitor-sheet', run: syncMonitorSheet },
+    // Mirror the hospital_patients registry (Cruz Roja + CIVIS) into the Sheet's
+    // "Hospital" tab. No-op without HOSPITAL_SHEET_ID/MONITOR_SHEET_ID + Google creds.
+    { name: 'hospital-sheet', run: syncHospitalSheet },
     // Sheet-as-source-of-truth: pull the curated "Casos CRM" sheet into D1 (one
     // bounded 4k-row pass per tick, drains via KV cursor; dedup runs on wrap).
     // No-op until CASES_SHEET_ID + GOOGLE_* creds are set.
@@ -170,6 +174,11 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   // it always has a full subrequest budget. This is the job that used to fail.
   // RAV photo analysis (vision + content-hash) + the image-content dedupe ride here.
   '45 * * * *': [
+    // CIVIS atendidos (civisvenezuela.com) — HOURLY. Pulls the newest hospital feed
+    // + a rotating slice of centros (KV cursor) into hospital_patients as name-deduped
+    // profiles. Runs FIRST here so its bounded (~28) subrequests land before the
+    // heavier social/blog jobs draw down the invocation budget.
+    { name: 'civis-atendidos', run: ingestCivisAtendidos },
     { name: 'social-monitor', run: ingestSocialMonitor },
     { name: 'blog', run: ingestBlog },
     // Trailing casualty (fallecidos/heridos/desaparecidos) poller. Self-throttles
