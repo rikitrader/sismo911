@@ -1,8 +1,81 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { edgeCached } from '../lib/edge-cache';
+import { getCanonicalCasualties, CANON_SOURCE } from '../lib/canonical-casualties';
 
 export const panorama = new Hono<{ Bindings: Env }>();
+
+// ── Balance oficial del gobierno ────────────────────────────────────────────
+// The government reads its balance aloud on TV; nobody publishes it as an API.
+// Three layers, later wins: (1) BALANCE_DEFAULTS — last hand-transcribed parte
+// shipped with the code; (2) canonical fallecidos/heridos from the casualty
+// pipeline (auto-updates as new partes are AI-extracted from press); (3) the
+// panorama_balance manual-override row (operator, damage:moderate).
+const BALANCE_DEFAULTS = {
+  corte: '1 de julio de 2026',
+  fallecidos: 2295, heridos: 11267, rescatadas: 6461,
+  damnificadas: 12841, campamentos: 28380, desaparecidos_onu: '50.000+',
+  fuente: 'Gobierno de Venezuela (Asamblea Nacional, vía Venevisión/VTV)',
+} as const;
+
+const BALANCE_INT_FIELDS = ['fallecidos', 'heridos', 'rescatadas', 'damnificadas', 'campamentos'] as const;
+
+async function buildBalance(env: Env) {
+  const balance: Record<string, any> = { ...BALANCE_DEFAULTS, origen: 'transcrito' };
+  const canon = await getCanonicalCasualties(env).catch(() => null);
+  if (canon?.fallecidos != null) { balance.fallecidos = canon.fallecidos; balance.origen = 'canonico'; }
+  if (canon?.heridos != null) balance.heridos = canon.heridos;
+  if (canon?.as_of) { balance.canon_as_of = canon.as_of; balance.canon_fuente = CANON_SOURCE; }
+  const manual: any = await env.DB.prepare(
+    `SELECT corte, fallecidos, heridos, rescatadas, damnificadas, campamentos,
+            desaparecidos_onu, fuente, updated_ms
+     FROM panorama_balance WHERE id = 1`
+  ).first().catch(() => null);
+  if (manual) {
+    for (const k of [...BALANCE_INT_FIELDS, 'corte', 'desaparecidos_onu', 'fuente'] as string[]) {
+      if (manual[k] != null && manual[k] !== '') balance[k] = manual[k];
+    }
+    balance.override_updated_ms = manual.updated_ms ?? null;
+    if (manual.corte) balance.origen = 'operador';
+  }
+  return balance;
+}
+
+// POST /api/panorama/balance — operator override (gated damage:moderate via
+// route-policy isPanoramaWrite). Body: any subset of {corte, fallecidos,
+// heridos, rescatadas, damnificadas, campamentos, desaparecidos_onu, fuente};
+// null clears a field back to canonical/default. Upserts the single row.
+panorama.post('/balance', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== 'object') return c.json({ error: 'json_body_requerido' }, 400);
+  const row: Record<string, any> = {};
+  for (const k of BALANCE_INT_FIELDS) {
+    if (!(k in body)) continue;
+    if (body[k] === null) { row[k] = null; continue; }
+    const n = Number(body[k]);
+    if (!Number.isFinite(n) || n < 0 || n > 100_000_000) return c.json({ error: `campo_invalido:${k}` }, 400);
+    row[k] = Math.trunc(n);
+  }
+  for (const k of ['corte', 'desaparecidos_onu', 'fuente'] as const) {
+    if (!(k in body)) continue;
+    row[k] = body[k] === null ? null : String(body[k]).replace(/\s+/g, ' ').trim().slice(0, 200);
+  }
+  if (!Object.keys(row).length) return c.json({ error: 'sin_campos' }, 400);
+  const existing: any = await c.env.DB.prepare(`SELECT * FROM panorama_balance WHERE id = 1`).first().catch(() => null);
+  const merged = { ...(existing || {}), ...row };
+  await c.env.DB.prepare(
+    `INSERT INTO panorama_balance
+       (id, corte, fallecidos, heridos, rescatadas, damnificadas, campamentos, desaparecidos_onu, fuente, updated_ms)
+     VALUES (1,?,?,?,?,?,?,?,?,?)
+     ON CONFLICT(id) DO UPDATE SET
+       corte=excluded.corte, fallecidos=excluded.fallecidos, heridos=excluded.heridos,
+       rescatadas=excluded.rescatadas, damnificadas=excluded.damnificadas, campamentos=excluded.campamentos,
+       desaparecidos_onu=excluded.desaparecidos_onu, fuente=excluded.fuente, updated_ms=excluded.updated_ms`
+  ).bind(merged.corte ?? null, merged.fallecidos ?? null, merged.heridos ?? null, merged.rescatadas ?? null,
+         merged.damnificadas ?? null, merged.campamentos ?? null, merged.desaparecidos_onu ?? null,
+         merged.fuente ?? null, Date.now()).run();
+  return c.json({ ok: true, balance: await buildBalance(c.env) });
+});
 
 // ── Panorama de la emergencia — public read-only aggregates ────────────────
 // Mirrors CIVIS Venezuela data ingested hourly by the civis-edificaciones cron
@@ -34,6 +107,7 @@ panorama.get('/stats', async (c) => edgeCached(c, 60, async () => {
   return {
     taken_ms: snap?.taken_ms ?? null,
     stats,
+    balance: await buildBalance(c.env),
     panorama: { texto: snap?.panorama_text || '', generado_en: snap?.panorama_generated_at || '' },
     sat: {
       confirmadas: satTotal,

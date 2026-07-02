@@ -74,18 +74,19 @@
     </div>
   </section>
 
-  <!-- Official government balance (hand-transcribed by CIVIS; static with corte date) -->
+  <!-- Official government balance: fallecidos/heridos auto-track the canonical
+       casualty pipeline; the rest come from the operator override / last parte -->
   <section class="sec">
-    <div class="sec-h"><span class="sec-t">Balance oficial del gobierno</span><span class="tag official">Corte oficial · 1 de julio de 2026</span></div>
+    <div class="sec-h"><span class="sec-t">Balance oficial del gobierno</span><span class="tag official" id="b-corte">Corte oficial · 1 de julio de 2026</span></div>
     <div class="tiles">
-      <div class="card stat"><div class="n red">2.295</div><div class="l">Fallecidos</div></div>
-      <div class="card stat"><div class="n orange">11.267</div><div class="l">Heridos</div></div>
-      <div class="card stat"><div class="n green">6.461</div><div class="l">Personas rescatadas</div></div>
-      <div class="card stat"><div class="n red">12.841</div><div class="l">Personas damnificadas</div></div>
-      <div class="card stat"><div class="n blue">28.380</div><div class="l">En campamentos temporales</div></div>
-      <div class="card stat"><div class="n orange">50.000+</div><div class="l">Desaparecidos (estimación ONU)</div></div>
+      <div class="card stat"><div class="n red" id="b-fallecidos">2.295</div><div class="l">Fallecidos</div></div>
+      <div class="card stat"><div class="n orange" id="b-heridos">11.267</div><div class="l">Heridos</div></div>
+      <div class="card stat"><div class="n green" id="b-rescatadas">6.461</div><div class="l">Personas rescatadas</div></div>
+      <div class="card stat"><div class="n red" id="b-damnificadas">12.841</div><div class="l">Personas damnificadas</div></div>
+      <div class="card stat"><div class="n blue" id="b-campamentos">28.380</div><div class="l">En campamentos temporales</div></div>
+      <div class="card stat"><div class="n orange" id="b-onu">50.000+</div><div class="l">Desaparecidos (estimación ONU)</div></div>
     </div>
-    <div class="note">Gobierno de Venezuela (Asamblea Nacional, vía Venevisión/VTV). Balance en evolución, transcrito manualmente con cada nuevo parte — puede llevar días de rezago frente a los reportes ciudadanos en vivo.</div>
+    <div class="note" id="b-fuente">Gobierno de Venezuela (Asamblea Nacional, vía Venevisión/VTV). Balance en evolución, transcrito manualmente con cada nuevo parte — puede llevar días de rezago frente a los reportes ciudadanos en vivo.</div>
   </section>
 
   <!-- Personas -->
@@ -166,7 +167,23 @@
 
   function setStat(id, v) { var el = document.getElementById(id); if (el) el.textContent = fmt(v); }
 
+  function renderBalance(b) {
+    if (!b) return;
+    ['fallecidos', 'heridos', 'rescatadas', 'damnificadas', 'campamentos'].forEach(function (k) {
+      if (b[k] != null) document.getElementById('b-' + k).textContent = fmt(b[k]);
+    });
+    if (b.desaparecidos_onu) document.getElementById('b-onu').textContent = b.desaparecidos_onu;
+    if (b.corte) document.getElementById('b-corte').textContent = 'Corte oficial · ' + b.corte;
+    var f = document.getElementById('b-fuente');
+    var extra = (b.origen === 'canonico' && b.canon_as_of)
+      ? ' Fallecidos/heridos actualizados automáticamente (' + b.canon_fuente + ', al ' +
+        new Date(b.canon_as_of).toLocaleDateString('es-VE', { day: 'numeric', month: 'long' }) + ').'
+      : '';
+    f.textContent = (b.fuente || '') + '. Balance en evolución — puede llevar rezago frente a los reportes ciudadanos en vivo.' + extra;
+  }
+
   function renderStats(d) {
+    renderBalance(d.balance);
     var s = d.stats || {};
     ['desap_total','desap_buscando','desap_localizadas','a_salvo','atendidas_total','atendidas_hospital',
      'atendidas_refugio','atendidas_reencontradas','danos_total','danos_colapso','danos_grave','danos_parcial',

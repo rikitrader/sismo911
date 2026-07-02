@@ -151,6 +151,9 @@ export function evaluateGate(path: string, method: string): GateDecision {
   // operator surfaces. GETs under /api/buildings stay public (PII-free reads).
   // Previously these writes fell through to the public allow-list — closing that gap.
   const isBuildingsWrite = WRITE_METHODS.has(method) && path.startsWith('/api/buildings');
+  // Panorama balance-override editor (official government block) is an operator
+  // surface; GETs under /api/panorama stay public (aggregate reads, no PII).
+  const isPanoramaWrite = WRITE_METHODS.has(method) && path.startsWith('/api/panorama');
   const isManualRefresh = path === '/api/events/refresh';
   const isShelterModeration = path === '/api/shelters/queue';
   const isSatWrite = WRITE_METHODS.has(method) && path.startsWith('/api/sat/') && path !== '/api/sat/pytorch-results';
@@ -166,7 +169,7 @@ export function evaluateGate(path: string, method: string): GateDecision {
   const isNinezAdminRead = method === 'GET' && path.startsWith('/api/ninez/admin');
 
   const gated = isAdminPage || isAdminWrite || isReportModeration || isPersonModeration ||
-    isMedicalCases || isDocketSubmit || isCaseAdmin || isSosTriage || isDamageReview || isBuildingsWrite || isManualRefresh ||
+    isMedicalCases || isDocketSubmit || isCaseAdmin || isSosTriage || isDamageReview || isBuildingsWrite || isPanoramaWrite || isManualRefresh ||
     isShelterModeration || isSatWrite || isAcopioReview || isFlotaApi || isFlotaAdminApi ||
     isSuministrosPage || isSuministrosRead || isNinezAdminRead;
 
@@ -197,7 +200,7 @@ export function evaluateGate(path: string, method: string): GateDecision {
   else if (isCaseAdmin || isPersonModeration || isMedicalCases) perm = 'persons:moderate';
   else if (isReportModeration) perm = 'reports:moderate';
   else if (isSosTriage) perm = 'sos:triage';
-  else if (isDamageReview || isBuildingsWrite) perm = 'damage:moderate';
+  else if (isDamageReview || isBuildingsWrite || isPanoramaWrite) perm = 'damage:moderate';
   else if (isManualRefresh) perm = 'events:refresh';
   else if (isShelterModeration) perm = 'shelters:manage';
   else if (isSatWrite) perm = 'sat:analyze';
