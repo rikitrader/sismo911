@@ -80,6 +80,13 @@ A real production secret (`PLAN_SECRET`) once reached git history; the repo is n
 - **Rotating a live production secret is an outward-facing action** — get explicit user approval first unless they said "rotate production secrets now."
 - **Verify by behavior, never by value** — confirm the gate works / old cookies are rejected; never reveal the value to "prove" rotation.
 
+## Ingested names are Title Case (HARD RULE — every ingest that stores a person's name)
+
+- **When ingesting people data, store display names in Title Case — first letter of each word upper, the rest lower** ("Abello Matilde", never "ABELLO MATILDE"). External feeds (Cruz Roja hospital registry, roster PDFs, CSV imports) arrive ALL-CAPS; normalize on the way in.
+- **Use the shared helper `titleCaseName()` in `src/lib/names.ts`** for `full_name` and any name variants. It handles ALL-CAPS input, accents ("Ángel María"), hyphens ("Jean-Paul"), and keeps Spanish particles lowercase mid-name ("Maria de la Cruz").
+- **DISPLAY only — never touch the matching key.** Dedupe/cross-match keys still come from `normName()` (lowercased, accent-stripped). Title-casing the display name must NOT change `norm_name`/`dedupe_key`, or matching silently breaks. (Applied in `patientToRow`, `src/lib/hospital-registry.ts`.)
+- Do not blanket-apply to already-mixed-case, user-entered names (would wreck "McDonald" → "Mcdonald"); apply it where the source is known ALL-CAPS or otherwise unnormalized.
+
 ## Project quick-reference
 
 - **Stack:** Cloudflare Workers + Hono 4 + D1 + KV + R2 + Static Assets + hourly Cron. Single Worker serves `public/*.html` + `/api/*`.

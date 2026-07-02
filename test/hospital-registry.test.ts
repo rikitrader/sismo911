@@ -37,12 +37,12 @@ describe('hospital-registry parsers', () => {
 
   it('patientToRow builds a clean row + parses estado', () => {
     const r = patientToRow({ hospital: 'Hospital Vargas', nombre: 'PÉREZ ANA / PEREZ ANA M', edad: '36', cedula: '18134813', observaciones: 'Internado | UPT' })!;
-    expect(r.full_name).toBe('PÉREZ ANA');
+    expect(r.full_name).toBe('Pérez Ana'); // ingest title-cases display names
     expect(r.norm_name).toBe('perez ana');
     expect(r.estado).toBe('hospitalizado');
     expect(r.cedula).toBe('18134813');
     expect(r.dedupe_key).toBe('c:18134813');
-    expect(JSON.parse(r.name_variants)).toEqual(['PÉREZ ANA', 'PEREZ ANA M']);
+    expect(JSON.parse(r.name_variants)).toEqual(['Pérez Ana', 'Perez Ana M']);
     expect(patientToRow({ nombre: '' })).toBeNull();
   });
 });
@@ -128,7 +128,7 @@ describe('hospital ingest route (catches the upsert / ON CONFLICT partial-index 
     const s = await (await app.request('/api/persons/hospital/stats', {}, env)).json();
     expect(s.hospitalizado).toBe(1); expect(s.alta).toBe(1); expect(s.total).toBe(2);
     const found = await (await app.request('/api/persons/hospital/search?q=maria', {}, env)).json();
-    expect(found.results[0].full_name).toBe('MARIA LOPEZ');
+    expect(found.results[0].full_name).toBe('Maria Lopez');
     expect(found.results[0].estado).toBe('hospitalizado');
   });
 });

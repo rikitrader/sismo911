@@ -3,6 +3,8 @@
 // unit-tested. Status is PARSED per row from the free-text OBSERVACIONES — a
 // deceased or discharged patient is NEVER counted as hospitalizado.
 
+import { titleCaseName } from './names';
+
 export type HospEstado = 'hospitalizado' | 'alta' | 'fallecido' | 'desconocido';
 
 /** Normalize a name for matching (mirrors normName in routes/persons.ts:51). */
@@ -81,8 +83,11 @@ const clip = (v: unknown, n: number) => (v == null ? '' : String(v)).replace(/\s
 
 /** Normalize one raw spreadsheet row → a storable PatientRow (null if unusable). */
 export function patientToRow(raw: RawPatient): PatientRow | null {
-  const variants = splitNameVariants(raw.nombre);
-  const full = variants[0] || clip(raw.nombre, 200);
+  // Title-case the display names on ingest (source is ALL-CAPS). Matching keys
+  // below still come from normName(), which lowercases + strips, so this is a
+  // display-only change and does NOT affect dedupe/cross-match.
+  const variants = splitNameVariants(raw.nombre).map(titleCaseName);
+  const full = variants[0] || titleCaseName(clip(raw.nombre, 200));
   if (!full) return null;                       // a row with no name is not a patient
   const primaryNorm = normName(full);
   const cedula = cleanCedula(raw.cedula);
