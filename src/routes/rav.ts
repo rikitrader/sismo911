@@ -33,7 +33,9 @@ function authed(c: any): boolean {
 rav.post('/api/rav/run', async (c) => {
   if (!authed(c)) return c.json({ error: 'unauthorized' }, 401);
   const kind = (c.req.query('kind') || 'persons').toLowerCase();
-  const pages = Math.min(Math.max(Number(c.req.query('pages')) || 5, 1), 25);
+  // proxy pages are 40 rows (RAV_MS_PAGE), so allow a wider window than the old
+  // 1000-row PostgREST pages: 60 pages ≈ 2,400 rows per driver call.
+  const pages = Math.min(Math.max(Number(c.req.query('pages')) || 5, 1), 60);
   const photoBatch = Math.min(Math.max(Number(c.req.query('batch')) || 24, 1), 25);
   const out: Record<string, unknown> = { kind };
   try {

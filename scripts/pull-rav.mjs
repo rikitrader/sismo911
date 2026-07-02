@@ -24,7 +24,7 @@ import { join } from 'node:path';
 const APPLY = process.argv.includes('--apply');
 const CLEAN = process.argv.includes('--clean');
 const NO_PULL = process.argv.includes('--no-pull');
-const PAGES = Math.min(Math.max(Number(process.env.RAV_PAGES) || 10, 1), 25);
+const PAGES = Math.min(Math.max(Number(process.env.RAV_PAGES) || 30, 1), 60);
 const BASE = (process.env.SISMO911_BASE || 'https://sismo911.rikitrader.workers.dev').replace(/\/+$/, '');
 const DB = 'sismo911';
 
@@ -96,14 +96,14 @@ async function main() {
     console.log('Ingesting stats + verified…');
     console.log('  →', JSON.stringify(await run('stats')));
     console.log('  →', JSON.stringify(await run('verified')));
-    console.log('Ingesting persons (looping until cursor wraps to 0)…');
+    console.log('Ingesting persons (looping until the active+found sweep wraps)…');
     let guard = 0, totalWritten = 0;
-    while (guard++ < 200) {
+    while (guard++ < 600) {
       const j = await run('persons', `&pages=${PAGES}`);
       const p = j.persons || {};
       totalWritten += p.written || 0;
       console.log(`  ${p.from ?? '?'}-${p.to ?? '?'}/${p.total ?? '?'}  wrote ${p.written ?? 0}  next=${p.next}`);
-      if (!p || p.next === 0 || p.next == null) break;
+      if (!p || p.wrapped || p.next == null) break;
     }
     console.log(`Persons ingest complete: ~${totalWritten} upserts this run.`);
   }

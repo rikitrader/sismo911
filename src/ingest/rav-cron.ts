@@ -1,7 +1,8 @@
 import type { Env } from '../types';
 import { recordIngest } from '../lib/db';
 import {
-  ravFetch, RAV_PAGE, mapRavPersona, mapRavVerified, mapRavStats, mapRavReport, mapRavSafe,
+  ravFetch, ravData, RAV_MS_PAGE, parseRavCursor, advanceRavCursor,
+  mapRavPersona, mapRavVerified, mapRavStats, mapRavReport, mapRavSafe,
   type RavPersonRow, type RavVerifiedRow, type RavStatsRow, type RavReportRow, type RavSafeRow, type PersonaUpsert,
 } from '../lib/rav';
 import { gatePersona, gateRavReport } from './gate-config';
@@ -16,13 +17,16 @@ import { logAgentActivity, missingStats, missingPhrase } from '../lib/agent-acti
 // (the same person also reported via theempire) are collapsed by the existing
 // dedupePersonas modes (exact / photo / loose) + the new `phash` mode.
 //
-// PAGINATION: PostgREST caps a response at 1000 rows. A bounded window of pages
-// is pulled per run with a KV offset cursor (`rav:cursor`) so successive cron
-// ticks cycle the whole ~53k set; the full backfill is driven out-of-band by
-// scripts/pull-rav.mjs via POST /api/rav/run.
+// PAGINATION (2026-07 proxy era): RAV revoked anon SELECT on missing_persons /
+// reports / safe_reports, so bulk reads go through the site's own /api/data
+// proxy (op missing_search — fixed 40 rows/page). A bounded window of pages is
+// pulled per run with a KV cursor (`rav:cursor`, format "<status>:<page>") that
+// sweeps all `active` pages, then all `found` pages, then wraps — so the whole
+// ~52k set (and located-status updates) cycles over successive cron ticks. The
+// full backfill is driven out-of-band by scripts/pull-rav.mjs via POST /api/rav/run.
 
 const CURSOR_KEY = 'rav:cursor';
-const MAX_PAGES_PER_RUN = 5;       // ~5000 rows / 5 subrequests per cron tick
+const MAX_PAGES_PER_RUN = 30;      // 40 rows/page → ~1,200 rows + 1 count + ~12 D1 batches per tick
 
 function upsertPersonaStmt(env: Env, p: PersonaUpsert) {
   return env.DB.prepare(
@@ -42,32 +46,31 @@ function upsertPersonaStmt(env: Env, p: PersonaUpsert) {
   );
 }
 
-export interface RavIngestResult { written: number; from: number; to: number; total: number; next: number; rejected?: number; }
+export interface RavIngestResult { written: number; from: number; to: number; total: number; next: string | null; wrapped?: boolean; rejected?: number; }
 
-// Ingest up to `pages` pages of RAV missing_persons starting at the KV cursor.
-// `pages` defaults to the cron-safe window; the run endpoint passes a larger N
-// for backfill. Advances/​wraps the cursor and returns a progress summary.
+// Ingest up to `pages` proxy pages of RAV missing persons starting at the KV
+// cursor. `pages` defaults to the cron-safe window; the run endpoint passes a
+// larger N for backfill. Advances the cursor ("<status>:<page>", flipping
+// active↔found on exhaustion) and returns a progress summary; `wrapped` = this
+// run finished the found list (a full active+found cycle completed).
 export async function ingestRav(env: Env, pages = MAX_PAGES_PER_RUN): Promise<RavIngestResult> {
   try {
-    let offset = 0;
-    try { offset = Math.max(0, parseInt((await env.CACHE.get(CURSOR_KEY)) || '0', 10) || 0); } catch { /* default 0 */ }
+    let stored: string | null = null;
+    try { stored = await env.CACHE.get(CURSOR_KEY); } catch { /* default */ }
+    const cur = parseRavCursor(stored);
 
     const runIso = new Date().toISOString();
-    let page0 = await ravFetch<RavPersonRow>(env, 'missing_persons', { offset, order: 'id.asc' });
-    let total = page0.total;
-    if (offset >= total) {   // dataset shrank / cursor past end → restart from 0
-      offset = 0;
-      page0 = await ravFetch<RavPersonRow>(env, 'missing_persons', { offset: 0, order: 'id.asc' });
-      total = page0.total;
-    }
+    const total = Number(await ravData<number>(env, 'missing_count', { status: cur.status })) || 0;
 
-    const collected: RavPersonRow[] = [...page0.rows];
-    const want = Math.max(1, Math.min(pages, 25));
-    let cur = offset + RAV_PAGE;
-    for (let i = 1; i < want && cur < total; i++) {
-      const pg = await ravFetch<RavPersonRow>(env, 'missing_persons', { offset: cur, order: 'id.asc' });
-      collected.push(...pg.rows);
-      cur += RAV_PAGE;
+    const collected: RavPersonRow[] = [];
+    const want = Math.max(1, Math.min(pages, 60));
+    let page = cur.page;
+    let exhausted = false;
+    for (let i = 0; i < want; i++, page++) {
+      const rows = await ravData<RavPersonRow[]>(env, 'missing_search', { term: '', status: cur.status, page });
+      if (!Array.isArray(rows) || rows.length === 0) { exhausted = true; break; }
+      collected.push(...rows);
+      if (rows.length < RAV_MS_PAGE) { exhausted = true; page++; break; }   // short page = end of list
     }
 
     const stmts = [];
@@ -83,22 +86,25 @@ export async function ingestRav(env: Env, pages = MAX_PAGES_PER_RUN): Promise<Ra
     let written = 0;
     for (let i = 0; i < stmts.length; i += 100) { await env.DB.batch(stmts.slice(i, i + 100)); written += Math.min(100, stmts.length - i); }
 
-    const next = cur >= total ? 0 : cur;   // wrap to 0 after a full cycle
-    await env.CACHE.put(CURSOR_KEY, String(next)).catch(() => {});
+    const next = advanceRavCursor(cur, page, exhausted);
+    const wrapped = exhausted && cur.status === 'found';   // full active+found sweep done
+    await env.CACHE.put(CURSOR_KEY, next).catch(() => {});
     await recordIngest(env, 'rav', true, written);
-    const res = { written, from: offset, to: Math.min(cur, total), total, next, rejected };
-    console.log(`[rav] ${offset}-${res.to}/${total}: upserted ${written}, rejected ${rejected}; next cursor=${next}`);
+    const from = cur.page * RAV_MS_PAGE;
+    const to = Math.min(page * RAV_MS_PAGE, total || page * RAV_MS_PAGE);
+    const res = { written, from, to, total, next, wrapped, rejected };
+    console.log(`[rav] ${cur.status} rows ${from}-${to}/${total}: upserted ${written}, rejected ${rejected}; next cursor=${next}`);
     // CRM tracking heartbeat — the desaparecidos firehose (redayudavenezuela).
     const m = await missingStats(env);
     await logAgentActivity(env, {
       source: 'rav', action: 'ingest', fetched: written + rejected, created: written, stillMissing: m.total, stillUnique: m.unique,
-      summary: `🤖 Ingesta RAV (desaparecidos) — ${written} sincronizados (offset ${offset}–${res.to}/${total}). ${missingPhrase(m)}.`,
+      summary: `🤖 Ingesta RAV (desaparecidos, ${cur.status}) — ${written} sincronizados (filas ${from}–${to}/${total}). ${missingPhrase(m)}.`,
     });
     return res;
   } catch (e: any) {
     console.error('[rav] ingest failed:', e?.message ?? e);
     await recordIngest(env, 'rav', false, 0, String(e?.message ?? e)).catch(() => {});
-    return { written: 0, from: 0, to: 0, total: 0, next: 0 };
+    return { written: 0, from: 0, to: 0, total: 0, next: null };
   }
 }
 
@@ -164,18 +170,16 @@ export async function ingestRavVerified(env: Env): Promise<number> {
 }
 
 // Citizen reports (pets/volunteers/trapped/aid/damage). PK = RAV uuid → no dupes
-// by construction. Bounded page fetch (covers the current ~9.3k; if it ever grows
-// past PAGES×1000 the tail is picked up next run). Skips empty-title junk.
-export async function ingestRavReports(env: Env, pages = 15): Promise<number> {
+// by construction. Direct table access was revoked (2026-07), so this now pulls
+// through the /api/data proxy op `reports_list`, which serves at most the 1,000
+// most-recent rows in ONE call (no offset param upstream). The ~10k historical
+// rows are already in D1; hourly runs keep the fresh edge synced. Skips
+// empty-title junk. (`pages` kept for API compat; the proxy ignores it.)
+export async function ingestRavReports(env: Env, _pages = 15): Promise<number> {
   try {
     const runIso = new Date().toISOString();
-    const first = await ravFetch<RavReportRow>(env, 'reports', { order: 'created_at.desc' });
-    const total = first.total;
-    const all = [...first.rows];
-    const want = Math.max(1, Math.min(pages, 25));
-    for (let i = 1, off = RAV_PAGE; i < want && off < total; i++, off += RAV_PAGE) {
-      all.push(...(await ravFetch<RavReportRow>(env, 'reports', { offset: off, order: 'created_at.desc' })).rows);
-    }
+    const all = (await ravData<RavReportRow[]>(env, 'reports_list', { limit: 1000 })) ?? [];
+    const total = all.length;
     const stmts = [];
     let rejected = 0;
     for (const r of all) {
@@ -202,7 +206,14 @@ export async function ingestRavReports(env: Env, pages = 15): Promise<number> {
   } catch (e: any) { console.error('[rav] reports failed:', e?.message ?? e); await recordIngest(env, 'rav-reports', false, 0, String(e?.message ?? e)).catch(() => {}); return 0; }
 }
 
-// "Estoy a salvo" safe check-ins. PK = RAV uuid → no dupes. Small (~300); one page.
+// "Estoy a salvo" safe check-ins. PK = RAV uuid → no dupes. STRUCTURALLY
+// DEGRADED since 2026-07: RAV revoked anon SELECT on safe_reports AND exposes
+// no bulk op on the /api/data proxy (only per-slug `safe_by_slug` + capped
+// term search `search_people`). We keep attempting the direct read once per
+// run — it costs 1 subrequest, self-heals if RAV ever re-grants access, and a
+// 401 is recorded as an explicit `degraded:` reason (not a mystery error) so
+// /api/status tells the operator exactly what happened. The ~300 already-synced
+// rows remain served as a snapshot.
 export async function ingestRavSafe(env: Env): Promise<number> {
   try {
     const runIso = new Date().toISOString();
@@ -225,5 +236,14 @@ export async function ingestRavSafe(env: Env): Promise<number> {
     await recordIngest(env, 'rav-safe', true, n);
     console.log(`[rav] safe_reports upserted ${n}`);
     return n;
-  } catch (e: any) { console.error('[rav] safe failed:', e?.message ?? e); await recordIngest(env, 'rav-safe', false, 0, String(e?.message ?? e)).catch(() => {}); return 0; }
+  } catch (e: any) {
+    const raw = String(e?.message ?? e);
+    // 401 here is the known lockdown, not a transient fault — record the real reason.
+    const msg = /HTTP 401/.test(raw)
+      ? 'degraded:upstream_access_revoked (RAV cerró el acceso público masivo a safe_reports; se mantiene el snapshot local)'
+      : raw;
+    console.error('[rav] safe failed:', msg);
+    await recordIngest(env, 'rav-safe', false, 0, msg).catch(() => {});
+    return 0;
+  }
 }
