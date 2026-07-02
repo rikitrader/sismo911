@@ -38,6 +38,10 @@ export interface PublicView {
   status: PublicStatus;
   verification: VerificationLevel;
   generalLocation: string | null;
+  // Facility name — PUBLIC only for official hospital-registry rows, whose
+  // hospital is already published on sismo911.com/hospitales. Always null for
+  // SISMO911-registry cases (there the hospital stays operator-only).
+  facility: string | null;
   lastVerifiedMs: number | null;
   profileUrl: string;
   // Privileged extras — populated ONLY for an admin/authorized viewer in a DM.
@@ -71,6 +75,7 @@ export function toPublicView(
     verification: record.verification,
     // General location is already coarsened in the adapter; re-coarsen defensively.
     generalLocation: coarsenLocation(record.generalLocation),
+    facility: record.registry === 'hospital' ? (record.sensitive.hospital ?? null) : null,
     lastVerifiedMs: record.lastVerifiedMs,
     profileUrl: profileUrlFor(record, baseUrl),
   };

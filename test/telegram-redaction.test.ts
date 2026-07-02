@@ -45,9 +45,21 @@ describe('toPublicView — public viewer', () => {
   });
   it('serialized view never contains any sensitive value', () => {
     const blob = JSON.stringify(view);
-    for (const leak of ['12345678', '584141234567', 'Vargas', 'fractura', 'tia Maria']) {
+    // The facility name is deliberately public-tier for OFFICIAL hospital-registry
+    // rows only — sismo911.com/hospitales already publishes patient+hospital.
+    for (const leak of ['12345678', '584141234567', 'Edif 5', 'fractura', 'tia Maria']) {
       expect(blob).not.toContain(leak);
     }
+  });
+  it('facility is public for the hospital registry only', () => {
+    expect(view.facility).toBe('Hospital Vargas');
+    const persona = toPublicView(
+      record({ registry: 'personas', caseId: 'FAM-p1' }),
+      'public',
+      false,
+    );
+    expect(persona.facility).toBeNull(); // hospital stays operator-only elsewhere
+    expect(JSON.stringify(persona)).not.toContain('Vargas');
   });
 });
 
