@@ -1,317 +1,636 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Expediente del edificio | SISMO911</title>
-<meta name="description" content="Expediente forense por edificio del terremoto de Venezuela (24-jun-2026): fotos, dirección, GIS/mapa, ocupación, costo de reparación y reemplazo, tipo de estructura, estudios de ingeniería/geológicos/oficiales, desaparecidos, denuncias y línea de tiempo — estilo caso judicial, público y buscable." />
-<link rel="icon" type="image/svg+xml" href="/logo.svg" />
-<meta name="theme-color" content="#14171b" />
-<meta name="robots" content="index,follow" />
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" as="script" />
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expediente del edificio — Comando Sísmico Nacional · SISMO911</title>
+<meta name="description" content="Expediente forense por edificio del terremoto de Venezuela (24-jun-2026): tablero de ingeniería estructural (HAZUS), tablero de seguros y pérdidas, análisis catastrófico, fotos, GIS, desaparecidos, estudios y cronología forense — estilo caso judicial, público y buscable.">
+<meta name="author" content="SISMO911 — Comando Sísmico Nacional">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta property="og:type" content="website"><meta property="og:site_name" content="SISMO911"><meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Expediente forense del edificio — SISMO911">
+<meta property="og:description" content="Dossier forense por edificio: daño estructural, costos HAZUS, tablero de seguros, análisis catastrófico, desaparecidos vinculados y cronología inmutable.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="stylesheet" href="/app.css" />
-<link rel="stylesheet" href="/ops-theme.css" />
+<script src="/app-shell.js" defer></script>
 <style>
-  body{background:var(--ops-bg);color:var(--ops-text);font-family:Inter,system-ui,sans-serif;margin:0}
-  main{max-width:1100px;margin:0 auto;padding:16px 16px 70px}
-  a{color:var(--ops-accent)}
-  .crumb{font:700 12px 'JetBrains Mono',monospace;color:var(--ops-muted);margin-bottom:6px}
-  .crumb a{color:var(--ops-muted);text-decoration:none}
-  .crumb a:hover{color:var(--ops-accent)}
-  .eyebrow{font:800 11px 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--ops-accent)}
-  h1{font:900 28px/1.08 'Public Sans';letter-spacing:-.02em;margin:4px 0 6px}
-  .sub{color:var(--ops-muted);font-size:14px}
-  .card{background:var(--ops-panel);border:1px solid var(--ops-border);border-radius:14px}
-  .pad{padding:16px}
-  .chip{display:inline-flex;align-items:center;gap:.3rem;font:800 10px 'JetBrains Mono',monospace;padding:3px 9px;border-radius:9999px;text-transform:uppercase;letter-spacing:.03em;color:#fff}
-  .tag{font:700 10px 'JetBrains Mono',monospace;padding:2px 7px;border-radius:6px;background:var(--ops-panel-2);border:1px solid var(--ops-border);color:var(--ops-muted)}
+  :root{
+    --bg:#eef1f7; --panel:#ffffff; --panel-2:#f6f8fc; --line:#e1e6f0; --line-2:#d2d9e8;
+    --ink:#0b1b3a; --muted:#5b6781; --faint:#8b96ad;
+    --navy:#00173a; --navy-2:#0b2b5b; --navy-3:#163b73;
+    --red:#bb0027; --crit:#c8102e; --amber:#e57200; --green:#1f8a4c; --blue:#1f5fd0;
+    --shadow:0 1px 2px rgba(11,27,58,.06),0 4px 16px rgba(11,27,58,.05);
+    --shadow-lg:0 10px 40px rgba(11,27,58,.16);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .disp{font-family:'Public Sans',sans-serif}
+  main{padding:0 !important}
+  .wrap{max-width:1400px;margin:0 auto;padding:18px 20px 60px}
+  a{color:inherit}
+  button{font-family:inherit;cursor:pointer}
   .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
-  .hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;margin:14px 0}
-  @media(max-width:760px){.hero{grid-template-columns:1fr}}
-  #heroImg{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:12px;background:var(--ops-panel-2);cursor:pointer}
-  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px}
-  .kv .k{color:var(--ops-muted);font:700 11px 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
-  .kv .v{color:var(--ops-text)}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
-  .stat{background:var(--ops-panel);border:1px solid var(--ops-border);border-radius:12px;padding:12px}
-  .stat .n{font:900 22px 'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
-  .stat .l{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ops-muted);margin-top:2px}
-  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--ops-border);margin:18px 0 0}
-  .tab{padding:9px 14px;font:800 12px 'Public Sans';color:var(--ops-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
-  .tab:hover{color:var(--ops-text)}
-  .tab.on{color:var(--ops-accent);border-bottom-color:var(--ops-accent)}
-  .tab .b{display:inline-block;min-width:16px;text-align:center;font:700 10px 'JetBrains Mono',monospace;background:var(--ops-panel-2);border-radius:9999px;padding:0 5px;margin-left:4px}
-  .panel{display:none;padding:16px 2px}
-  .panel.on{display:block}
-  .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-  .ggrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;background:var(--ops-panel-2)}
-  #map{height:340px;border-radius:12px;z-index:0;margin-top:10px}
-  .docrow{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--ops-border)}
-  .docrow .ic{font-size:20px;line-height:1}
-  .empty{color:var(--ops-muted);font-size:13px;padding:16px;text-align:center;border:1px dashed var(--ops-border);border-radius:10px}
-  .tl{position:relative;margin-left:8px;padding-left:18px}
-  .tl:before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:2px;background:var(--ops-border)}
-  .tlitem{position:relative;padding:8px 0}
-  .tlitem:before{content:'';position:absolute;left:-22px;top:12px;width:9px;height:9px;border-radius:50%;background:var(--ops-accent);border:2px solid var(--ops-bg)}
-  .tlitem .d{font:700 11px 'JetBrains Mono',monospace;color:var(--ops-muted)}
-  .misslist a{display:inline-block;background:var(--ops-panel-2);border:1px solid var(--ops-border);border-radius:9999px;padding:4px 11px;margin:3px 4px 0 0;font-size:12px;text-decoration:none}
-  .disc{font-size:11px;color:var(--ops-warn);background:var(--ops-warn-bg);border:1px solid var(--ops-accent-soft);border-radius:10px;padding:9px 12px;margin-top:16px}
-  /* lightbox */
-  #lb{position:fixed;inset:0;background:rgba(6,8,12,.94);z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column}
+
+  /* ---- Case-top hero (same federal-ops design as /casos) ---- */
+  .case-top{background:linear-gradient(135deg,#00112e 0%,#0a2c61 100%);color:#fff;border-radius:16px;box-shadow:var(--shadow-lg);overflow:hidden;position:relative}
+  .case-top::after{content:'';position:absolute;inset:0;background:radial-gradient(900px 200px at 90% -40%,rgba(95,144,255,.20),transparent);pointer-events:none}
+  .case-top .inner{padding:20px 22px;position:relative;z-index:1}
+  .eyebrow{font:800 11px/1 Inter;letter-spacing:.18em;text-transform:uppercase;color:#8fb0ef}
+  .backbtn{display:inline-flex;align-items:center;gap:8px;font:700 12.5px Inter;color:#bcd0f4;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:9px;padding:7px 12px;text-decoration:none}
+  .backbtn:hover{background:rgba(255,255,255,.15);color:#fff}
+  .case-id{font:700 13px 'JetBrains Mono';color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:8px;padding:3px 9px;letter-spacing:.03em;max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .case-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .case-head-right{display:flex;flex-direction:column;align-items:flex-end;gap:9px}
+  .case-idrow{display:flex;align-items:center;gap:9px}
+  .chrono-big{display:flex;flex-direction:column;align-items:flex-end;gap:3px;background:rgba(229,114,0,.14);border:1px solid rgba(229,114,0,.45);border-radius:12px;padding:9px 14px}
+  .chrono-big .chrono-lbl{font:800 9.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#ffce9e}
+  .chrono-big .chrono-val{font:900 34px/1 'JetBrains Mono';color:#fff;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+  @media(max-width:640px){
+    .case-head{flex-direction:column;align-items:stretch;gap:12px}
+    .case-head > .backbtn{align-self:flex-start}
+    .case-head-right{width:100%;align-items:stretch;gap:11px}
+    .case-idrow{justify-content:space-between;width:100%}
+    .chrono-big{width:100%;align-items:center;text-align:center;padding:13px 14px}
+    .chrono-big .chrono-val{font-size:30px}
+  }
+  .case-hero{display:flex;gap:18px;align-items:flex-start;margin-top:16px;flex-wrap:wrap}
+  .case-photo{width:118px;height:118px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,255,255,.25);flex:0 0 auto;background:rgba(255,255,255,.08);cursor:zoom-in}
+  .case-photo.ph{display:grid;place-items:center;font-size:44px;color:#7d93c2;cursor:default}
+  .case-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+  .mcard{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:10px 12px}
+  .mcard .k{font:700 9.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#8fb0ef}
+  .mcard .vv{font:600 13.5px Inter;color:#fff;margin-top:4px;line-height:1.25;overflow-wrap:anywhere;word-break:break-word}
+  .pill{display:inline-flex;align-items:center;gap:6px;font:700 11.5px Inter;padding:4px 10px;border-radius:999px;white-space:nowrap;color:#fff}
+  .pill .d{width:7px;height:7px;border-radius:50%;background:#fff}
+
+  /* ---- KPI banner (full-width auto-reflow, same as /casos) ---- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 13px;box-shadow:var(--shadow);position:relative}
+  .kpi .v{font:800 24px/1 'Public Sans';letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .kpi .l{font:600 11px Inter;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.04em}
+  .kpi .accent{position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:3px}
+
+  /* ---- Tabs (red underline, mobile pill grid — same as /casos) ---- */
+  .tabs{display:flex;gap:4px;overflow-x:auto;margin:18px 0 0;border-bottom:1px solid var(--line);padding-bottom:0}
+  .tabs button{flex:0 0 auto;padding:11px 15px;font:700 13px Inter;color:var(--muted);background:transparent;border:none;border-bottom:2.5px solid transparent;margin-bottom:-1px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+  .tabs button:hover{color:var(--ink)}
+  .tabs button.on{color:var(--navy);border-bottom-color:var(--red)}
+  .tabs button .b{font:700 10.5px 'JetBrains Mono';background:#eef2f9;color:var(--navy-2);border-radius:6px;padding:1px 6px}
+  @media(max-width:640px){
+    .tabs{flex-wrap:wrap;gap:7px;overflow-x:visible;border-bottom:none;margin-top:16px}
+    .tabs button{flex:1 1 auto;justify-content:center;border:1px solid var(--line);border-radius:10px;padding:10px 8px;font-size:12.5px;background:#fff;border-bottom-width:1px;margin-bottom:0;min-width:30%}
+    .tabs button.on{color:var(--navy);border-color:var(--red);background:#fff;box-shadow:inset 0 0 0 1px var(--red)}
+  }
+  .tabpane{display:none;padding:20px 0}
+  .tabpane.on{display:block}
+  .grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:16px 17px;box-shadow:var(--shadow)}
+  .card h3{font:800 13px Inter;letter-spacing:.02em;color:var(--ink);margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .card h3 .ic{width:16px;height:16px;color:var(--red);flex:0 0 auto}
+  .card + .card{margin-top:16px}
+  .facts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:560px){.facts{grid-template-columns:1fr}}
+  .fact{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+  .fact .k{font:700 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .fact .v{font:600 13.5px Inter;color:var(--ink);margin-top:3px;overflow-wrap:anywhere}
+  .fact .v.nd{color:var(--faint);font-weight:500}
+  .sismo-card{background:linear-gradient(135deg,#fdecec,#fbe3e3);border:1px solid #f3c3c3;border-radius:11px;padding:12px 13px}
+  .sismo-card .k{font:800 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--crit)}
+  .note{background:var(--panel-2);border:1px dashed var(--line-2);border-radius:11px;padding:13px 15px;font:500 13px Inter;color:var(--muted)}
+  .empty{text-align:center;padding:34px 16px;color:var(--muted)}
+  .empty .ic{font-size:30px;opacity:.5}
+  .tag{display:inline-block;font:700 10px Inter;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:#eef2f9;color:var(--navy-2)}
+  .ai-badge{display:inline-flex;align-items:center;gap:6px;font:700 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);background:#e8f0ff;border:1px solid #cfe0ff;border-radius:999px;padding:3px 9px}
+
+  /* ---- Dashboard widgets (Ingeniería / Seguros / Catastrófico) ---- */
+  .dash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+  .dstat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;box-shadow:var(--shadow);position:relative}
+  .dstat .accent{position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:3px}
+  .dstat .v{font:800 23px/1 'Public Sans';letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .dstat .l{font:600 10.5px Inter;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.04em}
+  .dstat .s{font:500 11px Inter;color:var(--faint);margin-top:3px}
+  .meter{height:10px;border-radius:999px;background:#e8ecf5;overflow:hidden;margin-top:8px}
+  .meter > span{display:block;height:100%;border-radius:999px}
+  .verdict{display:inline-flex;align-items:center;gap:9px;font:800 13px Inter;letter-spacing:.04em;text-transform:uppercase;color:#fff;border-radius:10px;padding:10px 16px}
+  .verdict .d{width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+  /* HAZUS damage-state ladder */
+  .ladder{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  @media(max-width:560px){.ladder{grid-template-columns:repeat(2,1fr)}}
+  .rung{border:1px solid var(--line);border-radius:10px;padding:10px 11px;background:var(--panel-2);opacity:.55}
+  .rung .nm{font:800 11px Inter;letter-spacing:.05em;text-transform:uppercase}
+  .rung .pc{font:800 19px 'JetBrains Mono';margin-top:4px}
+  .rung .ds{font:500 10.5px Inter;color:var(--muted);margin-top:2px}
+  .rung.on{opacity:1;border-width:2px;box-shadow:var(--shadow)}
+  /* scenario table (insurance) */
+  table.sc{width:100%;border-collapse:collapse;font-size:13px}
+  table.sc th{background:#0c1f44;color:#c8d6f3;font:700 10px Inter;letter-spacing:.07em;text-transform:uppercase;text-align:left;padding:9px 12px;white-space:nowrap}
+  table.sc td{padding:10px 12px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+  table.sc td.r,table.sc th.r{text-align:right}
+  table.sc tr:hover td{background:#f3f6fd}
+  .sc-wrap{border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .conf{display:inline-flex;align-items:center;gap:6px;font:800 10.5px Inter;letter-spacing:.05em;text-transform:uppercase;border-radius:7px;padding:4px 9px}
+  .conf.hi{background:#e3f6ea;color:var(--green)} .conf.md{background:#fff3da;color:#9a6400} .conf.lo{background:#fdecec;color:var(--crit)}
+
+  /* ---- Timeline (docket, same as /casos) ---- */
+  .docket{position:relative;padding-left:26px}
+  .docket::before{content:'';position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--line-2)}
+  .de{position:relative;padding-bottom:18px}
+  .de:last-child{padding-bottom:0}
+  .de .node{position:absolute;left:-22px;top:2px;width:15px;height:15px;border-radius:50%;border:3px solid var(--panel);box-shadow:0 0 0 1.5px var(--line-2);background:var(--navy-2)}
+  .de .ts{font:600 11.5px 'JetBrains Mono';color:var(--muted)}
+  .de .kind{font:800 13px Inter;margin-top:2px}
+  .de .detail{font:500 13.5px Inter;color:var(--ink);margin-top:3px;line-height:1.4}
+
+  /* ---- Gallery + lightbox (same visual language as /casos) ---- */
+  .galgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
+  .gal-item{position:relative;display:block;padding:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#fff;cursor:zoom-in;height:132px}
+  .gal-item:hover{border-color:var(--navy-2);box-shadow:0 3px 12px rgba(10,28,61,.12)}
+  .gal-item img{width:100%;height:100%;object-fit:cover;display:block}
+  #map{height:360px;border-radius:11px;z-index:0;margin-top:12px}
+  .misslist a{display:inline-block;background:var(--panel-2);border:1px solid var(--line-2);border-radius:999px;padding:6px 13px;margin:3px 5px 3px 0;font:600 12.5px Inter;text-decoration:none;color:var(--ink)}
+  .misslist a:hover{border-color:var(--navy-2);box-shadow:var(--shadow)}
+  .docrow{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line)}
+  .docrow:first-child{border-top:none}
+  .docrow .ic2{font-size:20px;line-height:1}
+  .docrow a{color:var(--blue);text-decoration:none;font-weight:700}
+  .docrow a:hover{text-decoration:underline}
+  #lb{position:fixed;inset:0;background:rgba(6,14,30,.94);z-index:10000;display:none;align-items:center;justify-content:center;flex-direction:column;backdrop-filter:blur(3px)}
   #lb.on{display:flex}
-  #lb img{max-width:92vw;max-height:80vh;border-radius:8px;object-fit:contain}
-  #lb .nav{position:absolute;top:0;bottom:0;width:22vw;display:flex;align-items:center;color:#fff;font-size:44px;cursor:pointer;opacity:.6;user-select:none}
-  #lb .nav:hover{opacity:1}
-  #lbPrev{left:0;padding-left:16px}#lbNext{right:0;justify-content:flex-end;padding-right:16px}
-  #lbX{position:absolute;top:14px;right:20px;color:#fff;font-size:30px;cursor:pointer}
-  #lbIdx{position:absolute;top:18px;left:20px;color:#cfd6e2;font:700 12px 'JetBrains Mono',monospace}
+  #lb img{max-width:92vw;max-height:80vh;border-radius:8px;object-fit:contain;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  #lb .nav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:64px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;cursor:pointer;background:rgba(255,255,255,.1);border-radius:10px;user-select:none}
+  #lb .nav:hover{background:rgba(255,255,255,.22)}
+  #lbPrev{left:12px}#lbNext{right:12px}
+  #lbX{position:absolute;top:14px;right:20px;width:38px;height:38px;display:grid;place-items:center;color:#fff;font-size:20px;cursor:pointer;background:rgba(200,16,46,.85);border-radius:9px}
+  #lbIdx{position:absolute;top:22px;left:20px;color:#9fc0ff;font:800 13px Inter;font-variant-numeric:tabular-nums}
+  #s911-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);background:#0a1c3d;color:#fff;font:600 13.5px Inter;padding:11px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;max-width:90vw;text-align:center}
+  #s911-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .disc{font:500 12px Inter;color:#9a6400;background:#fff3da;border:1px solid #f2d9a6;border-radius:11px;padding:11px 14px;margin-top:18px}
 </style>
+<script>addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG")return;
+if(t.hasAttribute("data-hide-on-err")){t.style.display="none";return}
+if(t.hasAttribute("data-fb-html")){t.outerHTML=t.getAttribute("data-fb-html")}},true)</script>
 </head>
 <body>
-<header style="background:linear-gradient(180deg,var(--ops-bar-1),var(--ops-bar-2));color:var(--ops-bar-fg)">
-  <div style="max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px">
-    <a href="/" style="display:flex;align-items:center;gap:8px;color:var(--ops-bar-fg);text-decoration:none;font:800 15px 'Public Sans'"><img src="/logo.svg" alt="" style="width:28px;height:28px"> SISMO911</a>
-  </div>
-</header>
 
 <main>
-  <div class="crumb"><a href="/edificios">← Edificios</a> / <span id="crumbId">expediente</span></div>
-  <div id="loading" class="empty" style="margin-top:20px">Cargando expediente del edificio…</div>
-  <div id="doc" style="display:none">
-    <div class="eyebrow" id="ev">Expediente forense</div>
-    <h1 id="bname">—</h1>
-    <div class="sub" id="baddr">—</div>
-    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap" id="badges"></div>
+<div class="wrap">
 
-    <div class="hero">
-      <img id="heroImg" alt="Foto principal" />
-      <div class="card pad">
-        <div class="kv" id="idkv"></div>
+  <div id="loading" class="empty" style="margin-top:26px"><div class="ic">🏚️</div><div style="margin-top:8px;font-weight:600">Cargando expediente del edificio…</div></div>
+  <div class="errbox" id="errBox" style="display:none;text-align:center;padding:26px 16px;color:var(--crit);background:#fff;border:1px solid #f3c3c3;border-radius:12px"></div>
+
+  <section id="doc" style="display:none">
+
+    <!-- ======= Case-top hero (caso main-profile design) ======= -->
+    <div class="case-top">
+      <div class="inner">
+        <div class="case-head">
+          <a class="backbtn" href="/edificios">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:15px;height:15px"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Volver a edificios
+          </a>
+          <div class="case-head-right">
+            <div class="case-idrow">
+              <span class="case-id mono" id="cv_caseno">—</span>
+              <button class="backbtn" id="shareBtn" title="Copiar enlace del expediente" style="padding:7px 10px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div class="chrono-big">
+              <span class="chrono-lbl">⏱ Tiempo desde el sismo</span>
+              <span class="chrono-val mono" id="cv_chrono">—</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px"><span class="eyebrow">Comando Sísmico Nacional · Expediente forense de edificio</span></div>
+        <div id="cv_hero" class="case-hero"></div>
+        <div id="cv_meta" class="case-meta"></div>
       </div>
     </div>
 
-    <div class="stats" id="stats"></div>
+    <!-- ======= KPI banner ======= -->
+    <div class="kpis" id="kpis"></div>
 
+    <!-- ======= Tabs ======= -->
     <div class="tabs" id="tabs"></div>
-    <div id="panels"></div>
+    <div id="panes"></div>
 
     <div class="disc" id="disc"></div>
-  </div>
+  </section>
+
+</div>
 </main>
 
-<div id="lb">
-  <div id="lbX">✕</div><div id="lbIdx"></div>
-  <div class="nav" id="lbPrev">‹</div><img id="lbImg" alt="" /><div class="nav" id="lbNext">›</div>
-</div>
+<div id="lb"><div id="lbX">✕</div><div id="lbIdx"></div><div class="nav" id="lbPrev">‹</div><img id="lbImg" alt=""><div class="nav" id="lbNext">›</div></div>
+<div id="s911-toast"></div>
 
-<script src="/app-shell.js" defer></script>
 <script>
 (function(){
-  var DMGC={total:'#d92d20',severo:'#f04438',parcial:'#f5c518'};
-  var DMGL={total:'Colapso total',severo:'Daño severo',parcial:'Daño parcial'};
-  var DOCK={photo:'📷',pdf:'📄',engineering:'📐',geological:'🪨',national:'🏛️',news:'📰',social:'💬',complaint:'⚠️',court:'⚖️',repair:'🔧',other:'📎'};
-  var DOCL={photo:'Fotos',pdf:'PDF',engineering:'Estudio de ingeniería',geological:'Estudio geológico',national:'Estudio oficial',news:'Prensa',social:'Redes',complaint:'Denuncia',court:'Documento judicial',repair:'Reparación',other:'Otro'};
-  var LB={p:[],i:0};
-  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-  function usd(n){ if(n==null)return '—'; n=+n; if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B'; if(n>=1e6)return '$'+(n/1e6).toFixed(2)+'M'; if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'k'; return '$'+Math.round(n); }
-  function num(n){ return n==null?'—':(+n).toLocaleString('es'); }
-  function fdate(s){ if(!s)return '—'; try{ return new Date(s).toLocaleDateString('es',{year:'numeric',month:'short',day:'numeric'}); }catch(e){ return s; } }
-  function idFromPath(){ var m=(location.pathname||'').match(/\/edificio\/([^\/?#]+)/); if(m)return decodeURIComponent(m[1]); var q=new URLSearchParams(location.search); return q.get('id')||''; }
+'use strict';
+const $=s=>document.querySelector(s);
+const QUAKE_MS=Date.parse('2026-06-24T22:05:11Z');
+const DMG={
+  total:  {c:'#c8102e', l:'Colapso total'},
+  severo: {c:'#e57200', l:'Daño severo'},
+  parcial:{c:'#b06a00', l:'Daño parcial'},
+};
+const VERDICT={
+  total:  {c:'#c8102e', t:'INSEGURO — NO ENTRAR',            s:'Clasificación tipo ATC-20 derivada del nivel de daño reportado; no sustituye inspección oficial.'},
+  severo: {c:'#e57200', t:'ACCESO RESTRINGIDO',              s:'Entrada solo para personal autorizado. Clasificación derivada, pendiente de peritaje CIV / Protección Civil.'},
+  parcial:{c:'#b06a00', t:'INSPECCIÓN DETALLADA REQUERIDA',  s:'Uso condicionado a evaluación estructural. Clasificación derivada del reporte de campo.'},
+};
+const HAZUS=[
+  {k:'Leve',      r:0.02, d:'Fisuras finas / acabados'},
+  {k:'Moderado',  r:0.10, d:'Grietas en muros y losas'},
+  {k:'Extensivo', r:0.50, d:'Daño estructural mayor'},
+  {k:'Completo',  r:1.00, d:'Colapso / pérdida total'},
+];
+const DOCK={photo:'📷',pdf:'📄',engineering:'📐',geological:'🪨',national:'🏛️',news:'📰',social:'💬',complaint:'⚠️',court:'⚖️',repair:'🔧',report:'📡',inspection:'🔍',other:'📎'};
+const DOCL={photo:'Fotos',pdf:'PDF',engineering:'Estudio de ingeniería',geological:'Estudio geológico',national:'Estudio oficial',news:'Prensa',social:'Redes',complaint:'Denuncia',court:'Documento judicial',repair:'Reparación',report:'Reporte de campo',inspection:'Inspección técnica',other:'Otro'};
 
-  function openLb(photos,i){ LB={p:photos,i:i||0}; document.getElementById('lb').classList.add('on'); showLb(); }
-  function showLb(){ document.getElementById('lbImg').src=LB.p[LB.i]; document.getElementById('lbIdx').textContent=(LB.i+1)+' / '+LB.p.length; var multi=LB.p.length>1; document.getElementById('lbPrev').style.visibility=multi?'visible':'hidden'; document.getElementById('lbNext').style.visibility=multi?'visible':'hidden'; }
-  function lbStep(d){ LB.i=(LB.i+d+LB.p.length)%LB.p.length; showLb(); }
-  function closeLb(){ document.getElementById('lb').classList.remove('on'); document.getElementById('lbImg').src=''; }
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const usd=n=>{ if(n==null||!isFinite(+n))return null; n=+n; if(n>=1e9)return '$'+(n/1e9).toFixed(2)+' B'; if(n>=1e6)return '$'+(n/1e6).toFixed(2)+' M'; if(n>=1e3)return '$'+Math.round(n/1e3).toLocaleString('es')+' k'; return '$'+Math.round(n).toLocaleString('es'); };
+const usdFull=n=>(n==null||!isFinite(+n))?null:'$'+Math.round(+n).toLocaleString('es');
+const num=n=>(n==null||!isFinite(+n))?null:(+n).toLocaleString('es');
+const pct=n=>(n==null||!isFinite(+n))?null:Math.round(+n*100)+'%';
+const fdate=s=>{ if(!s)return null; const t=Date.parse(s); if(!isFinite(t))return s; return new Date(t).toLocaleDateString('es',{year:'numeric',month:'short',day:'numeric'}); };
+const nd='<span style="color:var(--faint);font-weight:500">sin dato</span>';
+const val=v=>(v==null||v==='')?nd:v;
+function fact(k,v,cls){ return '<div class="fact"><div class="k">'+esc(k)+'</div><div class="v'+((v==null||v==='')?' nd':'')+(cls?' '+cls:'')+'">'+((v==null||v==='')?'sin dato':v)+'</div></div>'; }
+function idFromPath(){ const m=(location.pathname||'').match(/\/edificio\/([^\/?#]+)/); if(m)return decodeURIComponent(m[1]); return new URLSearchParams(location.search).get('id')||''; }
+function toast(msg){ const t=$('#s911-toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2400); }
 
-  function row(k,v){ return v==null||v===''||v==='—' ? '<div class="k">'+esc(k)+'</div><div class="v" style="color:var(--ops-muted)">sin dato</div>' : '<div class="k">'+esc(k)+'</div><div class="v">'+v+'</div>'; }
+/* chrono */
+function startChrono(){
+  const el=$('#cv_chrono');
+  const tick=()=>{ let s=Math.max(0,Math.floor((Date.now()-QUAKE_MS)/1000));
+    const d=Math.floor(s/86400); s-=d*86400; const h=Math.floor(s/3600); s-=h*3600; const m=Math.floor(s/60); s-=m*60;
+    el.textContent=d+'d '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); };
+  tick(); setInterval(tick,1000);
+}
 
-  function render(d){
-    var b=d.building, st=d.structure, c=d.cost, gis=d.gis;
-    document.getElementById('loading').style.display='none';
-    document.getElementById('doc').style.display='block';
-    document.title=(b.name||'Edificio')+' — Expediente | SISMO911';
-    document.getElementById('crumbId').textContent=b.name||'expediente';
-    document.getElementById('bname').textContent=b.name||'Edificio sin nombre';
-    document.getElementById('baddr').textContent=b.addr||b.city||'';
-    // badges
-    var bd='<span class="chip" style="background:'+(DMGC[b.damageLevel]||'#9aa4b2')+'">'+esc(DMGL[b.damageLevel]||b.damageLevel||'—')+'</span>';
-    if(b.verified) bd+='<span class="chip" style="background:#1570ef">✓ Verificado</span>';
-    if(d.missingCount) bd+='<span class="chip" style="background:#d92d20">'+d.missingCount+' desaparecido(s)</span>';
-    bd+='<span class="tag">Fuente: '+esc(b.source||'terremotovenezuela.com')+'</span>';
-    document.getElementById('badges').innerHTML=bd;
-    // hero
-    var hero=document.getElementById('heroImg');
-    if(b.photo){ hero.src=b.photo; hero.onclick=function(){ openLb(b.media&&b.media.length?b.media:[b.photo],0); }; } else { hero.style.display='none'; }
-    // identity kv
-    document.getElementById('idkv').innerHTML=
-      row('Dirección', esc(b.addr))+
-      row('Ciudad', esc(b.city))+ row('Zona', esc(b.zone))+ row('Estado', esc(b.state))+
-      row('Nivel de daño', esc(DMGL[b.damageLevel]||b.damageLevel))+
-      row('Coordenadas', gis?('<span class="mono">'+gis.lat.toFixed(5)+', '+gis.lon.toFixed(5)+'</span>'):null)+
-      row('Plus Code', gis&&gis.plusCode?esc(gis.plusCode):null)+
-      row('ID expediente', '<span class="mono" style="font-size:11px">'+esc(b.id)+'</span>');
-    // stats
-    document.getElementById('stats').innerHTML=
-      stat(usd(c.repairUsd),'Costo reparación ('+esc(c.confidence)+')')+
-      stat(usd(c.replacementUsd),'Costo reemplazo')+
-      stat(num(d.occupancy),'Ocupación estimada')+
-      stat(st.floors!=null?num(st.floors):'—',st.floorsSurveyed?'Pisos (verificado)':'Pisos (estim.)')+
-      stat(num(d.docCount),'Documentos')+
-      stat(num(d.missingCount),'Desaparecidos');
+/* lightbox */
+let LB={p:[],i:0};
+function openLb(photos,i){ if(!photos||!photos.length)return; LB={p:photos,i:i||0}; $('#lb').classList.add('on'); showLb(); }
+function showLb(){ $('#lbImg').src=LB.p[LB.i]; $('#lbIdx').textContent=(LB.i+1)+' / '+LB.p.length; const m=LB.p.length>1; $('#lbPrev').style.visibility=m?'visible':'hidden'; $('#lbNext').style.visibility=m?'visible':'hidden'; }
+function lbStep(d){ LB.i=(LB.i+d+LB.p.length)%LB.p.length; showLb(); }
+function closeLb(){ $('#lb').classList.remove('on'); $('#lbImg').src=''; }
 
-    buildTabs(d);
-    document.getElementById('disc').textContent='⚠️ '+d.disclaimer;
-  }
-  function stat(n,l){ return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+esc(l)+'</div></div>'; }
+/* ============ RENDER ============ */
+function render(d){
+  const b=d.building, st=d.structure||{}, c=d.cost||{}, gis=d.gis;
+  $('#loading').style.display='none';
+  $('#doc').style.display='block';
+  document.title=(b.name||'Edificio')+' — Expediente forense | SISMO911';
+  $('#cv_caseno').textContent='EDF · '+(b.id||'—');
+  startChrono();
 
-  var MAPDONE=false;
-  function buildTabs(d){
-    var b=d.building, docsBy=d.docsByKind||{};
-    var tabs=[
-      {id:'resumen',label:'Resumen',n:null},
-      {id:'fotos',label:'Fotos',n:(b.media||[]).length},
-      {id:'ubicacion',label:'Ubicación / GIS',n:null},
-      {id:'estructura',label:'Estructura & Costos',n:null},
-      {id:'desaparecidos',label:'Desaparecidos',n:d.missingCount},
-      {id:'documentos',label:'Documentos & Estudios',n:d.docCount},
-      {id:'forense',label:'Línea forense',n:(d.timeline||[]).length},
-    ];
-    document.getElementById('tabs').innerHTML=tabs.map(function(t,i){
-      return '<div class="tab'+(i===0?' on':'')+'" data-t="'+t.id+'">'+esc(t.label)+(t.n?'<span class="b">'+t.n+'</span>':'')+'</div>';
-    }).join('');
-    var P=document.getElementById('panels');
-    P.innerHTML=tabs.map(function(t,i){ return '<div class="panel'+(i===0?' on':'')+'" id="p_'+t.id+'"></div>'; }).join('');
-
-    // Resumen
-    document.getElementById('p_resumen').innerHTML=
-      '<div class="card pad"><div class="kv">'+
-        row('Resumen forense', d.building && b.notes ? esc(b.notes) : (d.profileEnriched?null:'Expediente en construcción — a la espera de peritaje de campo.'))+
-        row('Año de construcción', d.structure.yearBuilt!=null?d.structure.yearBuilt:null)+
-        row('Tipo de estructura', esc(d.structure.type))+
-        row('Sistema estructural', esc(d.structure.system))+
-        row('Unidades / apartamentos', d.structure.units!=null?d.structure.units:null)+
-        row('Tipo de suelo', esc(d.structure.soilType))+
-        row('Última inspección', d.structure.lastInspectionAt?fdate(d.structure.lastInspectionAt):null)+
+  /* hero */
+  const dmg=DMG[b.damageLevel]||{c:'#5b6781',l:b.damageLevel||'Sin clasificar'};
+  const photos=(b.media&&b.media.length)?b.media:(b.photo?[b.photo]:[]);
+  $('#cv_hero').innerHTML=
+    (b.photo
+      ? '<img class="case-photo" id="heroPh" src="'+esc(b.photo)+'" alt="Foto del edificio" data-fb-html=\'<div class="case-photo ph">🏚️</div>\'>'
+      : '<div class="case-photo ph">🏚️</div>')+
+    '<div style="flex:1;min-width:230px">'+
+      '<h1 class="disp" style="font-weight:900;font-size:26px;letter-spacing:-.02em;margin:2px 0 5px;color:#fff">'+esc(b.name||'Edificio sin nombre')+'</h1>'+
+      '<div style="font:500 13.5px Inter;color:#bcd0f4">'+esc([b.addr,b.city,b.state].filter(Boolean).join(' · ')||'Dirección pendiente de verificación')+'</div>'+
+      '<div style="margin-top:10px;display:flex;gap:7px;flex-wrap:wrap">'+
+        '<span class="pill" style="background:'+dmg.c+'"><span class="d"></span>'+esc(dmg.l)+'</span>'+
+        (b.verified?'<span class="pill" style="background:#1570ef">✓ Verificado</span>':'')+
+        (d.missingCount?'<span class="pill" style="background:#c8102e">'+d.missingCount+' desaparecido'+(d.missingCount===1?'':'s')+'</span>':'')+
+        (b.peopleTrapped?'<span class="pill" style="background:#7a1fa2">'+b.peopleTrapped+' atrapado'+(b.peopleTrapped===1?'':'s')+' reportados</span>':'')+
       '</div></div>';
+  if(b.photo){ const hp=$('#heroPh'); if(hp) hp.addEventListener('click',()=>openLb(photos,0)); }
 
-    // Fotos
-    var media=b.media||[];
-    document.getElementById('p_fotos').innerHTML= media.length
-      ? '<div class="ggrid" id="fgrid">'+media.map(function(u,i){return '<img loading="lazy" src="'+esc(u)+'" data-i="'+i+'" alt="Foto '+(i+1)+'" />';}).join('')+'</div>'
-      : '<div class="empty">Sin fotos en el expediente todavía.</div>';
-    if(media.length){ document.querySelectorAll('#fgrid img').forEach(function(im){ im.addEventListener('click',function(){ openLb(media,+im.getAttribute('data-i')); }); }); }
+  /* hero meta cards */
+  const mc=(k,v)=>'<div class="mcard"><div class="k">'+esc(k)+'</div><div class="vv">'+(v==null||v===''?'<span style="color:#7d93c2">sin dato</span>':v)+'</div></div>';
+  $('#cv_meta').innerHTML=
+    mc('Nivel de daño',esc(dmg.l))+
+    mc('Zona / parroquia',esc(b.zone||''))+
+    mc('Coordenadas',gis?'<span class="mono">'+gis.lat.toFixed(5)+', '+gis.lon.toFixed(5)+'</span>':null)+
+    mc('Fuente',esc(b.source||'terremotovenezuela.com'))+
+    mc('Última actualización',fdate(b.updatedAt))+
+    mc('Evento',esc((d.event||'').split('·')[0].trim()||'ve-eq-2026-06-24'));
 
-    // Ubicación / GIS
-    document.getElementById('p_ubicacion').innerHTML= d.gis
-      ? '<div class="card pad"><div class="kv">'+
-          row('Latitud', '<span class="mono">'+d.gis.lat.toFixed(6)+'</span>')+
-          row('Longitud', '<span class="mono">'+d.gis.lon.toFixed(6)+'</span>')+
-          row('Plus Code', d.gis.plusCode?esc(d.gis.plusCode):null)+
-          row('Google Maps', '<a href="'+esc(d.gis.mapsLink)+'" target="_blank" rel="noopener">Abrir en Maps ↗</a>')+
-          row('Street View', '<a href="'+esc(d.gis.streetView)+'" target="_blank" rel="noopener">Ver Street View ↗</a>')+
-          row('OpenStreetMap', '<a href="'+esc(d.gis.osm)+'" target="_blank" rel="noopener">Abrir en OSM ↗</a>')+
-        '</div><div id="map"></div></div>'
-      : '<div class="empty">Este edificio aún no tiene coordenadas. Pendiente de geolocalización.</div>';
+  /* KPI banner */
+  const kpi=(v,l,color)=>'<div class="kpi"><span class="accent" style="background:'+color+'"></span><div class="v" style="color:'+color+'">'+(v==null?'—':v)+'</div><div class="l">'+esc(l)+'</div></div>';
+  $('#kpis').innerHTML=
+    kpi(usd(c.repairUsd),'Costo reparación (est.)','var(--crit)')+
+    kpi(usd(c.replacementUsd),'Costo reemplazo (est.)','var(--navy-2)')+
+    kpi(num(d.occupancy),'Ocupación estimada','var(--blue)')+
+    kpi(st.floors!=null?num(st.floors):null,st.floorsSurveyed?'Pisos (verificado)':'Pisos (estim.)','var(--amber)')+
+    kpi(num(d.docCount),'Documentos y estudios','var(--green)')+
+    kpi(num(d.missingCount),'Desaparecidos vinculados','var(--red)');
 
-    // Estructura & Costos
-    var c=d.cost;
-    document.getElementById('p_estructura').innerHTML=
-      '<div class="card pad"><div class="kv">'+
-        row('Tipo de estructura', esc(d.structure.type))+
-        row('Sistema estructural', esc(d.structure.system))+
-        row('Nº de pisos', d.structure.floors!=null?(d.structure.floors+(d.structure.floorsSurveyed?' (verificado)':' (estimado)')):null)+
-        row('Área construida', c.areaM2!=null?('<span class="mono">'+num(Math.round(c.areaM2))+' m²</span>'):null)+
-        row('Ocupación estimada', d.occupancy!=null?num(d.occupancy)+' personas':null)+
-        row('Costo unitario', c.unitUsdM2!=null?('<span class="mono">'+usd(c.unitUsdM2)+'/m²</span>'):null)+
-        row('Ratio de daño (HAZUS)', c.damageRatio!=null?(Math.round(c.damageRatio*100)+'%'):null)+
-        row('Costo de reparación', '<b>'+usd(c.repairUsd)+'</b> <span class="tag">'+esc(c.confidence)+'</span>')+
-        row('Costo de reemplazo', '<b>'+usd(c.replacementUsd)+'</b>')+
-        row('Permiso de construcción', esc(d.structure.firstBuiltPermit))+
-      '</div><div style="font-size:11px;color:var(--ops-muted);margin-top:10px">Costos por modelo FEMA HAZUS + costos reales VE 2026. Área y pisos sin peritaje → confianza BAJA. No es tasación oficial.</div></div>';
+  buildTabs(d);
+  $('#disc').textContent='⚠️ '+(d.disclaimer||'Expediente forense en construcción. Estimaciones de ingeniería, no tasación ni censo oficial.');
+}
 
-    // Desaparecidos — every case attached to this building. A name with a case id
-    // opens the FULL case profile (/casos#caso=<id>); without one it falls back to
-    // the /personas registry search.
-    var caseList = (d.cases&&d.cases.length) ? d.cases : (d.missing||[]).map(function(n){ return {id:null,name:n}; });
-    document.getElementById('p_desaparecidos').innerHTML= caseList.length
-      ? '<div class="card pad"><div style="font-size:13px;color:var(--ops-muted);margin-bottom:8px">Casos vinculados a este edificio — haz clic en un nombre para abrir su expediente completo (enlace en vivo al sistema de Expedientes; nombres no verificados):</div><div class="misslist">'+
-        caseList.map(function(x){
-          return x.id
-            ? '<a href="/casos#caso='+encodeURIComponent(x.id)+'" title="Ver expediente completo">'+esc(x.name)+' 📋</a>'
-            : '<a href="/personas?q='+encodeURIComponent(x.name)+'">'+esc(x.name)+' ↗</a>';
-        }).join('')+'</div></div>'
-      : '<div class="empty">Sin desaparecidos enlazados a este edificio. Si conoces a alguien, repórtalo en <a href="/familia">Familia</a>.</div>';
+/* ============ TABS ============ */
+let MAPDONE=false;
+function buildTabs(d){
+  const b=d.building;
+  const tabs=[
+    {id:'resumen',   l:'Resumen'},
+    {id:'ing',       l:'Ingeniería'},
+    {id:'seguros',   l:'Seguros'},
+    {id:'cat',       l:'Catastrófico'},
+    {id:'fotos',     l:'Fotos', n:(b.media||[]).length},
+    {id:'gis',       l:'Ubicación · GIS'},
+    {id:'des',       l:'Desaparecidos', n:d.missingCount},
+    {id:'docs',      l:'Documentos', n:d.docCount},
+    {id:'tl',        l:'Cronología', n:(d.timeline||[]).length},
+  ];
+  $('#tabs').innerHTML=tabs.map((t,i)=>'<button data-t="'+t.id+'"'+(i===0?' class="on"':'')+'>'+esc(t.l)+(t.n?' <span class="b">'+t.n+'</span>':'')+'</button>').join('');
+  $('#panes').innerHTML=tabs.map((t,i)=>'<div class="tabpane'+(i===0?' on':'')+'" id="p_'+t.id+'"></div>').join('');
 
-    // Documentos & Estudios (studies quick-links + full doc list grouped by kind)
-    var studies=d.studies||{};
-    var sHtml='';
-    ['engineering','geological','national'].forEach(function(k){
-      if(studies[k]) sHtml+='<a class="tag" style="display:inline-block;margin:3px 6px 3px 0;padding:6px 11px" href="'+esc(studies[k])+'" target="_blank" rel="noopener">'+DOCK[k]+' '+DOCL[k]+' ↗</a>';
+  renderResumen(d); renderIng(d); renderSeguros(d); renderCat(d);
+  renderFotos(d); renderGis(d); renderDes(d); renderDocs(d); renderTl(d);
+
+  document.querySelectorAll('.tabs button').forEach(tb=>{
+    tb.addEventListener('click',()=>{
+      document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
+      document.querySelectorAll('.tabpane').forEach(x=>x.classList.remove('on'));
+      tb.classList.add('on');
+      const id=tb.getAttribute('data-t');
+      $('#p_'+id).classList.add('on');
+      if(id==='gis'&&d.gis&&!MAPDONE) initMap(d.gis,d.building);
     });
-    var order=['engineering','geological','national','pdf','court','complaint','news','social','repair','photo','other'];
-    var body='';
-    order.forEach(function(k){
-      var arr=docsBy[k]; if(!arr||!arr.length)return;
-      body+='<h3 style="font:800 13px \'Public Sans\';margin:14px 0 2px">'+DOCK[k]+' '+esc(DOCL[k])+' <span class="tag">'+arr.length+'</span></h3>';
-      arr.forEach(function(dc){
-        body+='<div class="docrow"><div class="ic">'+DOCK[k]+'</div><div style="flex:1"><div style="font-weight:700">'+
-          (dc.url?'<a href="'+esc(dc.url)+'" target="_blank" rel="noopener">'+esc(dc.title||DOCL[k])+' ↗</a>':esc(dc.title||DOCL[k]))+'</div>'+
-          '<div style="font-size:11px;color:var(--ops-muted)">'+[esc(dc.source),esc(dc.author),dc.published_at?fdate(dc.published_at):''].filter(Boolean).join(' · ')+'</div>'+
-          (dc.notes?'<div style="font-size:12px;margin-top:3px">'+esc(dc.notes)+'</div>':'')+'</div></div>';
-      });
+  });
+}
+
+/* ---- Resumen ---- */
+function renderResumen(d){
+  const b=d.building, st=d.structure||{};
+  $('#p_resumen').innerHTML=
+    '<div class="grid2">'+
+      '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/></svg>Datos del expediente</h3>'+
+        '<div class="facts">'+
+          fact('Nombre',esc(b.name))+
+          fact('Dirección',esc(b.addr))+
+          fact('Ciudad',esc(b.city))+
+          fact('Estado',esc(b.state))+
+          fact('Zona',esc(b.zone))+
+          fact('Año de construcción',st.yearBuilt!=null?st.yearBuilt:null)+
+          fact('Tipo de estructura',esc(st.type))+
+          fact('Sistema estructural',esc(st.system))+
+          fact('Unidades / apartamentos',st.units!=null?num(st.units):null)+
+          fact('Última inspección',fdate(st.lastInspectionAt))+
+        '</div>'+
+        (b.notes?'<div class="note" style="margin-top:12px"><b style="color:var(--ink)">Resumen forense:</b> '+esc(b.notes)+'</div>'
+                :'<div class="note" style="margin-top:12px">Expediente en construcción — a la espera de peritaje de campo (CIV / Protección Civil / FUNVISIS).</div>')+
+      '</div>'+
+      '<div><div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linejoin="round"/></svg>Sismo de referencia</h3>'+
+        '<div class="sismo-card"><div class="k">Evento sísmico</div><div style="font:600 13.5px Inter;margin-top:5px">'+esc(d.event||'ve-eq-2026-06-24 · Mw 7.2 + Mw 7.5')+'</div>'+
+        '<div style="font:500 12px Inter;color:#8a2a2a;margin-top:6px">24-JUN-2026 · 22:05:11 UTC · Yumare, Venezuela</div></div>'+
+        '<div style="margin-top:12px" class="facts">'+
+          fact('ID expediente','<span class="mono" style="font-size:11.5px">'+esc(b.id)+'</span>')+
+          fact('Perfil forense',d.profileEnriched?'<span class="tag" style="background:#e3f6ea;color:var(--green)">ENRIQUECIDO</span>':'<span class="tag">EN CONSTRUCCIÓN</span>')+
+        '</div>'+
+      '</div></div>'+
+    '</div>';
+}
+
+/* ---- Ingeniería (engineering dashboard) ---- */
+function renderIng(d){
+  const st=d.structure||{}, c=d.cost||{}, b=d.building;
+  const v=VERDICT[b.damageLevel];
+  const ratio=c.damageRatio;
+  // active HAZUS rung = nearest damage state to the model's damage ratio
+  let active=-1;
+  if(ratio!=null){ let best=1e9; HAZUS.forEach((h,i)=>{ const df=Math.abs(h.r-ratio); if(df<best){best=df;active=i;} }); }
+  const stat=(v2,l,s,color)=>'<div class="dstat"><span class="accent" style="background:'+color+'"></span><div class="v" style="color:'+color+'">'+(v2==null?'—':v2)+'</div><div class="l">'+esc(l)+'</div>'+(s?'<div class="s">'+esc(s)+'</div>':'')+'</div>';
+  $('#p_ing').innerHTML=
+    '<div class="dash-stats">'+
+      stat(ratio!=null?pct(ratio):null,'Ratio de daño (HAZUS)','Slight 2% · Moderate 10% · Extensive 50% · Complete 100%','var(--crit)')+
+      stat(st.floors!=null?num(st.floors):null,st.floorsSurveyed?'Pisos (verificado)':'Pisos (estimado)','','var(--amber)')+
+      stat(c.areaM2!=null?num(Math.round(c.areaM2))+' m²':null,'Área construida','huella × pisos','var(--navy-2)')+
+      stat(d.occupancy!=null?num(d.occupancy):null,'Ocupación estimada','30 m²/persona (HAZUS residencial)','var(--blue)')+
+    '</div>'+
+    '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>Veredicto de habitabilidad (derivado)</h3>'+
+      (v?'<div class="verdict" style="background:'+v.c+'"><span class="d"></span>'+esc(v.t)+'</div><div style="font:500 12.5px Inter;color:var(--muted);margin-top:10px">'+esc(v.s)+'</div>'
+        :'<div class="note">Sin nivel de daño clasificado — pendiente de evaluación de campo.</div>')+
+    '</div>'+
+    '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M6 21V8l6-5 6 5v13M10 21v-6h4v6" stroke-linecap="round" stroke-linejoin="round"/></svg>Estado de daño HAZUS</h3>'+
+      '<div class="ladder">'+HAZUS.map((h,i)=>{
+        const on=i===active;
+        const col=i===3?'var(--crit)':i===2?'var(--amber)':i===1?'#b06a00':'var(--green)';
+        return '<div class="rung'+(on?' on':'')+'" style="'+(on?'border-color:'+col:'')+'">'+
+          '<div class="nm" style="color:'+col+'">'+h.k+(on?' ◀':'')+'</div>'+
+          '<div class="pc">'+Math.round(h.r*100)+'%</div>'+
+          '<div class="ds">'+h.d+'</div></div>';
+      }).join('')+'</div>'+
+      (ratio!=null?'<div class="meter" title="Ratio de daño"><span style="width:'+Math.min(100,Math.round(ratio*100))+'%;background:linear-gradient(90deg,var(--green),var(--amber),var(--crit))"></span></div>':'')+
+      '<div style="font:500 11.5px Inter;color:var(--faint);margin-top:8px">Ratio de reparación/reemplazo por FEMA HAZUS-MH; estado activo = el más cercano al ratio del modelo. Estimación de ingeniería, no peritaje.</div>'+
+    '</div>'+
+    '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a5 5 0 00-7.07 7.07l-4.2 4.2a1.5 1.5 0 002.12 2.12l4.2-4.2a5 5 0 007.07-7.07l-2.83 2.83-2.12-2.12 2.83-2.83z" stroke-linejoin="round"/></svg>Ficha estructural</h3>'+
+      '<div class="facts">'+
+        fact('Tipo de estructura',esc(st.type))+
+        fact('Sistema estructural',esc(st.system))+
+        fact('Año de construcción',st.yearBuilt!=null?st.yearBuilt:null)+
+        fact('Tipo de suelo',esc(st.soilType))+
+        fact('Costo unitario',c.unitUsdM2!=null?'<span class="mono">'+usdFull(c.unitUsdM2)+'/m²</span>':null)+
+        fact('Permiso de construcción',esc(st.firstBuiltPermit))+
+        fact('Última inspección técnica',fdate(st.lastInspectionAt))+
+        fact('Confianza del modelo','<span class="conf '+(c.confidence==='SURVEYED'||c.confidence==='HIGH'?'hi':c.confidence==='MEDIUM'?'md':'lo')+'">'+esc(c.confidence||'LOW')+'</span>')+
+      '</div>'+
+    '</div>';
+}
+
+/* ---- Seguros (Fortune-500 claims-grade dashboard) ---- */
+function renderSeguros(d){
+  const c=d.cost||{};
+  const tiv=c.replacementUsd!=null?+c.replacementUsd:null;   // Total Insurable Value (RCV basis)
+  const loss=c.repairUsd!=null?+c.repairUsd:null;            // estimated gross loss
+  const ratio=c.damageRatio;
+  const stat=(v2,l,s,color)=>'<div class="dstat"><span class="accent" style="background:'+color+'"></span><div class="v" style="color:'+color+'">'+(v2==null?'—':v2)+'</div><div class="l">'+esc(l)+'</div>'+(s?'<div class="s">'+esc(s)+'</div>':'')+'</div>';
+  let scenarios='';
+  if(tiv!=null&&loss!=null){
+    scenarios='<div class="sc-wrap"><table class="sc"><thead><tr><th>Escenario de deducible CAT</th><th class="r">Deducible</th><th class="r">Pérdida bruta est.</th><th class="r">Indemnización neta est.</th></tr></thead><tbody>'+
+      [0.02,0.05,0.10].map(p=>{
+        const ded=tiv*p, net=Math.max(0,loss-ded);
+        return '<tr><td><b>'+Math.round(p*100)+'% del valor asegurable</b> <span class="tag">ESCENARIO</span></td>'+
+          '<td class="r mono">'+usdFull(ded)+'</td><td class="r mono">'+usdFull(loss)+'</td><td class="r mono"><b>'+usdFull(net)+'</b></td></tr>';
+      }).join('')+
+      '</tbody></table></div>'+
+      '<div style="font:500 11.5px Inter;color:var(--faint);margin-top:8px">Deducibles catastróficos típicos de pólizas de terremoto en LatAm (2–10% del valor asegurado). Escenarios ilustrativos — los términos reales dependen de cada póliza.</div>';
+  } else {
+    scenarios='<div class="note">Sin costos modelados suficientes para proyectar escenarios de deducible.</div>';
+  }
+  const resLow=loss!=null?usd(loss):null, resHigh=loss!=null?usd(loss*1.25):null;
+  $('#p_seguros').innerHTML=
+    '<div class="dash-stats">'+
+      stat(usd(tiv),'Valor asegurable total (TIV)','Base RCV — costo de reemplazo','var(--navy-2)')+
+      stat(usd(loss),'Pérdida bruta estimada','Costo de reparación HAZUS','var(--crit)')+
+      stat(ratio!=null?pct(ratio):null,'Severidad del siniestro','pérdida / valor de reemplazo','var(--amber)')+
+      stat(c.unitUsdM2!=null?usdFull(c.unitUsdM2)+'/m²':null,'Valuación unitaria','costos reales VE 2026','var(--blue)')+
+    '</div>'+
+    '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-4z" stroke-linejoin="round"/></svg>Escenarios de ajuste (deducible catastrófico)</h3>'+scenarios+'</div>'+
+    '<div class="grid2" style="margin-top:16px">'+
+      '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M3 12h18" stroke-linecap="round"/></svg>Reserva recomendada del siniestro</h3>'+
+        (loss!=null
+          ?'<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="disp mono" style="font:800 28px \'Public Sans\'">'+resLow+' – '+resHigh+'</span><span class="tag">ESTIMACIÓN DE PLANIFICACIÓN</span></div>'+
+           '<div style="font:500 12.5px Inter;color:var(--muted);margin-top:9px">Banda = pérdida bruta estimada + hasta 25% de contingencia (demolición, remoción de escombros, honorarios profesionales). No constituye una reserva contable ni una oferta de ajuste.</div>'
+          :'<div class="note">Sin costo de reparación modelado — reserva no proyectable.</div>')+
+      '</div>'+
+      '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5" stroke-linecap="round"/></svg>Base de valuación</h3>'+
+        '<div class="facts">'+
+          fact('Base','RCV — valor de reposición a nuevo')+
+          fact('ACV (aprox.)',tiv!=null&&ratio!=null?usd(Math.max(0,tiv*(1-ratio))):null)+
+          fact('Área asegurable',c.areaM2!=null?num(Math.round(c.areaM2))+' m²':null)+
+          fact('Confianza','<span class="conf '+(c.confidence==='SURVEYED'||c.confidence==='HIGH'?'hi':c.confidence==='MEDIUM'?'md':'lo')+'">'+esc(c.confidence||'LOW')+'</span>')+
+        '</div>'+
+        '<div style="font:500 11.5px Inter;color:var(--faint);margin-top:10px">ACV aprox. = valor de reemplazo neto del daño modelado (proxy de depreciación por siniestro). Modelo FEMA HAZUS + costos reales VE 2026 — <b>no es tasación oficial ni oferta de indemnización</b>.</div>'+
+      '</div>'+
+    '</div>';
+}
+
+/* ---- Catastrófico (CAT event dashboard) ---- */
+function renderCat(d){
+  const c=d.cost||{}, st=d.structure||{}, b=d.building, m=d.methodology||{};
+  const stat=(v2,l,s,color)=>'<div class="dstat"><span class="accent" style="background:'+color+'"></span><div class="v" style="color:'+color+'">'+(v2==null?'—':v2)+'</div><div class="l">'+esc(l)+'</div>'+(s?'<div class="s">'+esc(s)+'</div>':'')+'</div>';
+  const pml=c.replacementUsd!=null?usd(c.replacementUsd):null; // upper bound: complete damage
+  const expected=c.repairUsd!=null?usd(c.repairUsd):null;
+  $('#p_cat').innerHTML=
+    '<div class="dash-stats">'+
+      stat('M 7.5','Magnitud máxima','doblete Mw 7.2 + Mw 7.5','var(--crit)')+
+      stat('IX','Intensidad (MMI máx 9.05)','ShakeMap USGS','var(--amber)')+
+      stat(expected,'Pérdida esperada (edificio)','reparación modelada','var(--navy-2)')+
+      stat(pml,'PML — pérdida máxima probable','cota superior: reemplazo total','var(--red)')+
+    '</div>'+
+    '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h4l2-7 4 14 3-10 2 3h5" stroke-linecap="round" stroke-linejoin="round"/></svg>Evento catastrófico de referencia</h3>'+
+      '<div class="sismo-card"><div class="k">Evento</div><div style="font:600 13.5px Inter;margin-top:5px">'+esc(d.event||'ve-eq-2026-06-24')+'</div>'+
+      '<div style="font:500 12px Inter;color:#8a2a2a;margin-top:6px">24-JUN-2026 · 22:05:11 UTC · Yumare, Venezuela — secuencia doblete con réplicas en curso</div></div>'+
+      '<div class="facts" style="margin-top:12px">'+
+        fact('Peligro (hazard)',esc(m.hazard))+
+        fact('Fórmula del modelo',m.formula?'<span class="mono" style="font-size:11px">'+esc(m.formula)+'</span>':null)+
+      '</div>'+
+    '</div>'+
+    '<div class="grid2" style="margin-top:16px">'+
+      '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-5.1 7-11a7 7 0 10-14 0c0 5.9 7 11 7 11z"/><circle cx="12" cy="11" r="2.5"/></svg>Exposición del sitio</h3>'+
+        '<div class="facts">'+
+          fact('Tipo de suelo',esc(st.soilType))+
+          fact('Banda de riesgo',esc(b.band))+
+          fact('Nivel de daño observado',esc((DMG[b.damageLevel]||{}).l||b.damageLevel))+
+          fact('Calidad del dato',esc(b.dq||null))+
+        '</div>'+
+        '<div style="font:500 11.5px Inter;color:var(--faint);margin-top:10px">Prior satelital: NASA Sentinel-1 DPM (Oregon State) + Microsoft AI for Good. Amplificación por suelo según microzonificación disponible.</div>'+
+      '</div>'+
+      '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M4 15l4-4 4 3 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Marco de pérdida CAT</h3>'+
+        '<div class="facts">'+
+          fact('Pérdida esperada',expected)+
+          fact('PML (cota superior)',pml)+
+          fact('Ratio de daño',c.damageRatio!=null?pct(c.damageRatio):null)+
+          fact('Metodología','FEMA HAZUS-MH')+
+        '</div>'+
+        '<div style="font:500 11.5px Inter;color:var(--faint);margin-top:10px">Fuentes: '+esc([].concat(m.costSources||[],m.priorSources||[]).join(' · ')||'FEMA HAZUS · costos reales VE 2026')+'. Estimación probabilística a nivel de edificio — nunca predicción sísmica.</div>'+
+      '</div>'+
+    '</div>';
+}
+
+/* ---- Fotos ---- */
+function renderFotos(d){
+  const media=d.building.media||[];
+  $('#p_fotos').innerHTML= media.length
+    ? '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.5"/></svg>Galería de evidencia fotográfica <span class="tag">'+media.length+'</span></h3><div class="galgrid" id="fgrid">'+
+      media.map((u,i)=>'<button class="gal-item" data-i="'+i+'"><img loading="lazy" src="'+esc(u)+'" alt="Foto '+(i+1)+'"></button>').join('')+'</div></div>'
+    : '<div class="empty"><div class="ic">📷</div><div style="margin-top:6px;font-weight:600">Sin fotos en el expediente todavía.</div></div>';
+  if(media.length) document.querySelectorAll('#fgrid .gal-item').forEach(el=>el.addEventListener('click',()=>openLb(media,+el.getAttribute('data-i'))));
+}
+
+/* ---- GIS ---- */
+function renderGis(d){
+  const g=d.gis;
+  $('#p_gis').innerHTML= g
+    ? '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-5.1 7-11a7 7 0 10-14 0c0 5.9 7 11 7 11z"/><circle cx="12" cy="11" r="2.5"/></svg>Ubicación · GIS</h3>'+
+      '<div class="facts">'+
+        fact('Latitud','<span class="mono">'+g.lat.toFixed(6)+'</span>')+
+        fact('Longitud','<span class="mono">'+g.lon.toFixed(6)+'</span>')+
+        fact('Plus Code',g.plusCode?esc(g.plusCode):null)+
+        fact('Enlaces','<a href="'+esc(g.mapsLink)+'" target="_blank" rel="noopener" style="color:var(--blue)">Maps ↗</a> · <a href="'+esc(g.streetView)+'" target="_blank" rel="noopener" style="color:var(--blue)">Street View ↗</a> · <a href="'+esc(g.osm)+'" target="_blank" rel="noopener" style="color:var(--blue)">OSM ↗</a>')+
+      '</div><div id="map"></div></div>'
+    : '<div class="empty"><div class="ic">🗺️</div><div style="margin-top:6px;font-weight:600">Este edificio aún no tiene coordenadas.</div><div class="sub">Pendiente de geolocalización de campo.</div></div>';
+}
+function initMap(g,b){
+  if(typeof L==='undefined')return; MAPDONE=true;
+  const map=L.map('map',{attributionControl:false}).setView([g.lat,g.lon],17);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+  L.circleMarker([g.lat,g.lon],{radius:9,color:'#fff',weight:2,fillColor:(DMG[b.damageLevel]||{c:'#c8102e'}).c,fillOpacity:.95})
+    .bindPopup('<b>'+esc(b.name)+'</b><br>'+esc(b.addr||b.city||'')).addTo(map).openPopup();
+  setTimeout(()=>map.invalidateSize(),80);
+}
+
+/* ---- Desaparecidos ---- */
+function renderDes(d){
+  const list=(d.cases&&d.cases.length)?d.cases:(d.missing||[]).map(n=>({id:null,name:n}));
+  $('#p_des').innerHTML= list.length
+    ? '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/><circle cx="9" cy="7" r="4"/></svg>Casos vinculados a este edificio <span class="tag">'+list.length+'</span></h3>'+
+      '<p style="font:500 13px Inter;color:var(--muted);margin:-2px 0 10px">Haz clic en un nombre para abrir su expediente completo (enlace en vivo al sistema de Expedientes; nombres no verificados).</p>'+
+      '<div class="misslist">'+list.map(x=> x.id
+        ? '<a href="/casos#caso='+encodeURIComponent(x.id)+'" title="Ver expediente completo">'+esc(x.name)+' 📋</a>'
+        : '<a href="/personas?q='+encodeURIComponent(x.name)+'">'+esc(x.name)+' ↗</a>').join('')+'</div></div>'
+    : '<div class="empty"><div class="ic">🕊️</div><div style="margin-top:6px;font-weight:600">Sin desaparecidos enlazados a este edificio.</div><div class="sub" style="margin-top:4px">Si conoces a alguien, repórtalo en <a href="/familia" style="color:var(--blue)">Familia</a>.</div></div>';
+}
+
+/* ---- Documentos ---- */
+function renderDocs(d){
+  const docsBy=d.docsByKind||{}, studies=d.studies||{};
+  let sHtml='';
+  ['engineering','geological','national'].forEach(k=>{
+    if(studies[k]) sHtml+='<a class="tag" style="display:inline-block;margin:3px 6px 3px 0;padding:7px 12px;text-decoration:none" href="'+esc(studies[k])+'" target="_blank" rel="noopener">'+DOCK[k]+' '+DOCL[k]+' ↗</a>';
+  });
+  const order=['engineering','geological','national','pdf','court','complaint','news','social','repair','photo','other'];
+  let body='';
+  order.forEach(k=>{
+    const arr=docsBy[k]; if(!arr||!arr.length)return;
+    body+='<h3 style="font:800 13px \'Public Sans\';margin:16px 0 4px">'+DOCK[k]+' '+esc(DOCL[k])+' <span class="tag">'+arr.length+'</span></h3>';
+    arr.forEach(dc=>{
+      body+='<div class="docrow"><div class="ic2">'+DOCK[k]+'</div><div style="flex:1"><div>'+
+        (dc.url?'<a href="'+esc(dc.url)+'" target="_blank" rel="noopener">'+esc(dc.title||DOCL[k])+' ↗</a>':'<b>'+esc(dc.title||DOCL[k])+'</b>')+'</div>'+
+        '<div style="font:500 11.5px Inter;color:var(--muted)">'+[esc(dc.source),esc(dc.author),dc.published_at?fdate(dc.published_at):''].filter(Boolean).join(' · ')+'</div>'+
+        (dc.notes?'<div style="font:500 12.5px Inter;margin-top:3px">'+esc(dc.notes)+'</div>':'')+'</div></div>';
     });
-    document.getElementById('p_documentos').innerHTML= (sHtml||body)
-      ? '<div class="card pad">'+(sHtml?'<div style="margin-bottom:6px">'+sHtml+'</div>':'')+(body||'')+'</div>'
-      : '<div class="empty">Aún no hay estudios ni documentos cargados para este edificio.<br>Se agregarán peritajes de ingeniería, estudios geológicos/geotécnicos, reportes oficiales (FUNVISIS / Protección Civil / CIV), prensa y denuncias a medida que se recopilen.</div>';
+  });
+  $('#p_docs').innerHTML= (sHtml||body)
+    ? '<div class="card">'+(sHtml?'<div style="margin-bottom:8px">'+sHtml+'</div>':'')+(body||'')+'</div>'
+    : '<div class="empty"><div class="ic">📄</div><div style="margin-top:6px;font-weight:600">Aún no hay estudios ni documentos cargados.</div><div class="sub" style="margin-top:4px">Se agregarán peritajes de ingeniería, estudios geológicos, reportes oficiales (FUNVISIS / Protección Civil / CIV), prensa y denuncias a medida que se recopilen.</div></div>';
+}
 
-    // Línea forense
-    document.getElementById('p_forense').innerHTML= (d.timeline&&d.timeline.length)
-      ? '<div class="card pad"><div class="tl">'+d.timeline.map(function(t){
-          return '<div class="tlitem"><div class="d">'+fdate(t.at)+' · '+(DOCK[t.kind]||'•')+' '+esc((DOCL[t.kind]||t.kind))+'</div><div>'+esc(t.label)+'</div></div>';
-        }).join('')+'</div></div>'
-      : '<div class="empty">Sin eventos en la línea de tiempo.</div>';
+/* ---- Cronología ---- */
+function renderTl(d){
+  const tl=d.timeline||[];
+  $('#p_tl').innerHTML= tl.length
+    ? '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"/></svg>Cronología del expediente · '+tl.length+' entrada'+(tl.length===1?'':'s')+'</h3>'+
+      '<div class="docket">'+tl.map(t=>'<div class="de"><span class="node"></span><div class="ts">'+esc(fdate(t.at)||'—')+'</div><div class="kind">'+(DOCK[t.kind]||'•')+' '+esc(DOCL[t.kind]||t.kind)+'</div><div class="detail">'+esc(t.label)+'</div></div>').join('')+'</div></div>'
+    : '<div class="empty"><div class="ic">🕐</div><div style="margin-top:6px;font-weight:600">Sin eventos en la línea de tiempo.</div></div>';
+}
 
-    // tab switching (+ lazy map init)
-    document.querySelectorAll('.tab').forEach(function(tab){
-      tab.addEventListener('click',function(){
-        document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
-        document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('on');});
-        tab.classList.add('on');
-        var id=tab.getAttribute('data-t');
-        document.getElementById('p_'+id).classList.add('on');
-        if(id==='ubicacion' && d.gis && !MAPDONE) initMap(d.gis, b);
-      });
-    });
-  }
-
-  function initMap(gis,b){
-    if(typeof L==='undefined')return; MAPDONE=true;
-    var map=L.map('map',{attributionControl:false}).setView([gis.lat,gis.lon],17);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-    L.circleMarker([gis.lat,gis.lon],{radius:9,color:'#fff',weight:2,fillColor:(DMGC[b.damageLevel]||'#d92d20'),fillOpacity:.95})
-      .bindPopup('<b>'+esc(b.name)+'</b><br>'+esc(b.addr||b.city)).addTo(map).openPopup();
-    setTimeout(function(){ map.invalidateSize(); },80);
-  }
-
-  async function boot(){
-    var id=idFromPath();
-    if(!id){ document.getElementById('loading').textContent='Falta el identificador del edificio.'; return; }
-    try{
-      var res=await fetch('/api/buildings/reported/'+encodeURIComponent(id)+'?t='+Math.floor(Date.now()/60000));
-      if(res.status===404){ document.getElementById('loading').innerHTML='No se encontró el expediente de este edificio. <a href="/edificios">Ver todos los edificios →</a>'; return; }
-      var d=await res.json();
-      render(d);
-    }catch(e){ document.getElementById('loading').textContent='No se pudo cargar el expediente. Reintenta en unos segundos.'; }
-    document.getElementById('lbX').addEventListener('click',closeLb);
-    document.getElementById('lbPrev').addEventListener('click',function(){lbStep(-1);});
-    document.getElementById('lbNext').addEventListener('click',function(){lbStep(1);});
-    document.getElementById('lb').addEventListener('click',function(e){ if(e.target.id==='lb') closeLb(); });
-    document.addEventListener('keydown',function(e){ if(!document.getElementById('lb').classList.contains('on'))return; if(e.key==='Escape')closeLb(); else if(e.key==='ArrowLeft')lbStep(-1); else if(e.key==='ArrowRight')lbStep(1); });
-  }
-  boot();
+/* ============ BOOT ============ */
+async function boot(){
+  const id=idFromPath();
+  if(!id){ $('#loading').style.display='none'; const e=$('#errBox'); e.style.display='block'; e.innerHTML='<div style="font-weight:700">Falta el identificador del edificio.</div><div style="margin-top:6px"><a href="/edificios" style="color:var(--blue)">Ver todos los edificios →</a></div>'; return; }
+  try{
+    const res=await fetch('/api/buildings/reported/'+encodeURIComponent(id)+'?t='+Math.floor(Date.now()/60000));
+    if(res.status===404){ $('#loading').style.display='none'; const e=$('#errBox'); e.style.display='block'; e.innerHTML='<div style="font-weight:700">No se encontró el expediente de este edificio.</div><div style="margin-top:6px"><a href="/edificios" style="color:var(--blue)">Ver todos los edificios →</a></div>'; return; }
+    const d=await res.json();
+    render(d);
+  }catch(err){ $('#loading').style.display='none'; const e=$('#errBox'); e.style.display='block'; e.innerHTML='<div style="font-weight:700">No se pudo cargar el expediente.</div><div class="sub" style="margin-top:4px;color:var(--muted)">Revisa tu conexión e inténtalo de nuevo.</div>'; return; }
+  $('#shareBtn').addEventListener('click',async()=>{
+    const url=location.origin+'/edificio/'+encodeURIComponent(id);
+    try{ await navigator.clipboard.writeText(url); toast('Enlace copiado: '+url); }
+    catch{ toast(url); }
+  });
+  $('#lbX').addEventListener('click',closeLb);
+  $('#lbPrev').addEventListener('click',()=>lbStep(-1));
+  $('#lbNext').addEventListener('click',()=>lbStep(1));
+  $('#lb').addEventListener('click',e=>{ if(e.target.id==='lb') closeLb(); });
+  document.addEventListener('keydown',e=>{ if(!$('#lb').classList.contains('on'))return; if(e.key==='Escape')closeLb(); else if(e.key==='ArrowLeft')lbStep(-1); else if(e.key==='ArrowRight')lbStep(1); });
+}
+boot();
 })();
 </script>
 </body>
