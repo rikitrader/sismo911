@@ -7,3 +7,4 @@ Sitemap: https://sismo911.com/sitemap_index.xml
 Sitemap: https://sismo911.com/sitemap.xml
 Sitemap: https://sismo911.com/sitemap-blog.xml
 Sitemap: https://sismo911.com/sitemap-estados.xml
+Sitemap: https://sismo911.com/sitemap-edificios.xml

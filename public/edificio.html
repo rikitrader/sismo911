@@ -418,6 +418,7 @@ function renderResumen(d){
           fact('ID expediente','<span class="mono" style="font-size:11.5px">'+esc(b.id)+'</span>')+
           fact('Perfil forense',d.profileEnriched?'<span class="tag" style="background:#e3f6ea;color:var(--green)">ENRIQUECIDO</span>':'<span class="tag">EN CONSTRUCCIÓN</span>')+
           fact('Confirmación satelital',d.satConfirmed?('🛰️ '+(d.satConfirmed.severidad==='colapso'?'Colapso':'Daño grave')+' — Copernicus EMS / AI4G'+(d.satConfirmed.distM?' (a '+d.satConfirmed.distM+' m)':'')):null)+
+          (d.possibleDuplicateOf?fact('Posible duplicado','⚠ <a href="/edificio/'+encodeURIComponent(d.possibleDuplicateOf.id)+'" style="color:var(--blue)">'+esc(d.possibleDuplicateOf.name)+'</a> a '+d.possibleDuplicateOf.distM+' m — puede ser la misma estructura'):'')+
         '</div>'+
       '</div></div>'+
     '</div>';

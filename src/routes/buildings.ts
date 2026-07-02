@@ -8,7 +8,7 @@ import {
 } from '../lib/building-score';
 import {
   mapTvBuilding, mapSosDamageBuilding, mapSatEdificacion, poolReportedBuildings, poolSatellite,
-  satMatchOf, groundDistM, SOS_BUILDING_CATEGORIES, SAT_MATCH_M, SAT_SOURCE,
+  satMatchOf, groundDistM, zoneTokens, SOS_BUILDING_CATEGORIES, SAT_MATCH_M, SAT_SOURCE,
   type TvBuilding, type SosDamageRow, type SatEdifRow, type SatMatch,
 } from '../lib/tv-buildings';
 import { fetchCaseReports, persistedCases, persistedCasesByBuilding } from '../lib/building-cases';
@@ -182,21 +182,50 @@ buildings.get('/sar', async (c) => {
   if (limited) return limited;
   const state = c.req.query('state');
   const priority = c.req.query('priority');
+  const includeSat = c.req.query('sat') !== '0';
   const limit = Math.min(Math.max(Number(c.req.query('limit')) || 300, 1), 2000);
   return edgeCached(c, 300, async () => {
     const reports = await fetchCaseReports(c.env);
-    let rows = buildSarRows(reports);
+    let rows: any[] = buildSarRows(reports);
+    // Satellite-only buildings (Copernicus EMS/AI4G) join the rescue ranking
+    // TAGGED (dq: SAT-ONLY): same sarScore formula, occupants from the default
+    // 350 m² × 3 pisos model (~35, an estimate — never a field count). With no
+    // named missing they rank below field-reported buildings. ?sat=0 excludes.
+    let satIncluded = 0;
+    if (includeSat) {
+      try {
+        const res = await c.env.DB.prepare(
+          `SELECT id, lat, lng, severidad, oficial, zona, uso, maps_url, updated_ms
+             FROM sat_edificaciones WHERE lat IS NOT NULL AND lng IS NOT NULL LIMIT 5000`,
+        ).all();
+        for (const raw of (res.results ?? []) as unknown as SatEdifRow[]) {
+          const sb = mapSatEdificacion(raw);
+          const sar = computeSar({ status: sb.status, band: sb.band, use: 'RESIDENCIAL', cost: sb.cost, score: 0 } as unknown as Scored, []);
+          if (!sar) continue;
+          satIncluded++;
+          rows.push({
+            ...sar, id: sb.id, name: sb.name, addr: sb.addr, sector: sb.zone || sb.city, state: sb.state,
+            status: sb.status, dq: 'SAT-ONLY', lat: sb.lat, lon: sb.lon,
+            caseQuery: sb.zone || sb.name, liveMatched: 0, sectorReports: 0, missingSource: 'none', cases: [],
+            satOnly: true, occNote: 'ocupación por área por defecto (350 m² × 3) — estimación, no conteo',
+          });
+        }
+        rows.sort((a, z) => z.sarScore - a.sarScore || z.occupantsEst - a.occupantsEst);
+      } catch { /* fail-soft: SAR still serves the field-reported set */ }
+    }
     if (state) rows = rows.filter((r) => r.state.toLowerCase() === state.toLowerCase());
     if (priority) rows = rows.filter((r) => r.priority === priority.toUpperCase());
     return {
       event: METHODOLOGY.event,
       count: rows.length,
+      sat_included: satIncluded,
       live_reports_indexed: reports.length,
       note: 'Triage de rescate: prioridad = severidad × ocupantes estimados (ocupación nocturna; sismo 18:04 VET), realzado por desaparecidos reportados. Los desaparecidos provienen EN VIVO de /api/persons (last_seen) + Familia (ubicacion), cruzados por nombre del edificio. "Ocupantes estimados" = personas probablemente dentro, NO un conteo de atrapados. Estimación, no censo de campo.',
       methodology: {
         priority: 'sarScore≥70 INMEDIATA · ≥45 ALTA · ≥25 MEDIA · resto BAJA',
         occupants: 'área construida ÷ densidad (RESIDENCIAL 30 m²/persona; HAZUS occupancy)',
         missing: 'missingSource: live = del DB de desaparecidos · curated = de prensa · liveMatched = nº enlazados en vivo · sectorReports = desaparecidos del sector',
+        satellite: 'dq=SAT-ONLY: edificio detectado solo por satélite (Copernicus EMS/AI4G); ocupación = área por defecto, estimación. Excluir con ?sat=0.',
         cases: 'caseQuery → /personas?q= (buscar desaparecidos vinculados)',
       },
       buildings: rows.slice(0, limit),
@@ -337,6 +366,9 @@ buildings.get('/reported', async (c) => {
       // the satellite-only rows, which carry b.sat by construction).
       sat_confirmed: pooled.filter((b) => b.sat && b.source !== SAT_SOURCE).length,
       sat_only: pooled.filter((b) => b.source === SAT_SOURCE).length,
+      // satellite-only rows whose nearest reported building is 60-150 m away:
+      // likely the same structure twice — flagged rows stay in the inventory.
+      sat_possible_dup: pooled.filter((b) => b.possibleDuplicateOf).length,
       sat_match_m: SAT_MATCH_M,
       with_coords: withCoords,
       with_photos: withPhotos,
@@ -348,6 +380,7 @@ buildings.get('/reported', async (c) => {
         // (default-area HAZUS estimates, confianza LOW — no field survey).
         sat_only_repair: Math.round(pooled.filter((b) => b.source === SAT_SOURCE).reduce((s2, b) => s2 + (b.cost?.repairUsd ?? 0), 0)),
         sat_only_replacement: Math.round(pooled.filter((b) => b.source === SAT_SOURCE).reduce((s2, b) => s2 + (b.cost?.replacementUsd ?? 0), 0)),
+        sat_possible_dup_repair: Math.round(pooled.filter((b) => b.possibleDuplicateOf).reduce((s2, b) => s2 + (b.cost?.repairUsd ?? 0), 0)),
       },
       with_cases: pooled.filter((b) => b.cases.length > 0).length,
       by_damage: {
@@ -424,6 +457,31 @@ buildings.get('/reported/:id', async (c) => {
         }
         if (best && bestD <= SAT_MATCH_M) satConfirmed = satMatchOf(best, bestD);
       } catch { /* fail-soft: profile still serves without the satellite layer */ }
+    }
+    // Satellite-only expediente: flag the nearest REPORTED building within the
+    // 150 m dup band (probably the same physical structure counted twice).
+    if (satRow && b.lat != null && b.lon != null) {
+      try {
+        const dDeg = 0.002; // ~220 m box, refined by ground distance
+        let bestD = Infinity; let bestRef: { id: string; name: string } | null = null;
+        const scan = (rows: any[], nameOf: (r: any) => string) => {
+          for (const r of rows) {
+            if (r.lat == null || r.lng == null) continue;
+            const dM = groundDistM(b.lat!, b.lon!, Number(r.lat), Number(r.lng));
+            if (dM < bestD) { bestD = dM; bestRef = { id: String(r.id), name: nameOf(r) }; }
+          }
+        };
+        const tvNear = await c.env.DB.prepare(
+          `SELECT id, name, lat, lng FROM tv_buildings WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? LIMIT 50`,
+        ).bind(b.lat - dDeg, b.lat + dDeg, b.lon - dDeg, b.lon + dDeg).all();
+        scan((tvNear.results ?? []) as any[], (r) => String(r.name || 'Edificio'));
+        const sosNear = await c.env.DB.prepare(
+          `SELECT id, title, lat, lng FROM sos_damage WHERE category IN ('collapsed_building','damaged_building')
+             AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? LIMIT 50`,
+        ).bind(b.lat - dDeg, b.lat + dDeg, b.lon - dDeg, b.lon + dDeg).all();
+        scan((sosNear.results ?? []) as any[], (r) => String(r.title || 'Edificio'));
+        if (bestRef && bestD <= 150) b.possibleDuplicateOf = { ...(bestRef as { id: string; name: string }), distM: Math.round(bestD) };
+      } catch { /* fail-soft */ }
     }
 
     // Forensic record + evidence docs (soft-referenced; may not exist yet).
@@ -548,6 +606,7 @@ buildings.get('/reported/:id', async (c) => {
       timeline,
       evaluation,
       satConfirmed,
+      possibleDuplicateOf: b.possibleDuplicateOf ?? null,
       satNote: satConfirmed
         ? 'Confirmación satelital: Copernicus EMS (UE) verificado + predicción Microsoft AI4G, vía CIVIS Venezuela. Cruce por proximidad (≤60 m), no un peritaje de campo.'
         : null,
@@ -570,7 +629,9 @@ buildings.post('/reported/:id/cases', async (c) => {
   const body = await c.req.json().catch(() => ({} as any));
   const caseId = String(body.case_id ?? '').trim();
   if (!caseId || caseId.length > 128) return c.json({ error: 'case_id requerido' }, 400);
-  const bld = await c.env.DB.prepare(`SELECT id, name FROM tv_buildings WHERE id = ?`).bind(id).first();
+  let bld = await c.env.DB.prepare(`SELECT id FROM tv_buildings WHERE id = ?`).bind(id).first();
+  if (!bld) bld = await c.env.DB.prepare(`SELECT id FROM sos_damage WHERE id = ?`).bind(id).first().catch(() => null);
+  if (!bld) bld = await c.env.DB.prepare(`SELECT id FROM sat_edificaciones WHERE id = ?`).bind(id).first().catch(() => null);
   if (!bld) return c.json({ error: 'not_found', id }, 404);
   let caseName = String(body.case_name ?? '').trim();
   try {
@@ -585,6 +646,42 @@ buildings.post('/reported/:id/cases', async (c) => {
      ON CONFLICT(building_id, case_id) DO UPDATE SET case_name=excluded.case_name, source='manual'`,
   ).bind(id, caseId, caseName).run();
   return c.json({ ok: true, building_id: id, case_id: caseId, case_name: caseName, source: 'manual' });
+});
+
+// ── GET /api/buildings/reported/:id/case-suggestions — zone-text candidates ───
+// Suggestion-only (NEVER auto-attaches): still-missing cases whose public
+// last-seen text mentions the building's zone/name tokens. Built for
+// satellite-only buildings, whose generic names the hourly auto-linker can't
+// match; works for any building. Data is the same public set behind /personas.
+buildings.get('/reported/:id/case-suggestions', async (c) => {
+  const limited = await rateLimit(c.env, c, 'buildings_case_suggest', 30, 60);
+  if (limited) return limited;
+  const id = c.req.param('id');
+  let name = '', zona = '', city = '';
+  const tv = await c.env.DB.prepare(`SELECT name, zone, city FROM tv_buildings WHERE id = ?`).bind(id).first().catch(() => null) as any;
+  if (tv) { name = tv.name || ''; zona = tv.zone || ''; city = tv.city || ''; }
+  else {
+    const sos = await c.env.DB.prepare(`SELECT title, municipio, parroquia FROM sos_damage WHERE id = ?`).bind(id).first().catch(() => null) as any;
+    if (sos) { name = sos.title || ''; zona = sos.parroquia || ''; city = sos.municipio || ''; }
+    else {
+      const sat = await c.env.DB.prepare(`SELECT zona, uso FROM sat_edificaciones WHERE id = ?`).bind(id).first().catch(() => null) as any;
+      if (!sat) return c.json({ error: 'not_found', id }, 404);
+      zona = sat.zona || '';
+    }
+  }
+  const tokens = zoneTokens(name, zona, city);
+  if (!tokens.length) return c.json({ building_id: id, tokens, count: 0, suggestions: [] });
+  const [reports, attached] = await Promise.all([fetchCaseReports(c.env), persistedCases(c.env, id)]);
+  const have = new Set(attached.map((x) => x.id));
+  const norm = (t: string) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const suggestions = reports
+    .filter((r) => r.id && !have.has(r.id) && tokens.some((t) => norm(r.loc).includes(t)))
+    .slice(0, 30)
+    .map((r) => ({ id: r.id, name: r.name }));
+  return c.json({
+    building_id: id, tokens, count: suggestions.length, suggestions,
+    note: 'Candidatos por coincidencia de texto de zona — un operador debe confirmar y adjuntar manualmente; nunca se vinculan solos.',
+  });
 });
 
 // ── DELETE /api/buildings/reported/:id/cases/:caseId — operator: detach ───────
