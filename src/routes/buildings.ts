@@ -3,13 +3,14 @@ import type { Env } from '../types';
 import { rateLimit } from '../lib/security';
 import { edgeCached } from '../lib/edge-cache';
 import {
-  scoreCurated, scoreOsm, computeSar, linkLiveMissing, estimateOccupants,
-  type Sector, type Curated, type Osm, type Scored, type Sar, type MissingReport, PRIOR_BLEND,
+  scoreCurated, scoreOsm, computeSar, linkLiveCases, estimateOccupants,
+  type Sector, type Curated, type Osm, type Scored, type Sar, type MissingReport, type LinkedCase, PRIOR_BLEND,
 } from '../lib/building-score';
 import {
   mapTvBuilding, mapSosDamageBuilding, poolReportedBuildings, SOS_BUILDING_CATEGORIES,
   type TvBuilding, type SosDamageRow,
 } from '../lib/tv-buildings';
+import { fetchCaseReports, persistedCases, persistedCasesByBuilding } from '../lib/building-cases';
 import sectorsRaw from '../data/buildings/sectors.json';
 import curatedRaw from '../data/buildings/curated.json';
 import osmRaw from '../data/buildings/osm.json';
@@ -44,41 +45,31 @@ const DPM_OBSERVED = SCORED_OSM.filter((r) => r.dpmProb != null).length;
 // personas.ubicacion) by building name, merge with curated names, and re-rank.
 interface SarRow extends Sar { name: string; addr: string; sector: string; state: string;
   status: string; dq: string; lat: number; lon: number; caseQuery: string;
-  liveMatched: number; sectorReports: number; missingSource: string; }
+  liveMatched: number; sectorReports: number; missingSource: string; cases: LinkedCase[]; }
 const SAR_CANDIDATES: Scored[] = [...SCORED_CURATED, ...SCORED_OSM]
   .filter((b) => computeSar(b, b.missing ?? []) !== null);
 
-// Pull approved, still-missing reports for this event from both registries (one D1
-// batch). Returns lowercased {name, loc} for in-memory name matching. Fail-soft: on
-// any DB error the SAR list still works off curated names.
-async function fetchMissingReports(env: Env): Promise<MissingReport[]> {
-  try {
-    const [a, b] = await env.DB.batch([
-      env.DB.prepare(
-        `SELECT full_name AS name, last_seen AS loc FROM persons
-         WHERE review='approved' AND status='missing' AND COALESCE(last_seen,'')<>'' LIMIT 8000`),
-      env.DB.prepare(
-        `SELECT nombre AS name, ubicacion AS loc FROM personas
-         WHERE moderation='approved' AND COALESCE(ubicacion,'')<>''
-           AND estado NOT IN ('localizado','aparecido','hospitalizado','fallecido') LIMIT 8000`),
-    ]);
-    const rows = [...(a.results ?? []), ...(b.results ?? [])] as { name: string; loc: string }[];
-    return rows.filter((r) => r.name && r.loc).map((r) => ({ name: r.name, loc: r.loc.toLowerCase() }));
-  } catch { return []; }
-}
+// Missing-person reports come from fetchCaseReports (lib/building-cases): approved,
+// still-missing rows from BOTH registries, each carrying its federated case id so
+// UI links land on the full case profile (/casos#caso=<id>). Fail-soft: on any DB
+// error the SAR list still works off curated names.
 
 function buildSarRows(reports: MissingReport[]): SarRow[] {
   return SAR_CANDIDATES.map((b) => {
     const curated = b.missing ?? [];
-    const live = linkLiveMissing(b.name, reports);
+    const liveCases = linkLiveCases(b.name, reports);
+    const live = liveCases.map((x) => x.name);
     const merged = [...new Set([...curated, ...live])];
+    // Cases feed: live matches (with ids) first, then curated press names (no id yet).
+    const liveNames = new Set(live);
+    const cases: LinkedCase[] = [...liveCases, ...curated.filter((n) => !liveNames.has(n)).map((n) => ({ id: null, name: n }))];
     const sectorReports = reports.filter((r) => r.loc.includes(b.sector.toLowerCase())).length;
     const sar = computeSar(b, merged)!;
     const missingSource = live.length && curated.length ? 'live+curated' : live.length ? 'live' : curated.length ? 'curated' : 'none';
     return {
       ...sar, name: b.name, addr: b.addr, sector: b.sector, state: b.state,
       status: b.status, dq: b.dq, lat: b.lat, lon: b.lon,
-      caseQuery: merged[0] ?? b.name, liveMatched: live.length, sectorReports, missingSource,
+      caseQuery: merged[0] ?? b.name, liveMatched: live.length, sectorReports, missingSource, cases,
     };
   }).sort((a, z) => z.sarScore - a.sarScore || z.occupantsEst - a.occupantsEst);
 }
@@ -185,7 +176,7 @@ buildings.get('/sar', async (c) => {
   const priority = c.req.query('priority');
   const limit = Math.min(Math.max(Number(c.req.query('limit')) || 300, 1), 2000);
   return edgeCached(c, 300, async () => {
-    const reports = await fetchMissingReports(c.env);
+    const reports = await fetchCaseReports(c.env);
     let rows = buildSarRows(reports);
     if (state) rows = rows.filter((r) => r.state.toLowerCase() === state.toLowerCase());
     if (priority) rows = rows.filter((r) => r.priority === priority.toUpperCase());
@@ -208,7 +199,7 @@ buildings.get('/sar', async (c) => {
 // ── GET /api/buildings/sar/summary — SAR aggregate ────────────────────────────
 buildings.get('/sar/summary', async (c) => {
   return edgeCached(c, 300, async () => {
-    const reports = await fetchMissingReports(c.env);
+    const reports = await fetchCaseReports(c.env);
     const rows = buildSarRows(reports);
     const byPriority: Record<string, number> = {};
     let occupants = 0; const missingNames = new Set<string>(); let withMissing = 0; let liveLinked = 0;
@@ -268,14 +259,20 @@ buildings.get('/reported', async (c) => {
     } catch { sosRows = []; }
 
     // 3) pool + dedupe by id (tv galleries win; /danos adds triage/coords/trapped + new buildings)
-    const pooled = poolReportedBuildings(tvRows.map(mapTvBuilding), sosRows.map(mapSosDamageBuilding));
+    // 4) attach the persisted case links (building_cases): every case name feeds the
+    //    /edificios listing and deep-links to its full case profile (/casos#caso=<id>).
+    const caseLinks = await persistedCasesByBuilding(c.env);
+    const pooled = poolReportedBuildings(tvRows.map(mapTvBuilding), sosRows.map(mapSosDamageBuilding))
+      .map((b) => ({ ...b, cases: caseLinks[b.id] ?? [] }));
 
     let mapped = pooled;
     if (q.damage) mapped = mapped.filter((b) => b.damageLevel.toLowerCase() === q.damage!.toLowerCase());
     if (q.state) mapped = mapped.filter((b) => b.state.toLowerCase() === q.state!.toLowerCase());
     if (q.verified) mapped = mapped.filter((b) => b.verified);
     if (q.withPhotos) mapped = mapped.filter((b) => b.mediaCount > 0);
-    if (q.q) mapped = mapped.filter((b) => (b.name + ' ' + b.addr + ' ' + b.city).toLowerCase().includes(q.q));
+    // Text search matches the linked case names too — searching a person finds their building.
+    if (q.q) mapped = mapped.filter((b) =>
+      (b.name + ' ' + b.addr + ' ' + b.city + ' ' + b.cases.map((x) => x.name).join(' ')).toLowerCase().includes(q.q));
     // rank: collapses first, then severity, then buildings that have photos
     const rank = (b: TvBuilding) => (b.damageLevel === 'total' ? 3 : b.damageLevel === 'severo' ? 2 : 1) * 10 + (b.mediaCount > 0 ? 1 : 0);
     mapped.sort((a, z) => rank(z) - rank(a));
@@ -297,6 +294,7 @@ buildings.get('/reported', async (c) => {
       collapsed: pooled.filter((b) => b.damageLevel === 'total').length,
       people_trapped: pooled.reduce((s, b) => s + (b.peopleTrapped ?? 0), 0),
       costs_usd: { repair: sumRepair, replacement: sumRepl },
+      with_cases: pooled.filter((b) => b.cases.length > 0).length,
       by_damage: {
         total: pooled.filter((b) => b.damageLevel === 'total').length,
         severo: pooled.filter((b) => b.damageLevel === 'severo').length,
@@ -354,13 +352,23 @@ buildings.get('/reported/:id', async (c) => {
       docs = (dr.results ?? []) as any[];
     } catch { docs = []; }
 
-    // Linked missing persons — reuse the live-linkage engine (name-token match on
-    // free-text last-seen locations). Fail-soft: an empty list on any DB hiccup.
-    let missing: string[] = [];
+    // Attached cases — persisted attachments (building_cases: hourly auto-linker +
+    // operator manual attach) merged with a live name-token match, deduped by case
+    // id then name. Each carries the federated case id that opens the FULL case
+    // profile at /casos#caso=<id>. `missing` (names) kept for back-compat.
+    let cases: (LinkedCase & { source: string })[] = [];
     try {
-      const reports = await fetchMissingReports(c.env);
-      missing = linkLiveMissing(b.name, reports);
-    } catch { missing = []; }
+      cases = await persistedCases(c.env, id);
+      const reports = await fetchCaseReports(c.env);
+      const have = new Set(cases.map((x) => x.id ?? x.name.toLowerCase()));
+      for (const m of linkLiveCases(b.name, reports)) {
+        const k = m.id ?? m.name.toLowerCase();
+        if (!have.has(k) && ![...cases].some((x) => x.name.toLowerCase() === m.name.toLowerCase())) {
+          have.add(k); cases.push({ ...m, source: 'live' });
+        }
+      }
+    } catch { /* fail-soft: whatever we got so far */ }
+    const missing: string[] = cases.map((x) => x.name);
 
     // Occupancy: surveyed override on the profile wins; else model from built area.
     const floorM2 = profile?.gross_area_m2 ?? b.cost?.floorM2 ?? null;
@@ -428,6 +436,8 @@ buildings.get('/reported/:id', async (c) => {
       studies,
       missing,
       missingCount: missing.length,
+      cases,
+      caseProfileBase: '/casos#caso=',
       docs,
       docsByKind,
       docCount: docs.length,
@@ -438,6 +448,43 @@ buildings.get('/reported/:id', async (c) => {
       disclaimer: 'Expediente forense en construcción. Los campos sin dato están pendientes de estudio de campo (CIV / Protección Civil / FUNVISIS). Estimaciones de ingeniería, no tasación ni censo oficial.',
     };
   });
+});
+
+// ── POST /api/buildings/reported/:id/cases — operator: attach a case ──────────
+// Body: { case_id, case_name? }. Writes under /api/buildings are operator-gated
+// centrally (route-policy ADMIN_WRITE_PREFIXES); handlers assume an authed writer.
+// Validates the building exists and the case id resolves in persons / personas
+// (fam-) before persisting, so a typo can't mint a dangling attachment.
+buildings.post('/reported/:id/cases', async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json().catch(() => ({} as any));
+  const caseId = String(body.case_id ?? '').trim();
+  if (!caseId || caseId.length > 128) return c.json({ error: 'case_id requerido' }, 400);
+  const bld = await c.env.DB.prepare(`SELECT id, name FROM tv_buildings WHERE id = ?`).bind(id).first();
+  if (!bld) return c.json({ error: 'not_found', id }, 404);
+  let caseName = String(body.case_name ?? '').trim();
+  try {
+    const row: any = caseId.startsWith('fam-')
+      ? await c.env.DB.prepare(`SELECT nombre AS name FROM personas WHERE id = ?`).bind(caseId.slice(4)).first()
+      : await c.env.DB.prepare(`SELECT full_name AS name FROM persons WHERE id = ?`).bind(caseId).first();
+    if (!row) return c.json({ error: 'caso no existe', case_id: caseId }, 404);
+    caseName = row.name || caseName;
+  } catch { return c.json({ error: 'caso no verificable', case_id: caseId }, 500); }
+  await c.env.DB.prepare(
+    `INSERT INTO building_cases (building_id, case_id, case_name, source) VALUES (?,?,?,'manual')
+     ON CONFLICT(building_id, case_id) DO UPDATE SET case_name=excluded.case_name, source='manual'`,
+  ).bind(id, caseId, caseName).run();
+  return c.json({ ok: true, building_id: id, case_id: caseId, case_name: caseName, source: 'manual' });
+});
+
+// ── DELETE /api/buildings/reported/:id/cases/:caseId — operator: detach ───────
+buildings.delete('/reported/:id/cases/:caseId', async (c) => {
+  const id = c.req.param('id');
+  const caseId = c.req.param('caseId');
+  const r = await c.env.DB.prepare(
+    `DELETE FROM building_cases WHERE building_id = ? AND case_id = ?`,
+  ).bind(id, caseId).run();
+  return c.json({ ok: true, building_id: id, case_id: caseId, removed: r.meta?.changes ?? 0 });
 });
 
 // ── GET /api/buildings/sectors — sector registry (soil/MMI/prior) ─────────────

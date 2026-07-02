@@ -232,10 +232,17 @@
         row('Permiso de construcción', esc(d.structure.firstBuiltPermit))+
       '</div><div style="font-size:11px;color:var(--ops-muted);margin-top:10px">Costos por modelo FEMA HAZUS + costos reales VE 2026. Área y pisos sin peritaje → confianza BAJA. No es tasación oficial.</div></div>';
 
-    // Desaparecidos
-    document.getElementById('p_desaparecidos').innerHTML= d.missingCount
-      ? '<div class="card pad"><div style="font-size:13px;color:var(--ops-muted);margin-bottom:8px">Personas reportadas como desaparecidas cuya última ubicación coincide con este edificio (enlace en vivo al registro de Desaparecidos; nombres no verificados):</div><div class="misslist">'+
-        d.missing.map(function(n){ return '<a href="/personas?q='+encodeURIComponent(n)+'">'+esc(n)+' ↗</a>'; }).join('')+'</div></div>'
+    // Desaparecidos — every case attached to this building. A name with a case id
+    // opens the FULL case profile (/casos#caso=<id>); without one it falls back to
+    // the /personas registry search.
+    var caseList = (d.cases&&d.cases.length) ? d.cases : (d.missing||[]).map(function(n){ return {id:null,name:n}; });
+    document.getElementById('p_desaparecidos').innerHTML= caseList.length
+      ? '<div class="card pad"><div style="font-size:13px;color:var(--ops-muted);margin-bottom:8px">Casos vinculados a este edificio — haz clic en un nombre para abrir su expediente completo (enlace en vivo al sistema de Expedientes; nombres no verificados):</div><div class="misslist">'+
+        caseList.map(function(x){
+          return x.id
+            ? '<a href="/casos#caso='+encodeURIComponent(x.id)+'" title="Ver expediente completo">'+esc(x.name)+' 📋</a>'
+            : '<a href="/personas?q='+encodeURIComponent(x.name)+'">'+esc(x.name)+' ↗</a>';
+        }).join('')+'</div></div>'
       : '<div class="empty">Sin desaparecidos enlazados a este edificio. Si conoces a alguien, repórtalo en <a href="/familia">Familia</a>.</div>';
 
     // Documentos & Estudios (studies quick-links + full doc list grouped by kind)
