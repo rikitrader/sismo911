@@ -5,6 +5,7 @@ import {
   SOS_BUILDING_CATEGORIES, SAT_SOURCE, type SosDamageRow, type SatEdifRow,
 } from '../lib/tv-buildings';
 import { registrySummary } from './persons';
+import { getCanonicalCasualties } from '../lib/canonical-casualties';
 
 // Informe de Evaluación de Daños — Costa de La Guaira (terremoto doble Mw7.2+Mw7.5,
 // Falla de San Sebastián, 24-jun-2026). Renderizado DENTRO del marco principal del
@@ -176,6 +177,7 @@ apenas comenzaba).</li>
 <li><strong>Histórico:</strong> el más fuerte desde el <strong>terremoto
 de San Narciso (1900)</strong>.</li>
 </ul>
+<div style="background:#eef6ee;border:1px solid #bcd9bc;border-radius:10px;padding:10px 14px;margin:6px 0 12px;font:500 13px 'Inter',sans-serif;color:#25502c">🔄 <strong>Figuras regeneradas al corte del 2-jul-2026</strong> con el inventario unificado (reportes en tierra + capa satelital Copernicus EMS/AI4G). El texto de las secciones conserva el corte del 28-jun (820 reportes) con el que fue red-teamed; cada figura indica su corte al pie.</div>
 <p><img src="/informe-danos/assets/01_severidad_nacional.png"
 alt="Severidad nacional" /></p>
 <hr />
@@ -775,7 +777,7 @@ const musd = (n: number) => '$' + (n >= 1e9 ? (n / 1e9).toFixed(2) + ' MMM' : Ma
 
 async function livePanelHtml(env: Env): Promise<string> {
   // Same three feeds + pooling as GET /api/buildings/reported (lib/tv-buildings).
-  const [tvR, sosR, satR, reg, evalR] = await Promise.all([
+  const [tvR, sosR, satR, reg, evalR, canon] = await Promise.all([
     env.DB.prepare(
       `SELECT id, name, address, city, zone, lat, lng, damage_level, status,
               main_photo_url, media_urls, general_source, notes, has_missing_persons,
@@ -794,6 +796,7 @@ async function livePanelHtml(env: Env): Promise<string> {
     env.DB.prepare(
       `SELECT COUNT(DISTINCT building_id) AS b, COUNT(*) AS e FROM building_eval_events`,
     ).first<{ b: number; e: number }>().catch(() => null),
+    getCanonicalCasualties(env).catch(() => null),
   ]);
   const tvRows = (tvR.results ?? []) as any[];
   const sosRows = (sosR.results ?? []) as unknown as SosDamageRow[];
@@ -827,6 +830,8 @@ async function livePanelHtml(env: Env): Promise<string> {
       ${stat(musd(repl), 'Reemplazo modelado')}
       ${reg ? stat(nf(reg.missing), 'Personas buscadas') : ''}
       ${reg ? stat(nf(reg.found_safe), 'Reencontradas') : ''}
+      ${canon?.fallecidos != null ? stat(nf(canon.fallecidos), 'Fallecidos (cifra prelim.)') : ''}
+      ${canon?.heridos != null ? stat(nf(canon.heridos), 'Heridos (cifra prelim.)') : ''}
     </div>
     <div style="font:500 12.5px Inter,sans-serif;color:#33415e;margin-top:11px;line-height:1.55">
       El análisis de abajo conserva su corte del <b>28-jun</b> (820 reportes de <code>/danos</code>). Desde entonces el inventario creció a
@@ -835,7 +840,8 @@ async function livePanelHtml(env: Env): Promise<string> {
       del informe, «cerrar el punto ciego epicentral con verificación satelital», <b>está en marcha</b>).
       ${evalR && evalR.b ? `La acción (c), inspección <b>ATC-20</b>, también arrancó: pipeline de evaluación estructural N1/N2/N3 activo con <b>${nf(evalR.b)}</b> edificios priorizados y <b>${nf(evalR.e)}</b> eventos firmados (ver <a href="/edificios" style="color:#1570ef">/edificios</a>).` : ''}
       ${reg ? `Registro de personas: <b>${nf(reg.total)}</b> reportes · <b>${nf(reg.missing)}</b> buscadas · <b>${nf(reg.found_safe)}</b> reencontradas · <b>${nf(reg.hospitalized)}</b> hospitalizados (<a href="/personas" style="color:#1570ef">/personas</a>).` : ''}
-      Costos modelados HAZUS + costos reales VE 2026 — estimación de planificación, no tasación. Cifras oficiales de víctimas en <a href="/victimas" style="color:#1570ef">/victimas</a>.
+      ${canon?.fallecidos != null ? `Balance preliminar consolidado (medios internacionales · en actualización): <b>${nf(canon.fallecidos)}</b> fallecidos${canon.heridos != null ? ` · <b>${nf(canon.heridos)}</b> heridos` : ''}${canon.as_of ? ` (al ${new Date(canon.as_of).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', timeZone: 'America/Caracas' })})` : ''} — supera las cifras del 27-jun citadas abajo (≈1.430).` : ''}
+      Costos modelados HAZUS + costos reales VE 2026 — estimación de planificación, no tasación. Desglose por fuente en <a href="/victimas" style="color:#1570ef">/victimas</a>.
     </div>
   </aside>`;
 }
