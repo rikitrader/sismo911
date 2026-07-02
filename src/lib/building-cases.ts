@@ -1,4 +1,5 @@
 import type { Env } from '../types';
+import { recordIngest } from './db';
 import { linkLiveCases, type LinkedCase, type MissingReport } from './building-score';
 
 // ===== Buildings ↔ Cases linkage (building_cases, migration 0091) =====
@@ -86,4 +87,19 @@ export async function syncBuildingCases(env: Env): Promise<CaseSyncResult> {
     try { await env.DB.batch(batch); written += batch.length; } catch { /* keep going */ }
   }
   return { buildings: buildings.length, reports: reports.length, linked: rows.length, written };
+}
+
+// Cron entrypoint: runs the linker and records the outcome in ingest_log.
+// Runs FIRST in its cron group — as the tail of the tv-buildings job it died
+// with the invocation when the group's subrequest/CPU budget was already gone
+// (2026-07-02: tv-buildings recorded, tv-building-cases never did).
+export async function runBuildingCasesLink(env: Env): Promise<CaseSyncResult> {
+  try {
+    const r = await syncBuildingCases(env);
+    await recordIngest(env, 'tv-building-cases', true, r.linked);
+    return r;
+  } catch (e: any) {
+    await recordIngest(env, 'tv-building-cases', false, 0, String(e?.message || e));
+    throw e;
+  }
 }

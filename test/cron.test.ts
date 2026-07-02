@@ -10,7 +10,7 @@ const ALL_JOB_NAMES = [
   'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync', 'civis-atendidos',
   'hospital-sheet',
   'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match', 'hospital-registry-match',
-  'familia-photo-mirror', 'monitor-sheet', 'cases-sheet-sync', 'case-alerts', 'personas-dedupe-fuzzyphone', 'bulk-import-sweep', 'tv-buildings', 'rav-ingest', 'rav-stats', 'rav-verified',
+  'familia-photo-mirror', 'monitor-sheet', 'cases-sheet-sync', 'case-alerts', 'personas-dedupe-fuzzyphone', 'bulk-import-sweep', 'tv-buildings', 'tv-building-cases', 'rav-ingest', 'rav-stats', 'rav-verified',
   'civis-desaparecidos',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
   'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe', 'rav-reports-dedupe-extid',
@@ -54,6 +54,9 @@ describe('cron groups', () => {
 
   it('keeps RAV jobs isolated from the :30 cleanup/mirror group', () => {
     expect(CRON_GROUPS['30 * * * *'].map((j) => j.name)).toEqual([
+      // tv-building-cases runs FIRST: it needs full budget headroom (it died at
+      // the tail of this group on 2026-07-02 when run inside tv-buildings).
+      'tv-building-cases',
       'familia-photo-mirror',
       'monitor-sheet',
       'hospital-sheet',
