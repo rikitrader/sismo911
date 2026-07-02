@@ -12,7 +12,7 @@ const PAGE_ROWS = (page: number) => Array.from({ length: 3 }, (_, i) => ({
   ubicacion: 'La Guaira', estado: 'sin-contacto',
 }));
 
-function fakeEnv(failFromPage: number) {
+function fakeEnv(failFromPage: number, extra: Record<string, unknown> = {}) {
   const batched: any[] = [];
   const kv: Record<string, string> = { 'familia:cursor': '1' };
   const stmt = () => {
@@ -26,6 +26,7 @@ function fakeEnv(failFromPage: number) {
   };
   const env: any = {
     FAMILIA_SOURCE_URL: 'https://upstream.example/api/personas',
+    ...extra,
     CACHE: {
       get: async (k: string) => kv[k] ?? null,
       put: async (k: string, v: string) => { kv[k] = v; },
@@ -66,7 +67,28 @@ describe('ingestFamilia partial progress', () => {
   it('clean full window keeps the old behavior (cursor = lastPage + 1)', async () => {
     const { env, kv } = fakeEnv(99);               // no failure within the window
     const written = await ingestFamilia(env);
-    expect(written).toBe(75);                      // 25 pages × 3 rows
+    expect(written).toBe(75);                      // 25 pages × 3 rows (direct path)
     expect(kv['familia:cursor']).toBe('26');
+  });
+
+  it('resolver path uses the gentle 4-page burst (stays under the reCAPTCHA-v3 threshold)', async () => {
+    const { env, kv } = fakeEnv(99, {              // no failure; resolver configured
+      FAMILIA_RESOLVER_URL: 'https://tunnel.example/familia',
+      FAMILIA_RESOLVER_TOKEN: 'tok',
+    });
+    const written = await ingestFamilia(env);
+    expect(written).toBe(12);                      // 4 pages × 3 rows, NOT 25
+    expect(kv['familia:cursor']).toBe('5');
+  });
+
+  it('resolver page cap is env-overridable', async () => {
+    const { env, kv } = fakeEnv(99, {
+      FAMILIA_RESOLVER_URL: 'https://tunnel.example/familia',
+      FAMILIA_RESOLVER_TOKEN: 'tok',
+      FAMILIA_RESOLVER_MAX_PAGES: '2',
+    });
+    const written = await ingestFamilia(env);
+    expect(written).toBe(6);                        // 2 pages × 3 rows
+    expect(kv['familia:cursor']).toBe('3');
   });
 });
