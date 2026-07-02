@@ -30,6 +30,7 @@ import {
 import { auditTelegram, checkAbuse, queryFingerprint } from './audit';
 import { hashId } from './hash';
 import { isIntakeMessage, handleIntake } from './intake';
+import { parseModerationCommand, resolveIntakeModeration, buildModerationReply } from './intake/moderate';
 
 type BotEnv = Env & TelegramEnv;
 
@@ -245,6 +246,26 @@ telegram.post('/webhook', async (c) => {
 
   // Everything past here is a text query; ack non-text, non-media updates.
   if (!msg.text) return c.json({ ok: true });
+
+  // 4.6 Operator moderation by ITK code: /aprobar ITK-XXXX | /rechazar ITK-XXXX.
+  //     Approves/rejects the exact intake submission the bot answered with — the
+  //     code the operator already has on the receipt/alert, with no FAM-<id>
+  //     lookup. Admin-tier only (enforced in resolveIntakeModeration). Audited.
+  const mod = parseModerationCommand(msg.text);
+  if (mod) {
+    const actor = `tg:${userId ?? 'anon'}`;
+    const res = await resolveIntakeModeration(c.env, { code: mod.code, action: mod.action, role, actor });
+    await auditTelegram(c.env, {
+      event: 'query',
+      chatId,
+      chatType,
+      userHash,
+      command: `intake_${mod.action}`,
+      resultKind: res.kind,
+    });
+    c.executionCtx.waitUntil(sendMessages(token, chatId, [buildModerationReply(res)]));
+    return c.json({ ok: true });
+  }
 
   // Admin-only: force-reinstall the BotFather command menu on demand.
   if (/^\/(menu|comandos_menu|registrar_comandos|setup_menu)\b/i.test(msg.text) && role === 'admin') {
