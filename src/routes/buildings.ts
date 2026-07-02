@@ -308,21 +308,29 @@ buildings.get('/reported', async (c) => {
       from_tv: tvRows.length,
       from_danos: sosRows.length,
       from_sat: satRows.length,
-      sat_confirmed: pooled.filter((b) => b.sat).length,
+      // sat_confirmed = REPORTED buildings cross-confirmed by a sat point (excludes
+      // the satellite-only rows, which carry b.sat by construction).
+      sat_confirmed: pooled.filter((b) => b.sat && b.source !== SAT_SOURCE).length,
       sat_only: pooled.filter((b) => b.source === SAT_SOURCE).length,
       sat_match_m: SAT_MATCH_M,
       with_coords: withCoords,
       with_photos: withPhotos,
       collapsed: pooled.filter((b) => b.damageLevel === 'total').length,
       people_trapped: pooled.reduce((s, b) => s + (b.peopleTrapped ?? 0), 0),
-      costs_usd: { repair: sumRepair, replacement: sumRepl },
+      costs_usd: {
+        repair: sumRepair, replacement: sumRepl,
+        // transparency: how much of the aggregate comes from satellite-only rows
+        // (default-area HAZUS estimates, confianza LOW — no field survey).
+        sat_only_repair: Math.round(pooled.filter((b) => b.source === SAT_SOURCE).reduce((s2, b) => s2 + (b.cost?.repairUsd ?? 0), 0)),
+        sat_only_replacement: Math.round(pooled.filter((b) => b.source === SAT_SOURCE).reduce((s2, b) => s2 + (b.cost?.replacementUsd ?? 0), 0)),
+      },
       with_cases: pooled.filter((b) => b.cases.length > 0).length,
       by_damage: {
         total: pooled.filter((b) => b.damageLevel === 'total').length,
         severo: pooled.filter((b) => b.damageLevel === 'severo').length,
         parcial: pooled.filter((b) => b.damageLevel === 'parcial').length,
       },
-      cost_note: 'Costo estimado por daño (HAZUS + costos reales VE 2026). Área/pisos desconocidos para reportes ciudadanos → confianza BAJA. No es tasación.',
+      cost_note: 'Costo estimado por daño (HAZUS + costos reales VE 2026). Área/pisos desconocidos para reportes ciudadanos y puntos satelitales → confianza BAJA. Los edificios solo-satélite usan área/pisos por defecto (sat_only_* muestra su aporte al agregado). No es tasación.',
       buildings: mapped.slice(0, limit),
     };
   });
