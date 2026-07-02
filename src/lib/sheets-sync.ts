@@ -1,8 +1,21 @@
 import type { Env } from '../types';
+import { logAgentActivity } from './agent-activity';
 
 // Mirror the social_signals table into a Google Sheet once an hour. The Worker
 // exchanges a stored OAuth refresh token for a short-lived access token, then
 // clears + rewrites the "Señales" tab. All Google creds are wrangler secrets.
+
+// Idempotently ensure a tab exists before writing to it. A `values.update` to a
+// non-existent tab 400s ("Unable to parse range"), so a sync that adds a NEW tab
+// (Hospital / Desaparecidos) must create it first. addSheet errors if the tab
+// already exists — that error is expected and ignored. One cheap request/tick.
+async function ensureSheetTab(sheetId: string, token: string, title: string): Promise<void> {
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ requests: [{ addSheet: { properties: { title } } }] }),
+  }).catch(() => {});   // already-exists (400) or transient → ignore; the write below is the real op
+}
 
 export async function googleAccessToken(env: Env): Promise<string | null> {
   if (!env.GOOGLE_REFRESH_TOKEN || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return null;
@@ -54,6 +67,7 @@ export async function syncDesaparecidosSheet(env: Env): Promise<number> {
 
   const tab = encodeURIComponent('Desaparecidos');
   const auth = { authorization: `Bearer ${token}` };
+  await ensureSheetTab(sheetId, token, 'Desaparecidos');   // self-heal: create the tab if missing
   const header = [['Actualizado', 'Nombre', 'Edad', 'Ubicación', 'Estado', 'Foto', 'Foto URL', 'Descripción', 'Fuente']];
   await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tab}!A1?valueInputOption=RAW`, {
     method: 'PUT', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify({ values: header }),
@@ -64,6 +78,8 @@ export async function syncDesaparecidosSheet(env: Env): Promise<number> {
       method: 'PUT', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify({ values: rows }),
     });
   }
+  await logAgentActivity(env, { source: 'desaparecidos-sheet', action: 'sync', fetched: rows.length, updated: rows.length,
+    summary: `📄 Hoja "Desaparecidos" actualizada — ${rows.length} fila(s) desde D1.`, ok: true }).catch(() => {});
   return rows.length;
 }
 
@@ -90,6 +106,7 @@ export async function syncHospitalSheet(env: Env): Promise<number> {
 
   const tab = encodeURIComponent('Hospital');
   const auth = { authorization: `Bearer ${token}` };
+  await ensureSheetTab(sheetId, token, 'Hospital');        // self-heal: create the tab if missing
   const header = [['Actualizado', 'Nombre', 'Centro', 'Estado', 'Edad', 'Sexo', 'Cédula', 'Observaciones', 'Fuente', 'Código']];
   await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tab}!A1?valueInputOption=RAW`, {
     method: 'PUT', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify({ values: header }),
@@ -100,6 +117,8 @@ export async function syncHospitalSheet(env: Env): Promise<number> {
       method: 'PUT', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify({ values: rows }),
     });
   }
+  await logAgentActivity(env, { source: 'hospital-sheet', action: 'sync', fetched: rows.length, updated: rows.length,
+    summary: `📄 Hoja "Hospital" actualizada — ${rows.length} fila(s) desde D1.`, ok: true }).catch(() => {});
   return rows.length;
 }
 
