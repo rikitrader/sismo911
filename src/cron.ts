@@ -41,6 +41,7 @@ import { ingestCivisAtendidos } from './ingest/civis-atendidos';
 import { ingestCivisDesaparecidos } from './ingest/civis-desaparecidos';
 import { ingestTvBuildings } from './ingest/tv-buildings-cron';
 import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
+import { ingestCivisExtras } from './ingest/civis-extras';
 import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
@@ -247,6 +248,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // Runs 5 min after the :00 USGS/FUNVISIS ingest so alerts are fresh. No-op
     // until the bot is configured; KV-deduped, independent of quake-announce.
     { name: 'sismos-bot-broadcast', run: broadcastSismos },
+    // CIVIS auxiliary feeds — HOURLY. /api/reportes/publicos → sos_damage (citizen
+    // damage reports w/ photos+geo) + /api/puntos → civis_puntos (aid/collection
+    // points). Both idempotent UPSERTs, ~3 fetches total. Rides :05 (external-pull group).
+    { name: 'civis-extras', run: ingestCivisExtras },
   ],
 };
 
