@@ -1,5 +1,10 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
+import {
+  mapTvBuilding, mapSosDamageBuilding, poolReportedBuildings, poolSatellite,
+  SOS_BUILDING_CATEGORIES, SAT_SOURCE, type SosDamageRow, type SatEdifRow,
+} from '../lib/tv-buildings';
+import { registrySummary } from './persons';
 
 // Informe de Evaluación de Daños — Costa de La Guaira (terremoto doble Mw7.2+Mw7.5,
 // Falla de San Sebastián, 24-jun-2026). Renderizado DENTRO del marco principal del
@@ -32,7 +37,7 @@ doble de Venezuela · 24 de junio de 2026 (Mw 7,2 + Mw 7,5 — Falla de San
 Sebastián)</h3>
 <p><strong>Plataforma:</strong> SISMO911 · módulo <code>/danos</code>
 (Evaluación de Daños — Satélite + IA) <strong>Corte de datos:</strong>
-28 de junio de 2026 · <strong>Reportes analizados:</strong> 820
+28 de junio de 2026 (narrativa congelada al corte — cifras actuales en el panel «Actualización en vivo») · <strong>Reportes analizados:</strong> 820
 nacionales / 199 en la costa de La Guaira <strong>Método:</strong>
 lentes de <em>ingeniería estructural</em>, <em>geología/geotecnia</em> y
 <em>gestión de desastres</em>, <strong>endurecido por una revisión
@@ -760,6 +765,81 @@ sustituyen la inspección en sitio. Las cifras de víctimas son
 <strong>rangos en evolución</strong>.</em></p>
 `;
 
+// ── Actualización en vivo ─────────────────────────────────────────────────────
+// The narrative below keeps its frozen 28-jun data cut (820 reports, red-teamed).
+// This panel is computed AT REQUEST TIME from the same D1 feeds that power
+// /edificios and /personas, so the page never goes stale again. Fail-soft: any
+// error renders the report without the panel.
+const nf = (n: number) => Math.round(n).toLocaleString('es-VE');
+const musd = (n: number) => '$' + (n >= 1e9 ? (n / 1e9).toFixed(2) + ' MMM' : Math.round(n / 1e6).toLocaleString('es-VE') + ' M');
+
+async function livePanelHtml(env: Env): Promise<string> {
+  // Same three feeds + pooling as GET /api/buildings/reported (lib/tv-buildings).
+  const [tvR, sosR, satR, reg, evalR] = await Promise.all([
+    env.DB.prepare(
+      `SELECT id, name, address, city, zone, lat, lng, damage_level, status,
+              main_photo_url, media_urls, general_source, notes, has_missing_persons,
+              tv_created_at, tv_updated_at FROM tv_buildings LIMIT 5000`,
+    ).all().catch(() => ({ results: [] as any[] })),
+    env.DB.prepare(
+      `SELECT id, category, severity, verification, title, description, lat, lng,
+              municipio, parroquia, building_type, people_trapped, source_url, image_url, created_at
+         FROM sos_damage WHERE category IN (${SOS_BUILDING_CATEGORIES.map(() => '?').join(',')}) LIMIT 5000`,
+    ).bind(...SOS_BUILDING_CATEGORIES).all().catch(() => ({ results: [] as any[] })),
+    env.DB.prepare(
+      `SELECT id, lat, lng, severidad, oficial, zona, uso, maps_url, updated_ms
+         FROM sat_edificaciones WHERE lat IS NOT NULL AND lng IS NOT NULL LIMIT 5000`,
+    ).all().catch(() => ({ results: [] as any[] })),
+    registrySummary(env, false).catch(() => null),
+    env.DB.prepare(
+      `SELECT COUNT(DISTINCT building_id) AS b, COUNT(*) AS e FROM building_eval_events`,
+    ).first<{ b: number; e: number }>().catch(() => null),
+  ]);
+  const tvRows = (tvR.results ?? []) as any[];
+  const sosRows = (sosR.results ?? []) as unknown as SosDamageRow[];
+  const satRows = (satR.results ?? []) as unknown as SatEdifRow[];
+  if (!tvRows.length && !sosRows.length) return '';
+  const pooled = poolSatellite(
+    poolReportedBuildings(tvRows.map(mapTvBuilding), sosRows.map(mapSosDamageBuilding)), satRows,
+  );
+  const dmg = (lv: string) => pooled.filter((b) => b.damageLevel === lv).length;
+  const satOnly = pooled.filter((b) => b.source === SAT_SOURCE).length;
+  const satConfirmed = pooled.filter((b) => (b as any).sat && b.source !== SAT_SOURCE).length;
+  const repair = pooled.reduce((a, b) => a + (b.cost?.repairUsd ?? 0), 0);
+  const repl = pooled.reduce((a, b) => a + (b.cost?.replacementUsd ?? 0), 0);
+  const fecha = new Date().toLocaleDateString('es-VE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Caracas' });
+  const stat = (v: string, l: string) =>
+    `<div style="background:#fff;border:1px solid #dbe2ef;border-radius:10px;padding:10px 12px;min-width:150px;flex:1 1 150px">` +
+    `<div style="font:800 20px 'Public Sans',sans-serif;color:#13284f">${v}</div>` +
+    `<div style="font:600 10.5px Inter,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#5b6781;margin-top:3px">${l}</div></div>`;
+  return `
+  <aside style="background:#eef3fb;border:1.5px solid #b9c9e6;border-radius:14px;padding:16px 18px;margin-bottom:18px">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <span style="font:800 13px 'Public Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#13284f">📡 Actualización en vivo</span>
+      <span style="font:600 12px Inter,sans-serif;color:#5b6781">corte automático · ${fecha} · se recalcula con los datos vivos del sitio</span>
+    </div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:11px">
+      ${stat(nf(pooled.length), 'Edificios en el inventario')}
+      ${stat(nf(dmg('total')), 'Colapsos totales')}
+      ${stat(nf(dmg('severo')), 'Daño severo')}
+      ${stat(nf(satOnly + satConfirmed), 'Confirmación satelital')}
+      ${stat(musd(repair), 'Reparación modelada')}
+      ${stat(musd(repl), 'Reemplazo modelado')}
+      ${reg ? stat(nf(reg.missing), 'Personas buscadas') : ''}
+      ${reg ? stat(nf(reg.found_safe), 'Reencontradas') : ''}
+    </div>
+    <div style="font:500 12.5px Inter,sans-serif;color:#33415e;margin-top:11px;line-height:1.55">
+      El análisis de abajo conserva su corte del <b>28-jun</b> (820 reportes de <code>/danos</code>). Desde entonces el inventario creció a
+      <b>${nf(pooled.length)}</b> edificios agregados (galerías de terremotovenezuela + <code>/danos</code> + capa satelital Copernicus EMS/AI4G:
+      <b>${nf(satConfirmed)}</b> reportes ciudadanos confirmados por satélite y <b>${nf(satOnly)}</b> edificaciones solo-satélite — la acción (a)
+      del informe, «cerrar el punto ciego epicentral con verificación satelital», <b>está en marcha</b>).
+      ${evalR && evalR.b ? `La acción (c), inspección <b>ATC-20</b>, también arrancó: pipeline de evaluación estructural N1/N2/N3 activo con <b>${nf(evalR.b)}</b> edificios priorizados y <b>${nf(evalR.e)}</b> eventos firmados (ver <a href="/edificios" style="color:#1570ef">/edificios</a>).` : ''}
+      ${reg ? `Registro de personas: <b>${nf(reg.total)}</b> reportes · <b>${nf(reg.missing)}</b> buscadas · <b>${nf(reg.found_safe)}</b> reencontradas · <b>${nf(reg.hospitalized)}</b> hospitalizados (<a href="/personas" style="color:#1570ef">/personas</a>).` : ''}
+      Costos modelados HAZUS + costos reales VE 2026 — estimación de planificación, no tasación. Cifras oficiales de víctimas en <a href="/victimas" style="color:#1570ef">/victimas</a>.
+    </div>
+  </aside>`;
+}
+
 const PAGE = `<!DOCTYPE html><html lang="es"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Informe de Daños — Costa de La Guaira · Terremoto VE 24-jun-2026 · SISMO911</title>
@@ -787,15 +867,19 @@ ${REPORT_CSS}
     <div>
       <div class="text-[11px] font-extrabold tracking-widest uppercase text-on-surface-variant">Informe de evaluación de daños</div>
       <h1 class="font-display font-extrabold text-2xl leading-tight">Costa de La Guaira — Terremoto del 24-jun-2026</h1>
-      <p class="text-sm text-on-surface-variant mt-1">Análisis de los 820 reportes de <a href="/danos" class="text-primary hover:underline">/danos</a> · lentes estructural · geológica · gestión de desastres · revisión adversarial.</p>
+      <p class="text-sm text-on-surface-variant mt-1">Análisis base: 820 reportes de <a href="/danos" class="text-primary hover:underline">/danos</a> (corte 28-jun) · lentes estructural · geológica · gestión de desastres · revisión adversarial · <b>+ actualización en vivo con los datos actuales del sitio</b>.</p>
     </div>
     <a class="shrink-0 inline-flex items-center gap-2 rounded-lg bg-primary text-white px-4 py-2 text-sm font-semibold hover:opacity-90" href="/informe-danos.pdf" download>
       <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
       Descargar PDF
     </a>
   </div>
-  <article class="report-wrap card p-5 sm:p-7">${REPORT_BODY}</article>
+  __LIVE_PANEL__<article class="report-wrap card p-5 sm:p-7">${REPORT_BODY}</article>
 </main>
 </body></html>`;
 
-informeDanos.get('/informe-danos', (c) => c.html(PAGE));
+informeDanos.get('/informe-danos', async (c) => {
+  let panel = '';
+  try { panel = await livePanelHtml(c.env); } catch { panel = ''; }
+  return c.html(PAGE.replace('__LIVE_PANEL__', panel));
+});
