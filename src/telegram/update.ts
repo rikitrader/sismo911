@@ -32,6 +32,16 @@ const ESTADO_ALIASES: Record<string, string> = {
   fallecido: 'fallecido', fallecida: 'fallecido', muerto: 'fallecido', muerta: 'fallecido',
 };
 
+// Humanized display for a normalized estado token (reply text only — the DB
+// keeps the raw token).
+const ESTADO_LABEL: Record<string, string> = {
+  'sin-contacto': 'Sin contacto',
+  localizado: 'Localizado(a)',
+  aparecido: 'Aparecido(a)',
+  hospitalizado: 'En un hospital',
+  fallecido: 'Fallecido(a)',
+};
+
 // Fields that require only operator tier vs the executive (admin) tier.
 const EXECUTIVE_ONLY = new Set<UpdateField>(['aprobar', 'rechazar']);
 
@@ -84,7 +94,7 @@ export async function resolveUpdate(env: Env, cmd: ParsedCommand, ctx: UpdateCtx
         const norm = ESTADO_ALIASES[value.toLowerCase()] ?? (ESTADO_VALUES.has(value.toLowerCase()) ? value.toLowerCase() : null);
         if (!norm) return { kind: 'update_bad_input', reason: 'bad_estado' };
         await env.DB.prepare(`UPDATE personas SET estado=?, updated_at=? WHERE id=?`).bind(norm, now, id).run();
-        return ok(field, rec.caseId, name, `estado → ${norm}`);
+        return ok(field, rec.caseId, name, `estado → ${ESTADO_LABEL[norm] ?? norm}`);
       }
       case 'ubicacion': {
         const sf = computeSearchFields(name, value);

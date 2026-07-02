@@ -5,7 +5,7 @@
 // same string. No LLM, no inference. Factual fields come straight from the DB
 // record via redaction.toPublicView. Defaults to Spanish; English on request.
 
-import type { CaseRecord, PublicStatus, QueryResult, ViewerRole } from './types';
+import type { CaseRecord, PublicStatus, QueryResult, VerificationLevel, ViewerRole } from './types';
 import type { UpdateResult } from './update';
 import type { MuroPost, MuroPostResult } from './muro';
 import { toPublicView } from './redaction';
@@ -40,6 +40,13 @@ const STATUS_LABEL: Record<PublicStatus, { icon: string; es: string; en: string 
   EVACUATED: { icon: '🟠', es: 'Evacuado(a)', en: 'Evacuated' },
   UNKNOWN: { icon: '⚪', es: 'Sin confirmar', en: 'Unconfirmed' },
   PENDING_VERIFICATION: { icon: '⏳', es: 'Pendiente de verificación', en: 'Pending verification' },
+};
+
+// Humanized verification level — never the raw enum (VERIFIED → "Verificado").
+const VERIF_LABEL: Record<VerificationLevel, { es: string; en: string }> = {
+  OFFICIAL: { es: 'Registro oficial', en: 'Official registry' },
+  VERIFIED: { es: 'Verificado', en: 'Verified' },
+  PENDING_VERIFICATION: { es: 'Sin verificar', en: 'Unverified' },
 };
 
 // Recommended next action per public status (kept short + non-committal).
@@ -296,12 +303,13 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
       const mode = result.detail ?? 'summary';
       const label = STATUS_LABEL[view.status];
       const statusTxt = `${label.icon} ${es ? label.es : label.en}`;
+      const verifTxt = VERIF_LABEL[view.verification][opts.lang];
 
       // /status → short status line (no detail body).
       if (mode === 'status') {
         return es
-          ? `Caso: ${escapeHtml(view.caseId)}\nEstado: ${statusTxt}\nNivel: ${view.verification}\nFicha: ${view.profileUrl}`
-          : `Case: ${escapeHtml(view.caseId)}\nStatus: ${statusTxt}\nLevel: ${view.verification}\nProfile: ${view.profileUrl}`;
+          ? `Caso: ${escapeHtml(view.caseId)}\nEstado: ${statusTxt}\nNivel: ${verifTxt}\nFicha: ${view.profileUrl}`
+          : `Case: ${escapeHtml(view.caseId)}\nStatus: ${statusTxt}\nLevel: ${verifTxt}\nProfile: ${view.profileUrl}`;
       }
 
       // Unverified record → never assert a final status (but still link the case).
@@ -322,7 +330,7 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
             `Estado: ${statusTxt}`,
             `Ubicación general: ${escapeHtml(view.generalLocation ?? 'no disponible')}`,
             `Última verificación: ${fmtDate(view.lastVerifiedMs)}`,
-            `Nivel: ${view.verification}`,
+            `Nivel: ${verifTxt}`,
             `Ficha: ${view.profileUrl}`,
             `Nota: ${next}`,
           ]
@@ -334,7 +342,7 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
             `Status: ${statusTxt}`,
             `General location: ${escapeHtml(view.generalLocation ?? 'not available')}`,
             `Last verified: ${fmtDate(view.lastVerifiedMs)}`,
-            `Level: ${view.verification}`,
+            `Level: ${verifTxt}`,
             `Profile: ${view.profileUrl}`,
             `Note: ${next}`,
           ];
@@ -376,8 +384,8 @@ export function buildUpdateResponse(r: UpdateResult, opts: BuildOpts): string {
   switch (r.kind) {
     case 'update_ok':
       return es
-        ? `✅ Caso ${escapeHtml(r.caseId)} (${escapeHtml(r.name)}) actualizado: ${escapeHtml(r.summary)}.`
-        : `✅ Case ${escapeHtml(r.caseId)} (${escapeHtml(r.name)}) updated: ${escapeHtml(r.summary)}.`;
+        ? `✅ Caso ${escapeHtml(r.caseId)} (<b>${escapeHtml(r.name)}</b>) actualizado: ${escapeHtml(r.summary)}.`
+        : `✅ Case ${escapeHtml(r.caseId)} (<b>${escapeHtml(r.name)}</b>) updated: ${escapeHtml(r.summary)}.`;
     case 'update_forbidden':
       if (r.reason === 'not_executive') {
         return es
@@ -403,11 +411,11 @@ export function buildUpdateResponse(r: UpdateResult, opts: BuildOpts): string {
 // ---- Muro de Emergencia (public wall) replies -------------------------------
 // The wall at /muro is fully public, so these render without a redaction tier.
 
-/** One-line preview of a wall post (body clipped so lists stay scannable). */
+/** Card preview of a wall post (body clipped so lists stay scannable). */
 function muroLine(p: MuroPost, baseUrl: string): string {
   const when = fmtDate(p.createdMs);
   const body = p.body.length > 160 ? `${p.body.slice(0, 157)}…` : p.body;
-  return `• ${when} — ${p.name}: ${body}\n  ${baseUrl}/muro/p/${p.id}`;
+  return `💬 <b>${escapeHtml(p.name)}</b> · ${when}\n${escapeHtml(body)}\n<a href="${baseUrl}/muro/p/${p.id}">Ver mensaje</a>`;
 }
 
 /** Deterministic chat text for a /muro post attempt. */
@@ -417,8 +425,8 @@ export function buildMuroPostResponse(r: MuroPostResult, opts: BuildOpts): strin
   switch (r.kind) {
     case 'muro_ok':
       return es
-        ? `✅ Publicado en el Muro de Emergencia como ${r.name}.\nVerlo: ${base}/muro/p/${r.id}\nMuro completo: ${base}/muro`
-        : `✅ Posted to the Emergency Wall as ${r.name}.\nView it: ${base}/muro/p/${r.id}\nFull wall: ${base}/muro`;
+        ? `✅ Publicado en el Muro de Emergencia como <b>${escapeHtml(r.name)}</b>.\nVerlo: ${base}/muro/p/${r.id}\nMuro completo: ${base}/muro`
+        : `✅ Posted to the Emergency Wall as <b>${escapeHtml(r.name)}</b>.\nView it: ${base}/muro/p/${r.id}\nFull wall: ${base}/muro`;
     case 'muro_too_long':
       return es
         ? `El mensaje es demasiado largo para el Muro (máximo ${r.max} caracteres).`
@@ -462,7 +470,7 @@ export function buildMuroMentions(query: string, posts: MuroPost[], opts: BuildO
   const es = opts.lang !== 'en';
   const base = opts.baseUrl || 'https://sismo911.com';
   const header = es
-    ? `🧱 Menciones de «${query}» en el Muro de Emergencia (mensajes públicos SIN verificar):`
-    : `🧱 Mentions of "${query}" on the public Emergency Wall (UNVERIFIED public posts):`;
+    ? `🧱 Menciones de «${escapeHtml(query)}» en el Muro de Emergencia (mensajes públicos SIN verificar):`
+    : `🧱 Mentions of "${escapeHtml(query)}" on the public Emergency Wall (UNVERIFIED public posts):`;
   return ['', header, ...posts.map((p) => muroLine(p, base))].join('\n');
 }

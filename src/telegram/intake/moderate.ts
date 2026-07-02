@@ -105,19 +105,21 @@ export function parseModerationCommand(text: string): { action: ModerationAction
   return { action, code: m[2] };
 }
 
-/** Build the Spanish reply for a moderation result. */
+/** Build the Spanish reply for a moderation result (parse_mode:'HTML'). */
 export function buildModerationReply(r: ModerationResult): string {
-  const who = r.name ? ` — ${r.name}` : '';
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const code = `<b>${esc(r.code)}</b>`;
+  const who = r.name ? ` — <b>${esc(r.name)}</b>` : '';
   switch (r.kind) {
     case 'approved':
-      return `✅ ${r.code} aprobado y publicado${who}.`;
+      return `✅ ${code} aprobado y publicado${who}.`;
     case 'rejected':
-      return `🚫 ${r.code} rechazado (oculto)${who}.`;
+      return `🚫 ${code} rechazado (oculto)${who}.`;
     case 'forbidden':
       return `⛔ Aprobar o rechazar un caso requiere nivel administrador.`;
     case 'not_found':
-      return `No encontré ese envío (${r.code}). Verifica el código del recibo (ej: ITK-6439A061).`;
+      return `No encontré ese envío (${code}). Verifica el código del recibo (ej: ITK-6439A061).`;
     default:
-      return `Ocurrió un error al procesar ${r.code}. Intenta de nuevo.`;
+      return `Ocurrió un error al procesar ${code}. Intenta de nuevo.`;
   }
 }
