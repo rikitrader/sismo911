@@ -88,20 +88,46 @@ export async function dedupePersonas(
     )`;
   // SAFETY (perceptual hash only): a dHash can collide on DIFFERENT people whose
   // photos are visually similar (blank/placeholder/dark) — a real danger in a
-  // missing-persons DB. So for `dhash`, only collapse SMALL clusters (2..6 rows =
-  // the same person across a few sources); a large same-dHash cluster signals a
-  // shared placeholder/generic image and is left untouched. `grp` is the cluster
-  // size; the guard is a no-op for the exact-match modes.
-  const grpGuard = mode === 'dhash' ? `AND grp BETWEEN 2 AND 6` : ``;
-  const sql = `SELECT id, foto_r2 FROM (
+  // missing-persons DB. So for `dhash`:
+  //  · SMALL clusters (2..6 rows = the same person across a few sources) collapse
+  //    whole, as before.
+  //  · LARGE clusters (>6 rows = a shared placeholder/generic image, or one
+  //    family/group photo posted for several relatives) are NEVER collapsed
+  //    whole — but true duplicates hide inside them (prod audit 2026-07-02:
+  //    "Adela Taberneiro" ×2 and "Belkis Carolina Mendoza" ×2 inside 7-8-member
+  //    clusters, each pair = one row with age + one without). Within a large
+  //    cluster we collapse ONLY rows that ALSO agree on normalized full name
+  //    (first+last, ≥5 chars, must contain a space — same conservative scope as
+  //    `fuzzyname`) AND have COMPATIBLE ages (equal, or missing on one side:
+  //    min/max over the subgroup's non-null ages must coincide). Different
+  //    people sharing a placeholder never merge; same name with CONFLICTING
+  //    ages (could be relatives/namesakes on a group photo) and near-miss
+  //    spellings ("Belkys"/"Belkis") are left for operator review.
+  const keeperOrder = `${completeness} DESC, (CASE WHEN foto_r2 IS NOT NULL THEN 0 ELSE 1 END), updated_at DESC, id ASC`;
+  const subPart = `${partitionFor('dhash')}, ${normNameSql('nombre')}`;
+  const sql = mode === 'dhash'
+    ? `SELECT id, foto_r2 FROM (
+      SELECT id, foto_r2,
+        ${normNameSql('nombre')} AS name_norm,
+        ROW_NUMBER() OVER (PARTITION BY ${partitionFor(mode)} ORDER BY ${keeperOrder}) AS rn,
+        COUNT(*) OVER (PARTITION BY ${partitionFor(mode)}) AS grp,
+        ROW_NUMBER() OVER (PARTITION BY ${subPart} ORDER BY ${keeperOrder}) AS subrn,
+        COUNT(*) OVER (PARTITION BY ${subPart}) AS subgrp,
+        coalesce(MIN(edad) OVER (PARTITION BY ${subPart}), -1) AS age_lo,
+        coalesce(MAX(edad) OVER (PARTITION BY ${subPart}), -1) AS age_hi
+      FROM personas ${scope}
+    ) WHERE (grp BETWEEN 2 AND 6 AND rn > 1)
+       OR (grp > 6 AND subgrp >= 2 AND subrn > 1 AND age_lo = age_hi
+           AND length(name_norm) >= 5 AND instr(name_norm, ' ') > 0)`
+    : `SELECT id, foto_r2 FROM (
       SELECT id, foto_r2,
         ROW_NUMBER() OVER (
           PARTITION BY ${partitionFor(mode)}
-          ORDER BY ${completeness} DESC, (CASE WHEN foto_r2 IS NOT NULL THEN 0 ELSE 1 END), updated_at DESC, id ASC
+          ORDER BY ${keeperOrder}
         ) AS rn,
         COUNT(*) OVER (PARTITION BY ${partitionFor(mode)}) AS grp
       FROM personas ${scope}
-    ) WHERE rn > 1 ${grpGuard}`;
+    ) WHERE rn > 1`;
   const { results } = await env.DB.prepare(sql).all<{ id: string; foto_r2: string | null }>();
   const all = results ?? [];
   const found = all.length;
