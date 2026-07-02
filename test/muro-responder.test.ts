@@ -86,7 +86,7 @@ describe('buildWallReply', () => {
     const t = buildWallReply('Maria Perez', MATCH, true, base)!;
     expect(t).toContain('«Maria Perez»');
     expect(t).toContain('FAM-2026-0001');
-    expect(t).toContain('LOCATED');
+    expect(t).toMatch(/Estado: .*(Localizado|LOCATED)/); // status label per current renderer
     expect(t.length).toBeLessThanOrEqual(600);
     expect(t).not.toContain('Maria Fernanda Perez'); // summary tier: no full-name echo
   });

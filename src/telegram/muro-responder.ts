@@ -74,7 +74,10 @@ export function buildWallReply(query: string, result: QueryResult, questionLike:
   switch (result.kind) {
     case 'match':
     case 'multiple': {
-      const text = `↪ Sobre «${query}»: ${buildTelegramResponse(result, opts)}`;
+      // Telegram replies may carry HTML formatting (<b>, <a>); the wall renders
+      // plain text, so strip tags before posting.
+      const body = buildTelegramResponse(result, opts).replace(/<[^>]+>/g, '');
+      const text = `↪ Sobre «${query}»: ${body}`;
       return text.length > MURO_MAX_LEN ? `${text.slice(0, MURO_MAX_LEN - 1)}…` : text;
     }
     case 'no_match':
