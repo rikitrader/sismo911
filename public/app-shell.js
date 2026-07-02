@@ -344,9 +344,6 @@
     #s911-deskbar .s911-dnav-item.active .s911-dico{background:#c0152b;color:#fff;box-shadow:0 2px 8px rgba(192,21,43,.4)}
     #s911-deskbar .s911-dnav-item.active::after{content:'';position:absolute;left:18px;right:18px;bottom:-1px;height:3px;border-radius:3px;background:#e23147}
     #s911-deskbar .s911-dright{display:flex;align-items:center;gap:12px;flex:0 0 auto}
-    #s911-deskbar .s911-dsearch{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;color:#374151;text-decoration:none;transition:background .12s}
-    #s911-deskbar .s911-dsearch:hover{background:#eef0f4;color:#0a1733}
-    #s911-deskbar .s911-dsearch svg{width:20px;height:20px}
     #s911-deskbar .s911-dsos{display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:11px;background:linear-gradient(180deg,#e0394c,#c41f33);color:#fff;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;box-shadow:0 2px 10px rgba(196,31,51,.4);white-space:nowrap}
     #s911-deskbar .s911-dsos:hover{filter:brightness(1.07)}
     #s911-deskbar .s911-dsos svg{width:17px;height:17px}
@@ -396,9 +393,6 @@
         <a href="/informe-danos" class="s911-dnav-item s911-dnav-informe${location.pathname.startsWith('/informe-danos') ? ' active' : ''}" title="Informe de Evaluación de Daños"><span class="s911-dico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h12l4 4v12H4zM14 4v4h4M8 13h8M8 17h6"/></svg></span><span class="s911-dnav-lbl">Evaluación</span></a>
       </nav>
       <div class="s911-dright">
-        <a href="/personas" class="s911-dsearch" title="Buscar en el Registro de Desaparecidos" aria-label="Buscar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M21 21l-4.3-4.3"/></svg>
-        </a>
         <a href="/sos" class="s911-dsos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4m0 4h.01"/></svg>Emergencia / SOS</a>
         <div class="s911-pop" id="s911-deskacct"></div>
       </div>
