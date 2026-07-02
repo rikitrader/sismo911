@@ -50,6 +50,8 @@ export interface Env {
   // to BLOG_INGEST_TOKEN). RAV_VISION_MODEL overrides the photo-analysis model.
   RAV_SUPABASE_URL?: string;
   RAV_SUPABASE_KEY?: string;
+  TV_SUPABASE_URL?: string;
+  TV_SUPABASE_KEY?: string;
   RAV_INGEST_TOKEN?: string;
   RAV_VISION_MODEL?: string;
   // Identity-verification resolver (external Chrome service for CNE padrón lookup).

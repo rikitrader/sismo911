@@ -6,6 +6,7 @@ import {
   scoreCurated, scoreOsm, computeSar, linkLiveMissing,
   type Sector, type Curated, type Osm, type Scored, type Sar, type MissingReport, PRIOR_BLEND,
 } from '../lib/building-score';
+import { mapTvBuilding, type TvBuilding } from '../lib/tv-buildings';
 import sectorsRaw from '../data/buildings/sectors.json';
 import curatedRaw from '../data/buildings/curated.json';
 import osmRaw from '../data/buildings/osm.json';
@@ -220,6 +221,57 @@ buildings.get('/sar/summary', async (c) => {
       buildings_with_live_links: liveLinked, live_reports_indexed: reports.length,
       reported_missing_names: [...missingNames].slice(0, 200),
       note: 'Ocupantes = estimación de personas dentro (ocupación nocturna), NO atrapados. Desaparecidos enlazados EN VIVO desde /api/persons (last_seen) + Familia (ubicacion); nombres no verificados.',
+    };
+  });
+});
+
+// ── GET /api/buildings/reported — real citizen-reported buildings WITH photos ─
+// Mirror of terremotovenezuela.com (ingested hourly into tv_buildings). Each row
+// carries its address, a HAZUS replacement/repair cost, and a PHOTO GALLERY
+// (media[]). Distinct from the modeled curated/OSM inventory above. ?damage= (total|
+// severo|parcial) ?verified=1 ?withPhotos=1 ?state= ?q= ?limit=
+buildings.get('/reported', async (c) => {
+  const limited = await rateLimit(c.env, c, 'buildings_reported', 60, 60);
+  if (limited) return limited;
+  const q = {
+    damage: c.req.query('damage'), state: c.req.query('state'), q: (c.req.query('q') || '').toLowerCase(),
+    verified: c.req.query('verified') === '1', withPhotos: c.req.query('withPhotos') === '1',
+  };
+  const limit = Math.min(Math.max(Number(c.req.query('limit')) || 2000, 1), 5000);
+  return edgeCached(c, 300, async () => {
+    let rows: any[] = [];
+    try {
+      const res = await c.env.DB.prepare(
+        `SELECT id, name, address, city, zone, lat, lng, damage_level, status,
+                main_photo_url, media_urls, general_source, notes, has_missing_persons,
+                tv_created_at, tv_updated_at
+           FROM tv_buildings ORDER BY tv_updated_at DESC LIMIT 5000`,
+      ).all();
+      rows = (res.results ?? []) as any[];
+    } catch { rows = []; }
+    let mapped: TvBuilding[] = rows.map(mapTvBuilding);
+    if (q.damage) mapped = mapped.filter((b) => b.damageLevel.toLowerCase() === q.damage!.toLowerCase());
+    if (q.state) mapped = mapped.filter((b) => b.state.toLowerCase() === q.state!.toLowerCase());
+    if (q.verified) mapped = mapped.filter((b) => b.verified);
+    if (q.withPhotos) mapped = mapped.filter((b) => b.mediaCount > 0);
+    if (q.q) mapped = mapped.filter((b) => (b.name + ' ' + b.addr + ' ' + b.city).toLowerCase().includes(q.q));
+    const mappedAll: TvBuilding[] = rows.map(mapTvBuilding);
+    const withCoords = mapped.filter((b) => b.lat != null && b.lon != null).length;
+    const withPhotos = mapped.filter((b) => b.mediaCount > 0).length;
+    return {
+      event: METHODOLOGY.event,
+      source: 'terremotovenezuela.com',
+      count: mapped.length,
+      total: mappedAll.length,
+      with_coords: withCoords,
+      with_photos: withPhotos,
+      by_damage: {
+        total: mappedAll.filter((b) => b.damageLevel === 'total').length,
+        severo: mappedAll.filter((b) => b.damageLevel === 'severo').length,
+        parcial: mappedAll.filter((b) => b.damageLevel === 'parcial').length,
+      },
+      cost_note: 'Costo estimado por daño (HAZUS + costos reales VE 2026). Área/pisos desconocidos para reportes ciudadanos → confianza BAJA. No es tasación.',
+      buildings: mapped.slice(0, limit),
     };
   });
 });
