@@ -7,8 +7,9 @@ import {
   type Sector, type Curated, type Osm, type Scored, type Sar, type MissingReport, type LinkedCase, PRIOR_BLEND,
 } from '../lib/building-score';
 import {
-  mapTvBuilding, mapSosDamageBuilding, poolReportedBuildings, SOS_BUILDING_CATEGORIES,
-  type TvBuilding, type SosDamageRow,
+  mapTvBuilding, mapSosDamageBuilding, mapSatEdificacion, poolReportedBuildings, poolSatellite,
+  satMatchOf, groundDistM, SOS_BUILDING_CATEGORIES, SAT_MATCH_M, SAT_SOURCE,
+  type TvBuilding, type SosDamageRow, type SatEdifRow, type SatMatch,
 } from '../lib/tv-buildings';
 import { fetchCaseReports, persistedCases, persistedCasesByBuilding } from '../lib/building-cases';
 import sectorsRaw from '../data/buildings/sectors.json';
@@ -258,12 +259,27 @@ buildings.get('/reported', async (c) => {
       sosRows = (res.results ?? []) as unknown as SosDamageRow[];
     } catch { sosRows = []; }
 
-    // 3) pool + dedupe by id (tv galleries win; /danos adds triage/coords/trapped + new buildings)
+    // 2.5) satellite-confirmed damage (sat_edificaciones: Copernicus EMS + AI4G via
+    //      CIVIS) — cross-matched into the SAME pool: a sat point ≤60 m of a reported
+    //      building CONFIRMS it (🛰️ b.sat); the rest join as satellite-only buildings
+    //      so their damage + HAZUS reconstruction cost count in this inventory.
+    let satRows: SatEdifRow[] = [];
+    try {
+      const res = await c.env.DB.prepare(
+        `SELECT id, lat, lng, severidad, oficial, zona, uso, maps_url, updated_ms
+           FROM sat_edificaciones WHERE lat IS NOT NULL AND lng IS NOT NULL LIMIT 5000`,
+      ).all();
+      satRows = (res.results ?? []) as unknown as SatEdifRow[];
+    } catch { satRows = []; }
+
+    // 3) pool + dedupe by id (tv galleries win; /danos adds triage/coords/trapped +
+    //    new buildings), then cross-match the satellite layer by proximity.
     // 4) attach the persisted case links (building_cases): every case name feeds the
     //    /edificios listing and deep-links to its full case profile (/casos#caso=<id>).
     const caseLinks = await persistedCasesByBuilding(c.env);
-    const pooled = poolReportedBuildings(tvRows.map(mapTvBuilding), sosRows.map(mapSosDamageBuilding))
-      .map((b) => ({ ...b, cases: caseLinks[b.id] ?? [] }));
+    const pooled = poolSatellite(
+      poolReportedBuildings(tvRows.map(mapTvBuilding), sosRows.map(mapSosDamageBuilding)), satRows,
+    ).map((b) => ({ ...b, cases: caseLinks[b.id] ?? [] }));
 
     let mapped = pooled;
     if (q.damage) mapped = mapped.filter((b) => b.damageLevel.toLowerCase() === q.damage!.toLowerCase());
@@ -283,12 +299,16 @@ buildings.get('/reported', async (c) => {
     const sumRepl = Math.round(pooled.reduce((s, b) => s + (b.cost?.replacementUsd ?? 0), 0));
     return {
       event: METHODOLOGY.event,
-      source: 'terremotovenezuela.com + sosvenezuela2026.com (/danos)',
-      sources: ['terremotovenezuela.com', 'sosvenezuela2026.com'],
+      source: 'terremotovenezuela.com + sosvenezuela2026.com (/danos) + Copernicus EMS/AI4G (satélite, vía CIVIS)',
+      sources: ['terremotovenezuela.com', 'sosvenezuela2026.com', SAT_SOURCE],
       count: mapped.length,
       total: pooled.length,
       from_tv: tvRows.length,
       from_danos: sosRows.length,
+      from_sat: satRows.length,
+      sat_confirmed: pooled.filter((b) => b.sat).length,
+      sat_only: pooled.filter((b) => b.source === SAT_SOURCE).length,
+      sat_match_m: SAT_MATCH_M,
       with_coords: withCoords,
       with_photos: withPhotos,
       collapsed: pooled.filter((b) => b.damageLevel === 'total').length,
@@ -335,9 +355,41 @@ buildings.get('/reported/:id', async (c) => {
       ).bind(id).first();
     } catch { sosRow = null; }
   }
-  if (!row && !sosRow) return c.json({ error: 'not_found', id }, 404);
+  // Final fallback: satellite-only buildings (sat_edificaciones) get a full
+  // expediente too — the pooled /reported inventory links them to /edificio/:id.
+  let satRow: SatEdifRow | null = null;
+  if (!row && !sosRow) {
+    try {
+      satRow = await c.env.DB.prepare(
+        `SELECT id, lat, lng, severidad, oficial, zona, uso, maps_url, updated_ms
+           FROM sat_edificaciones WHERE id = ?`,
+      ).bind(id).first() as SatEdifRow | null;
+    } catch { satRow = null; }
+  }
+  if (!row && !sosRow && !satRow) return c.json({ error: 'not_found', id }, 404);
   return edgeCached(c, 120, async () => {
-    const b = row ? mapTvBuilding(row) : mapSosDamageBuilding(sosRow as SosDamageRow);
+    const b = row ? mapTvBuilding(row) : sosRow ? mapSosDamageBuilding(sosRow as SosDamageRow) : mapSatEdificacion(satRow!);
+
+    // Satellite confirmation for the card: the sat row itself, or the nearest
+    // sat_edificaciones point within SAT_MATCH_M of the building's coordinates.
+    let satConfirmed: SatMatch | null = b.sat ?? null;
+    if (!satConfirmed && b.lat != null && b.lon != null) {
+      try {
+        const dDeg = 0.0015; // ~165 m bounding box, refined by ground distance below
+        const near = await c.env.DB.prepare(
+          `SELECT id, lat, lng, severidad, oficial, zona, uso, maps_url, updated_ms
+             FROM sat_edificaciones
+            WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? LIMIT 50`,
+        ).bind(b.lat - dDeg, b.lat + dDeg, b.lon - dDeg, b.lon + dDeg).all();
+        let bestD = Infinity; let best: SatEdifRow | null = null;
+        for (const s of (near.results ?? []) as unknown as SatEdifRow[]) {
+          if (s.lat == null || s.lng == null) continue;
+          const dM = groundDistM(b.lat, b.lon, s.lat, s.lng);
+          if (dM < bestD) { bestD = dM; best = s; }
+        }
+        if (best && bestD <= SAT_MATCH_M) satConfirmed = satMatchOf(best, bestD);
+      } catch { /* fail-soft: profile still serves without the satellite layer */ }
+    }
 
     // Forensic record + evidence docs (soft-referenced; may not exist yet).
     let profile: any = null; let docs: any[] = [];
@@ -420,6 +472,11 @@ buildings.get('/reported/:id', async (c) => {
     const createdAt = (row?.tv_created_at ?? sosRow?.created_at) as string | undefined;
     if (createdAt) timeline.push({ at: String(createdAt), kind: 'report', label: 'Reporte ciudadano registrado' });
     if (structure.lastInspectionAt) timeline.push({ at: structure.lastInspectionAt, kind: 'inspection', label: 'Inspección técnica' });
+    if (satConfirmed) timeline.push({
+      at: satConfirmed.detectedAt || b.updatedAt || '',
+      kind: 'satellite',
+      label: `Daño ${satConfirmed.severidad === 'colapso' ? 'por colapso' : 'grave'} confirmado por satélite (Copernicus EMS / AI4G${satConfirmed.distM ? ` · a ${satConfirmed.distM} m` : ''})`,
+    });
     for (const d of docs) if (d.published_at) timeline.push({ at: d.published_at, kind: d.kind, label: d.title || d.kind });
     timeline.sort((a, z) => (z.at || '').localeCompare(a.at || ''));
 
@@ -446,6 +503,10 @@ buildings.get('/reported/:id', async (c) => {
       docCount: docs.length,
       timeline,
       evaluation,
+      satConfirmed,
+      satNote: satConfirmed
+        ? 'Confirmación satelital: Copernicus EMS (UE) verificado + predicción Microsoft AI4G, vía CIVIS Venezuela. Cruce por proximidad (≤60 m), no un peritaje de campo.'
+        : null,
       profileEnriched: !!profile,
       event: METHODOLOGY.event,
       methodology: METHODOLOGY,
@@ -559,9 +620,10 @@ buildings.post('/reported/:id/eval/events', async (c) => {
   const actorName = clamp(body.actor_name, 120);
   const actorRole = clamp(body.actor_role, 120);
   const signedBy = clamp(body.signed_by, 120) ?? actorName;
-  // The building must exist in one of the two feeds (typo can't mint a dangling trail).
+  // The building must exist in one of the three feeds (typo can't mint a dangling trail).
   let bld = await c.env.DB.prepare(`SELECT id FROM tv_buildings WHERE id = ?`).bind(id).first();
   if (!bld) bld = await c.env.DB.prepare(`SELECT id FROM sos_damage WHERE id = ?`).bind(id).first().catch(() => null);
+  if (!bld) bld = await c.env.DB.prepare(`SELECT id FROM sat_edificaciones WHERE id = ?`).bind(id).first().catch(() => null);
   if (!bld) return c.json({ error: 'not_found', id }, 404);
   const createdAt = new Date().toISOString();
   const payload = [id, level, status ?? '', kind, note ?? '', actorName ?? '', actorRole ?? '', signedBy ?? '', createdAt].join('|');

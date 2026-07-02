@@ -104,6 +104,7 @@ export interface TvBuilding {
   triage?: string | null;        // rojo | naranja | amarillo | verde (Venezuela damage triage)
   peopleTrapped?: number;        // people_trapped from a structural-damage report
   sources?: string[];            // provenance when a building is confirmed by >1 feed
+  sat?: SatMatch | null;         // satellite confirmation (Copernicus EMS / AI4G, ≤SAT_MATCH_M)
 }
 
 const STATUS_SCORE: Record<string, number> = {
@@ -221,6 +222,107 @@ export function poolReportedBuildings(tv: TvBuilding[], sos: TvBuilding[]): TvBu
     }
   }
   return [...byId.values()];
+}
+
+// ── Satellite pooling (sat_edificaciones: Copernicus EMS + AI4G via CIVIS) ────
+// The satellite evidence layer is cross-matched into the reported-buildings
+// pool by proximity: a sat point within SAT_MATCH_M of a reported building
+// CONFIRMS that building (b.sat set, verified upgraded); sat points with no
+// nearby report join the pool as satellite-only buildings so their damage +
+// HAZUS reconstruction cost count in the same inventory and each gets its own
+// expediente card at /edificio/:id.
+export const SAT_MATCH_M = 60;
+export const SAT_SOURCE = 'Copernicus EMS + AI4G (satélite, vía CIVIS)';
+
+export interface SatEdifRow {
+  id: string; lat: number | null; lng: number | null; severidad: string | null;
+  oficial: number | null; zona: string | null; uso: string | null;
+  maps_url: string | null; updated_ms?: number | null;
+}
+
+export interface SatMatch {
+  id: string; severidad: string; oficial: boolean; distM: number;
+  zona: string; uso: string; mapsUrl: string | null; detectedAt: string | null;
+}
+
+// severidad (colapso | grave) → damage_level (total | severo | parcial).
+export function satDamageLevel(severidad: string | null): string {
+  const s = (severidad || '').toLowerCase();
+  if (s === 'colapso') return 'total';
+  if (s === 'grave') return 'severo';
+  return 'parcial';
+}
+
+export function satMatchOf(row: SatEdifRow, distM: number): SatMatch {
+  return {
+    id: row.id, severidad: (row.severidad || '').toLowerCase(), oficial: !!row.oficial,
+    distM: Math.round(distM), zona: row.zona || '', uso: row.uso || '',
+    mapsUrl: row.maps_url || null,
+    detectedAt: row.updated_ms ? new Date(row.updated_ms).toISOString() : null,
+  };
+}
+
+// Satellite-only building → pooled inventory shape (same HAZUS cost defaults
+// as citizen reports: area/floors unknown → costConf LOW; honest, not a survey).
+export function mapSatEdificacion(row: SatEdifRow): TvBuilding {
+  const damageLevel = satDamageLevel(row.severidad);
+  const status = tvStatus(damageLevel);
+  const score = STATUS_SCORE[status] ?? 62;
+  const bandName = band(score);
+  const zona = row.zona || '';
+  const state = tvState(zona.split('/').pop() || zona);
+  const uso = row.uso && row.uso !== 'Unclassified' ? row.uso : '';
+  const cost = computeCost('RESIDENCIAL', state, status, bandName, undefined);
+  return {
+    id: row.id,
+    name: ['Edificación satélite', zona].filter(Boolean).join(' — '),
+    addr: [uso, zona].filter(Boolean).join(', ') || 'Ubicación por coordenadas satelitales',
+    city: zona, zone: zona, state,
+    lat: row.lat ?? null, lon: row.lng ?? null,
+    damageLevel, status, band: bandName,
+    verified: !!row.oficial,
+    hasMissing: false, notes: '', source: SAT_SOURCE,
+    photo: null, media: [], mediaCount: 0,
+    cost, updatedAt: row.updated_ms ? new Date(row.updated_ms).toISOString() : null,
+    sources: [SAT_SOURCE],
+    sat: satMatchOf(row, 0),
+  };
+}
+
+// Equirectangular ground distance in meters — fine at building scale.
+export function groundDistM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000, rad = Math.PI / 180;
+  const x = (lon2 - lon1) * rad * Math.cos(((lat1 + lat2) / 2) * rad);
+  const y = (lat2 - lat1) * rad;
+  return Math.sqrt(x * x + y * y) * R;
+}
+
+// Cross-match satellite points into the pooled inventory. Matched buildings are
+// ENRICHED in place (nearest sat point wins, verified upgraded, provenance
+// appended); unmatched sat points are APPENDED as satellite-only buildings.
+// Conservation: result.length === pooled.length + unmatched sat count.
+export function poolSatellite(pooled: TvBuilding[], sats: SatEdifRow[], maxM = SAT_MATCH_M): TvBuilding[] {
+  const located = pooled.filter((b) => b.lat != null && b.lon != null);
+  const extra: TvBuilding[] = [];
+  for (const s of sats) {
+    if (s.lat == null || s.lng == null) { continue; } // unlocatable sat rows are dropped, not fabricated
+    let best: TvBuilding | null = null; let bestD = Infinity;
+    for (const b of located) {
+      // cheap prefilter: ~0.001° ≈ 110 m
+      if (Math.abs((b.lat as number) - s.lat) > 0.0015 || Math.abs((b.lon as number) - s.lng) > 0.0015) continue;
+      const dM = groundDistM(b.lat as number, b.lon as number, s.lat, s.lng);
+      if (dM < bestD) { bestD = dM; best = b; }
+    }
+    if (best && bestD <= maxM) {
+      if (!best.sat || bestD < best.sat.distM) best.sat = satMatchOf(s, bestD);
+      if (!best.verified && s.oficial) best.verified = true;
+      if (!best.sources) best.sources = [best.source];
+      if (!best.sources.includes(SAT_SOURCE)) best.sources.push(SAT_SOURCE);
+    } else {
+      extra.push(mapSatEdificacion(s));
+    }
+  }
+  return [...pooled, ...extra];
 }
 
 function safeArr(s: any): string[] {
