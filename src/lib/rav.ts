@@ -50,6 +50,52 @@ export async function ravFetch<T = any>(
   return { rows: Array.isArray(rows) ? rows : [], total };
 }
 
+// --- /api/data proxy (2026-07 lockdown) ---
+// RAV revoked anon SELECT on missing_persons / reports / safe_reports
+// (PostgREST 42501 → HTTP 401 since ~2026-06-28). Their frontend now reads
+// through the site's own Next.js proxy: POST https://redayudavenezuela.com/api/data
+// {op, ...params} → {ok, data}. verified_info + official_stats KEEP anon SELECT,
+// so ravFetch still serves those two. missing_search pages are a fixed 40 rows
+// (server-side pageSize, not overridable); totals come from op missing_count.
+
+const DEFAULT_DATA_URL = 'https://redayudavenezuela.com/api/data';
+export const RAV_MS_PAGE = 40;
+
+export async function ravData<T = any>(env: Env, op: string, params: Record<string, unknown> = {}): Promise<T> {
+  const url = ((env as any).RAV_DATA_URL || DEFAULT_DATA_URL) as string;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ op, ...params }),
+  });
+  if (!res.ok) throw new Error(`RAV data ${op} HTTP ${res.status}`);
+  const j = (await res.json()) as { ok?: boolean; data?: T; error?: string };
+  if (!j?.ok) throw new Error(`RAV data ${op} failed: ${j?.error || 'unknown'}`);
+  return j.data as T;
+}
+
+// Cursor for the proxy-paged missing_persons sweep: "<status>:<page>". The sweep
+// walks all `active` pages, then all `found` pages, then wraps back to active —
+// so located-people status updates keep flowing even though the two lists are
+// separate server-side queries. A legacy value (the old numeric PostgREST row
+// offset) parses as a fresh `active:0`.
+export type RavMissingStatus = 'active' | 'found';
+export interface RavMissingCursor { status: RavMissingStatus; page: number; }
+
+export function parseRavCursor(v: string | null | undefined): RavMissingCursor {
+  const m = /^(active|found):(\d+)$/.exec(String(v ?? '').trim());
+  if (!m) return { status: 'active', page: 0 };
+  return { status: m[1] as RavMissingStatus, page: Math.max(0, parseInt(m[2], 10) || 0) };
+}
+
+// Advance after a run that stopped at `nextPage`. `exhausted` (an empty/short
+// page was hit) flips to the other status list at page 0; a full active→found
+// cycle therefore alternates statuses forever. Returns the cursor string to store.
+export function advanceRavCursor(cur: RavMissingCursor, nextPage: number, exhausted: boolean): string {
+  if (exhausted) return cur.status === 'active' ? 'found:0' : 'active:0';
+  return `${cur.status}:${Math.max(0, nextPage)}`;
+}
+
 // RAV status → personas estado. RAV uses literal 'active' | 'found'; map found →
 // localizado (safe/located) and everything else → sin-contacto (still missing).
 export function mapRavEstado(status: any): string {
