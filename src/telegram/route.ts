@@ -15,8 +15,9 @@ import { TgUpdate, type CaseRecord, type ParsedCommand, type QueryResult, type V
 import { verifyWebhook, isRequestAuthorized, canViewSensitiveData, viewerRoleFor } from './auth';
 import { parseCommand } from './commands';
 import { aiNormalizeIntent } from './intent';
-import { buildTelegramResponse, buildListMessages, buildUpdateResponse } from './responses';
+import { buildTelegramResponse, buildListMessages, buildUpdateResponse, buildMuroPostResponse, buildMuroLatestResponse, buildMuroMentions } from './responses';
 import { resolveUpdate } from './update';
+import { postToMuro, searchMuroMentions, latestMuroPosts, muroDisplayName } from './muro';
 import { syncBotCommands, getRegisteredVersion } from './botcommands';
 import { redactSensitiveFields, isHiddenFromPublic } from '../adapters/sismo911-api';
 import {
@@ -316,6 +317,29 @@ telegram.post('/webhook', async (c) => {
     return c.json({ ok: true });
   }
 
+  // 5.6 Public-wall bridge: /muro <texto> publishes on the Muro de Emergencia
+  //     (sismo911.com/muro) as the sender; bare /muro lists the latest posts.
+  //     Reaches here only from authorized chats and is rate-limited above, so
+  //     the wall's web-only CAPTCHA is not needed on this path. Audited.
+  if (cmd.kind === 'muro') {
+    const muroBase = c.env.PUBLIC_BASE_URL || 'https://sismo911.com';
+    const muroOpts = { lang: cmd.lang, role, canSeeSensitive, baseUrl: muroBase };
+    let reply: string;
+    let resultKind: string;
+    if (cmd.muroText) {
+      const posted = await postToMuro(c.env, { name: muroDisplayName(msg.from), text: cmd.muroText });
+      reply = buildMuroPostResponse(posted, muroOpts);
+      resultKind = posted.kind;
+    } else {
+      const latest = await latestMuroPosts(c.env);
+      reply = buildMuroLatestResponse(latest, muroOpts);
+      resultKind = 'muro_latest';
+    }
+    await auditTelegram(c.env, { event: 'query', chatId, chatType, userHash, command: 'muro', resultKind });
+    c.executionCtx.waitUntil(sendMessages(token, chatId, [reply]));
+    return c.json({ ok: true });
+  }
+
   // 6. Resolve against verified DB data.
   const result = await resolveQuery(c.env, cmd, { canSeeSensitive, role });
 
@@ -359,6 +383,17 @@ telegram.post('/webhook', async (c) => {
     result.kind === 'list'
       ? buildListMessages(result.records, opts, result.query)
       : [buildTelegramResponse(result, opts)];
+
+  // 9.5 Muro bridge (read side): a full-name search also surfaces recent PUBLIC
+  //     wall posts mentioning that name, clearly labeled as unverified. Public
+  //     content only — no registry data flows through this path.
+  const nameSearch = (cmd.kind === 'buscar' || cmd.kind === 'missing') && cmd.name && !cmd.partialName;
+  if (nameSearch && ['match', 'list', 'no_match', 'multiple'].includes(result.kind)) {
+    const mentions = await searchMuroMentions(c.env, cmd.name!);
+    const section = buildMuroMentions(cmd.name!, mentions, opts);
+    if (section) msgs[msgs.length - 1] += `\n${section}`;
+  }
+
   c.executionCtx.waitUntil(sendMessages(token, chatId, msgs));
   return c.json({ ok: true });
 });

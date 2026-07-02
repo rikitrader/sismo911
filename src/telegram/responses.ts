@@ -7,6 +7,7 @@
 
 import type { CaseRecord, PublicStatus, QueryResult, ViewerRole } from './types';
 import type { UpdateResult } from './update';
+import type { MuroPost, MuroPostResult } from './muro';
 import { toPublicView } from './redaction';
 
 export interface BuildOpts {
@@ -46,6 +47,8 @@ const HELP_ES = [
   '• /status EXP-2026-0123 — estado de un caso',
   '• /hospitalizados nombre "Jose Garcia" — buscar en el registro de hospitales',
   '• /missing nombre "Ana Rodriguez" — buscar personas desaparecidas',
+  '• /muro Vi a Maria Perez en el refugio de Catia — publicar un mensaje en el Muro de Emergencia (sismo911.com/muro)',
+  '• /muro — ver los últimos mensajes del Muro',
   '• /ayuda — mostrar esta ayuda',
   '',
   '📎 CÓMO REPORTAR CON UNA FOTO O UN PDF (crear o actualizar un caso):',
@@ -82,6 +85,8 @@ const HELP_EN = [
   '• /status EXP-2026-0123 — case status',
   '• /hospitalized name "Jose Garcia" — search the hospital registry',
   '• /missing name "Ana Rodriguez" — search missing persons',
+  '• /muro I saw Maria Perez at the Catia shelter — post to the public Emergency Wall (sismo911.com/muro)',
+  '• /muro — show the latest Wall posts',
   '• /help — show this help',
   '',
   '📎 HOW TO REPORT WITH A PHOTO OR PDF (create or update a case):',
@@ -358,4 +363,71 @@ export function buildUpdateResponse(r: UpdateResult, opts: BuildOpts): string {
     default:
       return es ? 'Ocurrió un error al actualizar. Intenta de nuevo.' : 'An error occurred while updating. Try again.';
   }
+}
+
+// ---- Muro de Emergencia (public wall) replies -------------------------------
+// The wall at /muro is fully public, so these render without a redaction tier.
+
+/** One-line preview of a wall post (body clipped so lists stay scannable). */
+function muroLine(p: MuroPost, baseUrl: string): string {
+  const when = fmtDate(p.createdMs);
+  const body = p.body.length > 160 ? `${p.body.slice(0, 157)}…` : p.body;
+  return `• ${when} — ${p.name}: ${body}\n  ${baseUrl}/muro/p/${p.id}`;
+}
+
+/** Deterministic chat text for a /muro post attempt. */
+export function buildMuroPostResponse(r: MuroPostResult, opts: BuildOpts): string {
+  const es = opts.lang !== 'en';
+  const base = opts.baseUrl || 'https://sismo911.com';
+  switch (r.kind) {
+    case 'muro_ok':
+      return es
+        ? `✅ Publicado en el Muro de Emergencia como ${r.name}.\nVerlo: ${base}/muro/p/${r.id}\nMuro completo: ${base}/muro`
+        : `✅ Posted to the Emergency Wall as ${r.name}.\nView it: ${base}/muro/p/${r.id}\nFull wall: ${base}/muro`;
+    case 'muro_too_long':
+      return es
+        ? `El mensaje es demasiado largo para el Muro (máximo ${r.max} caracteres).`
+        : `That message is too long for the Wall (max ${r.max} characters).`;
+    case 'muro_empty':
+      return es
+        ? 'Escribe el mensaje después del comando. Ejemplo: /muro Vi a Maria Perez en el refugio de Catia'
+        : 'Type the message after the command. Example: /muro I saw Maria Perez at the Catia shelter';
+    default:
+      return es
+        ? 'No pude publicar en el Muro. Inténtalo de nuevo.'
+        : 'I could not post to the Wall. Try again.';
+  }
+}
+
+/** Latest wall posts (bare /muro). */
+export function buildMuroLatestResponse(posts: MuroPost[], opts: BuildOpts): string {
+  const es = opts.lang !== 'en';
+  const base = opts.baseUrl || 'https://sismo911.com';
+  if (posts.length === 0) {
+    return es
+      ? `El Muro de Emergencia no tiene mensajes recientes. Publica con: /muro <tu mensaje>\n${base}/muro`
+      : `The Emergency Wall has no recent posts. Post with: /muro <your message>\n${base}/muro`;
+  }
+  const header = es
+    ? `🧱 Últimos ${posts.length} mensajes del Muro de Emergencia:`
+    : `🧱 Latest ${posts.length} Emergency Wall posts:`;
+  const footer = es
+    ? `Muro completo: ${base}/muro — publica con /muro <tu mensaje>`
+    : `Full wall: ${base}/muro — post with /muro <your message>`;
+  return [header, '', ...posts.map((p) => muroLine(p, base)), '', footer].join('\n');
+}
+
+/**
+ * Extra section appended to a name-search reply when the searched name also
+ * appears in recent PUBLIC wall posts. Empty string when there are none, so
+ * callers can unconditionally concatenate.
+ */
+export function buildMuroMentions(query: string, posts: MuroPost[], opts: BuildOpts): string {
+  if (posts.length === 0) return '';
+  const es = opts.lang !== 'en';
+  const base = opts.baseUrl || 'https://sismo911.com';
+  const header = es
+    ? `🧱 Menciones de «${query}» en el Muro de Emergencia (mensajes públicos SIN verificar):`
+    : `🧱 Mentions of "${query}" on the public Emergency Wall (UNVERIFIED public posts):`;
+  return ['', header, ...posts.map((p) => muroLine(p, base))].join('\n');
 }
