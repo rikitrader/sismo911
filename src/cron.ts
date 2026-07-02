@@ -38,6 +38,7 @@ import { backfillHospitalMatches } from './ingest/hospital-match';
 import { drainHospitalRegistryMatch } from './ingest/hospital-registry-match';
 import { ingestHospitalRegistry } from './ingest/hospital-registry-sync';
 import { ingestCivisAtendidos } from './ingest/civis-atendidos';
+import { ingestCivisDesaparecidos } from './ingest/civis-desaparecidos';
 import { ingestTvBuildings } from './ingest/tv-buildings-cron';
 import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
 import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
@@ -179,6 +180,11 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // profiles. Runs FIRST here so its bounded (~28) subrequests land before the
     // heavier social/blog jobs draw down the invocation budget.
     { name: 'civis-atendidos', run: ingestCivisAtendidos },
+    // CIVIS desaparecidos (civisvenezuela.com) — HOURLY. Pages the missing-persons
+    // registry (limit=100+offset KV cursor) into `personas` as new/updated rows;
+    // photos auto-mirror to R2 via familia-photo-mirror + dedupe crons. Also
+    // refreshes the Sheet "Desaparecidos" tab. Bounded (~10 subreq/tick).
+    { name: 'civis-desaparecidos', run: ingestCivisDesaparecidos },
     { name: 'social-monitor', run: ingestSocialMonitor },
     { name: 'blog', run: ingestBlog },
     // Trailing casualty (fallecidos/heridos/desaparecidos) poller. Self-throttles

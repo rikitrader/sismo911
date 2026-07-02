@@ -27,6 +27,46 @@ const HP_ESTADO_ES: Record<string, string> = {
   hospitalizado: '🟠 Hospitalizado', alta: '🟢 De alta', fallecido: '⚫ Fallecido', desconocido: '⚪ Desconocido',
 };
 
+const P_ESTADO_ES: Record<string, string> = {
+  'localizado': '🟢 Localizado', 'sin-contacto': '🔴 Buscando', 'desaparecido': '🔴 Buscando',
+};
+
+// Mirror the CIVIS-sourced missing persons (personas WHERE origen LIKE 'civis:%')
+// into the "Desaparecidos" tab. CIVIS-scoped + bounded (5000 newest) so it stays
+// cheap even though `personas` overall holds ~53k rows. Best-effort: no sheet id /
+// no token / API failure → 0, never throws.
+export async function syncDesaparecidosSheet(env: Env): Promise<number> {
+  const sheetId = env.DESAP_SHEET_ID || env.MONITOR_SHEET_ID;
+  if (!sheetId) return 0;
+  const token = await googleAccessToken(env);
+  if (!token) return 0;
+
+  const { results } = await env.DB.prepare(
+    `SELECT nombre, edad, ubicacion, estado, foto, foto_r2, origen, descripcion, updated_at
+     FROM personas WHERE origen LIKE 'civis:%' ORDER BY updated_at DESC LIMIT 5000`
+  ).all<any>();
+  const rows = (results ?? []).map((r) => [
+    r.updated_at ? new Date(r.updated_at).toISOString().replace('T', ' ').slice(0, 16) : '',
+    r.nombre ?? '', r.edad ?? '', r.ubicacion ?? '', P_ESTADO_ES[r.estado] ?? r.estado ?? '',
+    r.foto_r2 ? 'sí (R2)' : (r.foto ? 'sí' : 'no'), r.foto ?? '',
+    String(r.descripcion ?? '').slice(0, 400), r.origen ?? '',
+  ]);
+
+  const tab = encodeURIComponent('Desaparecidos');
+  const auth = { authorization: `Bearer ${token}` };
+  const header = [['Actualizado', 'Nombre', 'Edad', 'Ubicación', 'Estado', 'Foto', 'Foto URL', 'Descripción', 'Fuente']];
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tab}!A1?valueInputOption=RAW`, {
+    method: 'PUT', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify({ values: header }),
+  }).catch(() => {});
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tab}!A2:I5001:clear`, { method: 'POST', headers: auth }).catch(() => {});
+  if (rows.length) {
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tab}!A2?valueInputOption=RAW`, {
+      method: 'PUT', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify({ values: rows }),
+    });
+  }
+  return rows.length;
+}
+
 // Mirror the hospital_patients registry (Cruz Roja feed + CIVIS atendidos) into
 // the "Hospital" tab of the Google Sheet. Best-effort + additive: a no sheet-id /
 // no-token / API failure returns 0 and never throws, so it can never break a cron
