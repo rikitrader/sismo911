@@ -104,8 +104,23 @@ export async function ingestFamilia(env: Env): Promise<number> {
     const addRows = (rows: any[]) => { for (const r of rows) { const o = r.properties ? { ...r.properties, ...r } : r; const id = pick(o, ['id', '_id', 'uuid', 'codigo']); if (id) seen.set(String(id), o); } };
     addRows(toArray(first));
 
-    const lastPage = Math.min(totalPages, start + MAX_PAGES_PER_RUN - 1);
-    for (let p = start + 1; p <= lastPage; p++) addRows(toArray(await fetchPage(p)));
+    // PARTIAL PROGRESS: the resolver path is rate-limited upstream (reCAPTCHA
+    // v3 verification rejects bursts — observed live 2026-07-02: ~4-5 pages
+    // succeed, then 403s). A mid-run failure must NOT discard the pages already
+    // fetched: ingest what we have and advance the cursor to the last good
+    // page, so every hourly tick makes real progress even under the limit.
+    // Only a FIRST-page failure (fetchPage(start) above) still fails the run.
+    let lastPage = Math.min(totalPages, start + MAX_PAGES_PER_RUN - 1);
+    let partial: string | null = null;
+    for (let p = start + 1; p <= lastPage; p++) {
+      try {
+        addRows(toArray(await fetchPage(p)));
+      } catch (e: any) {
+        partial = String(e?.message ?? e);
+        lastPage = p - 1;   // cursor advances only past pages that landed
+        break;
+      }
+    }
 
     const stmts = [];
     let rejected = 0;
@@ -153,13 +168,15 @@ export async function ingestFamilia(env: Env): Promise<number> {
 
     const next = lastPage >= totalPages ? 1 : lastPage + 1;   // wrap to 1 after a full cycle
     await env.CACHE.put(CURSOR_KEY, String(next)).catch(() => {});
+    // A partial run still made real progress — record it as a success (the
+    // ingest IS flowing) but keep the stop reason visible in the log line.
     await recordIngest(env, 'familia', true, written);
-    console.log(`[familia] pages ${start}-${lastPage}/${totalPages}: upserted ${written}, rejected ${rejected}; next cursor=${next}`);
+    console.log(`[familia] pages ${start}-${lastPage}/${totalPages}: upserted ${written}, rejected ${rejected}; next cursor=${next}${partial ? `; PARTIAL (stopped by: ${partial})` : ''}`);
     // CRM tracking heartbeat — the Familia (theempire) desaparecidos registry.
     const m = await missingStats(env);
     await logAgentActivity(env, {
       source: 'familia', action: 'ingest', fetched: written + rejected, created: written, stillMissing: m.total, stillUnique: m.unique,
-      summary: `🤖 Ingesta Familia (desaparecidos) — ${written} sincronizados (págs ${start}–${lastPage}/${totalPages}). ${missingPhrase(m)}.`,
+      summary: `🤖 Ingesta Familia (desaparecidos) — ${written} sincronizados (págs ${start}–${lastPage}/${totalPages}${partial ? ', parcial' : ''}). ${missingPhrase(m)}.`,
     });
     return written;
   } catch (e: any) {
