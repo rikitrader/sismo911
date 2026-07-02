@@ -46,6 +46,7 @@ import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
 import { sweepBulkJobs } from './bulk/import-job';
 import { runCaseAlerts } from './ingest/case-alerts';
+import { runBuildingCasesLink } from './lib/building-cases';
 
 // Drain the hospital cross-match a bounded number of pages per tick (whole
 // registry completes over a few ticks; thereafter it re-scans for new intakes).
@@ -142,6 +143,11 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   // sheet sync and fuzzyphone dedupe. Keep RAV off this trigger: together these
   // jobs can exceed the Free-plan subrequest cap before RAV gets its turn.
   '30 * * * *': [
+    // Buildings ↔ cases auto-linker. Runs FIRST in the group: it needs only
+    // ~5-10 subrequests (2 registry reads + chunked INSERT OR IGNORE batches)
+    // but a few seconds of CPU for the name-token match — at the TAIL of this
+    // group (as part of tv-buildings) the invocation died before it could run.
+    { name: 'tv-building-cases', run: runBuildingCasesLink },
     { name: 'familia-photo-mirror', run: mirrorFamiliaPhotos },
     { name: 'monitor-sheet', run: syncMonitorSheet },
     // Mirror the hospital_patients registry (Cruz Roja + CIVIS) into the Sheet's
