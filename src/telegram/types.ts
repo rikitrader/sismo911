@@ -97,6 +97,7 @@ export type CommandKind =
   | 'hospitalizados'
   | 'missing'
   | 'actualizar'
+  | 'muro'
   | 'ayuda'
   | 'unknown';
 
@@ -120,6 +121,8 @@ export interface ParsedCommand {
   // aprobar/rechazar). caseId carries the target case id.
   updateField?: UpdateField;
   updateValue?: string;
+  // /muro: free text to publish on the public wall (empty → show latest posts).
+  muroText?: string;
   raw: string;
 }
 
@@ -130,6 +133,7 @@ export const TgUser = z
   .object({
     id: z.number(),
     is_bot: z.boolean().optional(),
+    first_name: z.string().optional(),
     username: z.string().optional(),
     language_code: z.string().optional(),
   })

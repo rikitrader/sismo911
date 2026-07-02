@@ -15,7 +15,7 @@
 import type { Env } from '../types';
 import type { TelegramConfig } from './env';
 
-export const COMMANDS_VERSION = 1;
+export const COMMANDS_VERSION = 2; // v2: + /muro (public Emergency Wall bridge)
 const TG_API = 'https://api.telegram.org';
 const KV_KEY = 'tg:botcommands:v';
 
@@ -31,6 +31,7 @@ export const PUBLIC_COMMANDS: BotCommand[] = [
   { command: 'status', description: 'Estado corto de un caso' },
   { command: 'hospitalizados', description: 'Buscar en el registro de hospitales' },
   { command: 'missing', description: 'Buscar personas desaparecidas' },
+  { command: 'muro', description: 'Publicar en el Muro de Emergencia (o ver los últimos mensajes)' },
   { command: 'ayuda', description: 'Ayuda y lista de comandos' },
 ];
 
@@ -45,6 +46,7 @@ export const BOT_DESCRIPTION = [
   'Bot oficial de SISMO911. Consulto el estado de casos con datos verificados.',
   '',
   '• Buscar: /buscar, /caso, /status, /hospitalizados, /missing.',
+  '• Muro de Emergencia: /muro <mensaje> publica en sismo911.com/muro; /muro muestra lo último.',
   '• Reportar: envíame una FOTO o un PDF (una cédula, un volante o un reporte) y creo o actualizo el caso automáticamente.',
   '• Operadores: /actualizar para editar un caso.',
   '',

@@ -55,6 +55,13 @@ const COMMANDS: Record<string, CommandKind> = {
   commands: 'ayuda',
 };
 
+// /muro publishes to the public wall at sismo911.com/muro — a WRITE command, so
+// it is SLASH-ONLY. A sentence that merely starts with the bare word "muro"
+// ("muro se cayó en Catia") must never publish; it falls through to the normal
+// free-text search path. No '/publicar' alias: that word already means "approve"
+// in the operator vocabulary (/actualizar <ID> publicar).
+const MURO_COMMANDS = new Set(['muro', 'wall']);
+
 // English command words / keywords that flip the reply language to English.
 const EN_COMMANDS = new Set(['search', 'find', 'case', 'hospitalized', 'missing', 'help', 'status', 'commands']);
 const EN_KEYWORDS = new Set(['name', 'birth', 'dob', 'phone', 'city', 'id']);
@@ -170,6 +177,14 @@ export function parseCommand(text: string): ParsedCommand {
   }
   const cmdWord = head.toLowerCase();
   const known = COMMANDS[cmdWord];
+
+  // Slash-only wall command: /muro <texto> publishes; bare /muro lists recent posts.
+  // The post text is cut from the RAW message (not re-joined tokens) so the
+  // author's quotes/newlines survive onto the wall verbatim.
+  if (isSlash && MURO_COMMANDS.has(cmdWord)) {
+    const muroText = raw.replace(/^\s*(?:@\S+\s+)*\/(?:muro|wall)(?:@\S+)?\s*/i, '').trim();
+    return { kind: 'muro', lang: detectLang(raw, cmdWord === 'wall'), muroText, raw };
+  }
 
   let kind: CommandKind;
   let args: string[];
