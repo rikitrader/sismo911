@@ -16,6 +16,8 @@
   <url><loc>https://sismo911.com/donar</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
   <url><loc>https://sismo911.com/danos</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://sismo911.com/danos-estructurales</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://sismo911.com/edificios</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://sismo911.com/panorama</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>
   <url><loc>https://sismo911.com/developers</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
   <url><loc>https://sismo911.com/estados</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://sismo911.com/estoy-a-salvo</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
