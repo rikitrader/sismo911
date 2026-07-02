@@ -135,6 +135,27 @@
   .conf{display:inline-flex;align-items:center;gap:6px;font:800 10.5px Inter;letter-spacing:.05em;text-transform:uppercase;border-radius:7px;padding:4px 9px}
   .conf.hi{background:#e3f6ea;color:var(--green)} .conf.md{background:#fff3da;color:#9a6400} .conf.lo{background:#fdecec;color:var(--crit)}
 
+  /* ---- Evaluación (Eng Nivel 1/2/3 — PM pipeline) ---- */
+  .eval-pipe{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:760px){.eval-pipe{grid-template-columns:1fr}}
+  .stage{border:1px solid var(--line);border-radius:12px;padding:13px 14px;background:var(--panel-2);position:relative}
+  .stage.on{background:var(--panel);border-width:2px;box-shadow:var(--shadow)}
+  .stage .lvl{font:800 10px 'JetBrains Mono';letter-spacing:.08em;color:var(--faint)}
+  .stage .nm2{font:800 13px Inter;margin-top:4px;color:var(--ink)}
+  .stage .ds2{font:500 11.5px Inter;color:var(--muted);margin-top:4px;line-height:1.4}
+  .stage .meta2{font:600 11px 'JetBrains Mono';color:var(--faint);margin-top:8px}
+  .spill{display:inline-flex;align-items:center;gap:6px;font:800 10px Inter;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 10px;margin-top:8px;color:#fff}
+  .spill .d2{width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.3)}
+  .sig{display:inline-flex;align-items:center;gap:6px;font:600 11px 'JetBrains Mono';color:var(--green);background:#e3f6ea;border:1px solid #bfe8cd;border-radius:7px;padding:3px 8px;margin-top:5px}
+  .evform{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+  @media(max-width:560px){.evform{grid-template-columns:1fr}}
+  .evform label{font:700 10px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:3px}
+  .evform select,.evform input,.evform textarea{width:100%;box-sizing:border-box;border:1px solid var(--line-2);border-radius:9px;padding:8px 10px;font:500 13px Inter;background:#fff;color:var(--ink)}
+  .evform textarea{min-height:64px;resize:vertical}
+  .evform .full{grid-column:1/-1}
+  .evbtn{background:var(--navy-2);color:#fff;border:none;border-radius:9px;padding:10px 18px;font:800 13px 'Public Sans';cursor:pointer}
+  .evbtn:hover{filter:brightness(1.1)}
+
   /* ---- Timeline (docket, same as /casos) ---- */
   .docket{position:relative;padding-left:26px}
   .docket::before{content:'';position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--line-2)}
@@ -337,6 +358,7 @@ function buildTabs(d){
   const tabs=[
     {id:'resumen',   l:'Resumen'},
     {id:'ing',       l:'Ingeniería'},
+    {id:'eval',      l:'Evaluación', n:(d.evaluation||{}).eventCount},
     {id:'seguros',   l:'Seguros'},
     {id:'cat',       l:'Catastrófico'},
     {id:'fotos',     l:'Fotos', n:(b.media||[]).length},
@@ -348,7 +370,7 @@ function buildTabs(d){
   $('#tabs').innerHTML=tabs.map((t,i)=>'<button data-t="'+t.id+'"'+(i===0?' class="on"':'')+'>'+esc(t.l)+(t.n?' <span class="b">'+t.n+'</span>':'')+'</button>').join('');
   $('#panes').innerHTML=tabs.map((t,i)=>'<div class="tabpane'+(i===0?' on':'')+'" id="p_'+t.id+'"></div>').join('');
 
-  renderResumen(d); renderIng(d); renderSeguros(d); renderCat(d);
+  renderResumen(d); renderIng(d); renderEval(d); renderSeguros(d); renderCat(d);
   renderFotos(d); renderGis(d); renderDes(d); renderDocs(d); renderTl(d);
 
   document.querySelectorAll('.tabs button').forEach(tb=>{
@@ -439,6 +461,84 @@ function renderIng(d){
         fact('Confianza del modelo','<span class="conf '+(c.confidence==='SURVEYED'||c.confidence==='HIGH'?'hi':c.confidence==='MEDIUM'?'md':'lo')+'">'+esc(c.confidence||'LOW')+'</span>')+
       '</div>'+
     '</div>';
+}
+
+/* ---- Evaluación (Eng Nivel 1/2/3 — PM-style tracking dashboard) ---- */
+const EVST={pendiente:{c:'#5b6781',l:'Pendiente'},en_curso:{c:'#b06a00',l:'En curso'},completada:{c:'#12805c',l:'Completada'},bloqueada:{c:'#c8102e',l:'Bloqueada'}};
+const EVK={inicio:'🚩',inspeccion:'🔍',hallazgo:'⚠️',documento:'📄',cambio_estado:'🔁',firma:'✍️',nota:'📝'};
+const EVKL={inicio:'Inicio de nivel',inspeccion:'Inspección',hallazgo:'Hallazgo',documento:'Documento',cambio_estado:'Cambio de estado',firma:'Firma',nota:'Nota'};
+const LVLC={1:'var(--green)',2:'var(--amber)',3:'var(--crit)'};
+function renderEval(d){
+  const ev=d.evaluation||{levels:[],events:[],progress:0,eventCount:0,currentLevel:null};
+  const bid=(d.building||{}).id||idFromPath();
+  const stat=(v2,l,s,color)=>'<div class="dstat"><span class="accent" style="background:'+color+'"></span><div class="v" style="color:'+color+'">'+(v2==null?'—':v2)+'</div><div class="l">'+esc(l)+'</div>'+(s?'<div class="s">'+esc(s)+'</div>':'')+'</div>';
+  const lvls=ev.levels||[];
+  const cur=lvls.find(x=>x.level===ev.currentLevel);
+  const lastEv=(ev.events||[])[0];
+  const pipe=lvls.map(x=>{
+    const st=EVST[x.status]||EVST.pendiente;
+    return '<div class="stage'+(x.level===ev.currentLevel?' on':'')+'" style="'+(x.level===ev.currentLevel?'border-color:'+st.c:'')+'">'+
+      '<div class="lvl" style="color:'+LVLC[x.level]+'">ENG · NIVEL '+x.level+'</div>'+
+      '<div class="nm2">'+esc(x.name)+'</div>'+
+      '<div class="ds2">'+esc(x.desc)+'</div>'+
+      '<div><span class="spill" style="background:'+st.c+'"><span class="d2"></span>'+st.l+'</span></div>'+
+      '<div class="meta2">'+x.events+' evento'+(x.events===1?'':'s')+(x.assignee?' · '+esc(x.assignee):'')+(x.lastAt?' · '+esc(fdate(x.lastAt)):'')+'</div>'+
+    '</div>';
+  }).join('');
+  const rows=(ev.events||[]).map(e=>{
+    const st=EVST[e.status];
+    return '<div class="de"><span class="node" style="background:'+(LVLC[e.level]||'var(--navy-2)')+'"></span>'+
+      '<div class="ts">'+esc(fdate(e.created_at)||'—')+' · N'+e.level+'</div>'+
+      '<div class="kind">'+(EVK[e.event_kind]||'📝')+' '+esc(EVKL[e.event_kind]||e.event_kind)+(st?' <span class="spill" style="background:'+st.c+';margin:0 0 0 8px;padding:2px 9px">'+st.l+'</span>':'')+'</div>'+
+      (e.note?'<div class="detail">'+esc(e.note)+'</div>':'')+
+      ((e.actor_name||e.actor_role)?'<div style="font:500 11.5px Inter;color:var(--muted);margin-top:2px">'+esc([e.actor_name,e.actor_role].filter(Boolean).join(' · '))+'</div>':'')+
+      (e.signed_by?'<div class="sig">✍ Firmado: '+esc(e.signed_by)+' · <span title="'+esc(e.signature||'')+'">'+esc(String(e.signature||'').slice(0,12))+'…</span></div>':'')+
+    '</div>';
+  }).join('');
+  $('#p_eval').innerHTML=
+    '<div class="dash-stats">'+
+      stat(ev.progress+'%','Progreso de evaluación','niveles completados / 3','var(--navy-2)')+
+      stat(ev.currentLevel!=null?'N'+ev.currentLevel:'✓',ev.currentLevel!=null?'Nivel actual':'Pipeline completo',cur?cur.name.split('—')[1].trim():'','var(--amber)')+
+      stat(ev.eventCount,'Eventos de seguimiento','todos firmados (SHA-256)','var(--blue)')+
+      stat(lastEv?fdate(lastEv.created_at):null,'Última actividad',lastEv?(EVKL[lastEv.event_kind]||lastEv.event_kind):'','var(--green)')+
+    '</div>'+
+    '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/></svg>Pipeline de evaluación estructural (ATC-20)</h3>'+
+      '<div class="eval-pipe">'+pipe+'</div>'+
+      '<div class="meter" title="Progreso"><span style="width:'+(ev.progress||0)+'%;background:linear-gradient(90deg,var(--green),var(--amber))"></span></div>'+
+      '<div style="font:500 11.5px Inter;color:var(--faint);margin-top:8px">'+esc(ev.note||'Seguimiento operativo por niveles — trazabilidad, no peritaje oficial.')+'</div>'+
+    '</div>'+
+    '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6zM19 15l1.5 5.5L17 19l-2 2-1-5M5 15l-1.5 5.5L7 19l2 2 1-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Registro de eventos firmados <span class="tag">'+ev.eventCount+'</span></h3>'+
+      (rows?'<div class="docket">'+rows+'</div>'
+           :'<div class="empty" style="padding:20px 12px"><div class="ic">📋</div><div style="margin-top:6px;font-weight:600">Sin eventos de seguimiento todavía.</div><div class="sub" style="margin-top:4px;color:var(--muted)">La evaluación inicia en Nivel 1 (rápida) cuando un operador registra el primer evento.</div></div>')+
+      '<details style="margin-top:14px"><summary style="cursor:pointer;font:700 12.5px Inter;color:var(--navy-2)">➕ Registrar evento de seguimiento (solo operadores)</summary>'+
+        '<form id="evForm" class="evform">'+
+          '<div><label>Nivel de evaluación</label><select name="level"><option value="1">Nivel 1 — Rápida</option><option value="2">Nivel 2 — Detallada</option><option value="3">Nivel 3 — Ingeniería</option></select></div>'+
+          '<div><label>Tipo de evento</label><select name="event_kind"><option value="inicio">Inicio de nivel</option><option value="inspeccion">Inspección</option><option value="hallazgo">Hallazgo</option><option value="documento">Documento</option><option value="cambio_estado">Cambio de estado</option><option value="firma">Firma</option><option value="nota" selected>Nota</option></select></div>'+
+          '<div><label>Nuevo estado (opcional)</label><select name="status"><option value="">— sin cambio —</option><option value="pendiente">Pendiente</option><option value="en_curso">En curso</option><option value="completada">Completada</option><option value="bloqueada">Bloqueada</option></select></div>'+
+          '<div><label>Responsable</label><input name="actor_name" maxlength="120" placeholder="Nombre de quien ejecuta"></div>'+
+          '<div><label>Rol</label><input name="actor_role" maxlength="120" placeholder="Ing. Estructural / PM / Protección Civil"></div>'+
+          '<div><label>Firmado por</label><input name="signed_by" maxlength="120" placeholder="(por defecto: responsable)"></div>'+
+          '<div class="full"><label>Nota</label><textarea name="note" maxlength="2000" placeholder="Detalle del evento…"></textarea></div>'+
+          '<div class="full"><button type="submit" class="evbtn">✍ Firmar y registrar evento</button></div>'+
+        '</form>'+
+      '</details>'+
+    '</div>';
+  const f=$('#evForm');
+  if(f) f.addEventListener('submit',async(e2)=>{
+    e2.preventDefault();
+    const fd=new FormData(f);
+    const body={}; fd.forEach((v,k)=>{ if(String(v).trim()!=='') body[k]=String(v).trim(); });
+    body.level=Number(body.level||1);
+    try{
+      const res=await fetch('/api/buildings/reported/'+encodeURIComponent(bid)+'/eval/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(res.status===401||res.status===403){ toast('Solo operadores autenticados pueden registrar eventos.'); return; }
+      if(!res.ok){ const j=await res.json().catch(()=>({})); toast(j.error||'No se pudo registrar el evento.'); return; }
+      const j=await res.json();
+      toast('Evento firmado ✍ '+String(j.signature||'').slice(0,12)+'…');
+      const fres=await fetch('/api/buildings/reported/'+encodeURIComponent(bid)+'/eval?t='+Date.now());
+      if(fres.ok){ d.evaluation=await fres.json(); renderEval(d); const tb=document.querySelector('.tabs button[data-t="eval"]'); if(tb) tb.innerHTML='Evaluación <span class="b">'+d.evaluation.eventCount+'</span>'; }
+    }catch(err){ toast('Error de red al registrar el evento.'); }
+  });
 }
 
 /* ---- Seguros (Fortune-500 claims-grade dashboard) ---- */

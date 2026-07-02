@@ -301,7 +301,8 @@
   const topbar = document.createElement('div'); topbar.id = 's911-topbar';
   topbar.innerHTML = `
     <button id="s911-burger" aria-label="Abrir menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:22px;height:22px"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-    <a href="/" class="s911-brand"><img src="/logo.svg" alt="" style="width:30px;height:30px">SISMO911</a>`;
+    <a href="/" class="s911-brand"><img src="/logo.svg" alt="" style="width:30px;height:30px">SISMO911</a>
+    <a href="/informe-danos" title="Informe de Evaluación de Daños" style="position:absolute;right:12px;top:11px;display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:9px;background:${CTARED};color:#fff;font:800 12px 'Public Sans',sans-serif;text-decoration:none;box-shadow:0 2px 8px rgba(214,40,40,.4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h12l4 4v12H4zM14 4v4h4M8 13h8M8 17h6"/></svg>Informe</a>`;
   document.body.appendChild(topbar);
   const burger = topbar.querySelector('#s911-burger');
   const toggle = (open) => { shell.classList.toggle('open', open); back.classList.toggle('open', open); };
@@ -349,6 +350,11 @@
     #s911-deskbar .s911-dsos{display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:11px;background:linear-gradient(180deg,#e0394c,#c41f33);color:#fff;font:800 13.5px 'Public Sans',sans-serif;text-decoration:none;box-shadow:0 2px 10px rgba(196,31,51,.4);white-space:nowrap}
     #s911-deskbar .s911-dsos:hover{filter:brightness(1.07)}
     #s911-deskbar .s911-dsos svg{width:17px;height:17px}
+    /* Red "Informe de Evaluación" CTA — same frame as SOS, solid CTA red, links to /informe-danos. */
+    #s911-deskbar .s911-dinforme{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:11px;background:${CTARED};color:#fff;font:800 13px 'Public Sans',sans-serif;text-decoration:none;box-shadow:0 2px 10px rgba(214,40,40,.38);white-space:nowrap}
+    #s911-deskbar .s911-dinforme:hover{filter:brightness(1.08)}
+    #s911-deskbar .s911-dinforme svg{width:16px;height:16px}
+    @media(max-width:1280px){ #s911-deskbar .s911-dinforme .s911-dinforme-lbl{display:none} }
     #s911-deskbar .s911-pop{position:relative}
     #s911-deskbar .s911-pop-btn{display:flex;align-items:center;gap:7px;background:transparent;border:none;cursor:pointer;color:#374151;font:700 11.5px Inter,sans-serif;padding:7px 10px;border-radius:12px}
     #s911-deskbar .s911-pop-btn:hover{background:#eef0f4;color:#0a1733}
@@ -392,6 +398,7 @@
         <a href="/personas" class="s911-dsearch" title="Buscar en el Registro de Desaparecidos" aria-label="Buscar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M21 21l-4.3-4.3"/></svg>
         </a>
+        <a href="/informe-danos" class="s911-dinforme" title="Informe de Evaluación de Daños"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h12l4 4v12H4zM14 4v4h4M8 13h8M8 17h6"/></svg><span class="s911-dinforme-lbl">Informe de Evaluación</span></a>
         <a href="/sos" class="s911-dsos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4m0 4h.01"/></svg>Emergencia / SOS</a>
         <div class="s911-pop" id="s911-deskacct"></div>
       </div>

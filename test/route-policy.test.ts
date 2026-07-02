@@ -33,6 +33,9 @@ const GATED: Array<[string, string]> = [
   ['/api/aid-orgs/x', 'POST'],               // isAdminWrite
   ['/api/emergencia', 'POST'],               // isAdminWrite
   ['/api/danos-estructurales/x', 'POST'],    // isAdminWrite
+  ['/api/buildings/reported/x/cases', 'POST'],           // isBuildingsWrite (attach case)
+  ['/api/buildings/reported/x/cases/y', 'DELETE'],       // isBuildingsWrite (detach case)
+  ['/api/buildings/reported/x/eval/events', 'POST'],     // isBuildingsWrite (signed eval event)
 ];
 
 // Surfaces that must stay PUBLIC (open) — the documented exceptions.
@@ -44,6 +47,8 @@ const OPEN: Array<[string, string]> = [
   ['/api/persons', 'POST'],                  // citizen missing-person report
   ['/api/persons/abc/tip', 'POST'],          // PUBLIC citizen investigation tip (rate-limited in handler)
   ['/api/sat/pytorch-results', 'POST'],      // explicit public callback
+  ['/api/buildings/reported/x', 'GET'],      // public forensic dossier read
+  ['/api/buildings/reported/x/eval', 'GET'], // public eval-pipeline read
   ['/api/health', 'GET'],
   ['/', 'GET'],
 ];

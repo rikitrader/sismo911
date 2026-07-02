@@ -147,6 +147,10 @@ export function evaluateGate(path: string, method: string): GateDecision {
     (path.startsWith('/api/sos/') && method === 'PATCH');
 
   const isDamageReview = (path === '/api/damage' && method === 'GET') || path.startsWith('/api/damage/photo/');
+  // Building-dossier writes (attach/detach cases, signed eval-tracking events) are
+  // operator surfaces. GETs under /api/buildings stay public (PII-free reads).
+  // Previously these writes fell through to the public allow-list — closing that gap.
+  const isBuildingsWrite = WRITE_METHODS.has(method) && path.startsWith('/api/buildings');
   const isManualRefresh = path === '/api/events/refresh';
   const isShelterModeration = path === '/api/shelters/queue';
   const isSatWrite = WRITE_METHODS.has(method) && path.startsWith('/api/sat/') && path !== '/api/sat/pytorch-results';
@@ -162,7 +166,7 @@ export function evaluateGate(path: string, method: string): GateDecision {
   const isNinezAdminRead = method === 'GET' && path.startsWith('/api/ninez/admin');
 
   const gated = isAdminPage || isAdminWrite || isReportModeration || isPersonModeration ||
-    isMedicalCases || isDocketSubmit || isCaseAdmin || isSosTriage || isDamageReview || isManualRefresh ||
+    isMedicalCases || isDocketSubmit || isCaseAdmin || isSosTriage || isDamageReview || isBuildingsWrite || isManualRefresh ||
     isShelterModeration || isSatWrite || isAcopioReview || isFlotaApi || isFlotaAdminApi ||
     isSuministrosPage || isSuministrosRead || isNinezAdminRead;
 
@@ -193,7 +197,7 @@ export function evaluateGate(path: string, method: string): GateDecision {
   else if (isCaseAdmin || isPersonModeration || isMedicalCases) perm = 'persons:moderate';
   else if (isReportModeration) perm = 'reports:moderate';
   else if (isSosTriage) perm = 'sos:triage';
-  else if (isDamageReview) perm = 'damage:moderate';
+  else if (isDamageReview || isBuildingsWrite) perm = 'damage:moderate';
   else if (isManualRefresh) perm = 'events:refresh';
   else if (isShelterModeration) perm = 'shelters:manage';
   else if (isSatWrite) perm = 'sat:analyze';
