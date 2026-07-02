@@ -24,7 +24,16 @@ import { isSafePublicUrl, safeFetch } from '../lib/sanitize';
 // done out-of-band by scripts/pull-familia.mjs.
 
 const PAGE_SIZE = 100;
-const MAX_PAGES_PER_RUN = 25;          // ~2500 rows/run, ~25 subrequests
+const MAX_PAGES_PER_RUN = 25;          // direct path: ~2500 rows/run, ~25 subrequests
+// Resolver path is gentler ON PURPOSE. theempire guards each request with
+// reCAPTCHA v3 and its server-side score verification rejects BURSTS: observed
+// live 2026-07-02, ~4-5 rapid pulls succeed, then it returns "Verificación
+// reCAPTCHA fallida" and the low score persists (re-burning it every hour kept
+// familia stuck DOWN). Capping the resolver run to a small burst under that
+// threshold lets each hourly tick bank a few pages CLEANLY instead of slamming
+// into the wall mid-run; partial-progress + the hourly cadence grind the full
+// ~545-page cycle over days. Overridable via FAMILIA_RESOLVER_MAX_PAGES.
+const RESOLVER_MAX_PAGES = 4;
 const CURSOR_KEY = 'familia:cursor';
 
 const pick = (o: any, keys: string[]) => { for (const k of keys) { const v = o?.[k]; if (v != null && v !== '') return v; } return null; };
@@ -110,7 +119,10 @@ export async function ingestFamilia(env: Env): Promise<number> {
     // fetched: ingest what we have and advance the cursor to the last good
     // page, so every hourly tick makes real progress even under the limit.
     // Only a FIRST-page failure (fetchPage(start) above) still fails the run.
-    let lastPage = Math.min(totalPages, start + MAX_PAGES_PER_RUN - 1);
+    const pagesPerRun = viaResolver
+      ? Math.max(1, parseInt((env as any).FAMILIA_RESOLVER_MAX_PAGES, 10) || RESOLVER_MAX_PAGES)
+      : MAX_PAGES_PER_RUN;
+    let lastPage = Math.min(totalPages, start + pagesPerRun - 1);
     let partial: string | null = null;
     for (let p = start + 1; p <= lastPage; p++) {
       try {
