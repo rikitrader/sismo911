@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   mmiToHaz, vulnFactor, band, scoreCurated, scoreOsm, PRIOR_BLEND, damageRatio, computeCost,
-  computeSar, estimateOccupants, sarSeverity, buildingKey, linkLiveMissing,
+  computeSar, estimateOccupants, sarSeverity, buildingKey, linkLiveMissing, linkLiveCases,
   type Sector, type Curated, type Osm, type Scored, type MissingReport,
 } from '../src/lib/building-score';
 
@@ -217,5 +217,24 @@ describe('live missing-persons linkage', () => {
   });
   it('returns empty when nothing references the building', () => {
     expect(linkLiveMissing('Edificio Vallarta', reports)).toEqual([]);
+  });
+  it('linkLiveCases carries the federated case id for the /casos profile deep-link', () => {
+    const withIds: MissingReport[] = [
+      { id: 'abc123', name: 'Diemery Ruiz', loc: 'caraballeda, edificio breogan, los corales' },
+      { id: 'fam-42', name: 'Caso Familia', loc: 'edificio breogan, piso 4' },
+      { name: 'Sin Id', loc: 'edificio breogan pb' },
+    ];
+    expect(linkLiveCases('Edificio Breogan', withIds)).toEqual([
+      { id: 'abc123', name: 'Diemery Ruiz' },
+      { id: 'fam-42', name: 'Caso Familia' },
+      { id: null, name: 'Sin Id' },
+    ]);
+  });
+  it('linkLiveCases dedupes by name (registries overlap), keeping the first id', () => {
+    const dup: MissingReport[] = [
+      { id: 'p1', name: 'Diemery Ruiz', loc: 'edificio breogan' },
+      { id: 'fam-9', name: 'Diemery Ruiz', loc: 'breogan, caraballeda' },
+    ];
+    expect(linkLiveCases('Edificio Breogan', dup)).toEqual([{ id: 'p1', name: 'Diemery Ruiz' }]);
   });
 });

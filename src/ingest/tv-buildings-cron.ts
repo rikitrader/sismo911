@@ -1,5 +1,6 @@
 import type { Env } from '../types';
 import { recordIngest } from '../lib/db';
+import { syncBuildingCases } from '../lib/building-cases';
 import { tvFetch, TV_PAGE, type TvRow } from '../lib/tv-buildings';
 
 // Hourly ingest of terremotovenezuela.com's `buildings` table into D1 `tv_buildings`.
@@ -58,6 +59,16 @@ export async function ingestTvBuildings(env: Env): Promise<TvIngestResult> {
       if (rows.length < TV_PAGE || offset >= total) break;
     }
     await recordIngest(env, 'tv-buildings', true, written);
+    // Attach cases: name-token match every building against the live case
+    // registries and persist into building_cases (INSERT OR IGNORE, so found
+    // people keep their attachment). Fail-soft — a linker error must never
+    // fail the ingest that feeds it.
+    try {
+      const link = await syncBuildingCases(env);
+      await recordIngest(env, 'tv-building-cases', true, link.linked);
+    } catch (e: any) {
+      await recordIngest(env, 'tv-building-cases', false, 0, String(e?.message || e));
+    }
     return { written, total, pages: pages + 1 };
   } catch (e: any) {
     await recordIngest(env, 'tv-buildings', false, 0, String(e?.message || e));
