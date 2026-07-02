@@ -504,12 +504,19 @@ buildings.get('/reported/:id', async (c) => {
     let cases: (LinkedCase & { source: string })[] = [];
     try {
       cases = await persistedCases(c.env, id);
-      const reports = await fetchCaseReports(c.env);
-      const have = new Set(cases.map((x) => x.id ?? x.name.toLowerCase()));
-      for (const m of linkLiveCases(b.name, reports)) {
-        const k = m.id ?? m.name.toLowerCase();
-        if (!have.has(k) && ![...cases].some((x) => x.name.toLowerCase() === m.name.toLowerCase())) {
-          have.add(k); cases.push({ ...m, source: 'live' });
+      // Live NAME-token matching only applies to buildings with a REAL name.
+      // Satellite-only rows have generic zone names ("Edificación satélite —
+      // Caracas") — token-matching those attaches every case in the zone
+      // (observed: 109 false "desaparecidos vinculados" on one sat point).
+      // Sat expedientes get operator-attached cases + /case-suggestions only.
+      if (!satRow) {
+        const reports = await fetchCaseReports(c.env);
+        const have = new Set(cases.map((x) => x.id ?? x.name.toLowerCase()));
+        for (const m of linkLiveCases(b.name, reports)) {
+          const k = m.id ?? m.name.toLowerCase();
+          if (!have.has(k) && ![...cases].some((x) => x.name.toLowerCase() === m.name.toLowerCase())) {
+            have.add(k); cases.push({ ...m, source: 'live' });
+          }
         }
       }
     } catch { /* fail-soft: whatever we got so far */ }
