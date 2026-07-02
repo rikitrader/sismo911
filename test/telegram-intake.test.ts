@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { pickMedia } from '../src/telegram/intake/download';
 import { isIntakeMessage } from '../src/telegram/intake';
 import { matchCase } from '../src/telegram/intake/match';
-import { summarize } from '../src/telegram/intake/persist';
+import { summarize, persist } from '../src/telegram/intake/persist';
 import { buildReceipt } from '../src/telegram/intake/notify';
 import type { ExtractedRecord } from '../src/telegram/intake/types';
 import type { TelegramMessage } from '../src/telegram/types';
@@ -119,5 +119,67 @@ describe('summarize + buildReceipt', () => {
     expect(buildReceipt({ ...base, outcome: 'created' })).toContain('ITK-ABC');
     expect(buildReceipt({ ...base, outcome: 'created' })).toContain('caso nuevo');
     expect(buildReceipt({ ...base, outcome: 'needs_review' })).toContain('nombre');
+  });
+
+  it('an admin auto-approved receipt says published immediately (no review)', () => {
+    const base = { submissionId: 'itk_x', code: 'ITK-ABC', personId: 'fam-p1', intelId: null, fields: rec({}), score: 0, note: '', autoApproved: true };
+    const created = buildReceipt({ ...base, outcome: 'created' });
+    expect(created).toContain('publicado de inmediato');
+    expect(created).not.toContain('operador lo revisará');
+    const matched = buildReceipt({ ...base, outcome: 'matched' });
+    expect(matched).toContain('verificado');
+  });
+});
+
+describe('persist — admin auto-approve', () => {
+  function persistEnv(capture: Array<{ sql: string; args: any[] }>): Env {
+    const DB = {
+      prepare(sql: string) {
+        return {
+          bind(...args: any[]) {
+            return {
+              async first() {
+                return null;
+              },
+              async all() {
+                return { results: [] };
+              },
+              async run() {
+                capture.push({ sql, args });
+                return { success: true, meta: { changes: 1 } };
+              },
+            };
+          },
+        };
+      },
+    };
+    const r2 = { put: async () => {} };
+    return { DB, PERSON_PHOTOS: r2, DESAP_FOTOS: r2 } as unknown as Env;
+  }
+  const media = { fileId: 'f1', mime: 'image/jpeg', fileName: 'foto.jpg', bytes: new Uint8Array([1]) };
+
+  it('publishes the persona + verifies the lead + ledgers as approved', async () => {
+    const cap: Array<{ sql: string; args: any[] }> = [];
+    const r = await persist(persistEnv(cap), {
+      submissionId: 'itk_a1', code: 'ITK-A1', media, fields: rec({ nombre: 'Ana Diaz' }),
+      match: { personId: null, score: 0, reason: 'none' } as any, tgUserId: '42', tgUsername: 'admin', tgChatId: '42',
+      autoApprove: true,
+    });
+    expect(r.outcome).toBe('created');
+    expect(r.autoApproved).toBe(true);
+    expect(cap.some((q) => /INSERT INTO personas/.test(q.sql) && q.args.includes('approved'))).toBe(true);
+    expect(cap.some((q) => /INSERT INTO case_intel/.test(q.sql) && q.args.includes('verified'))).toBe(true);
+    expect(cap.some((q) => /INSERT INTO intake_submissions/.test(q.sql) && q.args.includes('approved'))).toBe(true);
+  });
+
+  it('a NON-admin submission still creates a pending draft', async () => {
+    const cap: Array<{ sql: string; args: any[] }> = [];
+    const r = await persist(persistEnv(cap), {
+      submissionId: 'itk_b1', code: 'ITK-B1', media, fields: rec({ nombre: 'Ana Diaz' }),
+      match: { personId: null, score: 0, reason: 'none' } as any, tgUserId: '99', tgUsername: null, tgChatId: '99',
+    });
+    expect(r.autoApproved).toBe(false);
+    expect(cap.some((q) => /INSERT INTO personas/.test(q.sql) && q.args.includes('pending'))).toBe(true);
+    expect(cap.some((q) => /INSERT INTO intake_submissions/.test(q.sql) && q.args.includes('created'))).toBe(true);
   });
 });

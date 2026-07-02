@@ -42,4 +42,7 @@ export interface IntakeResult {
   fields: ExtractedRecord;
   score: number;
   note: string; // short human-readable note (Spanish)
+  // True when the submission came from an ADMIN and was published immediately
+  // (persona approved + lead verified) — no operator review needed.
+  autoApproved?: boolean;
 }

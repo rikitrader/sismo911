@@ -158,6 +158,7 @@ const OPERATOR_HELP_ES = [
   '• /actualizar <ID o nombre> aprobar  /  rechazar — publicar u ocultar un caso (solo nivel ejecutivo/admin)',
   '• /aprobar ITK-XXXX  /  /rechazar ITK-XXXX — aprobar u ocultar un envío del bot por su código de recibo (admin)',
   'Un campo por comando. Solo casos del registro de SISMO911 (no hospitales/oficiales).',
+  'Los envíos de un ADMINISTRADOR (foto/PDF/padrón) se publican de inmediato, sin aprobación pendiente.',
 ].join('\n');
 const OPERATOR_HELP_EN = [
   '🛠️ Operators — update a case from chat:',
@@ -178,6 +179,7 @@ const OPERATOR_HELP_EN = [
   '• /actualizar <ID or name> aprobar  /  rechazar — publish or hide a case (executive/admin only)',
   '• /aprobar ITK-XXXX  /  /rechazar ITK-XXXX — approve or hide a bot submission by its receipt code (admin)',
   'One field per command. Only SISMO911-registry cases (not hospital/official).',
+  'ADMIN submissions (photo/PDF/roster) publish immediately — no pending approval.',
 ].join('\n');
 
 /**
