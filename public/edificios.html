@@ -139,6 +139,28 @@
     <div id="map" style="margin-top:10px"></div>
   </div>
 
+  <!-- satellite-confirmed damage (Copernicus EMS + AI4G via CIVIS) -->
+  <div id="satelite" class="card pad" style="margin-bottom:14px;border-color:#1a7f3755">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <h2>🛰️ Daño confirmado por satélite</h2>
+      <span id="satSum" style="font-size:12px;color:var(--ops-muted)"></span>
+      <a href="/panorama" style="margin-left:auto;font:700 12px Inter;color:var(--ops-accent);text-decoration:none">Panorama de la emergencia →</a>
+    </div>
+    <div style="font-size:11px;color:var(--ops-muted);margin:4px 0 10px">Edificaciones con daño <b>colapso/grave confirmado por satélite</b> — <b>Copernicus EMS (UE)</b> verificado + predicción IA <b>Microsoft AI4G</b>, vía CIVIS Venezuela, sincronizadas cada hora. Capa de evidencia <b>independiente</b> de los reportes ciudadanos de arriba: no se mezclan ni deduplican entre sí. Clic en un punto → abrir en Google Maps.</div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:10px">
+      <div class="card pad stat"><div class="n num" id="sat_conf">—</div><div class="l">Confirmadas (satélite)</div></div>
+      <div class="card pad stat" style="border-color:#f04438"><div class="n num" id="sat_col" style="color:#d92d20">—</div><div class="l">Colapso confirmado</div></div>
+      <div class="card pad stat"><div class="n num" id="sat_grv" style="color:#b25e09">—</div><div class="l">Daño grave confirmado</div></div>
+      <div class="card pad stat"><div class="n num" id="sat_eval">—</div><div class="l">Evaluadas por satélite</div></div>
+    </div>
+    <div id="satMap" style="height:380px;border-radius:10px;z-index:0"></div>
+    <div class="legend">
+      <span><i class="dot" style="background:#d92d20"></i>Colapso</span>
+      <span><i class="dot" style="background:#b25e09"></i>Daño grave</span>
+      <span id="satZonas" style="margin-left:auto"></span>
+    </div>
+  </div>
+
   <!-- reported buildings with photos (terremotovenezuela.com) -->
   <div id="rep" class="card pad" style="margin-bottom:14px;border-color:var(--ops-accent-soft)">
     <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
@@ -472,6 +494,41 @@
     });
   }
   boot();
+})();
+</script>
+<script>
+// Satélite section — self-contained (own map + fetches); never touches the
+// motor/reported logic above. Data: /api/panorama/* (CIVIS/Copernicus mirror).
+(function(){
+  var fmt=function(n){return (n==null||isNaN(n))?'—':Number(n).toLocaleString('es-VE');};
+  var SEV={colapso:'#d92d20',grave:'#b25e09'};
+  fetch('/api/panorama/stats?t='+Math.floor(Date.now()/60000)).then(function(r){return r.json();}).then(function(d){
+    var s=d.stats||{}, sat=d.sat||{};
+    document.getElementById('sat_conf').textContent=fmt(sat.confirmadas);
+    document.getElementById('sat_col').textContent=fmt(sat.colapso!=null?sat.colapso:s.edif_colapso);
+    document.getElementById('sat_grv').textContent=fmt(sat.grave!=null?sat.grave:s.edif_grave);
+    document.getElementById('sat_eval').textContent=fmt(s.edif_total);
+    if(sat.zonas&&sat.zonas.length){
+      document.getElementById('satZonas').textContent='Zonas: '+sat.zonas.slice(0,4).map(function(z){return z.zona+' ('+fmt(z.n)+')';}).join(' · ');
+    }
+    if(d.taken_ms){
+      var mins=Math.max(0,Math.round((Date.now()-d.taken_ms)/60000));
+      document.getElementById('satSum').textContent='Sincronizado hace '+(mins<60?mins+' min':Math.round(mins/60)+' h')+' · Copernicus EMS + AI4G';
+    }
+  }).catch(function(){});
+  fetch('/api/panorama/edificaciones?t='+Math.floor(Date.now()/60000)).then(function(r){return r.json();}).then(function(d){
+    var pts=(d.edificaciones||[]).filter(function(e){return e.lat!=null&&e.lng!=null;});
+    if(!pts.length) return;
+    var m=L.map('satMap').setView([10.55,-66.9],9);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(m);
+    pts.forEach(function(e){
+      L.circleMarker([e.lat,e.lng],{radius:5,weight:1.5,color:'#fff',fillColor:SEV[e.severidad]||'#6b7280',fillOpacity:.85})
+        .bindPopup('<b>'+(e.severidad==='colapso'?'Colapso':'Daño grave')+'</b><br>'+(e.zona||'')+
+          (e.uso&&e.uso!=='Unclassified'?' · '+e.uso:'')+
+          (e.maps_url?'<br><a href="'+e.maps_url+'" target="_blank" rel="noopener">Abrir en Google Maps →</a>':''))
+        .addTo(m);
+    });
+  }).catch(function(){});
 })();
 </script>
 </body>

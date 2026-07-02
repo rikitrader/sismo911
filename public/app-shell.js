@@ -44,6 +44,7 @@
       { label: 'Satélite IA', href: '/satellite', m: ['/satellite'], d: 'M11 3a8 8 0 108 8M3 21l6-6M14 10l6-6' },
       { label: 'Ionosfera TEC', href: 'https://vzla-tec-map.rikitrader.workers.dev/', m: [], ext: true, d: 'M4.9 11a10 10 0 0 1 14.2 0M8.5 14.5a5 5 0 0 1 7 0M12 18h.01' },
       { label: 'Dashboard', href: '/dashboard', m: ['/dashboard'], d: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z' },
+      { label: 'Panorama Emergencia', href: '/panorama', m: ['/panorama'], d: 'M3 12h4l2 7 4-14 2 7h6M12 3v2m0 14v2' },
       { label: 'Alertas', href: '/alertas', m: ['/alertas'], d: 'M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z' },
       { label: 'Alerta PAGER', href: '/pager', m: ['/pager'], d: 'M12 3l8 4v5c0 4.5-3.1 7.9-8 9-4.9-1.1-8-4.5-8-9V7l8-4z' },
       { label: 'Víctimas y Fallecidos', href: '/victimas', m: ['/victimas', '/victimas.html'], alarm: true, d: 'M12 21s-7-4.35-9.5-8.5C.5 9 2 5 5.5 5 8 5 9.5 7 12 7s4-2 6.5-2C22 5 23.5 9 21.5 12.5 19 16.65 12 21 12 21z' },

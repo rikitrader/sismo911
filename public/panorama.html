@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Panorama de la emergencia — Cifras en vivo | SISMO911</title>
+<meta name="description" content="Panorama en vivo del doble terremoto de Venezuela (24-jun-2026, M7.2 y M7.5): balance oficial, personas desaparecidas y localizadas, atención en hospitales y refugios, daños estructurales reportados y daño satelital verificado (Copernicus EMS + Microsoft AI4G)." />
+<link rel="canonical" href="https://sismo911.com/panorama" />
+<meta property="og:title" content="Panorama de la emergencia — Cifras en vivo | SISMO911" />
+<meta property="og:description" content="Balance oficial, personas, hospitales, refugios y daño estructural satelital del terremoto de Venezuela, en vivo." />
+<meta property="og:url" content="https://sismo911.com/panorama" />
+<meta property="og:image" content="https://sismo911.com/og/og-default.png" />
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<meta name="theme-color" content="#14171b" />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/app.css" />
+<link rel="stylesheet" href="/ops-theme.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  body{background:var(--ops-bg);color:var(--ops-text);font-family:Inter,system-ui,sans-serif}
+  main{max-width:1080px;margin:0 auto;padding:18px 16px 60px}
+  .eyebrow{font:800 11px var(--ops-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ops-accent)}
+  h1{font:900 30px/1.05 'Public Sans';letter-spacing:-.02em;margin:4px 0 6px;color:var(--ops-text)}
+  .lede{color:var(--ops-muted);font-size:14px;max-width:820px;line-height:1.5}
+  .card{background:var(--ops-panel);border:1px solid var(--ops-border);border-radius:14px;box-shadow:0 1px 3px rgba(16,24,40,.04)}
+  .pad{padding:18px}
+  .sec{margin-top:22px}
+  .sec-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+  .sec-t{font:800 12px var(--ops-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ops-muted)}
+  .tag{font:700 10px var(--ops-mono);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:9999px;border:1px solid var(--ops-border)}
+  .tag.official{color:#1a7f37;border-color:#1a7f3744;background:#1a7f3712}
+  .tag.citizen{color:#9a6700;border-color:#9a670044;background:#9a670012}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .stat{padding:14px 14px 12px}
+  .stat .n{font:900 26px var(--ops-mono);font-variant-numeric:tabular-nums;color:var(--ops-text)}
+  .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ops-muted);margin-top:2px;line-height:1.3}
+  .n.red{color:#c9372c}.n.orange{color:#b25e09}.n.green{color:#1a7f37}.n.blue{color:#0550ae}.n.purple{color:#6639ba}
+  .note{font-size:12px;color:var(--ops-muted);line-height:1.5;margin-top:10px}
+  .banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:12px;border:1px solid #1a7f3733;background:#1a7f370d;font-size:13px}
+  .banner .n{font:900 22px var(--ops-mono);color:#1a7f37}
+  .ai-card{border-left:3px solid var(--ops-accent)}
+  .ai-card p{margin:0 0 8px;line-height:1.6;font-size:14px}
+  .stale{font:600 11px var(--ops-mono);color:var(--ops-muted)}
+  #satmap{height:440px;border-radius:10px;z-index:0}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ops-muted);align-items:center;margin-top:8px}
+  .dot{display:inline-block;width:11px;height:11px;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 1px var(--ops-border-strong);vertical-align:middle;margin-right:4px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font:600 12px Inter;padding:4px 10px;border-radius:9999px;border:1px solid var(--ops-border);background:var(--ops-panel);cursor:pointer;color:var(--ops-text)}
+  .chip.on{background:var(--ops-accent);color:#fff;border-color:var(--ops-accent)}
+  .contrast{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:13px;color:var(--ops-muted);margin-top:10px}
+  .cta{display:inline-block;font:700 13px Inter;color:var(--ops-accent);text-decoration:none;margin-top:8px}
+  .src{font-size:11px;color:var(--ops-muted);margin-top:14px;line-height:1.6}
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Situación Nacional</div>
+  <h1>Panorama de la emergencia</h1>
+  <p class="lede">Cifras en vivo del doble terremoto del 24/06/2026 (M7,2 y M7,5 · epicentro San Felipe / Yumare, Yaracuy). Datos ciudadanos y satelitales espejados cada hora desde CIVIS Venezuela hacia la base de datos de SISMO911. <span class="stale" id="stale"></span></p>
+
+  <!-- AI panorama summary -->
+  <section class="sec" id="sec-ai" hidden>
+    <div class="sec-h"><span class="sec-t">🧭 Panorama ahora</span><span class="tag">Resumen IA</span></div>
+    <div class="card pad ai-card">
+      <p id="ai-text"></p>
+      <div class="note">Resumen generado por IA (fuente: CIVIS Venezuela). Ante emergencias, confía siempre en fuentes oficiales.</div>
+    </div>
+  </section>
+
+  <!-- Official government balance (hand-transcribed by CIVIS; static with corte date) -->
+  <section class="sec">
+    <div class="sec-h"><span class="sec-t">Balance oficial del gobierno</span><span class="tag official">Corte oficial · 1 de julio de 2026</span></div>
+    <div class="tiles">
+      <div class="card stat"><div class="n red">2.295</div><div class="l">Fallecidos</div></div>
+      <div class="card stat"><div class="n orange">11.267</div><div class="l">Heridos</div></div>
+      <div class="card stat"><div class="n green">6.461</div><div class="l">Personas rescatadas</div></div>
+      <div class="card stat"><div class="n red">12.841</div><div class="l">Personas damnificadas</div></div>
+      <div class="card stat"><div class="n blue">28.380</div><div class="l">En campamentos temporales</div></div>
+      <div class="card stat"><div class="n orange">50.000+</div><div class="l">Desaparecidos (estimación ONU)</div></div>
+    </div>
+    <div class="note">Gobierno de Venezuela (Asamblea Nacional, vía Venevisión/VTV). Balance en evolución, transcrito manualmente con cada nuevo parte — puede llevar días de rezago frente a los reportes ciudadanos en vivo.</div>
+  </section>
+
+  <!-- Personas -->
+  <section class="sec">
+    <div class="sec-h"><span class="sec-t">Personas</span><span class="tag citizen">Reporte ciudadano</span></div>
+    <div class="tiles">
+      <div class="card stat"><div class="n" id="s-desap_total">—</div><div class="l">Desaparecidas reportadas</div></div>
+      <div class="card stat"><div class="n orange" id="s-desap_buscando">—</div><div class="l">Buscando</div></div>
+      <div class="card stat"><div class="n green" id="s-desap_localizadas">—</div><div class="l">Localizadas con vida</div></div>
+      <div class="card stat"><div class="n green" id="s-a_salvo">—</div><div class="l">A salvo</div></div>
+    </div>
+  </section>
+
+  <!-- Hospitales y refugios -->
+  <section class="sec">
+    <div class="sec-h"><span class="sec-t">En hospitales y refugios</span><span class="tag citizen">Reporte ciudadano</span></div>
+    <div class="tiles">
+      <div class="card stat"><div class="n" id="s-atendidas_total">—</div><div class="l">Atendidas en centros</div></div>
+      <div class="card stat"><div class="n blue" id="s-atendidas_hospital">—</div><div class="l">En hospitales</div></div>
+      <div class="card stat"><div class="n purple" id="s-atendidas_refugio">—</div><div class="l">En refugios</div></div>
+    </div>
+    <div class="banner" style="margin-top:10px"><span>De ellas, ya <b>reencontradas con familiares</b> que las buscaban</span><span class="n" id="s-atendidas_reencontradas">—</span></div>
+  </section>
+
+  <!-- Daños ciudadanos -->
+  <section class="sec">
+    <div class="sec-h"><span class="sec-t">Daños estructurales</span><span class="tag citizen">Reporte ciudadano</span></div>
+    <div class="tiles">
+      <div class="card stat"><div class="n" id="s-danos_total">—</div><div class="l">Edificios reportados</div></div>
+      <div class="card stat"><div class="n red" id="s-danos_colapso">—</div><div class="l">Colapso total</div></div>
+      <div class="card stat"><div class="n orange" id="s-danos_grave">—</div><div class="l">Daño grave</div></div>
+      <div class="card stat"><div class="n orange" id="s-danos_parcial">—</div><div class="l">Daño parcial</div></div>
+    </div>
+  </section>
+
+  <!-- Satélite -->
+  <section class="sec">
+    <div class="sec-h"><span class="sec-t">Daño estructural por satélite</span><span class="tag official">Fuente oficial</span></div>
+    <div class="tiles">
+      <div class="card stat"><div class="n" id="s-edif_total">—</div><div class="l">Edificaciones evaluadas</div></div>
+      <div class="card stat"><div class="n green" id="s-edif_copernicus">—</div><div class="l">Verificadas Copernicus EMS</div></div>
+      <div class="card stat"><div class="n red" id="sat-colapso">—</div><div class="l">Colapso (confirmado)</div></div>
+      <div class="card stat"><div class="n orange" id="sat-grave">—</div><div class="l">Grave (confirmado)</div></div>
+    </div>
+    <div class="contrast" id="contrast"></div>
+
+    <div class="card pad" style="margin-top:14px">
+      <div class="sec-h" style="margin-bottom:8px">
+        <span class="sec-t">Mapa satelital · <span id="sat-count">0</span> edificaciones confirmadas en nuestra base</span>
+        <div class="chips" id="zona-chips"></div>
+      </div>
+      <div id="satmap"></div>
+      <div class="legend">
+        <span><span class="dot" style="background:#c9372c"></span>Colapso</span>
+        <span><span class="dot" style="background:#b25e09"></span>Daño grave</span>
+        <span style="margin-left:auto">Clic en un punto → abrir en Google Maps</span>
+      </div>
+      <a class="cta" href="/edificios">Ver el motor de daño por edificio y los expedientes →</a>
+    </div>
+
+    <div class="src">Fuente satelital: <b>Copernicus EMS (UE)</b> verificado + predicción IA <b>Microsoft AI4G</b>, vía <b>CIVIS Venezuela</b> (iniciativa ciudadana independiente). Espejo horario en la base de datos de SISMO911 — este panel sigue operativo aunque la fuente esté caída, mostrando el último corte sincronizado.</div>
+  </section>
+</main>
+
+<script src="/app-shell.js" defer></script>
+<script>
+(function () {
+  var fmt = function (n) { return (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString('es-VE'); };
+  var SEV_COLOR = { colapso: '#c9372c', grave: '#b25e09' };
+  var map = null, layer = null, allPoints = [], activeZona = '';
+
+  function setStat(id, v) { var el = document.getElementById(id); if (el) el.textContent = fmt(v); }
+
+  function renderStats(d) {
+    var s = d.stats || {};
+    ['desap_total','desap_buscando','desap_localizadas','a_salvo','atendidas_total','atendidas_hospital',
+     'atendidas_refugio','atendidas_reencontradas','danos_total','danos_colapso','danos_grave','danos_parcial',
+     'edif_total','edif_copernicus'].forEach(function (k) { setStat('s-' + k, s[k]); });
+    setStat('sat-colapso', (d.sat && d.sat.colapso != null) ? d.sat.colapso : s.edif_colapso);
+    setStat('sat-grave', (d.sat && d.sat.grave != null) ? d.sat.grave : s.edif_grave);
+    if (s.edif_total != null && s.danos_total != null) {
+      document.getElementById('contrast').innerHTML =
+        'El satélite detectó <b>' + fmt(s.edif_total) + '</b> edificaciones afectadas frente a <b>' + fmt(s.danos_total) + '</b> reportadas por la ciudadanía — la mayoría del daño aún no tiene reporte en tierra.';
+    }
+    if (d.panorama && d.panorama.texto) {
+      document.getElementById('ai-text').textContent = d.panorama.texto;
+      document.getElementById('sec-ai').hidden = false;
+    }
+    if (d.taken_ms) {
+      var mins = Math.max(0, Math.round((Date.now() - d.taken_ms) / 60000));
+      document.getElementById('stale').textContent = 'Último corte sincronizado hace ' + (mins < 60 ? mins + ' min' : Math.round(mins / 60) + ' h') + '.';
+    }
+  }
+
+  function renderMap() {
+    if (!map) {
+      map = L.map('satmap').setView([10.55, -66.9], 9);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        { attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19 }).addTo(map);
+    }
+    if (layer) layer.remove();
+    layer = L.layerGroup();
+    var shown = 0;
+    allPoints.forEach(function (e) {
+      if (activeZona && e.zona !== activeZona) return;
+      shown++;
+      var m = L.circleMarker([e.lat, e.lng], {
+        radius: 6, weight: 1.5, color: '#fff',
+        fillColor: SEV_COLOR[e.severidad] || '#6b7280', fillOpacity: 0.85
+      });
+      m.bindPopup('<b>' + (e.severidad === 'colapso' ? 'Colapso' : 'Daño grave') + '</b><br>' +
+        (e.zona || '') + (e.uso && e.uso !== 'Unclassified' ? ' · ' + e.uso : '') +
+        (e.maps_url ? '<br><a href="' + e.maps_url + '" target="_blank" rel="noopener">Abrir en Google Maps →</a>' : ''));
+      layer.addLayer(m);
+    });
+    layer.addTo(map);
+    document.getElementById('sat-count').textContent = fmt(shown);
+  }
+
+  function renderChips(zonas) {
+    var box = document.getElementById('zona-chips');
+    box.innerHTML = '';
+    var mk = function (label, zona) {
+      var b = document.createElement('button');
+      b.className = 'chip' + ((activeZona === zona) ? ' on' : '');
+      b.textContent = label;
+      b.onclick = function () { activeZona = zona; renderChips(zonas); renderMap(); };
+      box.appendChild(b);
+    };
+    mk('Todas', '');
+    zonas.slice(0, 6).forEach(function (z) { mk(z.zona + ' (' + fmt(z.n) + ')', z.zona); });
+  }
+
+  function loadStats() {
+    fetch('/api/panorama/stats?t=' + Math.floor(Date.now() / 60000))
+      .then(function (r) { return r.json(); })
+      .then(function (d) { renderStats(d); if (d.sat && d.sat.zonas) renderChips(d.sat.zonas); })
+      .catch(function () {});
+  }
+
+  fetch('/api/panorama/edificaciones?t=' + Math.floor(Date.now() / 60000))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      allPoints = (d.edificaciones || []).filter(function (e) { return e.lat != null && e.lng != null; });
+      renderMap();
+    })
+    .catch(function () {});
+
+  loadStats();
+  setInterval(loadStats, 60000);
+})();
+</script>
+</body>
+</html>

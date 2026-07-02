@@ -14,6 +14,7 @@ import { refugios } from './routes/refugios';
 import { ninez } from './routes/ninez';
 import { casualties } from './routes/casualties';
 import { buildings } from './routes/buildings';
+import { panorama } from './routes/panorama';
 import { triage } from './routes/triage';
 import { ops } from './routes/ops';
 import { misc } from './routes/misc';
@@ -391,6 +392,7 @@ app.route('/api/refugios', refugios); // shelter siting + evacuation logistics e
 app.route('/api/ninez', ninez); // niñez/vulnerables shelter classification + needs board; public reads OFFICIAL-only aggregated, /admin reads + writes ninez:manage
 app.route('/api/casualties', casualties); // multi-source casualty ledger (fallecidos/heridos/desaparecidos); GET public, POST /manual admin:maintenance
 app.route('/api/buildings', buildings); // building damage-scoring engine (motor): fragility model anclado a NASA DPM/MSFT, alineado al tier/confianza de casualties; GET público, sin PII
+app.route('/api/panorama', panorama); // panorama de la emergencia: CIVIS mirror (satellite edificaciones + stats snapshot); GET público, sin PII
 app.route('/api/triage', triage);     // AI intake: free-text message → desaparecidos/mascotas/daños as pending (public, burst-limited)
 app.route('/api/damage', damage);
 app.route('/api/sat', satellite);    // satellite/GIS damage analysis (imagery proxy + Workers AI vision)
@@ -458,6 +460,9 @@ app.get('/flota/track', (c) => c.env.ASSETS.fetch(new Request(new URL('/flota-tr
 app.get('/refugios', (c) => c.env.ASSETS.fetch(new Request(new URL('/refugios.html', c.req.url))));
 // Edificios — building damage + cost dashboard (public): map + scores + addresses + repair/replacement cost.
 app.get('/edificios', (c) => c.env.ASSETS.fetch(new Request(new URL('/edificios.html', c.req.url))));
+// Panorama de la emergencia (public): live counters + AI summary + satellite
+// structural-damage map, mirrored hourly from CIVIS/Copernicus into our D1.
+app.get('/panorama', (c) => c.env.ASSETS.fetch(new Request(new URL('/panorama.html', c.req.url))));
 // Forensic per-building profile ("expediente" court-case dossier). Clean URL
 // /edificio/:id serves the static shell; edificio.html reads the id and hydrates
 // from GET /api/buildings/reported/:id.
