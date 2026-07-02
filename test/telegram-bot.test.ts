@@ -182,24 +182,24 @@ describe('buildTelegramResponse', () => {
     sensitive: { cedula: '12345678', phone: '+584141234567', hospital: 'Hospital Vargas', medicalNotes: 'reservado' },
   };
 
-  it('verified match (public) shows status + profile link but NO sensitive data', () => {
+  it('verified match (public) shows humanized status + profile link but NO sensitive data', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, base);
     expect(out).toMatch(/Registro verificado/);
-    expect(out).toMatch(/Estado: HOSPITALIZED/);
+    expect(out).toMatch(/Estado: 🏥 En un hospital/);
     expect(out).toMatch(/Nivel: VERIFIED/);
     expect(out).toMatch(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_1/);
     expect(out).not.toContain('12345678');
     expect(out).not.toContain('Vargas');
     expect(out).not.toContain('Jose Garcia'); // name is not a public field
   });
-  it('splits a long list into messages that EACH restart at 1) with a (parte i/total) header', () => {
+  it('splits a long list into card messages, EACH with a (parte i/total) header', () => {
     const many = Array.from({ length: 40 }, (_, i) => ({ ...rec, internalId: `hp_${i}`, caseId: `HOSP-hp_${i}`, fullName: `Persona ${i}` }));
     const msgs = buildListMessages(many, base, 'MARIA DELGADO');
     expect(msgs.length).toBeGreaterThan(1);
     msgs.forEach((m, i) => {
       expect(m).toContain(`(parte ${i + 1}/${msgs.length})`);
       expect(m).toContain('«MARIA DELGADO» — 40 registros'); // total reflects the whole search
-      expect(m).toMatch(/\n1\) Caso:/); // every message restarts numbering at 1)
+      expect(m).toMatch(/🏥 <b>Persona \d+<\/b>/); // card: bold name
     });
   });
   it('single-page list has no "parte" label', () => {
@@ -213,7 +213,7 @@ describe('buildTelegramResponse', () => {
   it("/caso (detail:full) shows name + age + link, still no sensitive PII in a group", () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec, detail: 'full' }, base);
     expect(out).toMatch(/Detalle del caso/);
-    expect(out).toContain('Nombre: Jose Garcia');
+    expect(out).toContain('Nombre: <b>Jose Garcia</b>');
     expect(out).toContain('Edad: 50');
     expect(out).toMatch(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_1/);
     expect(out).not.toContain('12345678'); // cédula still hidden in a group
@@ -221,27 +221,40 @@ describe('buildTelegramResponse', () => {
   });
   it("/caso (detail:full) as admin DM adds the operator block", () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec, detail: 'full' }, { lang: 'es', role: 'admin', canSeeSensitive: true });
-    expect(out).toContain('Nombre: Jose Garcia');
+    expect(out).toContain('Nombre: <b>Jose Garcia</b>');
     expect(out).toContain('12345678');
     expect(out).toContain('Hospital Vargas');
   });
   it('/status (detail:status) is a short status line with the link', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec, detail: 'status' }, base);
     expect(out).toMatch(/Caso: HOSP-hp_1/);
-    expect(out).toMatch(/Estado: HOSPITALIZED/);
+    expect(out).toMatch(/Estado: 🏥 En un hospital/);
     expect(out).toMatch(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_1/);
     expect(out).not.toContain('Nombre');
     expect(out).not.toContain('Ubicación');
   });
-  it('operator list shows every record as a FULL block (no PII)', () => {
+  it('list renders every record as a formal card (bold name, humanized status, linked ficha; no PII)', () => {
     const many = Array.from({ length: 5 }, (_, i) => ({ ...rec, internalId: `hp_${i}`, caseId: `HOSP-hp_${i}`, fullName: `Persona ${i}` }));
     const [msg] = buildListMessages(many, base, 'MARIA DELGADO');
     expect(msg).toMatch(/🔎 «MARIA DELGADO» — 5 registros:/);
-    expect(msg).toContain('1) Caso: HOSP-hp_0');
-    expect(msg).toContain('5) Caso: HOSP-hp_4');
-    expect((msg.match(/Estado: HOSPITALIZED/g) || []).length).toBe(5);
-    expect((msg.match(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_/g) || []).length).toBe(5);
-    expect(msg).not.toContain('12345678'); // no PII in the list
+    expect(msg).toContain('🏥 <b>Persona 0</b>');
+    expect(msg).toContain('🏥 <b>Persona 4</b>');
+    // Humanized status + facility (public on /hospitales for the hospital registry) + coarsened location.
+    expect((msg.match(/En un hospital — Hospital Vargas \(Distrito Capital\)/g) || []).length).toBe(5);
+    expect((msg.match(/<a href="https:\/\/sismo911\.com\/casos#caso=HOSP-hp_\d+">Ver ficha<\/a>/g) || []).length).toBe(5);
+    expect(msg).toContain('HOSP-hp_0 · Verificado 2026-06-30');
+    expect(msg).not.toMatch(/HOSPITALIZED/); // raw enum never shown
+    expect(msg).not.toContain('12345678'); // no cédula/phone PII in the list
+  });
+  it('card for a SISMO911-registry (personas) record never shows a facility', () => {
+    const persona: CaseRecord = {
+      ...rec, registry: 'personas', internalId: 'p1', caseId: 'FAM-p1', fullName: 'Ana <Prueba>',
+      sensitive: { hospital: 'Hospital Secreto' },
+    };
+    const [msg] = buildListMessages([persona], base, 'Ana');
+    expect(msg).not.toContain('Hospital Secreto'); // operator-only for non-hospital registries
+    expect(msg).toContain('En un hospital — Distrito Capital');
+    expect(msg).toContain('🏥 <b>Ana &lt;Prueba&gt;</b>'); // DB text is HTML-escaped
   });
 
   it('admin match (DM) includes the restricted detail block', () => {
@@ -254,14 +267,14 @@ describe('buildTelegramResponse', () => {
   it('an unverified record never asserts a final status', () => {
     const pending: CaseRecord = { ...rec, publicStatus: 'PENDING_VERIFICATION', verification: 'PENDING_VERIFICATION' };
     const out = buildTelegramResponse({ kind: 'match', record: pending }, base);
-    expect(out).toMatch(/PENDING_VERIFICATION/);
-    expect(out).not.toMatch(/Estado: HOSPITALIZED/);
+    expect(out).toMatch(/Pendiente de verificación/);
+    expect(out).not.toMatch(/En un hospital/);
   });
 
   it('English verified match', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, { lang: 'en', role: 'public', canSeeSensitive: false });
     expect(out).toMatch(/Verified record/);
-    expect(out).toMatch(/Status: HOSPITALIZED/);
+    expect(out).toMatch(/Status: 🏥 In a hospital/);
   });
 });
 

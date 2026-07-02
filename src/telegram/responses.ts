@@ -23,6 +23,25 @@ function fmtDate(ms: number | null): string {
   return new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
 }
 
+/** Escape DB-derived text for Telegram parse_mode:'HTML' (& < > only). */
+export function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Humanized status label + icon per public status — the "card" vocabulary the
+// web UI uses (e.g. HOSPITALIZED → "En un hospital"), never the raw enum.
+const STATUS_LABEL: Record<PublicStatus, { icon: string; es: string; en: string }> = {
+  ALIVE: { icon: '🟢', es: 'Con vida', en: 'Alive' },
+  DEATH: { icon: '⚫', es: 'Fallecido(a)', en: 'Deceased' },
+  MISSING: { icon: '🔴', es: 'Desaparecido(a)', en: 'Missing' },
+  HOSPITALIZED: { icon: '🏥', es: 'En un hospital', en: 'In a hospital' },
+  LOCATED: { icon: '🟢', es: 'Localizado(a)', en: 'Located' },
+  SHELTERED: { icon: '⛺', es: 'En un refugio', en: 'In a shelter' },
+  EVACUATED: { icon: '🟠', es: 'Evacuado(a)', en: 'Evacuated' },
+  UNKNOWN: { icon: '⚪', es: 'Sin confirmar', en: 'Unconfirmed' },
+  PENDING_VERIFICATION: { icon: '⏳', es: 'Pendiente de verificación', en: 'Pending verification' },
+};
+
 // Recommended next action per public status (kept short + non-committal).
 const NEXT_ACTION: Record<PublicStatus, { es: string; en: string }> = {
   ALIVE: { es: 'Para detalles, contacte a un operador autorizado.', en: 'For details, contact an authorized operator.' },
@@ -139,31 +158,46 @@ const OPERATOR_HELP_EN = [
 ].join('\n');
 
 /**
- * Full per-case block (the format an operator sees for every list item):
- * Caso · Estado · Ubicación general · Última verificación · Nivel · Ficha · Nota.
- * Unverified rows never assert a final status. No sensitive PII (public-tier).
+ * Formal "card" per list item, mirroring the web search UI (parse_mode:'HTML'):
+ *
+ *   🏥 MUSONI YOLANDA                                  ← bold name
+ *   En un hospital — Hospital Dr. José María Vargas (La Guaira)
+ *   HOSP-123 · Verificado 2026-07-01 · Ver ficha       ← linked profile
+ *
+ * Humanized status (never the raw enum); facility only when it is public-tier
+ * (hospital registry — see PublicView.facility). Unverified rows never assert
+ * a final status. No sensitive PII (public-tier). All DB text HTML-escaped.
  */
 function caseBlock(record: CaseRecord, opts: BuildOpts): string {
   const es = opts.lang === 'es';
   const v = toPublicView(record, opts.role, false, opts.baseUrl);
-  if (v.status === 'PENDING_VERIFICATION') {
-    return es
-      ? `Caso: ${v.caseId}\nEstado: PENDING_VERIFICATION\nUbicación general: ${v.generalLocation ?? 'no disponible'}\nFicha: ${v.profileUrl}`
-      : `Case: ${v.caseId}\nStatus: PENDING_VERIFICATION\nGeneral location: ${v.generalLocation ?? 'not available'}\nProfile: ${v.profileUrl}`;
-  }
-  const next = NEXT_ACTION[v.status][opts.lang];
-  return es
-    ? `Caso: ${v.caseId}\nEstado: ${v.status}\nUbicación general: ${v.generalLocation ?? 'no disponible'}\nÚltima verificación: ${fmtDate(v.lastVerifiedMs)}\nNivel: ${v.verification}\nFicha: ${v.profileUrl}\nNota: ${next}`
-    : `Case: ${v.caseId}\nStatus: ${v.status}\nGeneral location: ${v.generalLocation ?? 'not available'}\nLast verified: ${fmtDate(v.lastVerifiedMs)}\nLevel: ${v.verification}\nProfile: ${v.profileUrl}\nNote: ${next}`;
+  const label = STATUS_LABEL[v.status];
+
+  // "Hospital Dr. José María Vargas (La Guaira)" | "La Guaira" | fallback.
+  const where = v.facility
+    ? v.facility + (v.generalLocation ? ` (${v.generalLocation})` : '')
+    : v.generalLocation;
+  const statusLine =
+    `${es ? label.es : label.en}` +
+    (where ? ` — ${escapeHtml(where)}` : es ? ' — ubicación no disponible' : ' — location not available');
+
+  const link = `<a href="${v.profileUrl}">${es ? 'Ver ficha' : 'View profile'}</a>`;
+  const verified =
+    v.status === 'PENDING_VERIFICATION' || v.verification !== 'VERIFIED'
+      ? es ? 'Sin verificar' : 'Unverified'
+      : `${es ? 'Verificado' : 'Verified'} ${fmtDate(v.lastVerifiedMs).slice(0, 10)}`;
+  const metaLine = `${escapeHtml(v.caseId)} · ${verified} · ${link}`;
+
+  return `${label.icon} <b>${escapeHtml(v.name)}</b>\n${statusLine}\n${metaLine}`;
 }
 
 const LIST_PAGE_MAX = 3500; // per-message char budget (Telegram cap is 4096)
 
 /**
- * Render an operator match-list as one or MORE Telegram messages. Each message
- * is self-contained: its own header (`🔎 «query» — N registros (parte i/total)`)
- * and its items renumbered from 1). So every new search — and every continuation
- * message — restarts the numbering, tied to that search's items.
+ * Render a match-list as one or MORE Telegram messages. Each message is
+ * self-contained: its own header (`🔎 «query» — N registros (parte i/total)`)
+ * followed by unnumbered cards separated by a blank line, mirroring the web
+ * search results UI.
  */
 export function buildListMessages(
   records: Parameters<typeof caseBlock>[0][],
@@ -194,9 +228,8 @@ export function buildListMessages(
   const noun = (n: number) => (es ? `registro${n === 1 ? '' : 's'}` : `record${n === 1 ? '' : 's'}`);
   return pages.map((pageBlocks, pi) => {
     const part = total > 1 ? (es ? ` (parte ${pi + 1}/${total})` : ` (part ${pi + 1}/${total})`) : '';
-    const header = `🔎 ${q}${records.length} ${noun(records.length)}${part}:`;
-    const numbered = pageBlocks.map((b, i) => `${i + 1}) ${b}`); // restart at 1) each message
-    return [header, '', numbered.join('\n\n')].join('\n');
+    const header = `🔎 ${escapeHtml(q)}${records.length} ${noun(records.length)}${part}:`;
+    return [header, '', pageBlocks.join('\n\n')].join('\n');
   });
 }
 
@@ -261,31 +294,33 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
     case 'match': {
       const view = toPublicView(result.record, opts.role, opts.canSeeSensitive, opts.baseUrl);
       const mode = result.detail ?? 'summary';
+      const label = STATUS_LABEL[view.status];
+      const statusTxt = `${label.icon} ${es ? label.es : label.en}`;
 
       // /status → short status line (no detail body).
       if (mode === 'status') {
         return es
-          ? `Caso: ${view.caseId}\nEstado: ${view.status}\nNivel: ${view.verification}\nFicha: ${view.profileUrl}`
-          : `Case: ${view.caseId}\nStatus: ${view.status}\nLevel: ${view.verification}\nProfile: ${view.profileUrl}`;
+          ? `Caso: ${escapeHtml(view.caseId)}\nEstado: ${statusTxt}\nNivel: ${view.verification}\nFicha: ${view.profileUrl}`
+          : `Case: ${escapeHtml(view.caseId)}\nStatus: ${statusTxt}\nLevel: ${view.verification}\nProfile: ${view.profileUrl}`;
       }
 
       // Unverified record → never assert a final status (but still link the case).
       if (view.status === 'PENDING_VERIFICATION') {
-        const nameLine = mode === 'full' ? (es ? `\nNombre: ${view.name}` : `\nName: ${view.name}`) : '';
+        const nameLine = mode === 'full' ? (es ? `\nNombre: ${escapeHtml(view.name)}` : `\nName: ${escapeHtml(view.name)}`) : '';
         return es
-          ? `Existe un registro pendiente, pero aún no está verificado.\nCaso: ${view.caseId}${nameLine}\nEstado público: PENDING_VERIFICATION.\nFicha: ${view.profileUrl}`
-          : `A record exists but is not yet verified.\nCase: ${view.caseId}${nameLine}\nPublic status: PENDING_VERIFICATION.\nProfile: ${view.profileUrl}`;
+          ? `Existe un registro pendiente, pero aún no está verificado.\nCaso: ${escapeHtml(view.caseId)}${nameLine}\nEstado público: ${statusTxt}.\nFicha: ${view.profileUrl}`
+          : `A record exists but is not yet verified.\nCase: ${escapeHtml(view.caseId)}${nameLine}\nPublic status: ${statusTxt}.\nProfile: ${view.profileUrl}`;
       }
       const next = NEXT_ACTION[view.status][opts.lang];
       const full = mode === 'full';
       const lines = es
         ? [
             full ? 'Detalle del caso:' : 'Registro verificado:',
-            `Caso: ${view.caseId}`,
-            ...(full ? [`Nombre: ${view.name}`] : []),
+            `Caso: ${escapeHtml(view.caseId)}`,
+            ...(full ? [`Nombre: <b>${escapeHtml(view.name)}</b>`] : []),
             ...(full && view.age != null ? [`Edad: ${view.age}`] : []),
-            `Estado: ${view.status}`,
-            `Ubicación general: ${view.generalLocation ?? 'no disponible'}`,
+            `Estado: ${statusTxt}`,
+            `Ubicación general: ${escapeHtml(view.generalLocation ?? 'no disponible')}`,
             `Última verificación: ${fmtDate(view.lastVerifiedMs)}`,
             `Nivel: ${view.verification}`,
             `Ficha: ${view.profileUrl}`,
@@ -293,11 +328,11 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
           ]
         : [
             full ? 'Case detail:' : 'Verified record:',
-            `Case: ${view.caseId}`,
-            ...(full ? [`Name: ${view.name}`] : []),
+            `Case: ${escapeHtml(view.caseId)}`,
+            ...(full ? [`Name: <b>${escapeHtml(view.name)}</b>`] : []),
             ...(full && view.age != null ? [`Age: ${view.age}`] : []),
-            `Status: ${view.status}`,
-            `General location: ${view.generalLocation ?? 'not available'}`,
+            `Status: ${statusTxt}`,
+            `General location: ${escapeHtml(view.generalLocation ?? 'not available')}`,
             `Last verified: ${fmtDate(view.lastVerifiedMs)}`,
             `Level: ${view.verification}`,
             `Profile: ${view.profileUrl}`,
@@ -307,13 +342,13 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
         const p = view.privileged;
         lines.push('');
         lines.push(es ? '— Detalle restringido (operador) —' : '— Restricted detail (operator) —');
-        lines.push((es ? 'Nombre: ' : 'Name: ') + p.fullName);
-        if (p.cedula) lines.push((es ? 'Cédula: ' : 'ID: ') + p.cedula);
-        if (p.phone) lines.push((es ? 'Teléfono: ' : 'Phone: ') + p.phone);
-        if (p.hospital) lines.push((es ? 'Centro: ' : 'Facility: ') + p.hospital);
-        if (p.address) lines.push((es ? 'Dirección: ' : 'Address: ') + p.address);
-        if (p.medicalNotes) lines.push((es ? 'Notas: ' : 'Notes: ') + p.medicalNotes);
-        if (p.familyContact) lines.push((es ? 'Contacto familiar: ' : 'Family contact: ') + p.familyContact);
+        lines.push((es ? 'Nombre: ' : 'Name: ') + escapeHtml(p.fullName));
+        if (p.cedula) lines.push((es ? 'Cédula: ' : 'ID: ') + escapeHtml(p.cedula));
+        if (p.phone) lines.push((es ? 'Teléfono: ' : 'Phone: ') + escapeHtml(p.phone));
+        if (p.hospital) lines.push((es ? 'Centro: ' : 'Facility: ') + escapeHtml(p.hospital));
+        if (p.address) lines.push((es ? 'Dirección: ' : 'Address: ') + escapeHtml(p.address));
+        if (p.medicalNotes) lines.push((es ? 'Notas: ' : 'Notes: ') + escapeHtml(p.medicalNotes));
+        if (p.familyContact) lines.push((es ? 'Contacto familiar: ' : 'Family contact: ') + escapeHtml(p.familyContact));
       }
       return lines.join('\n');
     }
@@ -341,8 +376,8 @@ export function buildUpdateResponse(r: UpdateResult, opts: BuildOpts): string {
   switch (r.kind) {
     case 'update_ok':
       return es
-        ? `✅ Caso ${r.caseId} (${r.name}) actualizado: ${r.summary}.`
-        : `✅ Case ${r.caseId} (${r.name}) updated: ${r.summary}.`;
+        ? `✅ Caso ${escapeHtml(r.caseId)} (${escapeHtml(r.name)}) actualizado: ${escapeHtml(r.summary)}.`
+        : `✅ Case ${escapeHtml(r.caseId)} (${escapeHtml(r.name)}) updated: ${escapeHtml(r.summary)}.`;
     case 'update_forbidden':
       if (r.reason === 'not_executive') {
         return es

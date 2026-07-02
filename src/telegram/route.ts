@@ -68,13 +68,28 @@ async function sendMessages(token: string, chatId: number | string, msgs: string
 async function sendMessage(token: string, chatId: number | string, text: string): Promise<void> {
   // Split long operator lists across multiple Telegram messages (4096-char cap),
   // pacing them (~350ms) to stay under Telegram's ~1 msg/sec-per-chat flood limit.
+  // Replies are HTML-formatted "cards" (bold names, linked profiles). If Telegram
+  // rejects the entity parse (a stray unescaped tag), resend as plain text so a
+  // formatting bug can never swallow a reply.
   const chunks = chunkText(text);
   for (let i = 0; i < chunks.length; i++) {
-    await fetch(`${TG_API}/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: chunks[i], disable_web_page_preview: true }),
-    }).catch(() => {});
+    const send = (parseMode?: 'HTML') =>
+      fetch(`${TG_API}/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: chunks[i],
+          disable_web_page_preview: true,
+          ...(parseMode ? { parse_mode: parseMode } : {}),
+        }),
+      });
+    try {
+      const res = await send('HTML');
+      if (!res.ok) await send().catch(() => {});
+    } catch {
+      /* network failure — nothing to retry against */
+    }
     if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 350));
   }
 }
