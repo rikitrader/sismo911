@@ -14,6 +14,7 @@ import { extractFields } from './extract';
 import { matchCase } from './match';
 import { persist } from './persist';
 import { notifyOperators, buildReceipt, sendTelegram } from './notify';
+import { escapeHtml } from '../responses';
 import { uid } from '../../lib/db';
 import { createBulkJob, processBulkJob } from '../../bulk/import-job';
 import type { IntakeResult } from './types';
@@ -40,7 +41,7 @@ export async function handleIntake(env: Env, cfg: TelegramConfig, msg: TelegramM
   const code = `ITK-${submissionId.slice(4).toUpperCase()}`;
 
   // Immediate ack so the sender knows it's being processed (extraction is slow).
-  await sendTelegram(token, chatId, `📎 Recibí tu archivo. Procesando… (código ${code})`);
+  await sendTelegram(token, chatId, `📎 Recibí tu archivo. Procesando… (código <b>${code}</b>)`);
 
   const media = await downloadFile(token, picked);
   if (!media) {
@@ -101,23 +102,23 @@ async function handleRosterIntake(env: Env, cfg: TelegramConfig, msg: TelegramMe
     tgUserId,
   });
 
-  await sendTelegram(token, chatId, `📎 Recibí el documento (padrón). Estoy leyendo los nombres… código ${job.code}.`);
+  await sendTelegram(token, chatId, `📎 Recibí el documento (padrón). Estoy leyendo los nombres… código <b>${job.code}</b>.`);
 
   const s = await processBulkJob(env, job.jobId);
   if (!s) return null;
 
   const reply =
     s.status === 'error'
-      ? `⚠️ ${job.code}: no pude procesar el documento completo. Un operador lo revisará en la consola.`
+      ? `⚠️ <b>${job.code}</b>: no pude procesar el documento completo. Un operador lo revisará en la consola.`
       : s.total === 0
-        ? `${job.code}: no pude leer nombres claros en el documento. Si puedes, envía un PDF con texto (no una foto escaneada) o los datos por texto.`
-        : `✅ ${job.code}: detecté ${s.total} nombre(s) → ${s.created} caso(s) nuevo(s) en BORRADOR, ${s.matched} coincidencia(s) con casos existentes, ${s.needsReview} para revisión.\nNada es público todavía: un operador los revisará antes de publicarlos.`;
+        ? `<b>${job.code}</b>: no pude leer nombres claros en el documento. Si puedes, envía un PDF con texto (no una foto escaneada) o los datos por texto.`
+        : `✅ <b>${job.code}</b>: detecté <b>${s.total}</b> nombre(s) → <b>${s.created}</b> caso(s) nuevo(s) en borrador, <b>${s.matched}</b> coincidencia(s) con casos existentes, <b>${s.needsReview}</b> para revisión.\nNada es público todavía: un operador los revisará antes de publicarlos.`;
   await sendTelegram(token, chatId, reply);
 
   // Operator ping (same DM channel the single-intake path uses).
   if (cfg.adminUserIds.length && s.total > 0) {
     const base = env.PUBLIC_BASE_URL || 'https://sismo911.com';
-    const alert = `🗂️ Padrón por Telegram (${job.code}) de ${submittedBy ?? 'anónimo'}: ${s.total} nombres → ${s.created} borradores, ${s.matched} coincidencias. Revisar: ${base}/console`;
+    const alert = `🗂️ Padrón por Telegram (<b>${job.code}</b>) de ${escapeHtml(submittedBy ?? 'anónimo')}: ${s.total} nombres → ${s.created} borradores, ${s.matched} coincidencias. Revisar: ${base}/console`;
     for (const adminId of cfg.adminUserIds) await sendTelegram(token, adminId, alert);
   }
   return null;

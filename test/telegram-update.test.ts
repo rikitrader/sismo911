@@ -98,6 +98,8 @@ describe('resolveUpdate writes', () => {
     const r = await resolveUpdate(fakeEnv(PERSONA, cap), cmd({ caseId: 'pc_x', updateField: 'estado', updateValue: 'localizado' }), ctx('authorized'));
     expect(r.kind).toBe('update_ok');
     expect(cap.some((q) => /UPDATE personas SET estado/.test(q.sql) && q.args.includes('localizado'))).toBe(true);
+    // Reply summary is humanized (DB keeps the raw token).
+    expect(r.kind === 'update_ok' && r.summary).toBe('estado → Localizado(a)');
   });
   it('adds a note as a verified case_intel row', async () => {
     const cap: Array<{ sql: string; args: any[] }> = [];

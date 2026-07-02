@@ -186,7 +186,7 @@ describe('buildTelegramResponse', () => {
     const out = buildTelegramResponse({ kind: 'match', record: rec }, base);
     expect(out).toMatch(/Registro verificado/);
     expect(out).toMatch(/Estado: 🏥 En un hospital/);
-    expect(out).toMatch(/Nivel: VERIFIED/);
+    expect(out).toMatch(/Nivel: Verificado/);
     expect(out).toMatch(/Ficha: https:\/\/sismo911\.com\/casos#caso=HOSP-hp_1/);
     expect(out).not.toContain('12345678');
     expect(out).not.toContain('Vargas');

@@ -7,16 +7,31 @@
 import type { Env } from '../../types';
 import type { TelegramConfig } from '../env';
 import type { IntakeResult } from './types';
+import { escapeHtml } from '../responses';
 
 const TG_API = 'https://api.telegram.org';
 
-/** Fire-and-forget Telegram sendMessage (single, short message). */
+/** Fire-and-forget Telegram sendMessage (single, short message). Sends as HTML
+ *  (bold codes/names); on a rejected entity parse resends plain so a formatting
+ *  bug can never swallow a receipt. */
 export async function sendTelegram(token: string, chatId: number | string, text: string): Promise<void> {
-  await fetch(`${TG_API}/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text: text.slice(0, 3900), disable_web_page_preview: true }),
-  }).catch(() => {});
+  const send = (parseMode?: 'HTML') =>
+    fetch(`${TG_API}/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text.slice(0, 3900),
+        disable_web_page_preview: true,
+        ...(parseMode ? { parse_mode: parseMode } : {}),
+      }),
+    });
+  try {
+    const res = await send('HTML');
+    if (!res.ok) await send().catch(() => {});
+  } catch {
+    /* network failure — nothing to retry against */
+  }
 }
 
 /** DM every configured operator with the outcome + a console link. */
@@ -39,10 +54,10 @@ export async function notifyOperators(env: Env, cfg: TelegramConfig, r: IntakeRe
       ? [`Aprobar:  /aprobar ${r.code}`, `Rechazar: /rechazar ${r.code}`]
       : [];
   const msg = [
-    `${head} (${r.code})`,
-    r.note,
-    r.fields.nombre ? `Nombre: ${r.fields.nombre}` : null,
-    r.fields.cedula ? `Cédula: ${r.fields.cedula}` : null,
+    `${head} (<b>${escapeHtml(r.code)}</b>)`,
+    r.note ? escapeHtml(r.note) : null,
+    r.fields.nombre ? `Nombre: <b>${escapeHtml(r.fields.nombre)}</b>` : null,
+    r.fields.cedula ? `Cédula: ${escapeHtml(r.fields.cedula)}` : null,
     ...actions,
     link,
   ]
@@ -55,7 +70,7 @@ export async function notifyOperators(env: Env, cfg: TelegramConfig, r: IntakeRe
 
 /** Build the receipt the submitter sees. */
 export function buildReceipt(r: IntakeResult): string {
-  const lines = [`✅ Recibido. Tu código de seguimiento es ${r.code}.`];
+  const lines = [`✅ Recibido. Tu código de seguimiento es <b>${escapeHtml(r.code)}</b>.`];
   switch (r.outcome) {
     case 'matched':
       lines.push('Relacionamos tu envío con un caso existente. Un operador lo verificará.');
