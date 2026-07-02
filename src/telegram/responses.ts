@@ -141,25 +141,41 @@ const HELP_EN = [
 // Operator-only write command help (appended to /ayuda for operators/admins).
 const OPERATOR_HELP_ES = [
   '🛠️ Operadores — actualizar un caso desde el chat:',
-  '• /actualizar <ID> estado localizado — cambiar el estado (sin-contacto, localizado, aparecido, hospitalizado, fallecido)',
-  '• /actualizar <ID> nota "Visto en el refugio de Catia" — agregar una nota verificada al caso',
-  '• /actualizar <ID> ubicacion "Caracas, Distrito Capital" — actualizar la ubicación',
-  '• /actualizar <ID> contacto 0412-5551234 — actualizar el contacto',
-  '• /actualizar <ID> edad 34 — actualizar la edad',
-  '• /actualizar <ID> nombre "Juan Pérez Gómez" — corregir el nombre',
-  '• /actualizar <ID> aprobar  /  rechazar — publicar u ocultar un caso (solo nivel ejecutivo/admin)',
+  '',
+  'Cambio de estado rápido (por nombre o por ID):',
+  '• /fallecido Sarah Ysea Caracciolo — marcar Fallecido(a)',
+  '• /localizado Juan Pérez — marcar Localizado(a)',
+  '• /aparecido, /hospitalizado, /sincontacto — igual, con el nombre o el ID',
+  'Si hay varios casos con ese nombre, te muestro la lista para que repitas con el ID.',
+  '',
+  'Comando completo — acepta el ID (FAM-123) o el NOMBRE completo:',
+  '• /actualizar <ID o nombre> estado fallecido — cambiar el estado (sin-contacto, localizado, aparecido, hospitalizado, fallecido; UNO solo)',
+  '• /actualizar <ID o nombre> nota "Visto en el refugio de Catia" — agregar una nota verificada al caso',
+  '• /actualizar <ID o nombre> ubicacion "Caracas, Distrito Capital" — actualizar la ubicación',
+  '• /actualizar <ID o nombre> contacto 0412-5551234 — actualizar el contacto',
+  '• /actualizar <ID o nombre> edad 34 — actualizar la edad',
+  '• /actualizar <ID o nombre> nombre "Juan Pérez Gómez" — corregir el nombre',
+  '• /actualizar <ID o nombre> aprobar  /  rechazar — publicar u ocultar un caso (solo nivel ejecutivo/admin)',
   '• /aprobar ITK-XXXX  /  /rechazar ITK-XXXX — aprobar u ocultar un envío del bot por su código de recibo (admin)',
   'Un campo por comando. Solo casos del registro de SISMO911 (no hospitales/oficiales).',
 ].join('\n');
 const OPERATOR_HELP_EN = [
   '🛠️ Operators — update a case from chat:',
-  '• /actualizar <ID> estado localizado — change status (sin-contacto, localizado, aparecido, hospitalizado, fallecido)',
-  '• /actualizar <ID> nota "Seen at the Catia shelter" — add a verified note to the case',
-  '• /actualizar <ID> ubicacion "Caracas, Distrito Capital" — update location',
-  '• /actualizar <ID> contacto 0412-5551234 — update contact',
-  '• /actualizar <ID> edad 34 — update age',
-  '• /actualizar <ID> nombre "Juan Pérez Gómez" — fix the name',
-  '• /actualizar <ID> aprobar  /  rechazar — publish or hide a case (executive/admin only)',
+  '',
+  'Quick status change (by name or ID):',
+  '• /fallecido Sarah Ysea Caracciolo — mark Deceased',
+  '• /localizado Juan Pérez — mark Located',
+  '• /aparecido, /hospitalizado, /sincontacto — same, with the name or the ID',
+  'If several cases match the name, I list them so you can repeat with the ID.',
+  '',
+  'Full command — accepts the ID (FAM-123) or the full NAME:',
+  '• /actualizar <ID or name> estado fallecido — change status (sin-contacto, localizado, aparecido, hospitalizado, fallecido; ONE only)',
+  '• /actualizar <ID or name> nota "Seen at the Catia shelter" — add a verified note to the case',
+  '• /actualizar <ID or name> ubicacion "Caracas, Distrito Capital" — update location',
+  '• /actualizar <ID or name> contacto 0412-5551234 — update contact',
+  '• /actualizar <ID or name> edad 34 — update age',
+  '• /actualizar <ID or name> nombre "Juan Pérez Gómez" — fix the name',
+  '• /actualizar <ID or name> aprobar  /  rechazar — publish or hide a case (executive/admin only)',
   '• /aprobar ITK-XXXX  /  /rechazar ITK-XXXX — approve or hide a bot submission by its receipt code (admin)',
   'One field per command. Only SISMO911-registry cases (not hospital/official).',
 ].join('\n');
@@ -364,17 +380,19 @@ export function buildTelegramResponse(result: QueryResult, opts: BuildOpts): str
 }
 
 const BAD_INPUT_ES: Record<string, string> = {
-  missing_id: 'Falta el ID del caso. Uso: /actualizar <ID> <campo> <valor>',
+  missing_id: 'Falta el caso. Uso: /actualizar <ID o nombre completo> <campo> <valor>',
   unknown_field: 'Campo no reconocido. Campos: estado, ubicacion, contacto, edad, nombre, nota — o aprobar / rechazar.',
   missing_value: 'Falta el valor a asignar.',
   bad_estado: 'Estado inválido. Usa: sin-contacto, localizado, aparecido, hospitalizado o fallecido.',
+  ambiguous_estado: 'Indicaste más de un estado a la vez. Envía SOLO UNO: sin-contacto, localizado, aparecido, hospitalizado o fallecido.',
   bad_edad: 'Edad inválida (debe ser un número entre 1 y 129).',
 };
 const BAD_INPUT_EN: Record<string, string> = {
-  missing_id: 'Missing case ID. Usage: /actualizar <ID> <field> <value>',
+  missing_id: 'Missing case. Usage: /actualizar <ID or full name> <field> <value>',
   unknown_field: 'Unknown field. Fields: estado, ubicacion, contacto, edad, nombre, nota — or aprobar / rechazar.',
   missing_value: 'Missing the value to set.',
   bad_estado: 'Invalid status. Use: sin-contacto, localizado, aparecido, hospitalizado or fallecido.',
+  ambiguous_estado: 'You gave more than one status at once. Send ONLY ONE: sin-contacto, localizado, aparecido, hospitalizado or fallecido.',
   bad_edad: 'Invalid age (must be a number between 1 and 129).',
 };
 
@@ -397,8 +415,16 @@ export function buildUpdateResponse(r: UpdateResult, opts: BuildOpts): string {
         : '⛔ Only authorized operators can update cases.';
     case 'update_bad_input':
       return (es ? BAD_INPUT_ES : BAD_INPUT_EN)[r.reason] ?? (es ? 'Entrada inválida.' : 'Invalid input.');
+    case 'update_ambiguous': {
+      const list = r.candidates.map((c) => `• ${escapeHtml(c.caseId)} — <b>${escapeHtml(c.name)}</b>`).join('\n');
+      return es
+        ? `Encontré varios casos con ese nombre. Repite el comando con el ID exacto:\n${list}`
+        : `Several cases match that name. Repeat the command with the exact ID:\n${list}`;
+    }
     case 'update_not_found':
-      return es ? 'No encontré ese caso.' : 'Case not found.';
+      return es
+        ? 'No encontré ese caso. Usa el ID (ej: FAM-123) o el nombre completo tal como aparece en la ficha.'
+        : 'Case not found. Use the ID (e.g. FAM-123) or the full name exactly as it appears on the profile.';
     case 'update_not_editable':
       return es
         ? 'Ese caso no se puede editar desde el chat (registro externo/oficial). Usa la consola web.'

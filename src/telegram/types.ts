@@ -118,9 +118,12 @@ export interface ParsedCommand {
   // True when the name looks partial (single token / too short) → require more.
   partialName?: boolean;
   // /actualizar: which field/action to apply and its new value (value empty for
-  // aprobar/rechazar). caseId carries the target case id.
+  // aprobar/rechazar). caseId carries the target — a case id OR a full name.
   updateField?: UpdateField;
   updateValue?: string;
+  // True when parsed from a direct estado shortcut (/fallecido <nombre>…) so the
+  // route can downgrade a public sender to a plain search instead of a write.
+  statusShortcut?: boolean;
   // /muro: free text to publish on the public wall (empty → show latest posts).
   muroText?: string;
   raw: string;

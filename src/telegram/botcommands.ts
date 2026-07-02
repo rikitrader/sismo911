@@ -15,7 +15,7 @@
 import type { Env } from '../types';
 import type { TelegramConfig } from './env';
 
-export const COMMANDS_VERSION = 2; // v2: + /muro (public Emergency Wall bridge)
+export const COMMANDS_VERSION = 3; // v3: + operator estado shortcuts (/fallecido <nombre>, …)
 const TG_API = 'https://api.telegram.org';
 const KV_KEY = 'tg:botcommands:v';
 
@@ -37,7 +37,12 @@ export const PUBLIC_COMMANDS: BotCommand[] = [
 
 export const OPERATOR_COMMANDS: BotCommand[] = [
   ...PUBLIC_COMMANDS,
-  { command: 'actualizar', description: 'Actualizar un caso: estado, nota, ubicación, contacto, edad, nombre' },
+  { command: 'actualizar', description: 'Actualizar un caso (ID o nombre): estado, nota, ubicación, edad…' },
+  { command: 'fallecido', description: 'Marcar Fallecido(a): /fallecido <nombre o ID>' },
+  { command: 'localizado', description: 'Marcar Localizado(a): /localizado <nombre o ID>' },
+  { command: 'aparecido', description: 'Marcar Aparecido(a): /aparecido <nombre o ID>' },
+  { command: 'hospitalizado', description: 'Marcar En un hospital: /hospitalizado <nombre o ID>' },
+  { command: 'sincontacto', description: 'Marcar Sin contacto: /sincontacto <nombre o ID>' },
   { command: 'menu', description: 'Reinstalar el menú de comandos (admin)' },
 ];
 
