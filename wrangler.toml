@@ -183,6 +183,11 @@ CIVIS_API_BASE = "https://civisvenezuela.com"
 # into D1 (Sheet → D1). Sheet id is not a secret (it's in the share URL). The
 # GOOGLE_* OAuth creds that read it ARE Worker secrets.
 CASES_SHEET_ID = "1sE7L8BcZ0VmzmSUCbVh8DAOiDz3buYImUww_9GEaZwo"
+# Dedicated Google Sheets for the D1→Sheet mirrors (not secrets — in the share URL).
+# syncHospitalSheet / syncDesaparecidosSheet write here instead of MONITOR_SHEET_ID.
+# Owned by rikitrader (same account as the GOOGLE_* OAuth creds → Worker can write).
+HOSPITAL_SHEET_ID = "1_l2_VcReGbav1azaqZVl6vv5kCdeDqC8gZUarUnVr7g"
+DESAP_SHEET_ID = "18DFPjCMSnEIh9qabvPqeuO065QOdCRpRor_cjtjdXE0"
 # Ops distribution address for operational alerts (SYS-02 cron-failure, etc.).
 # Plain address, not a secret. Comment out to disable operational email alerts.
 OPS_ALERT_EMAIL = "rikitrader@gmail.com"
