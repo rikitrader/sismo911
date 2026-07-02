@@ -37,6 +37,7 @@ import { sweepCaseScores } from './lib/case-score-sync';
 import { backfillHospitalMatches } from './ingest/hospital-match';
 import { drainHospitalRegistryMatch } from './ingest/hospital-registry-match';
 import { ingestHospitalRegistry } from './ingest/hospital-registry-sync';
+import { ingestTvBuildings } from './ingest/tv-buildings-cron';
 import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
 import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
@@ -160,6 +161,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // died before waitUntil ran it, and flag long-stuck 'processing' jobs as
     // error. Cheap D1-only when idle (a couple of indexed reads).
     { name: 'bulk-import-sweep', run: (env) => sweepBulkJobs(env) },
+    // Hourly mirror of terremotovenezuela.com's damaged-buildings map (real
+    // citizen field reports WITH photo galleries) into tv_buildings. Light:
+    // 1 external fetch of ~795 rows + chunked D1 upserts; idempotent (upsert on id).
+    { name: 'tv-buildings', run: ingestTvBuildings },
   ],
   // :45 — social/web monitor + AI blog (external-fetch heavy) — now isolated, so
   // it always has a full subrequest budget. This is the job that used to fail.

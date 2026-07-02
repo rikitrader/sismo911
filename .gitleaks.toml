@@ -19,4 +19,8 @@ regexes = [
   # Supabase ANON key (role=anon) — PUBLIC by design, protected by Row Level Security.
   # Pinned by EXACT value so a service_role key (a real secret) is still flagged.
   '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwYXZ3a2RvbnZrdnJ3eWdmemZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjAyODMsImV4cCI6MjA5NzkzNjI4M30\.-_FAsA2csTrB9qt267pBfjJkczMP7pcaUi4plMv3kv4''',
+  # terremotovenezuela.com Supabase PUBLISHABLE key (sb_publishable_) — PUBLIC by
+  # design (shipped in their browser bundle, protected by RLS). NOT a service key.
+  # Pinned by exact value so an sb_secret_ key (a real secret) is still flagged.
+  '''sb_publishable_i7iEDrCVZcSt0k3RGFrY4g_WrtZBB4w''',
 ]

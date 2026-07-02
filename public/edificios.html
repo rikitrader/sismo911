@@ -48,6 +48,30 @@
   .note{font-size:12px;color:var(--ops-warn);background:var(--ops-warn-bg);border:1px solid var(--ops-accent-soft);border-radius:8px;padding:8px 11px}
   .tag{font:700 10px var(--ops-mono);padding:1px 6px;border-radius:6px;background:var(--ops-panel-2);border:1px solid var(--ops-border);color:var(--ops-muted)}
   .leaflet-popup-content{font-family:Inter,sans-serif;font-size:13px}
+  /* Reported-buildings gallery */
+  .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .gcard{background:var(--ops-panel);border:1px solid var(--ops-border);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .12s,box-shadow .12s}
+  .gcard:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.28)}
+  .gthumb{position:relative;aspect-ratio:4/3;background:var(--ops-panel-2) center/cover no-repeat;display:block}
+  .gthumb .cnt{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.72);color:#fff;font:700 10px 'JetBrains Mono',monospace;padding:2px 7px;border-radius:9999px}
+  .gthumb .dmg{position:absolute;left:6px;top:6px;font:800 9px 'JetBrains Mono',monospace;color:#fff;padding:2px 7px;border-radius:9999px;text-transform:uppercase;letter-spacing:.03em}
+  .gbody{padding:9px 11px 11px}
+  .gbody .nm{font:800 13px 'Public Sans';color:var(--ops-text);line-height:1.2}
+  .gbody .ad{font-size:11px;color:var(--ops-muted);margin-top:2px;line-height:1.3}
+  .gbody .cost{font:700 11px 'JetBrains Mono',monospace;color:var(--ops-accent);margin-top:5px}
+  /* Lightbox */
+  #lb{position:fixed;inset:0;background:rgba(6,8,12,.94);z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column}
+  #lb.on{display:flex}
+  #lb img{max-width:92vw;max-height:78vh;border-radius:8px;object-fit:contain}
+  #lb .cap{color:#e6e9ef;font:600 13px Inter,sans-serif;margin-top:12px;text-align:center;max-width:90vw}
+  #lb .cap b{font-family:'Public Sans'}
+  #lb .nav{position:absolute;top:0;bottom:0;width:22vw;display:flex;align-items:center;justify-content:center;color:#fff;font-size:44px;cursor:pointer;user-select:none;opacity:.6}
+  #lb .nav:hover{opacity:1}
+  #lb #lbPrev{left:0;justify-content:flex-start;padding-left:18px}
+  #lb #lbNext{right:0;justify-content:flex-end;padding-right:18px}
+  #lb #lbX{position:absolute;top:14px;right:20px;color:#fff;font-size:30px;cursor:pointer;opacity:.75}
+  #lb #lbX:hover{opacity:1}
+  #lb .idx{position:absolute;top:18px;left:20px;color:#cfd6e2;font:700 12px 'JetBrains Mono',monospace}
 </style>
 </head>
 <body>
@@ -114,6 +138,23 @@
     <div id="map" style="margin-top:10px"></div>
   </div>
 
+  <!-- reported buildings with photos (terremotovenezuela.com) -->
+  <div id="rep" class="card pad" style="margin-bottom:14px;border-color:var(--ops-accent-soft)">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <h2>📷 Edificios reportados con fotos</h2>
+      <span id="repSum" style="font-size:12px;color:var(--ops-muted)"></span>
+    </div>
+    <div style="font-size:11px;color:var(--ops-muted);margin:4px 0 10px">Reportes ciudadanos de campo con <b>galería de fotos</b>, dirección y costo estimado de daño, sincronizados cada hora desde <b>terremotovenezuela.com</b>. Clic en una tarjeta para ver todas las fotos. Los marcadores <span style="color:var(--ops-accent)">●</span> en el mapa de arriba son estos edificios.</div>
+    <div class="filters" style="margin-bottom:10px">
+      <div><label class="f">Buscar</label><input id="rf_q" placeholder="Nombre, dirección, ciudad…" /></div>
+      <div><label class="f">Daño</label><select id="rf_dmg"><option value="">Todos</option><option value="total">Colapso total</option><option value="severo">Severo</option><option value="parcial">Parcial</option></select></div>
+      <div><label class="f">Estado</label><select id="rf_state"></select></div>
+      <div style="display:flex;align-items:end;gap:6px"><label class="f" style="display:flex;align-items:center;gap:5px;margin:0"><input id="rf_ver" type="checkbox" style="width:auto" /> Solo verificados</label></div>
+    </div>
+    <div id="repGrid" class="ggrid"><div style="color:var(--ops-muted);font-size:13px;padding:14px">Cargando reportes…</div></div>
+    <button id="repMore" class="tag" style="display:none;cursor:pointer;margin-top:12px;padding:7px 16px;border-color:var(--ops-accent-soft);color:var(--ops-accent-fg);background:var(--ops-accent-soft)">Mostrar más</button>
+  </div>
+
   <!-- table -->
   <div class="card" style="overflow:auto;max-height:640px">
     <table class="dt">
@@ -125,8 +166,18 @@
       <tbody id="tbody"><tr><td colspan="8" style="padding:18px;color:var(--ops-muted)">Cargando…</td></tr></tbody>
     </table>
   </div>
-  <p style="font-size:11px;color:var(--ops-muted);margin-top:10px">Fuentes: USGS ShakeMap (us6000t7zp), NASA Sentinel-1 Likely Damaged Structures (Oregon State), OpenStreetMap, FEMA HAZUS-MH, costos VE 2026 (micasaenvenezuela/proyectoscecor). Tabla limitada a 400 filas; usa los filtros para acotar.</p>
+  <p style="font-size:11px;color:var(--ops-muted);margin-top:10px">Fuentes: USGS ShakeMap (us6000t7zp), NASA Sentinel-1 Likely Damaged Structures (Oregon State), OpenStreetMap, FEMA HAZUS-MH, costos VE 2026 (micasaenvenezuela/proyectoscecor), reportes ciudadanos con foto de terremotovenezuela.com. Tabla limitada a 400 filas; usa los filtros para acotar.</p>
 </main>
+
+<!-- lightbox -->
+<div id="lb">
+  <div id="lbX">✕</div>
+  <div class="idx" id="lbIdx"></div>
+  <div class="nav" id="lbPrev">‹</div>
+  <img id="lbImg" alt="" />
+  <div class="nav" id="lbNext">›</div>
+  <div class="cap" id="lbCap"></div>
+</div>
 
 <script src="/app-shell.js" defer></script>
 <script>
@@ -245,6 +296,98 @@
       ? L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:48,disableClusteringAtZoom:16,spiderfyOnMaxZoom:false})
       : L.layerGroup();
     layer.addTo(map);
+    repLayer = L.layerGroup().addTo(map);
+  }
+
+  // ── Reported buildings (terremotovenezuela.com) — photos + gallery ───────────
+  var REP=[], repShown=60, repLayer, LB={photos:[],i:0,name:''};
+  var DMGC={total:'#d92d20',severo:'#f04438',parcial:'#f5c518'};
+  var DMGL={total:'Colapso total',severo:'Severo',parcial:'Parcial'};
+  function repFiltered(){
+    var q=(document.getElementById('rf_q').value||'').toLowerCase();
+    var dm=document.getElementById('rf_dmg').value, st=document.getElementById('rf_state').value;
+    var ver=document.getElementById('rf_ver').checked;
+    return REP.filter(function(b){
+      if(dm && b.damageLevel!==dm) return false;
+      if(st && b.state!==st) return false;
+      if(ver && !b.verified) return false;
+      if(q && (b.name+' '+b.addr+' '+b.city).toLowerCase().indexOf(q)<0) return false;
+      return true;
+    });
+  }
+  function repCard(b){
+    var thumb=b.photo?('background-image:url('+esc(b.photo)+')'):'';
+    var dc=DMGC[b.damageLevel]||'#9aa4b2';
+    var cost=b.cost?fmtUsd(b.cost.repairUsd):'—';
+    return '<div class="gcard" data-id="'+esc(b.id)+'">'+
+      '<div class="gthumb" style="'+thumb+'">'+
+        '<span class="dmg" style="background:'+dc+'">'+esc(DMGL[b.damageLevel]||b.damageLevel)+'</span>'+
+        (b.mediaCount>1?'<span class="cnt">📷 '+b.mediaCount+'</span>':'')+
+        (b.verified?'<span class="cnt" style="left:6px;bottom:6px;right:auto;background:rgba(21,112,239,.9)">✓ verificado</span>':'')+
+      '</div>'+
+      '<div class="gbody"><div class="nm">'+esc(b.name)+'</div>'+
+        '<div class="ad">'+esc(b.addr||b.city)+'</div>'+
+        '<div class="cost">Reparación estim. '+cost+'</div></div></div>';
+  }
+  function renderRep(){
+    var rows=repFiltered();
+    document.getElementById('repSum').textContent=rows.length+' edificios · '+
+      rows.filter(function(b){return b.mediaCount>0;}).length+' con fotos';
+    var grid=document.getElementById('repGrid');
+    grid.innerHTML=rows.slice(0,repShown).map(repCard).join('')||
+      '<div style="color:var(--ops-muted);font-size:13px;padding:14px">Sin edificios reportados que coincidan.</div>';
+    document.getElementById('repMore').style.display=rows.length>repShown?'inline-block':'none';
+    grid.querySelectorAll('.gcard').forEach(function(el){
+      el.addEventListener('click',function(){ var b=REP.find(function(x){return x.id===el.getAttribute('data-id');}); if(b) openLb(b); });
+    });
+    renderRepMap(rows);
+  }
+  function renderRepMap(rows){
+    if(!repLayer) return; repLayer.clearLayers();
+    rows.forEach(function(b){
+      if(b.lat==null||b.lon==null) return;
+      var dc=DMGC[b.damageLevel]||'#9aa4b2';
+      var m=L.circleMarker([b.lat,b.lon],{radius:6,color:'#fff',weight:2,fillColor:dc,fillOpacity:.95});
+      var pop='<div style="min-width:190px"><div style="font:800 13px \'Public Sans\'">'+esc(b.name)+'</div>'+
+        '<div style="font-size:11px;color:#5b6781;margin-bottom:5px">'+esc(b.addr||b.city)+'</div>';
+      if(b.photo) pop+='<img src="'+esc(b.photo)+'" style="width:100%;border-radius:6px;max-height:120px;object-fit:cover" loading="lazy" />';
+      pop+='<div style="font-size:12px;margin-top:5px"><span class="chip" style="background:'+dc+'">'+esc(DMGL[b.damageLevel]||b.damageLevel)+'</span>'+
+        (b.mediaCount>0?' <span class="tag">📷 '+b.mediaCount+' fotos</span>':'')+'</div>'+
+        (b.cost?'<div style="font-size:11px;color:#5b6781;margin-top:4px">Reparación estim. '+fmtUsd(b.cost.repairUsd)+'</div>':'')+
+        '<button data-repid="'+esc(b.id)+'" style="margin-top:6px;width:100%;cursor:pointer;border:1px solid #1570ef;background:#1570ef;color:#fff;border-radius:7px;padding:5px;font-weight:700">Ver fotos</button></div>';
+      m.bindPopup(pop);
+      m.on('popupopen',function(e){
+        var btn=e.popup.getElement().querySelector('[data-repid]');
+        if(btn) btn.addEventListener('click',function(){ var bb=REP.find(function(x){return x.id===btn.getAttribute('data-repid');}); if(bb) openLb(bb); });
+      });
+      repLayer.addLayer(m);
+    });
+  }
+  function openLb(b){
+    if(!b.media||!b.media.length){ return; }
+    LB={photos:b.media,i:0,name:b.name,addr:(b.addr||b.city)};
+    document.getElementById('lb').classList.add('on'); showLb();
+  }
+  function showLb(){
+    var p=LB.photos[LB.i];
+    document.getElementById('lbImg').src=p;
+    document.getElementById('lbIdx').textContent=(LB.i+1)+' / '+LB.photos.length;
+    document.getElementById('lbCap').innerHTML='<b>'+esc(LB.name)+'</b> — '+esc(LB.addr);
+    document.getElementById('lbPrev').style.visibility=LB.photos.length>1?'visible':'hidden';
+    document.getElementById('lbNext').style.visibility=LB.photos.length>1?'visible':'hidden';
+  }
+  function lbStep(d){ LB.i=(LB.i+d+LB.photos.length)%LB.photos.length; showLb(); }
+  function closeLb(){ document.getElementById('lb').classList.remove('on'); document.getElementById('lbImg').src=''; }
+  async function loadReported(){
+    try{
+      var d=await fetch('/api/buildings/reported?limit=3000&t='+Math.floor(Date.now()/60000)).then(function(x){return x.json();});
+      REP=d.buildings||[];
+      if(!REP.length){ document.getElementById('rep').style.display='none'; return; }
+      fillSelect('rf_state',[...new Set(REP.map(function(b){return b.state;}).filter(Boolean))],'Todos');
+      ['rf_q','rf_dmg','rf_state','rf_ver'].forEach(function(id){ var el=document.getElementById(id); el.addEventListener(id==='rf_q'?'input':'change',function(){repShown=60;renderRep();}); });
+      document.getElementById('repMore').addEventListener('click',function(){ repShown+=60; renderRep(); });
+      renderRep();
+    }catch(e){ document.getElementById('repGrid').innerHTML='<div style="color:var(--ops-muted);padding:14px">No se pudieron cargar los reportes.</div>'; }
   }
   function toCsv(rows){
     var head=['score','banda','edificio','direccion','sector','estado','daño','dpm','reparacion_usd','reemplazo_usd','area_m2','pisos','costo_confianza','lat','lon'];
@@ -282,6 +425,16 @@
     refresh();
     applyHash();
     loadSar();
+    loadReported();
+    // lightbox controls
+    document.getElementById('lbX').addEventListener('click',closeLb);
+    document.getElementById('lbPrev').addEventListener('click',function(){lbStep(-1);});
+    document.getElementById('lbNext').addEventListener('click',function(){lbStep(1);});
+    document.getElementById('lb').addEventListener('click',function(e){ if(e.target.id==='lb') closeLb(); });
+    document.addEventListener('keydown',function(e){
+      if(!document.getElementById('lb').classList.contains('on')) return;
+      if(e.key==='Escape') closeLb(); else if(e.key==='ArrowLeft') lbStep(-1); else if(e.key==='ArrowRight') lbStep(1);
+    });
   }
   boot();
 })();
