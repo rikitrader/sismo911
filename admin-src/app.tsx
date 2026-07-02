@@ -21,6 +21,7 @@ import { FeatureFlagsPage } from './pages/FeatureFlags';
 import { SecurityPage } from './pages/Security';
 import { SupportInboxPage } from './pages/SupportInbox';
 import { SumSolicitudesPage } from './pages/SumSolicitudes';
+import { EvaluacionesPage } from './pages/Evaluaciones';
 import { IntakeReviewPage } from './pages/IntakeReview';
 import { rbac } from './api';
 
@@ -42,6 +43,7 @@ function PageRouter({ route }: { route: string }) {
     case 'support': return <SupportInboxPage />;
     case 'intake': return <IntakeReviewPage />;
     case 'sum-solicitudes': return <SumSolicitudesPage />;
+    case 'evaluaciones': return <EvaluacionesPage />;
     case 'dashboard':
     default: return <DashboardPage />;
   }

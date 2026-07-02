@@ -49,6 +49,7 @@ const OPEN: Array<[string, string]> = [
   ['/api/sat/pytorch-results', 'POST'],      // explicit public callback
   ['/api/buildings/reported/x', 'GET'],      // public forensic dossier read
   ['/api/buildings/reported/x/eval', 'GET'], // public eval-pipeline read
+  ['/api/buildings/reported/x/eval/verify', 'GET'], // public signature re-verification
   ['/api/health', 'GET'],
   ['/', 'GET'],
 ];

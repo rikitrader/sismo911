@@ -333,6 +333,8 @@
   var REP=[], REP_META={}, repShown=60, repLayer, LB={photos:[],i:0,name:''};
   var DMGC={total:'#d92d20',severo:'#f04438',parcial:'#f5c518'};
   var DMGL={total:'Colapso total',severo:'Severo',parcial:'Parcial'};
+  var EVALC={pendiente:'#5b6781',en_curso:'#b06a00',completada:'#12805c',bloqueada:'#c8102e'};
+  var EVALL={pendiente:'Pendiente',en_curso:'En curso',completada:'Completada',bloqueada:'Bloqueada'};
   function repFiltered(){
     var q=(document.getElementById('rf_q').value||'').toLowerCase();
     var dm=document.getElementById('rf_dmg').value, st=document.getElementById('rf_state').value;
@@ -369,6 +371,7 @@
       '<div class="gbody"><div class="nm">'+esc(b.name)+'</div>'+
         '<div class="ad">'+esc(b.addr||b.city)+'</div>'+
         '<div class="cost">Reparación estim. '+cost+'</div>'+
+        (b.eval?'<div style="margin-top:5px"><span class="tag" style="background:'+(EVALC[b.eval.status]||'#5b6781')+';border-color:transparent;color:#fff;font-weight:800">EVAL '+(b.eval.activeLevel?'N'+b.eval.activeLevel:'✓')+' · '+esc(EVALL[b.eval.status]||b.eval.status)+'</span> <span style="font-size:10.5px;color:var(--ops-muted)">'+b.eval.events+' evento'+(b.eval.events===1?'':'s')+' firmados</span></div>':'')+
         caseHtml+
         '<a class="tag" href="/edificio/'+encodeURIComponent(b.id)+'" style="display:inline-block;margin-top:7px;padding:4px 10px;text-decoration:none;border-color:var(--ops-accent-soft);color:var(--ops-accent-fg);background:var(--ops-accent-soft)">📋 Ver expediente →</a>'+
       '</div></div>';
@@ -402,7 +405,8 @@
         '<div style="font-size:11px;color:#5b6781;margin-bottom:5px">'+esc(b.addr||b.city)+'</div>';
       if(b.photo) pop+='<img src="'+esc(b.photo)+'" style="width:100%;border-radius:6px;max-height:120px;object-fit:cover" loading="lazy" />';
       pop+='<div style="font-size:12px;margin-top:5px"><span class="chip" style="background:'+dc+'">'+esc(DMGL[b.damageLevel]||b.damageLevel)+'</span>'+
-        (b.mediaCount>0?' <span class="tag">📷 '+b.mediaCount+' fotos</span>':'')+'</div>'+
+        (b.mediaCount>0?' <span class="tag">📷 '+b.mediaCount+' fotos</span>':'')+
+        (b.eval?' <span class="tag" style="background:'+(EVALC[b.eval.status]||'#5b6781')+';border-color:transparent;color:#fff">EVAL '+(b.eval.activeLevel?'N'+b.eval.activeLevel:'✓')+'</span>':'')+'</div>'+
         (b.cost?'<div style="font-size:11px;color:#5b6781;margin-top:4px">Reparación estim. '+fmtUsd(b.cost.repairUsd)+'</div>':'')+
         '<button data-repid="'+esc(b.id)+'" style="margin-top:6px;width:100%;cursor:pointer;border:1px solid #1570ef;background:#1570ef;color:#fff;border-radius:7px;padding:5px;font-weight:700">Ver fotos</button>'+
         '<a href="/edificio/'+encodeURIComponent(b.id)+'" style="display:block;text-align:center;margin-top:5px;text-decoration:none;color:#1570ef;font-weight:700;font-size:12px">📋 Ver expediente completo →</a></div>';

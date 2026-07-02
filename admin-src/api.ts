@@ -157,6 +157,17 @@ export interface Dashboard {
   failedLogins24h: number;
 }
 
+export interface EvaluacionRow {
+  building_id: string;
+  name: string;
+  levels: Record<string, string>; // '1'|'2'|'3' -> pendiente|en_curso|completada|bloqueada
+  progress: number;
+  currentLevel: number | null;
+  events: number;
+  lastAt: string | null;
+  lastBy: string | null;
+}
+
 export const rbac = {
   dashboard: () => api.get<Dashboard>('/dashboard'),
   users: (q = '', status = '') =>
@@ -185,6 +196,7 @@ export const rbac = {
   unlock: (id: string) => api.post(`/users/${id}/unlock`, {}),
 
   sessions: () => api.get<{ sessions: SessionRow[] }>(`/sessions`),
+  evaluaciones: () => api.get<{ evaluaciones: EvaluacionRow[] }>(`/evaluaciones`),
   userSessions: (id: string) => api.get<{ sessions: SessionRow[] }>(`/users/${id}/sessions`),
   userAudit: (id: string) => api.get<{ ok: boolean; opted_in: boolean; items: { id: string; action: string; detail: string; created_ms: number }[] }>(`/users/${id}/audit`),
   revokeSession: (token: string) => api.del(`/sessions/${encodeURIComponent(token)}`),

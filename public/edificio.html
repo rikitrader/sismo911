@@ -155,6 +155,10 @@
   .evform .full{grid-column:1/-1}
   .evbtn{background:var(--navy-2);color:#fff;border:none;border-radius:9px;padding:10px 18px;font:800 13px 'Public Sans';cursor:pointer}
   .evbtn:hover{filter:brightness(1.1)}
+  .de.voided .kind,.de.voided .detail{text-decoration:line-through;opacity:.55}
+  .de.voided .sig{opacity:.55}
+  .ev-anular{margin-left:8px;cursor:pointer;border:1px solid var(--line-2);background:transparent;color:var(--crit);border-radius:7px;padding:2px 9px;font:700 10.5px Inter;transition:background .12s}
+  .ev-anular:hover{background:#fdecec}
 
   /* ---- Timeline (docket, same as /casos) ---- */
   .docket{position:relative;padding-left:26px}
@@ -269,8 +273,8 @@ const HAZUS=[
   {k:'Extensivo', r:0.50, d:'Daño estructural mayor'},
   {k:'Completo',  r:1.00, d:'Colapso / pérdida total'},
 ];
-const DOCK={photo:'📷',pdf:'📄',engineering:'📐',geological:'🪨',national:'🏛️',news:'📰',social:'💬',complaint:'⚠️',court:'⚖️',repair:'🔧',report:'📡',inspection:'🔍',satellite:'🛰️',other:'📎'};
-const DOCL={photo:'Fotos',pdf:'PDF',engineering:'Estudio de ingeniería',geological:'Estudio geológico',national:'Estudio oficial',news:'Prensa',social:'Redes',complaint:'Denuncia',court:'Documento judicial',repair:'Reparación',report:'Reporte de campo',inspection:'Inspección técnica',satellite:'Confirmación satelital',other:'Otro'};
+const DOCK={photo:'📷',pdf:'📄',engineering:'📐',geological:'🪨',national:'🏛️',news:'📰',social:'💬',complaint:'⚠️',court:'⚖️',repair:'🔧',report:'📡',inspection:'🔍',satellite:'🛰️',eval:'✍️',other:'📎'};
+const DOCL={photo:'Fotos',pdf:'PDF',engineering:'Estudio de ingeniería',geological:'Estudio geológico',national:'Estudio oficial',news:'Prensa',social:'Redes',complaint:'Denuncia',court:'Documento judicial',repair:'Reparación',report:'Reporte de campo',inspection:'Inspección técnica',satellite:'Confirmación satelital',eval:'Evaluación estructural',other:'Otro'};
 
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const usd=n=>{ if(n==null||!isFinite(+n))return null; n=+n; if(n>=1e9)return '$'+(n/1e9).toFixed(2)+' B'; if(n>=1e6)return '$'+(n/1e6).toFixed(2)+' M'; if(n>=1e3)return '$'+Math.round(n/1e3).toLocaleString('es')+' k'; return '$'+Math.round(n).toLocaleString('es'); };
@@ -467,9 +471,22 @@ function renderIng(d){
 
 /* ---- Evaluación (Eng Nivel 1/2/3 — PM-style tracking dashboard) ---- */
 const EVST={pendiente:{c:'#5b6781',l:'Pendiente'},en_curso:{c:'#b06a00',l:'En curso'},completada:{c:'#12805c',l:'Completada'},bloqueada:{c:'#c8102e',l:'Bloqueada'}};
-const EVK={inicio:'🚩',inspeccion:'🔍',hallazgo:'⚠️',documento:'📄',cambio_estado:'🔁',firma:'✍️',nota:'📝'};
-const EVKL={inicio:'Inicio de nivel',inspeccion:'Inspección',hallazgo:'Hallazgo',documento:'Documento',cambio_estado:'Cambio de estado',firma:'Firma',nota:'Nota'};
+const EVK={inicio:'🚩',inspeccion:'🔍',hallazgo:'⚠️',documento:'📄',cambio_estado:'🔁',firma:'✍️',nota:'📝',anulacion:'🚫'};
+const EVKL={inicio:'Inicio de nivel',inspeccion:'Inspección',hallazgo:'Hallazgo',documento:'Documento',cambio_estado:'Cambio de estado',firma:'Firma',nota:'Nota',anulacion:'Anulación'};
 const LVLC={1:'var(--green)',2:'var(--amber)',3:'var(--crit)'};
+let EVALFRESH=false;
+async function refreshEval(d,bid){
+  try{
+    const r=await fetch('/api/buildings/reported/'+encodeURIComponent(bid)+'/eval?t='+Date.now());
+    if(!r.ok) return;
+    const fresh=await r.json();
+    if(JSON.stringify(fresh)!==JSON.stringify(d.evaluation)){
+      d.evaluation=fresh; renderEval(d);
+      const tb=document.querySelector('.tabs button[data-t="eval"]');
+      if(tb) tb.innerHTML='Evaluación'+(fresh.eventCount?' <span class="b">'+fresh.eventCount+'</span>':'');
+    }
+  }catch(e){}
+}
 function renderEval(d){
   const ev=d.evaluation||{levels:[],events:[],progress:0,eventCount:0,currentLevel:null};
   const bid=(d.building||{}).id||idFromPath();
@@ -489,12 +506,17 @@ function renderEval(d){
   }).join('');
   const rows=(ev.events||[]).map(e=>{
     const st=EVST[e.status];
-    return '<div class="de"><span class="node" style="background:'+(LVLC[e.level]||'var(--navy-2)')+'"></span>'+
-      '<div class="ts">'+esc(fdate(e.created_at)||'—')+' · N'+e.level+'</div>'+
-      '<div class="kind">'+(EVK[e.event_kind]||'📝')+' '+esc(EVKL[e.event_kind]||e.event_kind)+(st?' <span class="spill" style="background:'+st.c+';margin:0 0 0 8px;padding:2px 9px">'+st.l+'</span>':'')+'</div>'+
+    const voided=!!e.voided;
+    const canVoid=!voided&&e.event_kind!=='anulacion'&&e.id!=null;
+    return '<div class="de'+(voided?' voided':'')+'"><span class="node" style="background:'+(LVLC[e.level]||'var(--navy-2)')+'"></span>'+
+      '<div class="ts">'+esc(fdate(e.created_at)||'—')+' · N'+e.level+(voided?' · <b style="color:var(--crit)">ANULADO</b>':'')+'</div>'+
+      '<div class="kind">'+(EVK[e.event_kind]||'📝')+' '+esc(EVKL[e.event_kind]||e.event_kind)+(st?' <span class="spill" style="background:'+st.c+';margin:0 0 0 8px;padding:2px 9px">'+st.l+'</span>':'')+
+        (e.event_kind==='anulacion'&&e.voids_event_id?' <span class="tag">anula #'+esc(e.voids_event_id)+'</span>':'')+
+        (canVoid?' <button type="button" class="ev-anular" data-evid="'+esc(e.id)+'" data-lvl="'+esc(e.level)+'" title="Anular este evento (queda en el registro, deja de contar)">Anular</button>':'')+'</div>'+
       (e.note?'<div class="detail">'+esc(e.note)+'</div>':'')+
       ((e.actor_name||e.actor_role)?'<div style="font:500 11.5px Inter;color:var(--muted);margin-top:2px">'+esc([e.actor_name,e.actor_role].filter(Boolean).join(' · '))+'</div>':'')+
       (e.signed_by?'<div class="sig">✍ Firmado: '+esc(e.signed_by)+' · <span title="'+esc(e.signature||'')+'">'+esc(String(e.signature||'').slice(0,12))+'…</span></div>':'')+
+      (e.user_name?'<div style="font:500 11px Inter;color:var(--faint);margin-top:3px">Registrado por '+esc(e.user_name)+'</div>':'')+
     '</div>';
   }).join('');
   $('#p_eval').innerHTML=
@@ -509,7 +531,8 @@ function renderEval(d){
       '<div class="meter" title="Progreso"><span style="width:'+(ev.progress||0)+'%;background:linear-gradient(90deg,var(--green),var(--amber))"></span></div>'+
       '<div style="font:500 11.5px Inter;color:var(--faint);margin-top:8px">'+esc(ev.note||'Seguimiento operativo por niveles — trazabilidad, no peritaje oficial.')+'</div>'+
     '</div>'+
-    '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6zM19 15l1.5 5.5L17 19l-2 2-1-5M5 15l-1.5 5.5L7 19l2 2 1-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Registro de eventos firmados <span class="tag">'+ev.eventCount+'</span></h3>'+
+    '<div class="card"><h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6zM19 15l1.5 5.5L17 19l-2 2-1-5M5 15l-1.5 5.5L7 19l2 2 1-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Registro de eventos firmados <span class="tag">'+ev.eventCount+'</span>'+
+      (ev.eventCount?'<button type="button" id="evVerify" style="margin-left:auto;cursor:pointer;border:1px solid var(--line-2);background:var(--panel-2);color:var(--navy-2);border-radius:8px;padding:5px 11px;font:700 11px Inter">🔒 Verificar integridad</button>':'')+'</h3>'+
       (rows?'<div class="docket">'+rows+'</div>'
            :'<div class="empty" style="padding:20px 12px"><div class="ic">📋</div><div style="margin-top:6px;font-weight:600">Sin eventos de seguimiento todavía.</div><div class="sub" style="margin-top:4px;color:var(--muted)">La evaluación inicia en Nivel 1 (rápida) cuando un operador registra el primer evento.</div></div>')+
       '<details style="margin-top:14px"><summary style="cursor:pointer;font:700 12.5px Inter;color:var(--navy-2)">➕ Registrar evento de seguimiento (solo operadores)</summary>'+
@@ -537,10 +560,40 @@ function renderEval(d){
       if(!res.ok){ const j=await res.json().catch(()=>({})); toast(j.error||'No se pudo registrar el evento.'); return; }
       const j=await res.json();
       toast('Evento firmado ✍ '+String(j.signature||'').slice(0,12)+'…');
-      const fres=await fetch('/api/buildings/reported/'+encodeURIComponent(bid)+'/eval?t='+Date.now());
-      if(fres.ok){ d.evaluation=await fres.json(); renderEval(d); const tb=document.querySelector('.tabs button[data-t="eval"]'); if(tb) tb.innerHTML='Evaluación <span class="b">'+d.evaluation.eventCount+'</span>'; }
+      await refreshEval(d,bid);
     }catch(err){ toast('Error de red al registrar el evento.'); }
   });
+  // Verify integrity: recompute every stored SHA-256 server-side and report.
+  const vb=$('#evVerify');
+  if(vb) vb.addEventListener('click',async()=>{
+    try{
+      const r=await fetch('/api/buildings/reported/'+encodeURIComponent(bid)+'/eval/verify?t='+Date.now());
+      if(!r.ok){ toast('No se pudo verificar la integridad.'); return; }
+      const v=await r.json();
+      if(v.invalid&&v.invalid.length) toast('⚠️ '+v.invalid.length+' firma'+(v.invalid.length===1?'':'s')+' INVÁLIDA'+(v.invalid.length===1?'':'S')+' (eventos #'+v.invalid.join(', #')+')');
+      else toast('✓ '+v.valid+'/'+v.total+' firmas válidas — registro íntegro');
+    }catch(e3){ toast('Error de red al verificar.'); }
+  });
+  // Anular: two-step inline confirm (no browser dialogs), then POST an 'anulacion'
+  // event pointing at the target — append-only correction, nothing is deleted.
+  document.querySelectorAll('#p_eval .ev-anular').forEach(btn=>btn.addEventListener('click',async()=>{
+    if(btn.getAttribute('data-armed')!=='1'){
+      btn.setAttribute('data-armed','1'); btn.textContent='¿Confirmar anulación?'; btn.style.background='var(--crit)'; btn.style.color='#fff';
+      setTimeout(()=>{ btn.removeAttribute('data-armed'); btn.textContent='Anular'; btn.style.background=''; btn.style.color=''; },5000);
+      return;
+    }
+    try{
+      const res=await fetch('/api/buildings/reported/'+encodeURIComponent(bid)+'/eval/events',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({level:Number(btn.getAttribute('data-lvl'))||1,event_kind:'anulacion',voids_event_id:Number(btn.getAttribute('data-evid')),note:'Anulación del evento #'+btn.getAttribute('data-evid')})});
+      if(res.status===401||res.status===403){ toast('Solo operadores autenticados pueden anular eventos.'); return; }
+      if(!res.ok){ const j=await res.json().catch(()=>({})); toast(j.error||'No se pudo anular.'); return; }
+      toast('Evento anulado — el registro conserva ambos.');
+      await refreshEval(d,bid);
+    }catch(e4){ toast('Error de red al anular.'); }
+  }));
+  // First render: refresh from the uncached /eval route in the background so the
+  // edge-cached copy embedded in the dossier (TTL 120s) can never show stale counts.
+  if(!EVALFRESH){ EVALFRESH=true; refreshEval(d,bid); }
 }
 
 /* ---- Seguros (Fortune-500 claims-grade dashboard) ---- */
