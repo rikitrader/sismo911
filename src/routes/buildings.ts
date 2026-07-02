@@ -287,13 +287,15 @@ buildings.get('/reported/:id', async (c) => {
   const limited = await rateLimit(c.env, c, 'buildings_profile', 90, 60);
   if (limited) return limited;
   const id = c.req.param('id');
+  // Not-found must return BEFORE edgeCached (it re-wraps any returned value with
+  // c.json → a Response object would serialize to {} with status 200).
+  const row = await c.env.DB.prepare(
+    `SELECT id, name, address, city, zone, lat, lng, damage_level, status,
+            main_photo_url, media_urls, general_source, notes, has_missing_persons,
+            tv_created_at, tv_updated_at FROM tv_buildings WHERE id = ?`,
+  ).bind(id).first();
+  if (!row) return c.json({ error: 'not_found', id }, 404);
   return edgeCached(c, 120, async () => {
-    const row = await c.env.DB.prepare(
-      `SELECT id, name, address, city, zone, lat, lng, damage_level, status,
-              main_photo_url, media_urls, general_source, notes, has_missing_persons,
-              tv_created_at, tv_updated_at FROM tv_buildings WHERE id = ?`,
-    ).bind(id).first();
-    if (!row) return c.json({ error: 'not_found', id }, 404);
     const b = mapTvBuilding(row);
 
     // Forensic record + evidence docs (soft-referenced; may not exist yet).
