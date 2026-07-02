@@ -62,6 +62,19 @@ const COMMANDS: Record<string, CommandKind> = {
 // in the operator vocabulary (/actualizar <ID> publicar).
 const MURO_COMMANDS = new Set(['muro', 'wall']);
 
+// Direct estado shortcuts — operator writes, SLASH-ONLY (a sentence starting
+// with the bare word "fallecido" must never edit a case):
+//   /fallecido Sarah Ysea Caracciolo   ≡   /actualizar "Sarah…" estado fallecido
+// Also /localizado, /aparecido, /hospitalizado, /sincontacto (/sin-contacto).
+// In route.ts a PUBLIC sender is downgraded to a plain name search.
+const STATUS_SHORTCUTS: Record<string, string> = {
+  'sin-contacto': 'sin-contacto', sincontacto: 'sin-contacto', sin_contacto: 'sin-contacto',
+  localizado: 'localizado', localizada: 'localizado',
+  aparecido: 'aparecido', aparecida: 'aparecido',
+  hospitalizado: 'hospitalizado', hospitalizada: 'hospitalizado',
+  fallecido: 'fallecido', fallecida: 'fallecido',
+};
+
 // English command words / keywords that flip the reply language to English.
 const EN_COMMANDS = new Set(['search', 'find', 'case', 'hospitalized', 'missing', 'help', 'status', 'commands']);
 const EN_KEYWORDS = new Set(['name', 'birth', 'dob', 'phone', 'city', 'id']);
@@ -186,6 +199,24 @@ export function parseCommand(text: string): ParsedCommand {
     return { kind: 'muro', lang: detectLang(raw, cmdWord === 'wall'), muroText, raw };
   }
 
+  // Slash-only estado shortcut with a target: /fallecido <nombre o ID>.
+  // A bare "/hospitalizado" (no args) still falls through to the legacy
+  // hospital-registry search alias below.
+  if (isSlash && STATUS_SHORTCUTS[cmdWord] && tokens.length > 1) {
+    const target = tokens.slice(1).filter((t) => !t.startsWith('@')).join(' ').trim();
+    if (target) {
+      return {
+        kind: 'actualizar',
+        lang: detectLang(raw, false),
+        caseId: target,
+        updateField: 'estado',
+        updateValue: STATUS_SHORTCUTS[cmdWord],
+        statusShortcut: true,
+        raw,
+      };
+    }
+  }
+
   let kind: CommandKind;
   let args: string[];
   if (known) {
@@ -214,14 +245,25 @@ export function parseCommand(text: string): ParsedCommand {
     return { kind, lang, caseId: caseId || undefined, raw };
   }
 
-  // /actualizar <ID> <campo> <valor…>  (operator write command).
-  //   Grammar: first non-@ token = case id, second = field/action, the rest = value.
-  //   Also accepts `campo=valor` glued to the field token. aprobar/rechazar take no value.
+  // /actualizar <ID o nombre> <campo> <valor…>  (operator write command).
+  //   Grammar: everything before the FIRST field/action keyword is the target —
+  //   a case id OR a multi-word full name ("/actualizar Sarah Ysea estado
+  //   fallecido"). Also accepts `campo=valor` glued to the field token.
+  //   aprobar/rechazar take no value.
   if (kind === 'actualizar') {
     const a = args.filter((t) => !t.startsWith('@'));
-    const caseId = (a[0] || '').trim();
-    let fieldTok = (a[1] || '').toLowerCase();
-    let value = a.slice(2).join(' ').trim();
+    let fi = -1;
+    for (let i = 1; i < a.length; i++) {
+      const w = a[i].toLowerCase();
+      const baseTok = w.includes('=') ? w.slice(0, w.indexOf('=')) : w;
+      if (UPDATE_FIELDS[baseTok]) {
+        fi = i;
+        break;
+      }
+    }
+    const caseId = (fi > 0 ? a.slice(0, fi).join(' ') : a[0] || '').trim();
+    let fieldTok = ((fi > 0 ? a[fi] : a[1]) || '').toLowerCase();
+    let value = (fi > 0 ? a.slice(fi + 1) : a.slice(2)).join(' ').trim();
     // Support `campo=valor` as a single token.
     if (fieldTok.includes('=')) {
       const eq = fieldTok.indexOf('=');

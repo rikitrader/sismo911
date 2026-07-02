@@ -314,6 +314,16 @@ telegram.post('/webhook', async (c) => {
     }
   }
 
+  // 5.4 A PUBLIC sender using an estado shortcut (/fallecido María …) is
+  //     downgraded to a plain search — writes stay operator-only without
+  //     breaking the legacy public /hospitalizado search alias. Re-parse the
+  //     original line as the search command so keywords (nombre, cedula…)
+  //     keep working.
+  if (cmd.kind === 'actualizar' && cmd.statusShortcut && role === 'public') {
+    const searchWord = cmd.updateValue === 'hospitalizado' ? '/hospitalizados' : '/buscar';
+    cmd = parseCommand(cmd.raw.replace(/^\s*(?:@\S+\s+)*\/\S+/, searchWord));
+  }
+
   // 5.5 Operator WRITE path: /actualizar edits an existing case. Authorized here
   //     (role !== 'public'; aprobar/rechazar require admin) and again in
   //     resolveUpdate. Never runs against public/hospital registries. Audited.

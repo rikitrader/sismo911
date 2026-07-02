@@ -17,7 +17,7 @@
 
 import type { Env } from '../types';
 import type { ParsedCommand, UpdateField, ViewerRole } from './types';
-import { getCaseById } from '../adapters/sismo911-api';
+import { getCaseById, searchPersonByName } from '../adapters/sismo911-api';
 import { computeSearchFields } from '../lib/search-index';
 import { uid } from '../lib/db';
 
@@ -51,6 +51,8 @@ export type UpdateResult =
   | { kind: 'update_bad_input'; reason: string }
   | { kind: 'update_not_found' }
   | { kind: 'update_not_editable' }
+  // Name target matched several editable cases — operator must repeat with the ID.
+  | { kind: 'update_ambiguous'; candidates: Array<{ caseId: string; name: string }> }
   | { kind: 'update_error' };
 
 export interface UpdateCtx {
@@ -83,7 +85,20 @@ export async function resolveUpdate(env: Env, cmd: ParsedCommand, ctx: UpdateCtx
   if (needsValue && !value) return { kind: 'update_bad_input', reason: 'missing_value' };
 
   try {
-    const rec = await getCaseById(env, caseId);
+    // Target may be a case id (FAM-…, pc_…) or a full NAME ("Sarah Ysea
+    // Caracciolo"). Try the id lookup first; if it misses and the target looks
+    // like a name, resolve it against the editable (personas) registry.
+    let rec = await getCaseById(env, caseId);
+    if (!rec && /[a-zA-ZÀ-ÿ]{2}/.test(caseId)) {
+      const matches = (await searchPersonByName(env, { name: caseId }, now)).filter((m) => m.registry === 'personas');
+      if (matches.length === 1) rec = matches[0];
+      else if (matches.length > 1) {
+        return {
+          kind: 'update_ambiguous',
+          candidates: matches.slice(0, 8).map((m) => ({ caseId: m.caseId, name: m.fullName })),
+        };
+      }
+    }
     if (!rec) return { kind: 'update_not_found' };
     if (rec.registry !== 'personas') return { kind: 'update_not_editable' };
     const id = rec.internalId;
@@ -91,8 +106,22 @@ export async function resolveUpdate(env: Env, cmd: ParsedCommand, ctx: UpdateCtx
 
     switch (field) {
       case 'estado': {
-        const norm = ESTADO_ALIASES[value.toLowerCase()] ?? (ESTADO_VALUES.has(value.toLowerCase()) ? value.toLowerCase() : null);
-        if (!norm) return { kind: 'update_bad_input', reason: 'bad_estado' };
+        // Whole-value first ("sin contacto" is a two-word alias); else per-token
+        // scan so "estado localizado fallecido" is caught as AMBIGUOUS instead of
+        // silently failing or picking one.
+        const lower = value.toLowerCase();
+        const whole = ESTADO_ALIASES[lower] ?? (ESTADO_VALUES.has(lower) ? lower : null);
+        const found = new Set<string>();
+        if (whole) found.add(whole);
+        else {
+          for (const t of lower.split(/\s+/)) {
+            const n2 = ESTADO_ALIASES[t] ?? (ESTADO_VALUES.has(t) ? t : null);
+            if (n2) found.add(n2);
+          }
+        }
+        if (found.size === 0) return { kind: 'update_bad_input', reason: 'bad_estado' };
+        if (found.size > 1) return { kind: 'update_bad_input', reason: 'ambiguous_estado' };
+        const norm = [...found][0];
         await env.DB.prepare(`UPDATE personas SET estado=?, updated_at=? WHERE id=?`).bind(norm, now, id).run();
         return ok(field, rec.caseId, name, `estado → ${ESTADO_LABEL[norm] ?? norm}`);
       }
