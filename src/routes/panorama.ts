@@ -45,6 +45,26 @@ panorama.get('/stats', async (c) => edgeCached(c, 60, async () => {
   };
 }));
 
+// GET /api/panorama/series — hourly counter history for the evolution charts
+// (small multiples on /panorama). One point per snapshot, ascending; only the
+// charted keys are extracted so the payload stays small (~720 points max).
+const SERIES_KEYS = ['desap_buscando', 'desap_localizadas', 'atendidas_total',
+  'atendidas_reencontradas', 'danos_total', 'edif_total'] as const;
+
+panorama.get('/series', async (c) => edgeCached(c, 300, async () => {
+  const rows = await c.env.DB.prepare(
+    `SELECT taken_ms, stats_json FROM civis_stats_snapshots ORDER BY taken_ms ASC LIMIT 720`
+  ).all<any>().catch(() => ({ results: [] as any[] }));
+  const points = (rows.results ?? []).map((r: any) => {
+    let s: Record<string, number> = {};
+    try { s = JSON.parse(r.stats_json || '{}'); } catch { /* skip bad row */ }
+    const p: Record<string, number | null> = { t: Number(r.taken_ms) };
+    for (const k of SERIES_KEYS) p[k] = Number.isFinite(Number(s[k])) ? Number(s[k]) : null;
+    return p;
+  });
+  return { points, keys: SERIES_KEYS };
+}));
+
 // GET /api/panorama/edificaciones — satellite-detected damaged buildings
 // (points layer). Optional ?zona= and ?severidad= filters; capped at 2000
 // (dataset is ~975 today — the cap is headroom, not pagination).

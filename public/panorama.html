@@ -49,6 +49,12 @@
   .chip{font:600 12px Inter;padding:4px 10px;border-radius:9999px;border:1px solid var(--ops-border);background:var(--ops-panel);cursor:pointer;color:var(--ops-text)}
   .chip.on{background:var(--ops-accent);color:#fff;border-color:var(--ops-accent)}
   .contrast{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:13px;color:var(--ops-muted);margin-top:10px}
+  .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+  .mini{padding:12px 14px 8px}
+  .mini .mt{font:800 10px var(--ops-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ops-muted)}
+  .mini .mv{font:900 20px var(--ops-mono);font-variant-numeric:tabular-nums;color:var(--ops-text);margin:2px 0 4px}
+  .mini svg{display:block;width:100%;height:64px;overflow:visible}
+  .mini .md{font-size:10px;color:var(--ops-muted);margin-top:4px}
   .cta{display:inline-block;font:700 13px Inter;color:var(--ops-accent);text-decoration:none;margin-top:8px}
   .src{font-size:11px;color:var(--ops-muted);margin-top:14px;line-height:1.6}
 </style>
@@ -142,6 +148,13 @@
 
     <div class="src">Fuente satelital: <b>Copernicus EMS (UE)</b> verificado + predicción IA <b>Microsoft AI4G</b>, vía <b>CIVIS Venezuela</b> (iniciativa ciudadana independiente). Espejo horario en la base de datos de SISMO911 — este panel sigue operativo aunque la fuente esté caída, mostrando el último corte sincronizado.</div>
   </section>
+
+  <!-- Evolution — hourly snapshot history, small multiples (own scale each) -->
+  <section class="sec" id="sec-series" hidden>
+    <div class="sec-h"><span class="sec-t">Evolución · historial por hora</span><span class="tag" id="series-note"></span></div>
+    <div class="charts" id="charts"></div>
+    <div class="note">Cada corte horario queda guardado en SISMO911 desde el 2-jul-2026; las curvas se completan solas con el tiempo. Escala propia por indicador.</div>
+  </section>
 </main>
 
 <script src="/app-shell.js" defer></script>
@@ -230,6 +243,87 @@
 
   loadStats();
   setInterval(loadStats, 60000);
+
+  // ── Evolución: small multiples from /api/panorama/series ──────────────────
+  // One mini line chart per indicator, each with its OWN scale (the counters
+  // span 7 → 56.000, a shared axis would flatten everything). Hand-rolled SVG
+  // (strict CSP, no libs); native <title> tooltips per point.
+  var SERIES_DEFS = [
+    { k: 'desap_buscando',          label: 'Buscando',              color: '#b25e09' },
+    { k: 'desap_localizadas',       label: 'Localizadas con vida',  color: '#1a7f37' },
+    { k: 'atendidas_total',         label: 'Atendidas en centros',  color: '#0550ae' },
+    { k: 'atendidas_reencontradas', label: 'Reencontradas',         color: '#1a7f37' },
+    { k: 'danos_total',             label: 'Edificios reportados',  color: '#c9372c' },
+    { k: 'edif_total',              label: 'Evaluadas por satélite', color: '#6639ba' }
+  ];
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs) {
+    var e = document.createElementNS(SVGNS, tag);
+    for (var a in attrs) e.setAttribute(a, attrs[a]);
+    return e;
+  }
+  function hora(t) {
+    var d = new Date(t);
+    return d.toLocaleDateString('es-VE', { day: 'numeric', month: 'short' }) + ' ' +
+           d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+  }
+  function miniChart(def, pts) {
+    var data = pts.map(function (p) { return { t: p.t, v: p[def.k] }; })
+                  .filter(function (d) { return d.v != null; });
+    if (!data.length) return null;
+    var card = document.createElement('div');
+    card.className = 'card mini';
+    var last = data[data.length - 1].v;
+    card.innerHTML = '<div class="mt">' + def.label + '</div><div class="mv">' + fmt(last) + '</div>';
+    var W = 240, H = 64, PAD = 6;
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img',
+      'aria-label': def.label + ': ' + data.length + ' cortes, último ' + fmt(last) });
+    var vs = data.map(function (d) { return d.v; });
+    var vmin = Math.min.apply(null, vs), vmax = Math.max.apply(null, vs);
+    if (vmin === vmax) { vmin -= 1; vmax += 1; }               // flat line stays visible
+    var t0 = data[0].t, t1 = data[data.length - 1].t || t0 + 1;
+    var x = function (t) { return data.length === 1 ? W / 2 : PAD + (t - t0) / (t1 - t0) * (W - 2 * PAD); };
+    var y = function (v) { return H - PAD - (v - vmin) / (vmax - vmin) * (H - 2 * PAD); };
+    // baseline (recessive)
+    svg.appendChild(el('line', { x1: 0, y1: H - 1, x2: W, y2: H - 1, stroke: 'currentColor', 'stroke-opacity': '.15', 'stroke-width': 1 }));
+    if (data.length > 1) {
+      var dPath = data.map(function (d, i) { return (i ? 'L' : 'M') + x(d.t).toFixed(1) + ' ' + y(d.v).toFixed(1); }).join(' ');
+      svg.appendChild(el('path', { d: dPath, fill: 'none', stroke: def.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    }
+    data.forEach(function (d) {
+      var c = el('circle', { cx: x(d.t).toFixed(1), cy: y(d.v).toFixed(1), r: 4, fill: def.color, stroke: '#fff', 'stroke-width': 1.5 });
+      var tt = document.createElementNS(SVGNS, 'title');
+      tt.textContent = hora(d.t) + ' — ' + fmt(d.v);
+      c.appendChild(tt);
+      svg.appendChild(c);
+    });
+    card.appendChild(svg);
+    var md = document.createElement('div');
+    md.className = 'md';
+    md.textContent = hora(data[0].t) + ' → ' + hora(data[data.length - 1].t);
+    card.appendChild(md);
+    return card;
+  }
+  function loadSeries() {
+    fetch('/api/panorama/series?t=' + Math.floor(Date.now() / 300000))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var pts = d.points || [];
+        if (!pts.length) return;
+        var box = document.getElementById('charts');
+        box.innerHTML = '';
+        SERIES_DEFS.forEach(function (def) {
+          var c = miniChart(def, pts);
+          if (c) box.appendChild(c);
+        });
+        document.getElementById('series-note').textContent =
+          pts.length < 6 ? 'Recopilando historial · ' + pts.length + ' cortes' : pts.length + ' cortes horarios';
+        document.getElementById('sec-series').hidden = !box.children.length;
+      })
+      .catch(function () {});
+  }
+  loadSeries();
+  setInterval(loadSeries, 300000);
 })();
 </script>
 </body>
