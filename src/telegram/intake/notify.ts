@@ -32,7 +32,22 @@ export async function notifyOperators(env: Env, cfg: TelegramConfig, r: IntakeRe
         : r.outcome === 'needs_review'
           ? '📥 Intake Telegram — revisar'
           : '⚠️ Intake Telegram — error';
-  const msg = [`${head} (${r.code})`, r.note, r.fields.nombre ? `Nombre: ${r.fields.nombre}` : null, r.fields.cedula ? `Cédula: ${r.fields.cedula}` : null, link].filter(Boolean).join('\n');
+  // One-tap moderation for a fresh draft: the operator can approve/reject right
+  // here with the code (admin-tier /aprobar|/rechazar ITK-XXXX handled in route.ts).
+  const actions =
+    r.outcome === 'created' || r.outcome === 'matched'
+      ? [`Aprobar:  /aprobar ${r.code}`, `Rechazar: /rechazar ${r.code}`]
+      : [];
+  const msg = [
+    `${head} (${r.code})`,
+    r.note,
+    r.fields.nombre ? `Nombre: ${r.fields.nombre}` : null,
+    r.fields.cedula ? `Cédula: ${r.fields.cedula}` : null,
+    ...actions,
+    link,
+  ]
+    .filter(Boolean)
+    .join('\n');
   for (const adminId of cfg.adminUserIds) {
     await sendTelegram(cfg.botToken, adminId, msg);
   }

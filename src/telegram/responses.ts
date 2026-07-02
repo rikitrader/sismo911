@@ -117,6 +117,7 @@ const OPERATOR_HELP_ES = [
   '• /actualizar <ID> edad 34 — actualizar la edad',
   '• /actualizar <ID> nombre "Juan Pérez Gómez" — corregir el nombre',
   '• /actualizar <ID> aprobar  /  rechazar — publicar u ocultar un caso (solo nivel ejecutivo/admin)',
+  '• /aprobar ITK-XXXX  /  /rechazar ITK-XXXX — aprobar u ocultar un envío del bot por su código de recibo (admin)',
   'Un campo por comando. Solo casos del registro de SISMO911 (no hospitales/oficiales).',
 ].join('\n');
 const OPERATOR_HELP_EN = [
@@ -128,6 +129,7 @@ const OPERATOR_HELP_EN = [
   '• /actualizar <ID> edad 34 — update age',
   '• /actualizar <ID> nombre "Juan Pérez Gómez" — fix the name',
   '• /actualizar <ID> aprobar  /  rechazar — publish or hide a case (executive/admin only)',
+  '• /aprobar ITK-XXXX  /  /rechazar ITK-XXXX — approve or hide a bot submission by its receipt code (admin)',
   'One field per command. Only SISMO911-registry cases (not hospital/official).',
 ].join('\n');
 
