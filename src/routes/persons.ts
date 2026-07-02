@@ -197,7 +197,7 @@ async function logDocket(
 //   • hospital_patients — only the UNMATCHED rows (matched ones are already
 //     counted inside persons/personas, so adding them would double-count).
 // Operators (op=true) see every row (no suppression), mirroring the docket.
-async function registrySummary(
+export async function registrySummary(
   env: any, op: boolean,
 ): Promise<{ missing: number; found_safe: number; deceased: number; hospitalized: number; pending: number; total: number }> {
   const sumW = op ? '' : ` WHERE p.review='approved' AND NOT ${personsPublicSuppressSql('p')}`;
