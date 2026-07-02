@@ -18,6 +18,7 @@ import { aiNormalizeIntent } from './intent';
 import { buildTelegramResponse, buildListMessages, buildUpdateResponse, buildMuroPostResponse, buildMuroLatestResponse, buildMuroMentions } from './responses';
 import { resolveUpdate } from './update';
 import { postToMuro, searchMuroMentions, latestMuroPosts, muroDisplayName } from './muro';
+import { maybeRespondOnMuro } from './muro-responder';
 import { syncBotCommands, getRegisteredVersion } from './botcommands';
 import { redactSensitiveFields, isHiddenFromPublic } from '../adapters/sismo911-api';
 import {
@@ -345,6 +346,13 @@ telegram.post('/webhook', async (c) => {
       const posted = await postToMuro(c.env, { name: muroDisplayName(msg.from), text: cmd.muroText });
       reply = buildMuroPostResponse(posted, muroOpts);
       resultKind = posted.kind;
+      // Wall bot: if the /muro text is itself a person-search question, the bot
+      // also answers ON the wall (public tier), same as for web-form posts.
+      if (posted.kind === 'muro_ok') {
+        c.executionCtx.waitUntil(
+          maybeRespondOnMuro(c.env, { id: posted.id, name: posted.name, body: cmd.muroText }).then(() => {})
+        );
+      }
     } else {
       const latest = await latestMuroPosts(c.env);
       reply = buildMuroLatestResponse(latest, muroOpts);

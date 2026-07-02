@@ -5,6 +5,7 @@ import { burstLimit } from '../lib/security';
 import { sanitizeHtml } from '../lib/sanitize';
 import { getUserFromRequest, isPrivilegedRole } from '../lib/auth';
 import { scanFile } from '../security/file-scan';
+import { maybeRespondOnMuro } from '../telegram/muro-responder';
 
 // Community channel — verified-info chat + the "Muro Sísmico" wall (channel
 // 'terremotos'). Public read/write. The wall adds: an anti-bot CAPTCHA + honeypot,
@@ -114,6 +115,15 @@ chat.post('/', async (c) => {
     `INSERT INTO chat_messages (id, channel, name, body, role, image_key, user_id, flagged, created_ms)
      VALUES (?,?,?,?,?,?,?,0,?)`
   ).bind(id, channel, displayName, safeBody, role, imageKey, me?.id ?? null, Date.now()).run();
+
+  // Wall bot: if the post looks like a person-search ("Busco a Maria Perez",
+  // "¿Alguien ha visto a…?"), the bot answers ON the wall from verified data
+  // (public-tier redaction). Background — never delays or fails the post.
+  if (channel === MURO && safeBody) {
+    c.executionCtx.waitUntil(
+      maybeRespondOnMuro(c.env, { id, name: displayName, body: safeBody, userId: me?.id ?? null }).then(() => {})
+    );
+  }
   return c.json({ ok: true, id, hasPhoto: !!imageKey }, 201);
 });
 
