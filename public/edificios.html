@@ -327,7 +327,9 @@
       '</div>'+
       '<div class="gbody"><div class="nm">'+esc(b.name)+'</div>'+
         '<div class="ad">'+esc(b.addr||b.city)+'</div>'+
-        '<div class="cost">Reparación estim. '+cost+'</div></div></div>';
+        '<div class="cost">Reparación estim. '+cost+'</div>'+
+        '<a class="tag" href="/edificio/'+encodeURIComponent(b.id)+'" style="display:inline-block;margin-top:7px;padding:4px 10px;text-decoration:none;border-color:var(--ops-accent-soft);color:var(--ops-accent-fg);background:var(--ops-accent-soft)">📋 Ver expediente →</a>'+
+      '</div></div>';
   }
   function renderRep(){
     var rows=repFiltered();
@@ -338,7 +340,7 @@
       '<div style="color:var(--ops-muted);font-size:13px;padding:14px">Sin edificios reportados que coincidan.</div>';
     document.getElementById('repMore').style.display=rows.length>repShown?'inline-block':'none';
     grid.querySelectorAll('.gcard').forEach(function(el){
-      el.addEventListener('click',function(){ var b=REP.find(function(x){return x.id===el.getAttribute('data-id');}); if(b) openLb(b); });
+      el.addEventListener('click',function(e){ if(e.target.tagName==='A')return; var b=REP.find(function(x){return x.id===el.getAttribute('data-id');}); if(b) openLb(b); });
     });
     renderRepMap(rows);
   }
@@ -354,7 +356,8 @@
       pop+='<div style="font-size:12px;margin-top:5px"><span class="chip" style="background:'+dc+'">'+esc(DMGL[b.damageLevel]||b.damageLevel)+'</span>'+
         (b.mediaCount>0?' <span class="tag">📷 '+b.mediaCount+' fotos</span>':'')+'</div>'+
         (b.cost?'<div style="font-size:11px;color:#5b6781;margin-top:4px">Reparación estim. '+fmtUsd(b.cost.repairUsd)+'</div>':'')+
-        '<button data-repid="'+esc(b.id)+'" style="margin-top:6px;width:100%;cursor:pointer;border:1px solid #1570ef;background:#1570ef;color:#fff;border-radius:7px;padding:5px;font-weight:700">Ver fotos</button></div>';
+        '<button data-repid="'+esc(b.id)+'" style="margin-top:6px;width:100%;cursor:pointer;border:1px solid #1570ef;background:#1570ef;color:#fff;border-radius:7px;padding:5px;font-weight:700">Ver fotos</button>'+
+        '<a href="/edificio/'+encodeURIComponent(b.id)+'" style="display:block;text-align:center;margin-top:5px;text-decoration:none;color:#1570ef;font-weight:700;font-size:12px">📋 Ver expediente completo →</a></div>';
       m.bindPopup(pop);
       m.on('popupopen',function(e){
         var btn=e.popup.getElement().querySelector('[data-repid]');

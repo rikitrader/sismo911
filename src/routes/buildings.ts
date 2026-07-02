@@ -3,7 +3,7 @@ import type { Env } from '../types';
 import { rateLimit } from '../lib/security';
 import { edgeCached } from '../lib/edge-cache';
 import {
-  scoreCurated, scoreOsm, computeSar, linkLiveMissing,
+  scoreCurated, scoreOsm, computeSar, linkLiveMissing, estimateOccupants,
   type Sector, type Curated, type Osm, type Scored, type Sar, type MissingReport, PRIOR_BLEND,
 } from '../lib/building-score';
 import { mapTvBuilding, type TvBuilding } from '../lib/tv-buildings';
@@ -272,6 +272,124 @@ buildings.get('/reported', async (c) => {
       },
       cost_note: 'Costo estimado por daño (HAZUS + costos reales VE 2026). Área/pisos desconocidos para reportes ciudadanos → confianza BAJA. No es tasación.',
       buildings: mapped.slice(0, limit),
+    };
+  });
+});
+
+// ── GET /api/buildings/reported/:id — full FORENSIC building profile ──────────
+// The court-case dossier for one building: field data + photo galleries + a
+// structured forensic record (year built, structure, GIS, studies) + the
+// evidence document list (PDFs, engineering/geological/national studies, news,
+// complaints) + linked missing persons + computed occupancy/cost + GIS links +
+// a chronological forensic timeline. Read-only, public, PII-free (missing persons
+// are already public on /personas). 404 if the building id is unknown.
+buildings.get('/reported/:id', async (c) => {
+  const limited = await rateLimit(c.env, c, 'buildings_profile', 90, 60);
+  if (limited) return limited;
+  const id = c.req.param('id');
+  return edgeCached(c, 120, async () => {
+    const row = await c.env.DB.prepare(
+      `SELECT id, name, address, city, zone, lat, lng, damage_level, status,
+              main_photo_url, media_urls, general_source, notes, has_missing_persons,
+              tv_created_at, tv_updated_at FROM tv_buildings WHERE id = ?`,
+    ).bind(id).first();
+    if (!row) return c.json({ error: 'not_found', id }, 404);
+    const b = mapTvBuilding(row);
+
+    // Forensic record + evidence docs (soft-referenced; may not exist yet).
+    let profile: any = null; let docs: any[] = [];
+    try {
+      profile = await c.env.DB.prepare(`SELECT * FROM building_profile WHERE building_id = ?`).bind(id).first();
+    } catch { profile = null; }
+    try {
+      const dr = await c.env.DB.prepare(
+        `SELECT id, kind, title, url, source, author, published_at, notes, created_at
+           FROM building_docs WHERE building_id = ? ORDER BY published_at DESC, created_at DESC`,
+      ).bind(id).all();
+      docs = (dr.results ?? []) as any[];
+    } catch { docs = []; }
+
+    // Linked missing persons — reuse the live-linkage engine (name-token match on
+    // free-text last-seen locations). Fail-soft: an empty list on any DB hiccup.
+    let missing: string[] = [];
+    try {
+      const reports = await fetchMissingReports(c.env);
+      missing = linkLiveMissing(b.name, reports);
+    } catch { missing = []; }
+
+    // Occupancy: surveyed override on the profile wins; else model from built area.
+    const floorM2 = profile?.gross_area_m2 ?? b.cost?.floorM2 ?? null;
+    const occupancy = profile?.occupancy_est ?? (floorM2 ? estimateOccupants('RESIDENCIAL', floorM2) : null);
+
+    // GIS / map links (no API key needed for the basic embed / street-view deep link).
+    const gis = (b.lat != null && b.lon != null) ? {
+      lat: b.lat, lon: b.lon,
+      plusCode: profile?.plus_code ?? null,
+      mapsEmbed: `https://maps.google.com/maps?q=${b.lat},${b.lon}&z=18&output=embed`,
+      mapsLink: `https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lon}`,
+      streetView: `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${b.lat},${b.lon}`,
+      osm: `https://www.openstreetmap.org/?mlat=${b.lat}&mlon=${b.lon}#map=19/${b.lat}/${b.lon}`,
+    } : null;
+
+    // Structure / build facts (surveyed on the profile; honest nulls otherwise).
+    const structure = {
+      yearBuilt: profile?.year_built ?? null,
+      type: profile?.structure_type ?? null,
+      system: profile?.structure_system ?? null,
+      floors: profile?.floors ?? b.cost?.levels ?? null,
+      floorsSurveyed: profile?.floors != null,
+      units: profile?.units ?? null,
+      soilType: profile?.soil_type ?? null,
+      lastInspectionAt: profile?.last_inspection_at ?? null,
+      firstBuiltPermit: profile?.first_built_permit ?? null,
+    };
+
+    // Cost — surveyed override wins, else the HAZUS estimate on the mapped row.
+    const cost = {
+      repairUsd: profile?.repair_cost_usd ?? b.cost?.repairUsd ?? null,
+      replacementUsd: profile?.replacement_cost_usd ?? b.cost?.replacementUsd ?? null,
+      unitUsdM2: b.cost?.unitUsdM2 ?? null,
+      areaM2: profile?.gross_area_m2 ?? b.cost?.areaM2 ?? null,
+      damageRatio: b.cost?.damageRatio ?? null,
+      confidence: (profile?.repair_cost_usd != null) ? 'SURVEYED' : (b.cost?.costConf ?? 'LOW'),
+    };
+
+    // Studies quick-links pulled from the profile (also appear in docs).
+    const studies = {
+      engineering: profile?.engineer_study_url ?? null,
+      geological: profile?.geological_study_url ?? null,
+      national: profile?.national_study_url ?? null,
+    };
+
+    // Forensic timeline — chronological chain of custody / evidence events.
+    const timeline: { at: string; kind: string; label: string }[] = [];
+    if (b.updatedAt) timeline.push({ at: b.updatedAt, kind: 'report', label: 'Última actualización del reporte de campo' });
+    if (row.tv_created_at) timeline.push({ at: String(row.tv_created_at), kind: 'report', label: 'Reporte ciudadano registrado' });
+    if (structure.lastInspectionAt) timeline.push({ at: structure.lastInspectionAt, kind: 'inspection', label: 'Inspección técnica' });
+    for (const d of docs) if (d.published_at) timeline.push({ at: d.published_at, kind: d.kind, label: d.title || d.kind });
+    timeline.sort((a, z) => (z.at || '').localeCompare(a.at || ''));
+
+    // Group docs by the tab they belong to.
+    const docsByKind: Record<string, any[]> = {};
+    for (const d of docs) (docsByKind[d.kind] ||= []).push(d);
+
+    return {
+      building: b,
+      structure,
+      cost,
+      occupancy,
+      gis,
+      studies,
+      missing,
+      missingCount: missing.length,
+      docs,
+      docsByKind,
+      docCount: docs.length,
+      timeline,
+      profileEnriched: !!profile,
+      event: METHODOLOGY.event,
+      methodology: METHODOLOGY,
+      disclaimer: 'Expediente forense en construcción. Los campos sin dato están pendientes de estudio de campo (CIV / Protección Civil / FUNVISIS). Estimaciones de ingeniería, no tasación ni censo oficial.',
     };
   });
 });

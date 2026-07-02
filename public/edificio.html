@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Expediente del edificio | SISMO911</title>
+<meta name="description" content="Expediente forense por edificio del terremoto de Venezuela (24-jun-2026): fotos, dirección, GIS/mapa, ocupación, costo de reparación y reemplazo, tipo de estructura, estudios de ingeniería/geológicos/oficiales, desaparecidos, denuncias y línea de tiempo — estilo caso judicial, público y buscable." />
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<meta name="theme-color" content="#14171b" />
+<meta name="robots" content="index,follow" />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" as="script" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/app.css" />
+<link rel="stylesheet" href="/ops-theme.css" />
+<style>
+  body{background:var(--ops-bg);color:var(--ops-text);font-family:Inter,system-ui,sans-serif;margin:0}
+  main{max-width:1100px;margin:0 auto;padding:16px 16px 70px}
+  a{color:var(--ops-accent)}
+  .crumb{font:700 12px 'JetBrains Mono',monospace;color:var(--ops-muted);margin-bottom:6px}
+  .crumb a{color:var(--ops-muted);text-decoration:none}
+  .crumb a:hover{color:var(--ops-accent)}
+  .eyebrow{font:800 11px 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--ops-accent)}
+  h1{font:900 28px/1.08 'Public Sans';letter-spacing:-.02em;margin:4px 0 6px}
+  .sub{color:var(--ops-muted);font-size:14px}
+  .card{background:var(--ops-panel);border:1px solid var(--ops-border);border-radius:14px}
+  .pad{padding:16px}
+  .chip{display:inline-flex;align-items:center;gap:.3rem;font:800 10px 'JetBrains Mono',monospace;padding:3px 9px;border-radius:9999px;text-transform:uppercase;letter-spacing:.03em;color:#fff}
+  .tag{font:700 10px 'JetBrains Mono',monospace;padding:2px 7px;border-radius:6px;background:var(--ops-panel-2);border:1px solid var(--ops-border);color:var(--ops-muted)}
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+  .hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;margin:14px 0}
+  @media(max-width:760px){.hero{grid-template-columns:1fr}}
+  #heroImg{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:12px;background:var(--ops-panel-2);cursor:pointer}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px}
+  .kv .k{color:var(--ops-muted);font:700 11px 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+  .kv .v{color:var(--ops-text)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
+  .stat{background:var(--ops-panel);border:1px solid var(--ops-border);border-radius:12px;padding:12px}
+  .stat .n{font:900 22px 'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+  .stat .l{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ops-muted);margin-top:2px}
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--ops-border);margin:18px 0 0}
+  .tab{padding:9px 14px;font:800 12px 'Public Sans';color:var(--ops-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+  .tab:hover{color:var(--ops-text)}
+  .tab.on{color:var(--ops-accent);border-bottom-color:var(--ops-accent)}
+  .tab .b{display:inline-block;min-width:16px;text-align:center;font:700 10px 'JetBrains Mono',monospace;background:var(--ops-panel-2);border-radius:9999px;padding:0 5px;margin-left:4px}
+  .panel{display:none;padding:16px 2px}
+  .panel.on{display:block}
+  .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .ggrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;background:var(--ops-panel-2)}
+  #map{height:340px;border-radius:12px;z-index:0;margin-top:10px}
+  .docrow{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--ops-border)}
+  .docrow .ic{font-size:20px;line-height:1}
+  .empty{color:var(--ops-muted);font-size:13px;padding:16px;text-align:center;border:1px dashed var(--ops-border);border-radius:10px}
+  .tl{position:relative;margin-left:8px;padding-left:18px}
+  .tl:before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:2px;background:var(--ops-border)}
+  .tlitem{position:relative;padding:8px 0}
+  .tlitem:before{content:'';position:absolute;left:-22px;top:12px;width:9px;height:9px;border-radius:50%;background:var(--ops-accent);border:2px solid var(--ops-bg)}
+  .tlitem .d{font:700 11px 'JetBrains Mono',monospace;color:var(--ops-muted)}
+  .misslist a{display:inline-block;background:var(--ops-panel-2);border:1px solid var(--ops-border);border-radius:9999px;padding:4px 11px;margin:3px 4px 0 0;font-size:12px;text-decoration:none}
+  .disc{font-size:11px;color:var(--ops-warn);background:var(--ops-warn-bg);border:1px solid var(--ops-accent-soft);border-radius:10px;padding:9px 12px;margin-top:16px}
+  /* lightbox */
+  #lb{position:fixed;inset:0;background:rgba(6,8,12,.94);z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column}
+  #lb.on{display:flex}
+  #lb img{max-width:92vw;max-height:80vh;border-radius:8px;object-fit:contain}
+  #lb .nav{position:absolute;top:0;bottom:0;width:22vw;display:flex;align-items:center;color:#fff;font-size:44px;cursor:pointer;opacity:.6;user-select:none}
+  #lb .nav:hover{opacity:1}
+  #lbPrev{left:0;padding-left:16px}#lbNext{right:0;justify-content:flex-end;padding-right:16px}
+  #lbX{position:absolute;top:14px;right:20px;color:#fff;font-size:30px;cursor:pointer}
+  #lbIdx{position:absolute;top:18px;left:20px;color:#cfd6e2;font:700 12px 'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+<header style="background:linear-gradient(180deg,var(--ops-bar-1),var(--ops-bar-2));color:var(--ops-bar-fg)">
+  <div style="max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px">
+    <a href="/" style="display:flex;align-items:center;gap:8px;color:var(--ops-bar-fg);text-decoration:none;font:800 15px 'Public Sans'"><img src="/logo.svg" alt="" style="width:28px;height:28px"> SISMO911</a>
+  </div>
+</header>
+
+<main>
+  <div class="crumb"><a href="/edificios">← Edificios</a> / <span id="crumbId">expediente</span></div>
+  <div id="loading" class="empty" style="margin-top:20px">Cargando expediente del edificio…</div>
+  <div id="doc" style="display:none">
+    <div class="eyebrow" id="ev">Expediente forense</div>
+    <h1 id="bname">—</h1>
+    <div class="sub" id="baddr">—</div>
+    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap" id="badges"></div>
+
+    <div class="hero">
+      <img id="heroImg" alt="Foto principal" />
+      <div class="card pad">
+        <div class="kv" id="idkv"></div>
+      </div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="tabs" id="tabs"></div>
+    <div id="panels"></div>
+
+    <div class="disc" id="disc"></div>
+  </div>
+</main>
+
+<div id="lb">
+  <div id="lbX">✕</div><div id="lbIdx"></div>
+  <div class="nav" id="lbPrev">‹</div><img id="lbImg" alt="" /><div class="nav" id="lbNext">›</div>
+</div>
+
+<script src="/app-shell.js" defer></script>
+<script>
+(function(){
+  var DMGC={total:'#d92d20',severo:'#f04438',parcial:'#f5c518'};
+  var DMGL={total:'Colapso total',severo:'Daño severo',parcial:'Daño parcial'};
+  var DOCK={photo:'📷',pdf:'📄',engineering:'📐',geological:'🪨',national:'🏛️',news:'📰',social:'💬',complaint:'⚠️',court:'⚖️',repair:'🔧',other:'📎'};
+  var DOCL={photo:'Fotos',pdf:'PDF',engineering:'Estudio de ingeniería',geological:'Estudio geológico',national:'Estudio oficial',news:'Prensa',social:'Redes',complaint:'Denuncia',court:'Documento judicial',repair:'Reparación',other:'Otro'};
+  var LB={p:[],i:0};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function usd(n){ if(n==null)return '—'; n=+n; if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B'; if(n>=1e6)return '$'+(n/1e6).toFixed(2)+'M'; if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'k'; return '$'+Math.round(n); }
+  function num(n){ return n==null?'—':(+n).toLocaleString('es'); }
+  function fdate(s){ if(!s)return '—'; try{ return new Date(s).toLocaleDateString('es',{year:'numeric',month:'short',day:'numeric'}); }catch(e){ return s; } }
+  function idFromPath(){ var m=(location.pathname||'').match(/\/edificio\/([^\/?#]+)/); if(m)return decodeURIComponent(m[1]); var q=new URLSearchParams(location.search); return q.get('id')||''; }
+
+  function openLb(photos,i){ LB={p:photos,i:i||0}; document.getElementById('lb').classList.add('on'); showLb(); }
+  function showLb(){ document.getElementById('lbImg').src=LB.p[LB.i]; document.getElementById('lbIdx').textContent=(LB.i+1)+' / '+LB.p.length; var multi=LB.p.length>1; document.getElementById('lbPrev').style.visibility=multi?'visible':'hidden'; document.getElementById('lbNext').style.visibility=multi?'visible':'hidden'; }
+  function lbStep(d){ LB.i=(LB.i+d+LB.p.length)%LB.p.length; showLb(); }
+  function closeLb(){ document.getElementById('lb').classList.remove('on'); document.getElementById('lbImg').src=''; }
+
+  function row(k,v){ return v==null||v===''||v==='—' ? '<div class="k">'+esc(k)+'</div><div class="v" style="color:var(--ops-muted)">sin dato</div>' : '<div class="k">'+esc(k)+'</div><div class="v">'+v+'</div>'; }
+
+  function render(d){
+    var b=d.building, st=d.structure, c=d.cost, gis=d.gis;
+    document.getElementById('loading').style.display='none';
+    document.getElementById('doc').style.display='block';
+    document.title=(b.name||'Edificio')+' — Expediente | SISMO911';
+    document.getElementById('crumbId').textContent=b.name||'expediente';
+    document.getElementById('bname').textContent=b.name||'Edificio sin nombre';
+    document.getElementById('baddr').textContent=b.addr||b.city||'';
+    // badges
+    var bd='<span class="chip" style="background:'+(DMGC[b.damageLevel]||'#9aa4b2')+'">'+esc(DMGL[b.damageLevel]||b.damageLevel||'—')+'</span>';
+    if(b.verified) bd+='<span class="chip" style="background:#1570ef">✓ Verificado</span>';
+    if(d.missingCount) bd+='<span class="chip" style="background:#d92d20">'+d.missingCount+' desaparecido(s)</span>';
+    bd+='<span class="tag">Fuente: '+esc(b.source||'terremotovenezuela.com')+'</span>';
+    document.getElementById('badges').innerHTML=bd;
+    // hero
+    var hero=document.getElementById('heroImg');
+    if(b.photo){ hero.src=b.photo; hero.onclick=function(){ openLb(b.media&&b.media.length?b.media:[b.photo],0); }; } else { hero.style.display='none'; }
+    // identity kv
+    document.getElementById('idkv').innerHTML=
+      row('Dirección', esc(b.addr))+
+      row('Ciudad', esc(b.city))+ row('Zona', esc(b.zone))+ row('Estado', esc(b.state))+
+      row('Nivel de daño', esc(DMGL[b.damageLevel]||b.damageLevel))+
+      row('Coordenadas', gis?('<span class="mono">'+gis.lat.toFixed(5)+', '+gis.lon.toFixed(5)+'</span>'):null)+
+      row('Plus Code', gis&&gis.plusCode?esc(gis.plusCode):null)+
+      row('ID expediente', '<span class="mono" style="font-size:11px">'+esc(b.id)+'</span>');
+    // stats
+    document.getElementById('stats').innerHTML=
+      stat(usd(c.repairUsd),'Costo reparación ('+esc(c.confidence)+')')+
+      stat(usd(c.replacementUsd),'Costo reemplazo')+
+      stat(num(d.occupancy),'Ocupación estimada')+
+      stat(st.floors!=null?num(st.floors):'—',st.floorsSurveyed?'Pisos (verificado)':'Pisos (estim.)')+
+      stat(num(d.docCount),'Documentos')+
+      stat(num(d.missingCount),'Desaparecidos');
+
+    buildTabs(d);
+    document.getElementById('disc').textContent='⚠️ '+d.disclaimer;
+  }
+  function stat(n,l){ return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+esc(l)+'</div></div>'; }
+
+  var MAPDONE=false;
+  function buildTabs(d){
+    var b=d.building, docsBy=d.docsByKind||{};
+    var tabs=[
+      {id:'resumen',label:'Resumen',n:null},
+      {id:'fotos',label:'Fotos',n:(b.media||[]).length},
+      {id:'ubicacion',label:'Ubicación / GIS',n:null},
+      {id:'estructura',label:'Estructura & Costos',n:null},
+      {id:'desaparecidos',label:'Desaparecidos',n:d.missingCount},
+      {id:'documentos',label:'Documentos & Estudios',n:d.docCount},
+      {id:'forense',label:'Línea forense',n:(d.timeline||[]).length},
+    ];
+    document.getElementById('tabs').innerHTML=tabs.map(function(t,i){
+      return '<div class="tab'+(i===0?' on':'')+'" data-t="'+t.id+'">'+esc(t.label)+(t.n?'<span class="b">'+t.n+'</span>':'')+'</div>';
+    }).join('');
+    var P=document.getElementById('panels');
+    P.innerHTML=tabs.map(function(t,i){ return '<div class="panel'+(i===0?' on':'')+'" id="p_'+t.id+'"></div>'; }).join('');
+
+    // Resumen
+    document.getElementById('p_resumen').innerHTML=
+      '<div class="card pad"><div class="kv">'+
+        row('Resumen forense', d.building && b.notes ? esc(b.notes) : (d.profileEnriched?null:'Expediente en construcción — a la espera de peritaje de campo.'))+
+        row('Año de construcción', d.structure.yearBuilt!=null?d.structure.yearBuilt:null)+
+        row('Tipo de estructura', esc(d.structure.type))+
+        row('Sistema estructural', esc(d.structure.system))+
+        row('Unidades / apartamentos', d.structure.units!=null?d.structure.units:null)+
+        row('Tipo de suelo', esc(d.structure.soilType))+
+        row('Última inspección', d.structure.lastInspectionAt?fdate(d.structure.lastInspectionAt):null)+
+      '</div></div>';
+
+    // Fotos
+    var media=b.media||[];
+    document.getElementById('p_fotos').innerHTML= media.length
+      ? '<div class="ggrid" id="fgrid">'+media.map(function(u,i){return '<img loading="lazy" src="'+esc(u)+'" data-i="'+i+'" alt="Foto '+(i+1)+'" />';}).join('')+'</div>'
+      : '<div class="empty">Sin fotos en el expediente todavía.</div>';
+    if(media.length){ document.querySelectorAll('#fgrid img').forEach(function(im){ im.addEventListener('click',function(){ openLb(media,+im.getAttribute('data-i')); }); }); }
+
+    // Ubicación / GIS
+    document.getElementById('p_ubicacion').innerHTML= d.gis
+      ? '<div class="card pad"><div class="kv">'+
+          row('Latitud', '<span class="mono">'+d.gis.lat.toFixed(6)+'</span>')+
+          row('Longitud', '<span class="mono">'+d.gis.lon.toFixed(6)+'</span>')+
+          row('Plus Code', d.gis.plusCode?esc(d.gis.plusCode):null)+
+          row('Google Maps', '<a href="'+esc(d.gis.mapsLink)+'" target="_blank" rel="noopener">Abrir en Maps ↗</a>')+
+          row('Street View', '<a href="'+esc(d.gis.streetView)+'" target="_blank" rel="noopener">Ver Street View ↗</a>')+
+          row('OpenStreetMap', '<a href="'+esc(d.gis.osm)+'" target="_blank" rel="noopener">Abrir en OSM ↗</a>')+
+        '</div><div id="map"></div></div>'
+      : '<div class="empty">Este edificio aún no tiene coordenadas. Pendiente de geolocalización.</div>';
+
+    // Estructura & Costos
+    var c=d.cost;
+    document.getElementById('p_estructura').innerHTML=
+      '<div class="card pad"><div class="kv">'+
+        row('Tipo de estructura', esc(d.structure.type))+
+        row('Sistema estructural', esc(d.structure.system))+
+        row('Nº de pisos', d.structure.floors!=null?(d.structure.floors+(d.structure.floorsSurveyed?' (verificado)':' (estimado)')):null)+
+        row('Área construida', c.areaM2!=null?('<span class="mono">'+num(Math.round(c.areaM2))+' m²</span>'):null)+
+        row('Ocupación estimada', d.occupancy!=null?num(d.occupancy)+' personas':null)+
+        row('Costo unitario', c.unitUsdM2!=null?('<span class="mono">'+usd(c.unitUsdM2)+'/m²</span>'):null)+
+        row('Ratio de daño (HAZUS)', c.damageRatio!=null?(Math.round(c.damageRatio*100)+'%'):null)+
+        row('Costo de reparación', '<b>'+usd(c.repairUsd)+'</b> <span class="tag">'+esc(c.confidence)+'</span>')+
+        row('Costo de reemplazo', '<b>'+usd(c.replacementUsd)+'</b>')+
+        row('Permiso de construcción', esc(d.structure.firstBuiltPermit))+
+      '</div><div style="font-size:11px;color:var(--ops-muted);margin-top:10px">Costos por modelo FEMA HAZUS + costos reales VE 2026. Área y pisos sin peritaje → confianza BAJA. No es tasación oficial.</div></div>';
+
+    // Desaparecidos
+    document.getElementById('p_desaparecidos').innerHTML= d.missingCount
+      ? '<div class="card pad"><div style="font-size:13px;color:var(--ops-muted);margin-bottom:8px">Personas reportadas como desaparecidas cuya última ubicación coincide con este edificio (enlace en vivo al registro de Desaparecidos; nombres no verificados):</div><div class="misslist">'+
+        d.missing.map(function(n){ return '<a href="/personas?q='+encodeURIComponent(n)+'">'+esc(n)+' ↗</a>'; }).join('')+'</div></div>'
+      : '<div class="empty">Sin desaparecidos enlazados a este edificio. Si conoces a alguien, repórtalo en <a href="/familia">Familia</a>.</div>';
+
+    // Documentos & Estudios (studies quick-links + full doc list grouped by kind)
+    var studies=d.studies||{};
+    var sHtml='';
+    ['engineering','geological','national'].forEach(function(k){
+      if(studies[k]) sHtml+='<a class="tag" style="display:inline-block;margin:3px 6px 3px 0;padding:6px 11px" href="'+esc(studies[k])+'" target="_blank" rel="noopener">'+DOCK[k]+' '+DOCL[k]+' ↗</a>';
+    });
+    var order=['engineering','geological','national','pdf','court','complaint','news','social','repair','photo','other'];
+    var body='';
+    order.forEach(function(k){
+      var arr=docsBy[k]; if(!arr||!arr.length)return;
+      body+='<h3 style="font:800 13px \'Public Sans\';margin:14px 0 2px">'+DOCK[k]+' '+esc(DOCL[k])+' <span class="tag">'+arr.length+'</span></h3>';
+      arr.forEach(function(dc){
+        body+='<div class="docrow"><div class="ic">'+DOCK[k]+'</div><div style="flex:1"><div style="font-weight:700">'+
+          (dc.url?'<a href="'+esc(dc.url)+'" target="_blank" rel="noopener">'+esc(dc.title||DOCL[k])+' ↗</a>':esc(dc.title||DOCL[k]))+'</div>'+
+          '<div style="font-size:11px;color:var(--ops-muted)">'+[esc(dc.source),esc(dc.author),dc.published_at?fdate(dc.published_at):''].filter(Boolean).join(' · ')+'</div>'+
+          (dc.notes?'<div style="font-size:12px;margin-top:3px">'+esc(dc.notes)+'</div>':'')+'</div></div>';
+      });
+    });
+    document.getElementById('p_documentos').innerHTML= (sHtml||body)
+      ? '<div class="card pad">'+(sHtml?'<div style="margin-bottom:6px">'+sHtml+'</div>':'')+(body||'')+'</div>'
+      : '<div class="empty">Aún no hay estudios ni documentos cargados para este edificio.<br>Se agregarán peritajes de ingeniería, estudios geológicos/geotécnicos, reportes oficiales (FUNVISIS / Protección Civil / CIV), prensa y denuncias a medida que se recopilen.</div>';
+
+    // Línea forense
+    document.getElementById('p_forense').innerHTML= (d.timeline&&d.timeline.length)
+      ? '<div class="card pad"><div class="tl">'+d.timeline.map(function(t){
+          return '<div class="tlitem"><div class="d">'+fdate(t.at)+' · '+(DOCK[t.kind]||'•')+' '+esc((DOCL[t.kind]||t.kind))+'</div><div>'+esc(t.label)+'</div></div>';
+        }).join('')+'</div></div>'
+      : '<div class="empty">Sin eventos en la línea de tiempo.</div>';
+
+    // tab switching (+ lazy map init)
+    document.querySelectorAll('.tab').forEach(function(tab){
+      tab.addEventListener('click',function(){
+        document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
+        document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('on');});
+        tab.classList.add('on');
+        var id=tab.getAttribute('data-t');
+        document.getElementById('p_'+id).classList.add('on');
+        if(id==='ubicacion' && d.gis && !MAPDONE) initMap(d.gis, b);
+      });
+    });
+  }
+
+  function initMap(gis,b){
+    if(typeof L==='undefined')return; MAPDONE=true;
+    var map=L.map('map',{attributionControl:false}).setView([gis.lat,gis.lon],17);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+    L.circleMarker([gis.lat,gis.lon],{radius:9,color:'#fff',weight:2,fillColor:(DMGC[b.damageLevel]||'#d92d20'),fillOpacity:.95})
+      .bindPopup('<b>'+esc(b.name)+'</b><br>'+esc(b.addr||b.city)).addTo(map).openPopup();
+    setTimeout(function(){ map.invalidateSize(); },80);
+  }
+
+  async function boot(){
+    var id=idFromPath();
+    if(!id){ document.getElementById('loading').textContent='Falta el identificador del edificio.'; return; }
+    try{
+      var res=await fetch('/api/buildings/reported/'+encodeURIComponent(id)+'?t='+Math.floor(Date.now()/60000));
+      if(res.status===404){ document.getElementById('loading').innerHTML='No se encontró el expediente de este edificio. <a href="/edificios">Ver todos los edificios →</a>'; return; }
+      var d=await res.json();
+      render(d);
+    }catch(e){ document.getElementById('loading').textContent='No se pudo cargar el expediente. Reintenta en unos segundos.'; }
+    document.getElementById('lbX').addEventListener('click',closeLb);
+    document.getElementById('lbPrev').addEventListener('click',function(){lbStep(-1);});
+    document.getElementById('lbNext').addEventListener('click',function(){lbStep(1);});
+    document.getElementById('lb').addEventListener('click',function(e){ if(e.target.id==='lb') closeLb(); });
+    document.addEventListener('keydown',function(e){ if(!document.getElementById('lb').classList.contains('on'))return; if(e.key==='Escape')closeLb(); else if(e.key==='ArrowLeft')lbStep(-1); else if(e.key==='ArrowRight')lbStep(1); });
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
