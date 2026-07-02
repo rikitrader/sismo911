@@ -146,7 +146,7 @@
       <span id="satSum" style="font-size:12px;color:var(--ops-muted)"></span>
       <a href="/panorama" style="margin-left:auto;font:700 12px Inter;color:var(--ops-accent);text-decoration:none">Panorama de la emergencia →</a>
     </div>
-    <div style="font-size:11px;color:var(--ops-muted);margin:4px 0 10px">Edificaciones con daño <b>colapso/grave confirmado por satélite</b> — <b>Copernicus EMS (UE)</b> verificado + predicción IA <b>Microsoft AI4G</b>, vía CIVIS Venezuela, sincronizadas cada hora. Capa de evidencia <b>independiente</b> de los reportes ciudadanos de arriba: no se mezclan ni deduplican entre sí. Clic en un punto → abrir en Google Maps.</div>
+    <div style="font-size:11px;color:var(--ops-muted);margin:4px 0 10px">Edificaciones con daño <b>colapso/grave confirmado por satélite</b> — <b>Copernicus EMS (UE)</b> verificado + predicción IA <b>Microsoft AI4G</b>, vía CIVIS Venezuela, sincronizadas cada hora. Esta capa ahora también se <b>cruza por proximidad (≤60 m)</b> con los reportes ciudadanos de arriba: los edificios coincidentes llevan la insignia 🛰️ y los puntos sin reporte cercano entran al inventario con su propio expediente y costo de reconstrucción. Clic en un punto → abrir en Google Maps.</div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:10px">
       <div class="card pad stat"><div class="n num" id="sat_conf">—</div><div class="l">Confirmadas (satélite)</div></div>
       <div class="card pad stat" style="border-color:#f04438"><div class="n num" id="sat_col" style="color:#d92d20">—</div><div class="l">Colapso confirmado</div></div>
@@ -167,7 +167,7 @@
       <h2>📷 Edificios reportados con fotos</h2>
       <span id="repSum" style="font-size:12px;color:var(--ops-muted)"></span>
     </div>
-    <div style="font-size:11px;color:var(--ops-muted);margin:4px 0 10px">Reportes ciudadanos de campo con <b>galería de fotos</b>, dirección y costo estimado de daño, agrupados y deduplicados de <b>terremotovenezuela.com</b> + el mapa de <b><a href="/danos" style="color:var(--ops-accent)">/danos</a></b> (sosvenezuela2026.com), sincronizados cada hora. Clic en una tarjeta para ver todas las fotos, o abre el <b>expediente</b> completo. Los marcadores <span style="color:var(--ops-accent)">●</span> en el mapa de arriba son estos edificios.</div>
+    <div style="font-size:11px;color:var(--ops-muted);margin:4px 0 10px">Reportes ciudadanos de campo con <b>galería de fotos</b>, dirección y costo estimado de daño, agrupados y deduplicados de <b>terremotovenezuela.com</b> + el mapa de <b><a href="/danos" style="color:var(--ops-accent)">/danos</a></b> (sosvenezuela2026.com), y <b>cruzados con la capa satelital</b> Copernicus EMS + AI4G (≤60 m → insignia 🛰️; puntos satelitales sin reporte cercano entran como edificios propios con su costo de reconstrucción), sincronizados cada hora. Clic en una tarjeta para ver todas las fotos, o abre el <b>expediente</b> completo. Los marcadores <span style="color:var(--ops-accent)">●</span> en el mapa de arriba son estos edificios.</div>
     <div class="filters" style="margin-bottom:10px">
       <div><label class="f">Buscar</label><input id="rf_q" placeholder="Nombre, dirección, ciudad…" /></div>
       <div><label class="f">Daño</label><select id="rf_dmg"><option value="">Todos</option><option value="total">Colapso total</option><option value="severo">Severo</option><option value="parcial">Parcial</option></select></div>
@@ -364,6 +364,7 @@
         '<span class="dmg" style="background:'+dc+'">'+esc(DMGL[b.damageLevel]||b.damageLevel)+'</span>'+
         (b.mediaCount>1?'<span class="cnt">📷 '+b.mediaCount+'</span>':'')+
         (b.verified?'<span class="cnt" style="left:6px;bottom:6px;right:auto;background:rgba(21,112,239,.9)">✓ verificado</span>':'')+
+        (b.sat?'<span class="cnt" style="right:6px;top:6px;bottom:auto;background:rgba(18,128,92,.92)">🛰️ satélite</span>':'')+
       '</div>'+
       '<div class="gbody"><div class="nm">'+esc(b.name)+'</div>'+
         '<div class="ad">'+esc(b.addr||b.city)+'</div>'+
@@ -379,7 +380,9 @@
       rows.filter(function(b){return b.mediaCount>0;}).length+' con fotos'+
       (m.collapsed!=null?' · '+fmtN(m.collapsed)+' colapsos':'')+
       (m.from_danos?' · '+fmtN(m.from_tv||0)+' de terremotovenezuela + '+fmtN(m.from_danos)+' de /danos':'')+
-      (m.people_trapped?' · '+fmtN(m.people_trapped)+' atrapados':'');
+      (m.people_trapped?' · '+fmtN(m.people_trapped)+' atrapados':'')+
+      (m.sat_confirmed?' · '+fmtN(m.sat_confirmed)+' confirmados por satélite 🛰️':'')+
+      (m.sat_only?' · '+fmtN(m.sat_only)+' solo-satélite':'');
     var grid=document.getElementById('repGrid');
     grid.innerHTML=rows.slice(0,repShown).map(repCard).join('')||
       '<div style="color:var(--ops-muted);font-size:13px;padding:14px">Sin edificios reportados que coincidan.</div>';
