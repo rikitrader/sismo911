@@ -11,6 +11,7 @@ const ALL_JOB_NAMES = [
   'hospital-sheet',
   'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match', 'hospital-registry-match',
   'familia-photo-mirror', 'monitor-sheet', 'cases-sheet-sync', 'case-alerts', 'personas-dedupe-fuzzyphone', 'bulk-import-sweep', 'tv-buildings', 'rav-ingest', 'rav-stats', 'rav-verified',
+  'civis-desaparecidos',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
   'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe', 'rav-reports-dedupe-extid',
   'pacientes-rvz', 'sismos-bot-broadcast', 'botcommands-sync',
@@ -41,10 +42,13 @@ describe('cron groups', () => {
     // Coarse guardrail: keep groups small so even multi-subrequest jobs stay well
     // under the ~1000/invocation cap. Tighten/loosen deliberately, not by accident.
     for (const [cron, jobs] of Object.entries(CRON_GROUPS)) {
-      // :15 carries 9 persons/familia D1 jobs (all bounded, D1-only — no external
-      // fetch), incl. both hospital cross-matches + the ext_id dedupe. :00 carries 9
-      // light jobs incl. the every-6h hospital-registry pull. Still far under the cap.
-      expect(jobs.length, `group ${cron} has too many jobs`).toBeLessThanOrEqual(9);
+      // :15 carries persons/familia D1 jobs (all bounded, D1-only — no external
+      // fetch); :00 carries the seismic core + every-6h hospital pull. :45 carries
+      // the external-fetch ingests incl. BOTH CIVIS pulls (atendidos ~28 subreq,
+      // desaparecidos ~10, both bounded/paged). Ceiling raised 9→10 deliberately to
+      // seat the second CIVIS ingest; every job is bounded so the group stays far
+      // under the ~1000/invocation cap.
+      expect(jobs.length, `group ${cron} has too many jobs`).toBeLessThanOrEqual(10);
     }
   });
 

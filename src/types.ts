@@ -154,6 +154,9 @@ export interface Env {
   // Google Sheet to mirror the hospital_patients registry into (falls back to
   // MONITOR_SHEET_ID when unset). (in [vars])
   HOSPITAL_SHEET_ID?: string;
+  // Google Sheet to mirror CIVIS-sourced missing persons into (falls back to
+  // MONITOR_SHEET_ID when unset). (in [vars])
+  DESAP_SHEET_ID?: string;
 
   // --- DB Ingestion Gatekeeper (src/security/*) -----------------------------
   // All optional: the gate has safe built-in defaults and degrades gracefully.
