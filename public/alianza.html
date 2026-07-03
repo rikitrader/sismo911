@@ -222,8 +222,9 @@
 </head>
 <body>
 
-<!-- 1. HERO — seismic command-center -->
-<header class="hero">
+<!-- 1. HERO — seismic command-center (must be <section>, not <header>: app-shell.js
+     hides every `body > header` to strip legacy page nav) -->
+<section class="hero">
   <span class="epi" aria-hidden="true"></span>
   <!-- decorative HUD labels (desktop) -->
   <div class="hud tl" aria-hidden="true"><b>LA GUAIRA</b>Coastal Zone</div>
@@ -251,7 +252,7 @@
       <div class="st"><div class="v">0.8<em>s</em></div><div class="l">Latencia de alerta</div></div>
     </div>
   </div>
-</header>
+</section>
 
 <!-- 2. PARTNER TYPES -->
 <section class="sec">
