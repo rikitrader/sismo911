@@ -9,7 +9,7 @@ import { CRON_GROUPS, jobsForCron } from '../src/cron';
 const ALL_JOB_NAMES = [
   'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync', 'civis-atendidos',
   'hospital-sheet',
-  'familia-ingest', 'personas-clean', 'personas-name-floods', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match', 'hospital-registry-match',
+  'familia-ingest', 'personas-clean', 'personas-name-floods', 'search-index-backfill', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match', 'hospital-registry-match',
   'familia-photo-mirror', 'monitor-sheet', 'cases-sheet-sync', 'case-alerts', 'personas-dedupe-fuzzyphone', 'bulk-import-sweep', 'tv-buildings', 'tv-building-cases', 'rav-ingest', 'rav-stats', 'rav-verified',
   'civis-desaparecidos',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
@@ -45,10 +45,11 @@ describe('cron groups', () => {
       // :15 carries persons/familia D1 jobs (all bounded, D1-only — no external
       // fetch); :00 carries the seismic core + every-6h hospital pull. :45 carries
       // the external-fetch ingests incl. BOTH CIVIS pulls (atendidos ~28 subreq,
-      // desaparecidos ~10, both bounded/paged). Ceiling raised 9→10 deliberately to
-      // seat the second CIVIS ingest; every job is bounded so the group stays far
-      // under the ~1000/invocation cap.
-      expect(jobs.length, `group ${cron} has too many jobs`).toBeLessThanOrEqual(10);
+      // desaparecidos ~10, both bounded/paged). Ceiling raised 9→10 to seat the
+      // second CIVIS ingest, then 10→11 to seat the standalone search-index-backfill
+      // rule in :15 (which is all bounded, D1-only, no external fetch); every job is
+      // bounded so the group stays far under the ~1000/invocation cap.
+      expect(jobs.length, `group ${cron} has too many jobs`).toBeLessThanOrEqual(11);
     }
   });
 

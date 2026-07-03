@@ -27,6 +27,7 @@ import { ingestSosDamage } from './ingest/sos-damage';
 import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
 import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from './lib/clean';
 import { dedupePersonas, dedupeRavReports } from './lib/dedupe';
+import { backfillSearchFields, reindexRemaining } from './lib/search-index';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet, syncSosSheet, syncHospitalSheet } from './lib/sheets-sync';
 import { syncCasesSheetToD1 } from './sync/sheet-source';
@@ -124,6 +125,14 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'familia-ingest', run: ingestFamilia },
     { name: 'personas-clean', run: (env) => cleanPersonas(env, { apply: true }) },
     { name: 'personas-name-floods', run: (env) => cleanNameFloods(env, { apply: true }) },
+    // Structured-search backfill (name_norm / geo_estado / geo_municipio) — a
+    // standalone maintenance rule that DRAINS to convergence exactly like the
+    // personas-dedupe-* rules below. Manual + citizen writes set these fields
+    // inline, but the BULK importers (familia/RAV/CIVIS sync) insert WITHOUT them,
+    // so those rows accumulate NULL name_norm and fall out of name search + dedupe
+    // (a prior cron rebalance dropped this job, leaving ~124k rows unindexed).
+    // Covers personas + persons + hospital.
+    { name: 'search-index-backfill', run: (env) => drain(async () => { const p = await backfillSearchFields(env, 400); return { remaining: await reindexRemaining(env), deletedRows: p.total }; }) },
     // Each cleanup DRAINS to convergence (up to N bounded passes) so backlogs
     // clear over a single tick, not one 400-row batch per hour.
     { name: 'personas-dedupe-exact', run: (env) => drain(() => dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 })) },
