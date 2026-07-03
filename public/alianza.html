@@ -75,7 +75,7 @@
   .hud.bl{bottom:126px;left:34px}
   .hud.br{bottom:126px;right:34px;text-align:right}
 
-  .hero-inner{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:clamp(60px,10vw,124px) clamp(20px,5vw,40px) 0;text-align:center}
+  .hero-inner{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:clamp(64px,10vw,128px) clamp(20px,5vw,40px) clamp(64px,10vw,120px);text-align:center}
   .hero-badge{display:inline-flex;align-items:center;gap:9px;font:700 12px/1 Inter,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#ffd9d6;background:rgba(211,47,47,.15);border:1px solid rgba(255,120,120,.34);border-radius:999px;padding:9px 16px}
   .hero-badge .rd{width:8px;height:8px;border-radius:50%;background:#ff4d4f;box-shadow:0 0 0 4px rgba(255,77,79,.2);animation:pulse 1.8s infinite}
   .hero h1{font-family:Manrope,'Public Sans',sans-serif;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:-.02em;line-height:1.04;font-size:clamp(33px,6.3vw,66px);margin:24px 0 0;text-shadow:0 2px 30px rgba(0,0,0,.5)}
@@ -85,12 +85,6 @@
   .hero-cta{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:34px}
   .btn-red{background:#d32f2f;color:#fff;box-shadow:0 10px 26px rgba(175,16,26,.42)}
   .btn-red:hover{background:#af101a}
-  /* full-width stat bar at the base of the hero */
-  .hero-stats{position:relative;z-index:1;margin-top:clamp(42px,7vw,72px);border-top:1px solid rgba(255,255,255,.1);background:rgba(6,10,20,.5)}
-  .hero-stats .in{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:26px clamp(20px,5vw,40px)}
-  .hero-stats .st .v{font:800 clamp(24px,3.2vw,36px)/1 Manrope,sans-serif;color:#fff;letter-spacing:-.01em}
-  .hero-stats .st .v em{color:#ffb3ac;font-style:normal}
-  .hero-stats .st .l{font:600 11px/1.35 Inter,sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#93a1bd;margin-top:9px}
 
   /* generic section head */
   .sec{padding:clamp(56px,8vw,96px) 0}
@@ -193,7 +187,6 @@
   /* RESPONSIVE */
   @media(max-width:1000px){
     .hud{display:none}
-    .hero-stats .in{grid-template-columns:repeat(2,1fr);gap:22px 10px}
     .cards,.why-grid,.steps{grid-template-columns:repeat(2,1fr)}
     .step::after{display:none}
     .form-wrap{grid-template-columns:1fr}
@@ -211,8 +204,6 @@
     .hero h1 .ln{display:inline}
     .hero-badge{font-size:10.5px;letter-spacing:.05em;padding:8px 13px;white-space:normal;text-align:center}
     .hero .sub{font-size:15px}
-    .hero-stats .in{padding-left:16px;padding-right:16px;gap:20px 12px}
-    .hero-stats .st .v{font-size:26px}
   }
   @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -254,14 +245,6 @@
     </div>
   </div>
 
-  <div class="hero-stats">
-    <div class="in">
-      <div class="st"><div class="v"><em>+</em>120</div><div class="l">Aliados corporativos</div></div>
-      <div class="st"><div class="v">15k</div><div class="l">Personal desplegable</div></div>
-      <div class="st"><div class="v">24/7</div><div class="l">Vigilancia satelital</div></div>
-      <div class="st"><div class="v">0.8<em>s</em></div><div class="l">Latencia de alerta</div></div>
-    </div>
-  </div>
 </section>
 
 <!-- 2. PARTNER TYPES -->
