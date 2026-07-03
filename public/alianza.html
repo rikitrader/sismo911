@@ -177,7 +177,6 @@
   .final h2{color:#fff;font-size:clamp(28px,4.4vw,50px);line-height:1.06;max-width:20ch;margin:0 auto}
   .final p{color:#c6d2ea;font-size:clamp(16px,1.9vw,19px);margin:18px auto 0;max-width:48ch;line-height:1.5}
   .final .btn{margin-top:30px}
-  .foot{border-top:1px solid rgba(255,255,255,.1);padding:22px 0;color:#8ea2c9;font:600 13px Inter;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center;text-align:center}
 
   /* RESPONSIVE */
   @media(max-width:1000px){
@@ -512,14 +511,12 @@
     <a href="#solicitud" class="btn btn-amber" data-scroll>Unirme a la alianza
       <svg class="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
     </a>
-    <div class="foot">© <span id="yr">2026</span> SISMO911 · Plataforma humanitaria de respuesta ante emergencias · Venezuela</div>
   </div>
 </section>
 
 <script>
 (function(){
   'use strict';
-  var yr = document.getElementById('yr'); if (yr) yr.textContent = String(new Date().getFullYear());
 
   // Smooth scroll for in-page anchors + optional partner-type prefill.
   function scrollToForm(){
