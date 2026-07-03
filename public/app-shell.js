@@ -18,6 +18,9 @@
     // bright yellow (#f5c518) with navy text/icon; links to the refugios/evacuation map.
     { label: 'REFUGIOS', href: '/refugios', m: ['/refugios', '/refugios.html'], refugio: true, d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
     { label: 'AYUDA CERCA', href: '/cerca', m: ['/cerca', '/cerca.html'], refugio: true, d: 'M12 21s-6-5.7-6-10a6 6 0 1112 0c0 4.3-6 10-6 10zm0-7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z' },
+    // Yellow "ALIANZAS" button directly under AYUDA CERCA — same compact yellow chip
+    // (refugio flag) — links to the humanitarian alliance CTA page (/alianza).
+    { label: 'ALIANZAS', href: '/alianza', m: ['/alianza', '/alianza.html'], refugio: true, d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z' },
     // Big flashing red CTA pulled out of the "Familia y Reportes" submenu so a
     // damage report is always one tap away — extra top/bottom spacing.
     { label: 'REPORTAR', href: '/reportar', m: ['/reportar'], report: true, d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
@@ -104,7 +107,7 @@
     { label: 'Terremotos',    href: '/terremotos',m: ['/terremotos'],d: 'M3 12h4l2 7 4-14 2 7h6' },
     { label: 'Refugios',      href: '/refugios',  m: ['/refugios', '/refugios.html'], d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
     { label: 'Edificios',     href: '/edificios', m: ['/edificios', '/edificios.html'], d: 'M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01' },
-    { label: 'Ayuda Cerca',   href: '/cerca',     m: ['/cerca', '/cerca.html'], d: 'M12 21s-6-5.7-6-10a6 6 0 1112 0c0 4.3-6 10-6 10zm0-7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z' },
+    { label: 'Alianza',       href: '/alianza',   m: ['/alianza', '/alianza.html'], d: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z' },
     { label: 'Reportar',      href: '/reportar',  m: ['/reportar'],  d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
     { label: 'Daños',         href: '/danos',     m: ['/danos'],     d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M12 8v4m0 3h.01' },
   ];
