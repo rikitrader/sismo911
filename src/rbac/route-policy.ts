@@ -46,6 +46,10 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   '/api/health', '/api/ready', '/api/status', '/api/verified-info', '/api/stats', '/api/impact', '/api/csp-report',
   '/api/events', '/api/heatmap', '/api/dashboard', '/api/geo', '/api/layers', '/api/sitrep',
   '/api/acopio', '/api/agencias', '/api/aid-orgs', '/api/alerts', '/api/auth',
+  // Alianza Humanitaria partner intake. POST /api/alianza is public by design (a
+  // prospective partner has no session — anonymous CTA form). The /api/alianza/admin/*
+  // review endpoints self-gate with requirePermission(ops:console) inside the handler.
+  '/api/alianza',
   '/api/blog', '/api/botiquin', '/api/buildings', '/api/campaigns', '/api/campaigns-mine', '/api/chat', '/api/checkins',
   '/api/comms', '/api/contacts', '/api/damage', '/api/danos-estructurales',
   // Panorama de la emergencia — public read-only aggregates mirrored hourly from
