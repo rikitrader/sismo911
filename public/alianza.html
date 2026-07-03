@@ -46,34 +46,16 @@
   .svg{width:18px;height:18px;flex:none}
   section{position:relative}
 
-  /* HERO — seismic command-center (redesign per SISMO/DESIGN.md) */
-  .hero{position:relative;isolation:isolate;color:#fff;overflow:hidden;background:#090d17;font-family:Inter,sans-serif}
-  /* red epicenter glows over a dark tactical field */
-  .hero::before{content:"";position:absolute;inset:0;z-index:-3;background:
-    radial-gradient(560px 380px at 20% 70%, rgba(211,47,47,.34), transparent 62%),
-    radial-gradient(460px 320px at 82% 26%, rgba(175,16,26,.30), transparent 62%),
-    radial-gradient(900px 640px at 50% 42%, rgba(120,22,32,.20), transparent 68%),
-    linear-gradient(160deg,#090d17 0%,#0b1122 46%,#080c16 100%)}
-  /* tactical grid, masked to a soft central vignette */
-  .hero::after{content:"";position:absolute;inset:0;z-index:-2;
-    background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
-    background-size:48px 48px;
-    -webkit-mask-image:radial-gradient(1050px 660px at 50% 40%,#000,transparent 80%);
-    mask-image:radial-gradient(1050px 660px at 50% 40%,#000,transparent 80%)}
+  /* HERO — real seismic command-center backdrop (La Guaira COP image) */
+  .hero{position:relative;isolation:isolate;color:#fff;overflow:hidden;background:#080c16;font-family:Inter,sans-serif}
+  /* the command-center photograph, covering the hero */
+  .hero::before{content:"";position:absolute;inset:0;z-index:-3;
+    background:#080c16 url("/img/hero-command-center.jpg") center/cover no-repeat}
+  /* dark scrim so the white headline stays legible over the image */
+  .hero::after{content:"";position:absolute;inset:0;z-index:-2;background:
+    radial-gradient(130% 105% at 50% 46%, rgba(6,10,20,.30), rgba(6,10,20,.80) 78%),
+    linear-gradient(180deg, rgba(6,10,20,.55) 0%, rgba(6,10,20,.42) 42%, rgba(6,10,20,.72) 100%)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-  /* pulsing epicenter marker behind the content */
-  .epi{position:absolute;left:50%;top:40%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#ff5a5f;box-shadow:0 0 22px 6px rgba(255,60,66,.5);z-index:-1}
-  .epi::before,.epi::after{content:"";position:absolute;inset:-1px;border-radius:50%;border:1px solid rgba(255,90,95,.6);animation:epiring 3.4s ease-out infinite}
-  .epi::after{animation-delay:1.7s}
-  @keyframes epiring{0%{transform:scale(1);opacity:.7}100%{transform:scale(10);opacity:0}}
-  /* decorative HUD corner labels (desktop only) */
-  .hud{position:absolute;z-index:0;font:700 10px/1.5 'JetBrains Mono',monospace;letter-spacing:.16em;color:rgba(220,230,250,.4);text-transform:uppercase;pointer-events:none}
-  .hud b{display:block;font-size:13px;letter-spacing:.05em;color:rgba(255,255,255,.6)}
-  .hud .warn{color:#ffb85f}
-  .hud.tl{top:24px;left:34px}
-  .hud.tr{top:24px;right:34px;text-align:right;color:rgba(255,130,130,.62)}
-  .hud.bl{bottom:126px;left:34px}
-  .hud.br{bottom:126px;right:34px;text-align:right}
 
   .hero-inner{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:clamp(64px,10vw,128px) clamp(20px,5vw,40px) clamp(64px,10vw,120px);text-align:center}
   .hero-badge{display:inline-flex;align-items:center;gap:9px;font:700 12px/1 Inter,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#ffd9d6;background:rgba(211,47,47,.15);border:1px solid rgba(255,120,120,.34);border-radius:999px;padding:9px 16px}
@@ -186,7 +168,6 @@
 
   /* RESPONSIVE */
   @media(max-width:1000px){
-    .hud{display:none}
     .cards,.why-grid,.steps{grid-template-columns:repeat(2,1fr)}
     .step::after{display:none}
     .form-wrap{grid-template-columns:1fr}
@@ -226,13 +207,6 @@
 <!-- 1. HERO — seismic command-center (must be <section>, not <header>: app-shell.js
      hides every `body > header` to strip legacy page nav) -->
 <section class="hero">
-  <span class="epi" aria-hidden="true"></span>
-  <!-- decorative HUD labels (desktop) -->
-  <div class="hud tl" aria-hidden="true"><b>LA GUAIRA</b>Coastal Zone</div>
-  <div class="hud tr" aria-hidden="true"><span class="warn">▲ Tectonic Alert</span></div>
-  <div class="hud bl" aria-hidden="true">Epicenter Cluster · 10.6°N 66.9°W</div>
-  <div class="hud br" aria-hidden="true">Seismic Data Stream · Live</div>
-
   <div class="hero-inner">
     <span class="hero-badge"><span class="rd"></span> Red Nacional de Respuesta Sísmica</span>
     <h1><span class="ln">Una red construida</span> <span class="ln">por quienes <span class="hl">responden</span></span></h1>
