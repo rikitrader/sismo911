@@ -79,6 +79,7 @@
   .hero-badge{display:inline-flex;align-items:center;gap:9px;font:700 12px/1 Inter,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#ffd9d6;background:rgba(211,47,47,.15);border:1px solid rgba(255,120,120,.34);border-radius:999px;padding:9px 16px}
   .hero-badge .rd{width:8px;height:8px;border-radius:50%;background:#ff4d4f;box-shadow:0 0 0 4px rgba(255,77,79,.2);animation:pulse 1.8s infinite}
   .hero h1{font-family:Manrope,'Public Sans',sans-serif;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:-.02em;line-height:1.04;font-size:clamp(33px,6.3vw,66px);margin:24px 0 0;text-shadow:0 2px 30px rgba(0,0,0,.5)}
+  .hero h1 .ln{display:block}
   .hero h1 .hl{color:#ffb3ac}
   .hero .sub{color:#cdd6e8;font-size:clamp(15px,1.9vw,19px);line-height:1.6;margin:20px auto 0;max-width:58ch}
   .hero-cta{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:34px}
@@ -203,6 +204,15 @@
     .fld.two .fld{margin-bottom:16px}
     .ally-card{grid-template-columns:1fr;text-align:center;justify-items:center}
     .hero-cta .btn,.panel .row .btn{width:100%}
+    /* let the headline wrap naturally (drop the forced <br>) so no single line
+       exceeds the phone viewport, and keep badge/stats inside the gutter */
+    .hero-inner{padding-left:16px;padding-right:16px}
+    .hero h1{font-size:clamp(27px,7.6vw,40px)}
+    .hero h1 .ln{display:inline}
+    .hero-badge{font-size:10.5px;letter-spacing:.05em;padding:8px 13px;white-space:normal;text-align:center}
+    .hero .sub{font-size:15px}
+    .hero-stats .in{padding-left:16px;padding-right:16px;gap:20px 12px}
+    .hero-stats .st .v{font-size:26px}
   }
   @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -234,7 +244,7 @@
 
   <div class="hero-inner">
     <span class="hero-badge"><span class="rd"></span> Red Nacional de Respuesta Sísmica</span>
-    <h1>Una red construida<br>por quienes <span class="hl">responden</span></h1>
+    <h1><span class="ln">Una red construida</span> <span class="ln">por quienes <span class="hl">responden</span></span></h1>
     <p class="sub">Cada aliado aporta una capacidad crítica. Elige tu rol y solicita tu incorporación a la alianza para fortalecer la respuesta tecnológica nacional ante desastres.</p>
     <div class="hero-cta">
       <a href="#solicitud" class="btn btn-red" data-scroll>Unirse a la Alianza
