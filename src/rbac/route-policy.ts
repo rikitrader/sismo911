@@ -50,6 +50,10 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   // prospective partner has no session — anonymous CTA form). The /api/alianza/admin/*
   // review endpoints self-gate with requirePermission(ops:console) inside the handler.
   '/api/alianza',
+  // Guardianes founding-ally profile. POST /api/guardianes/mensaje (public contact
+  // form) + POST /api/guardianes/asistente (public Workers-AI assistant). The
+  // /api/guardianes/admin/* inbox self-gates with requirePermission(ops:console).
+  '/api/guardianes',
   '/api/blog', '/api/botiquin', '/api/buildings', '/api/campaigns', '/api/campaigns-mine', '/api/chat', '/api/checkins',
   '/api/comms', '/api/contacts', '/api/damage', '/api/danos-estructurales',
   // Panorama de la emergencia — public read-only aggregates mirrored hourly from

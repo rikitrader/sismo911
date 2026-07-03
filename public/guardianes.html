@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Guardianes — Protección de la niñez · Aliado fundador de SISMO911</title>
+<meta name="description" content="Guardianes es una organización venezolana dedicada a vigilar, proteger y apoyar a la niñez. Aliado fundador de la Alianza Humanitaria de SISMO911. Contáctalos, colabora, dona o sé voluntario.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sismo911.com/guardianes">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SISMO911">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="Guardianes — Protección de la niñez">
+<meta property="og:description" content="Vigilamos · Protegemos · Apoyamos — Cada infancia. Aliado fundador de la Alianza Humanitaria de SISMO911.">
+<meta property="og:url" content="https://sismo911.com/guardianes">
+<meta property="og:image" content="https://sismo911.com/img/guardianes.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#12386b">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  :root{
+    --g-navy:#12386b; --g-amber:#f4b400; --g-blue:#0038a8; --g-red:#cf142b;
+    --ink:#101820; --muted:#5f6675; --line:#e2e6ef; --bg:#f6f7fb; --card:#fff;
+    --shadow:0 1px 2px rgba(16,24,32,.05); --shadow-lg:0 24px 60px rgba(18,56,107,.14); --r:16px;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;margin:0;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 clamp(18px,4vw,40px)}
+  .eyebrow{font:800 12px/1 'Public Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--g-amber)}
+  h1,h2,h3{font-family:'Public Sans',sans-serif;color:var(--g-navy);letter-spacing:-.02em;margin:0}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font:800 15px/1 'Public Sans',sans-serif;text-decoration:none;border-radius:12px;padding:15px 24px;border:1px solid transparent;cursor:pointer;transition:transform .12s ease,background .12s ease,box-shadow .12s ease;white-space:nowrap}
+  .btn:active{transform:translateY(1px)}
+  .btn-amber{background:var(--g-amber);color:#3a2c00;box-shadow:0 8px 22px rgba(244,180,0,.32)}
+  .btn-amber:hover{background:#ffc21f}
+  .btn-navy{background:var(--g-navy);color:#fff}.btn-navy:hover{background:#0d2c56}
+  .btn-ghost{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.32)}
+  .btn-ghost:hover{background:rgba(255,255,255,.18)}
+  .btn-outline{background:#fff;color:var(--g-navy);border-color:var(--line)}.btn-outline:hover{border-color:#b9c2d6}
+  .svg{width:18px;height:18px;flex:none}
+  .sec{padding:clamp(52px,7vw,88px) 0}
+  .sec-head{max-width:720px;margin:0 auto clamp(28px,4vw,44px);text-align:center}
+  .sec-head h2{font-size:clamp(24px,3.4vw,38px);line-height:1.1;margin-top:12px}
+  .sec-head p{color:var(--muted);font-size:clamp(15px,1.7vw,18px);line-height:1.6;margin:14px 0 0}
+
+  /* HERO (section, never header) */
+  .hero{position:relative;isolation:isolate;color:#fff;overflow:hidden;background:var(--g-navy)}
+  .hero::before{content:"";position:absolute;inset:0;z-index:-2;background:
+    radial-gradient(680px 420px at 82% 8%, rgba(244,180,0,.22), transparent 60%),
+    radial-gradient(560px 420px at 8% 92%, rgba(0,56,168,.5), transparent 60%),
+    linear-gradient(160deg,#0e2f5c 0%,#12386b 55%,#0b264e 100%)}
+  .hero::after{content:"";position:absolute;inset:0;z-index:-1;opacity:.5;
+    background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+    background-size:46px 46px;-webkit-mask-image:radial-gradient(900px 520px at 50% 20%,#000,transparent 80%);mask-image:radial-gradient(900px 520px at 50% 20%,#000,transparent 80%)}
+  .hero-in{display:grid;grid-template-columns:auto 1fr;gap:clamp(24px,4vw,52px);align-items:center;padding:clamp(44px,7vw,84px) 0}
+  .hero-logo{width:clamp(140px,22vw,210px);height:clamp(140px,22vw,210px);border-radius:26px;background:#fff;display:flex;align-items:center;justify-content:center;padding:14px;box-shadow:var(--shadow-lg)}
+  .hero-logo img{max-width:100%;max-height:100%;object-fit:contain}
+  .hero h1{color:#fff;font-family:Manrope,'Public Sans',sans-serif;font-weight:800;font-size:clamp(34px,5.6vw,60px);line-height:1.02;margin:16px 0 0}
+  .hero .flag{display:inline-flex;gap:5px;margin-bottom:6px}
+  .hero .flag i{width:26px;height:6px;border-radius:3px;display:block}
+  .hero .lead{color:#cdd9ef;font-size:clamp(16px,2vw,19px);line-height:1.55;margin:16px 0 0;max-width:52ch}
+  .hero .tagline{display:inline-flex;align-items:center;gap:8px;margin-top:18px;font:800 12px/1 'Public Sans';letter-spacing:.12em;text-transform:uppercase;color:#0e2f5c;background:var(--g-amber);border-radius:999px;padding:9px 15px}
+  .hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+
+  /* mission / areas */
+  .mission{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(24px,4vw,48px);align-items:center}
+  .mission p{color:var(--muted);font-size:16px;line-height:1.7;margin:0 0 14px}
+  .mission .quote{border-left:4px solid var(--g-amber);padding:6px 0 6px 18px;font:700 18px/1.5 'Public Sans';color:var(--g-navy);margin:18px 0 0}
+  .areas{display:grid;gap:14px}
+  .area{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+  .area .ic{width:44px;height:44px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#eaf0fb,#dbe6fb);color:var(--g-navy)}
+  .area .ic svg{width:22px;height:22px}
+  .area h3{font-size:16px;margin:0 0 5px}.area p{color:var(--muted);font:500 13.5px/1.55 Inter;margin:0}
+
+  /* stats row (real, from brand) */
+  .pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+  .pillar{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;text-align:center;box-shadow:var(--shadow)}
+  .pillar .v{font:900 18px 'Public Sans';color:var(--g-navy)}
+  .pillar .l{font:500 13px Inter;color:var(--muted);margin-top:6px}
+
+  /* contact + assistant grid */
+  .contact{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .cx{display:grid;grid-template-columns:1fr 1fr;gap:clamp(22px,4vw,44px);align-items:start}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:clamp(20px,3vw,30px);box-shadow:var(--shadow-lg)}
+  .panel > h3{font-size:20px;margin:0 0 6px}
+  .panel > .ph{color:var(--muted);font:500 14px/1.55 Inter;margin:0 0 18px}
+  .chan{display:flex;align-items:center;gap:12px;text-decoration:none;padding:13px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;transition:border-color .12s ease,background .12s ease}
+  .chan:hover{border-color:#b9c2d6;background:#fafbff}
+  .chan .ci{width:40px;height:40px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;background:#eef3fc;color:var(--g-navy)}
+  .chan .ci svg{width:20px;height:20px}
+  .chan .t{font:800 14px 'Public Sans';color:var(--g-navy)}.chan .s{font:500 12.5px Inter;color:var(--muted);margin-top:2px}
+
+  /* form */
+  .fld{margin-bottom:15px}
+  .fld label{display:block;font:700 13px 'Public Sans';color:var(--g-navy);margin-bottom:7px}
+  .fld label .req{color:var(--g-red)}
+  .fld input,.fld select,.fld textarea{width:100%;font:500 15px Inter;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:12px 13px;transition:border-color .12s ease,box-shadow .12s ease}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--g-blue);box-shadow:0 0 0 4px rgba(0,56,168,.12)}
+  .fld textarea{resize:vertical;min-height:110px}
+  .fld.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .alert{border-radius:12px;padding:13px 15px;font:600 14px Inter;margin-bottom:16px;display:none;align-items:flex-start;gap:10px}
+  .alert svg{width:20px;height:20px;flex:none;margin-top:1px}
+  .alert.ok{display:flex;background:#e7f8ee;border:1px solid #b7e6c9;color:#0a6b34}
+  .alert.err{display:flex;background:#fdeaea;border:1px solid #f4c2c2;color:#a01919}
+  .form-actions .btn{width:100%;margin-top:6px}
+  .form-note{font:500 12px Inter;color:var(--muted);text-align:center;margin-top:12px;line-height:1.5}
+
+  /* AI assistant chat */
+  .chat{display:flex;flex-direction:column;height:100%}
+  .chat-badge{display:inline-flex;align-items:center;gap:7px;font:800 11px 'Public Sans';letter-spacing:.06em;text-transform:uppercase;color:var(--g-blue);background:#eef3fc;border:1px solid #dbe6fb;border-radius:999px;padding:6px 11px;align-self:flex-start;margin-bottom:12px}
+  .chat-log{flex:1;min-height:220px;max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px 12px}
+  .msg{max-width:88%;padding:11px 13px;border-radius:14px;font:500 14px/1.5 Inter;white-space:pre-wrap;word-wrap:break-word}
+  .msg.bot{align-self:flex-start;background:#f1f5fc;color:#22314a;border:1px solid #e2eaf7;border-bottom-left-radius:4px}
+  .msg.me{align-self:flex-end;background:var(--g-navy);color:#fff;border-bottom-right-radius:4px}
+  .msg.typing{color:var(--muted);font-style:italic}
+  .chat-in{display:flex;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--line)}
+  .chat-in input{flex:1;font:500 14px Inter;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px}
+  .chat-in input:focus{outline:none;border-color:var(--g-blue);box-shadow:0 0 0 4px rgba(0,56,168,.1)}
+  .chat-in button{flex:none;background:var(--g-blue);color:#fff;border:0;border-radius:11px;padding:0 16px;font:800 14px 'Public Sans';cursor:pointer}
+  .chat-in button:disabled{opacity:.5;cursor:not-allowed}
+  .chat-hint{font:500 11.5px Inter;color:var(--muted);margin-top:10px;line-height:1.45}
+
+  .final{background:linear-gradient(160deg,#0e2f5c,#12386b 55%,#0b264e);color:#fff;text-align:center}
+  .final .in{padding:clamp(50px,8vw,96px) 0}
+  .final h2{color:#fff;font-size:clamp(26px,3.8vw,44px);line-height:1.08;max-width:22ch;margin:0 auto}
+  .final p{color:#cdd9ef;font-size:clamp(15px,1.8vw,18px);margin:16px auto 0;max-width:50ch;line-height:1.55}
+  .final .btn{margin-top:26px}
+
+  @media(max-width:900px){
+    .hero-in{grid-template-columns:1fr;text-align:center;justify-items:center}
+    .hero .lead{max-width:none}
+    .hero-cta{justify-content:center}
+    .mission{grid-template-columns:1fr}
+    .cx{grid-template-columns:1fr}
+    .pillars{grid-template-columns:1fr}
+  }
+  @media(max-width:560px){
+    .fld.two{grid-template-columns:1fr;gap:0}
+    .fld.two .fld{margin-bottom:15px}
+    .hero-cta .btn{width:100%}
+  }
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"NGO","name":"Guardianes","alternateName":"Guardianes VZLA","description":"Organización venezolana dedicada a vigilar, proteger y apoyar a la niñez. Aliado fundador de la Alianza Humanitaria de SISMO911.","slogan":"Vigilamos · Protegemos · Apoyamos — Cada infancia","areaServed":"Venezuela","url":"https://sismo911.com/guardianes","logo":"https://sismo911.com/img/guardianes.jpg","sameAs":["https://instagram.com/guardianes.vzla"]}
+</script>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-in">
+    <div class="hero-logo"><img src="/img/guardianes.jpg" alt="Logo de Guardianes — corazón con la bandera de Venezuela sostenido por manos que protegen a dos niños"></div>
+    <div>
+      <span class="flag"><i style="background:#f4b400"></i><i style="background:#0038a8"></i><i style="background:#cf142b"></i></span>
+      <div class="eyebrow">Aliado fundador · Alianza Humanitaria SISMO911</div>
+      <h1>Guardianes</h1>
+      <p class="lead">Organización venezolana dedicada a vigilar, proteger y apoyar a la niñez. Cada infancia cuenta.</p>
+      <span class="tagline">Vigilamos · Protegemos · Apoyamos</span>
+      <div class="hero-cta">
+        <a href="#contacto" class="btn btn-amber" data-scroll>Escribir a Guardianes
+          <svg class="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4zM4 7l8 6 8-6"/></svg>
+        </a>
+        <a href="/alianza" class="btn btn-ghost">Ver la Alianza</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MISSION -->
+<section class="sec">
+  <div class="wrap mission">
+    <div>
+      <span class="eyebrow">Quiénes somos</span>
+      <h2 style="font-size:clamp(24px,3.2vw,34px);margin-top:12px">Cada infancia cuenta</h2>
+      <p style="margin-top:16px">Guardianes es una organización venezolana dedicada a la protección de la niñez. Vigilamos el bienestar de los más pequeños, protegemos a quienes están en riesgo y apoyamos a las familias para que ningún niño quede desatendido.</p>
+      <p>Como <b>aliado fundador</b> de la Alianza Humanitaria de SISMO&nbsp;911, integramos la protección de la infancia en cada operación de respuesta ante emergencias: cuando ocurre un desastre, los niños son los más vulnerables, y estar preparados salva vidas.</p>
+      <div class="quote">“Vigilamos, protegemos y apoyamos a cada infancia.”</div>
+      <div class="pillars">
+        <div class="pillar"><div class="v">Vigilamos</div><div class="l">Atención temprana al riesgo infantil</div></div>
+        <div class="pillar"><div class="v">Protegemos</div><div class="l">Resguardo de los más vulnerables</div></div>
+        <div class="pillar"><div class="v">Apoyamos</div><div class="l">Acompañamiento a las familias</div></div>
+      </div>
+    </div>
+    <div class="areas">
+      <div class="area"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21c-4.4-2.4-8-5.7-8-11a8 8 0 0116 0c0 5.3-3.6 8.6-8 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div><div><h3>Protección infantil</h3><p>Prevención y respuesta ante situaciones de riesgo para niñas, niños y adolescentes.</p></div></div>
+      <div class="area"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="M9 11a3 3 0 100-6 3 3 0 000 6zm6 0a3 3 0 100-6 3 3 0 000 6zM3 20v-1a4 4 0 014-4h4a4 4 0 014 4v1M17 15a4 4 0 013 4v1"/></svg></div><div><h3>Familias</h3><p>Acompañamiento a las familias para sostener el bienestar de la niñez.</p></div></div>
+      <div class="area"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg></div><div><h3>Respuesta humanitaria</h3><p>Protección de la infancia integrada a la respuesta ante emergencias con SISMO911.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT + ASSISTANT -->
+<section class="sec contact" id="contacto">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Contacto</span>
+      <h2>Habla con Guardianes</h2>
+      <p>Escríbeles directamente o pregúntale al asistente cómo colaborar, donar o ser voluntario.</p>
+    </div>
+    <div class="cx">
+      <!-- left: channels + AI assistant -->
+      <div class="panel chat">
+        <span class="chat-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 00-9 9 8.7 8.7 0 001.4 4.7L3 21l4.5-1.3A9 9 0 1012 3z"/></svg>
+          Asistente de Guardianes · IA
+        </span>
+        <div class="chat-log" id="chatLog" aria-live="polite">
+          <div class="msg bot">Hola 👋 Soy el asistente de Guardianes. Puedo contarte sobre nuestra misión de protección de la niñez, cómo colaborar, donar o ser voluntario, y ayudarte a redactar tu mensaje. ¿En qué te ayudo?</div>
+        </div>
+        <div class="chat-in">
+          <input id="chatInput" type="text" placeholder="Escribe tu pregunta…" maxlength="1000" autocomplete="off" aria-label="Mensaje para el asistente">
+          <button id="chatSend" type="button">Enviar</button>
+        </div>
+        <p class="chat-hint">⚠️ Si un niño está en peligro inminente, llama de inmediato a las autoridades (911 / protección civil) y activa un <a href="/sos" style="color:var(--g-blue);font-weight:700">SOS en SISMO911</a>. Este asistente no sustituye a los servicios de emergencia.</p>
+        <div style="margin-top:16px">
+          <a class="chan" href="https://instagram.com/guardianes.vzla" target="_blank" rel="noopener">
+            <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span>
+            <span><span class="t">Instagram</span><span class="s">@guardianes.vzla</span></span>
+          </a>
+        </div>
+      </div>
+
+      <!-- right: contact form -->
+      <form class="panel" id="guaForm" novalidate>
+        <h3>Envíales un mensaje</h3>
+        <p class="ph">Tu mensaje llega directamente al equipo de Guardianes. Te responderán al correo que indiques.</p>
+        <div class="alert ok" id="okMsg" role="status" aria-live="polite">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span id="okTxt">¡Mensaje enviado a Guardianes!</span>
+        </div>
+        <div class="alert err" id="errMsg" role="alert" aria-live="assertive">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z"/></svg>
+          <span id="errTxt">No se pudo enviar el mensaje. Revisa los campos e inténtalo de nuevo.</span>
+        </div>
+        <div class="fld">
+          <label for="g-nombre">Nombre completo <span class="req">*</span></label>
+          <input id="g-nombre" name="nombre" type="text" autocomplete="name" required maxlength="120" placeholder="Tu nombre y apellido">
+        </div>
+        <div class="fld two">
+          <div class="fld">
+            <label for="g-email">Email <span class="req">*</span></label>
+            <input id="g-email" name="email" type="email" autocomplete="email" required maxlength="160" placeholder="tucorreo@ejemplo.com">
+          </div>
+          <div class="fld">
+            <label for="g-tel">Teléfono</label>
+            <input id="g-tel" name="telefono" type="tel" autocomplete="tel" maxlength="60" placeholder="+58 …">
+          </div>
+        </div>
+        <div class="fld">
+          <label for="g-org">Organización / Empresa</label>
+          <input id="g-org" name="organizacion" type="text" maxlength="160" placeholder="Opcional">
+        </div>
+        <div class="fld">
+          <label for="g-asunto">Asunto</label>
+          <select id="g-asunto" name="asunto">
+            <option value="alianza">Alianza / colaboración</option>
+            <option value="donacion">Donación</option>
+            <option value="voluntariado">Voluntariado</option>
+            <option value="caso">Reportar un caso</option>
+            <option value="prensa">Prensa / medios</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label for="g-msg">Mensaje <span class="req">*</span></label>
+          <textarea id="g-msg" name="mensaje" required maxlength="4000" placeholder="Cuéntale a Guardianes cómo quieres ayudar o qué necesitas."></textarea>
+        </div>
+        <div class="hp" aria-hidden="true"><label>No llenar<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        <div class="form-actions">
+          <button class="btn btn-navy" type="submit" id="guaSubmit">Enviar mensaje
+            <svg class="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+        <p class="form-note">Tus datos se usan solo para que Guardianes pueda responderte.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL -->
+<section class="final">
+  <div class="wrap in">
+    <span class="eyebrow" style="color:var(--g-amber)">Guardianes · Cada infancia</span>
+    <h2 style="margin-top:12px">Proteger a la niñez es responsabilidad de todos.</h2>
+    <p>Únete a Guardianes y a la Alianza Humanitaria de SISMO&nbsp;911 para que ningún niño quede desatendido.</p>
+    <a href="#contacto" class="btn btn-amber" data-scroll>Escribir a Guardianes</a>
+  </div>
+</section>
+
+<script>
+(function(){
+  'use strict';
+  // Smooth in-page scroll for hero/final CTAs.
+  document.querySelectorAll('[data-scroll]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      var href = a.getAttribute('href') || '';
+      if (href.charAt(0) !== '#') return;
+      var t = document.querySelector(href);
+      if (t){ e.preventDefault(); t.scrollIntoView({ behavior:'smooth', block:'start' }); }
+    });
+  });
+
+  // ---- Contact form → POST /api/guardianes/mensaje ----
+  var form = document.getElementById('guaForm');
+  var ok = document.getElementById('okMsg'), err = document.getElementById('errMsg');
+  var okTxt = document.getElementById('okTxt'), errTxt = document.getElementById('errTxt');
+  var btn = document.getElementById('guaSubmit');
+  var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  function show(box, on){ if (box) box.style.display = on ? 'flex' : 'none'; }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    show(ok, false); show(err, false);
+    var data = {
+      nombre: form.nombre.value.trim(), email: form.email.value.trim(),
+      telefono: form.telefono.value.trim(), organizacion: form.organizacion.value.trim(),
+      asunto: form.asunto.value, mensaje: form.mensaje.value.trim(), website: form.website.value
+    };
+    var bad = null;
+    if (!data.nombre) bad = 'Ingresa tu nombre.';
+    else if (!EMAIL.test(data.email)) bad = 'Ingresa un email válido.';
+    else if (!data.mensaje) bad = 'Escribe tu mensaje.';
+    if (bad){ errTxt.textContent = bad; show(err, true); err.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
+    btn.disabled = true; var label = btn.textContent; btn.textContent = 'Enviando…';
+    try {
+      var res = await fetch('/api/guardianes/mensaje', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)
+      });
+      var j = await res.json().catch(function(){ return {}; });
+      if (res.ok && j && j.ok){
+        okTxt.textContent = '¡Mensaje enviado a Guardianes! ' + (j.ref ? ('Referencia ' + j.ref + '. ') : '') + 'Te responderán a tu correo.';
+        show(ok, true); form.reset(); ok.scrollIntoView({behavior:'smooth',block:'center'});
+      } else if (res.status === 429){
+        errTxt.textContent = 'Has enviado varios mensajes. Espera un momento e inténtalo de nuevo.'; show(err, true);
+      } else {
+        errTxt.textContent = 'No se pudo enviar el mensaje. Inténtalo de nuevo.'; show(err, true);
+      }
+    } catch(_){
+      errTxt.textContent = 'Sin conexión. Revisa tu red e inténtalo de nuevo.'; show(err, true);
+    } finally { btn.disabled = false; btn.textContent = label; }
+  });
+
+  // ---- AI assistant → POST /api/guardianes/asistente ----
+  var log = document.getElementById('chatLog');
+  var input = document.getElementById('chatInput');
+  var send = document.getElementById('chatSend');
+  var history = [];
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+  function addMsg(role, text){
+    var d = document.createElement('div');
+    d.className = 'msg ' + (role === 'user' ? 'me' : 'bot');
+    d.innerHTML = esc(text);
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+    return d;
+  }
+  async function ask(){
+    var q = input.value.trim();
+    if (!q || send.disabled) return;
+    input.value = '';
+    addMsg('user', q);
+    history.push({ role:'user', content:q });
+    send.disabled = true; input.disabled = true;
+    var typing = addMsg('assistant', 'Escribiendo…'); typing.classList.add('typing');
+    try {
+      var res = await fetch('/api/guardianes/asistente', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ messages: history.slice(-8) })
+      });
+      var j = await res.json().catch(function(){ return {}; });
+      typing.remove();
+      if (res.ok && j && j.reply){
+        addMsg('assistant', j.reply);
+        history.push({ role:'assistant', content:j.reply });
+      } else if (res.status === 503){
+        addMsg('assistant', 'El asistente no está disponible en este momento. Puedes escribirle a Guardianes con el formulario o por Instagram @guardianes.vzla.');
+      } else {
+        addMsg('assistant', 'No pude responder ahora. Intenta de nuevo o usa el formulario de contacto.');
+      }
+    } catch(_){
+      typing.remove();
+      addMsg('assistant', 'Sin conexión. Revisa tu red e inténtalo de nuevo.');
+    } finally { send.disabled = false; input.disabled = false; input.focus(); }
+  }
+  send.addEventListener('click', ask);
+  input.addEventListener('keydown', function(e){ if (e.key === 'Enter') ask(); });
+})();
+</script>
+</body>
+</html>
