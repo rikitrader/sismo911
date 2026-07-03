@@ -15,7 +15,7 @@
 <meta property="og:image" content="https://sismo911.com/og/og-default.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css">
 <script src="/app-shell.js" defer></script>
 <style>
@@ -46,39 +46,50 @@
   .svg{width:18px;height:18px;flex:none}
   section{position:relative}
 
-  /* HERO */
-  .hero{background:radial-gradient(1200px 600px at 78% -10%,rgba(0,56,168,.55),transparent 60%),radial-gradient(900px 500px at 10% 110%,rgba(245,179,1,.14),transparent 55%),linear-gradient(160deg,#001233 0%,#00173a 45%,#062a63 100%);color:#fff;overflow:hidden}
-  .hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(900px 500px at 70% 0,#000,transparent 75%);pointer-events:none}
-  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(28px,5vw,64px);align-items:center;padding:clamp(30px,6vw,64px) 0 clamp(40px,7vw,80px);position:relative;z-index:1}
-  .badges{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 26px}
-  .badge{display:inline-flex;align-items:center;gap:7px;font:700 12px Inter,sans-serif;color:#dbe6ff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:7px 12px}
-  .badge b{color:#fff}
-  .hero h1{color:#fff;font-size:clamp(32px,5.4vw,56px);line-height:1.03;font-weight:900}
-  .hero p.sub{color:#c6d2ea;font-size:clamp(16px,2vw,19px);line-height:1.55;margin:18px 0 0;max-width:36ch}
-  .hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
-  .hero-trust{display:flex;align-items:center;gap:14px;margin-top:26px;color:#9fb2d6;font:600 13px Inter,sans-serif}
-  .hero-trust .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 0 4px rgba(46,204,113,.18)}
-
-  /* Hero visual — dashboard preview card */
-  .preview{background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(247,249,255,.98));border-radius:22px;box-shadow:var(--shadow-lg);border:1px solid rgba(255,255,255,.5);overflow:hidden}
-  .preview-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);background:#fff}
-  .preview-top .live{display:flex;align-items:center;gap:7px;font:800 11px 'Public Sans',sans-serif;letter-spacing:.08em;color:#0a7d3a}
-  .preview-top .live i{width:8px;height:8px;border-radius:50%;background:#12b34a;display:inline-block;animation:pulse 1.8s infinite}
+  /* HERO — seismic command-center (redesign per SISMO/DESIGN.md) */
+  .hero{position:relative;isolation:isolate;color:#fff;overflow:hidden;background:#090d17;font-family:Inter,sans-serif}
+  /* red epicenter glows over a dark tactical field */
+  .hero::before{content:"";position:absolute;inset:0;z-index:-3;background:
+    radial-gradient(560px 380px at 20% 70%, rgba(211,47,47,.34), transparent 62%),
+    radial-gradient(460px 320px at 82% 26%, rgba(175,16,26,.30), transparent 62%),
+    radial-gradient(900px 640px at 50% 42%, rgba(120,22,32,.20), transparent 68%),
+    linear-gradient(160deg,#090d17 0%,#0b1122 46%,#080c16 100%)}
+  /* tactical grid, masked to a soft central vignette */
+  .hero::after{content:"";position:absolute;inset:0;z-index:-2;
+    background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+    background-size:48px 48px;
+    -webkit-mask-image:radial-gradient(1050px 660px at 50% 40%,#000,transparent 80%);
+    mask-image:radial-gradient(1050px 660px at 50% 40%,#000,transparent 80%)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-  .preview-body{padding:16px}
-  .pv-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .pv-kpi{background:#f7f9fe;border:1px solid var(--line);border-radius:12px;padding:12px}
-  .pv-kpi .v{font:900 22px/1 'Public Sans',sans-serif;color:var(--navy)}
-  .pv-kpi .l{font:600 11px Inter;color:var(--muted);margin-top:5px}
-  .pv-rows{margin-top:12px;display:grid;gap:8px}
-  .pv-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:11px}
-  .pv-row .chip{font:800 10px 'JetBrains Mono',monospace;color:#fff;border-radius:6px;padding:4px 6px}
-  .pv-row .t{font:700 12px Inter;color:var(--ink)}
-  .pv-row .m{font:600 11px Inter;color:var(--muted);margin-left:auto}
-  .ally-strip{display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px;background:#fff;border:1px dashed #cdd6e8;border-radius:12px}
-  .ally-strip img{width:44px;height:44px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid var(--line)}
-  .ally-strip .t{font:800 12px 'Public Sans';color:var(--navy)}
-  .ally-strip .s{font:600 11px Inter;color:var(--muted)}
+  /* pulsing epicenter marker behind the content */
+  .epi{position:absolute;left:50%;top:40%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#ff5a5f;box-shadow:0 0 22px 6px rgba(255,60,66,.5);z-index:-1}
+  .epi::before,.epi::after{content:"";position:absolute;inset:-1px;border-radius:50%;border:1px solid rgba(255,90,95,.6);animation:epiring 3.4s ease-out infinite}
+  .epi::after{animation-delay:1.7s}
+  @keyframes epiring{0%{transform:scale(1);opacity:.7}100%{transform:scale(10);opacity:0}}
+  /* decorative HUD corner labels (desktop only) */
+  .hud{position:absolute;z-index:0;font:700 10px/1.5 'JetBrains Mono',monospace;letter-spacing:.16em;color:rgba(220,230,250,.4);text-transform:uppercase;pointer-events:none}
+  .hud b{display:block;font-size:13px;letter-spacing:.05em;color:rgba(255,255,255,.6)}
+  .hud .warn{color:#ffb85f}
+  .hud.tl{top:24px;left:34px}
+  .hud.tr{top:24px;right:34px;text-align:right;color:rgba(255,130,130,.62)}
+  .hud.bl{bottom:126px;left:34px}
+  .hud.br{bottom:126px;right:34px;text-align:right}
+
+  .hero-inner{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:clamp(60px,10vw,124px) clamp(20px,5vw,40px) 0;text-align:center}
+  .hero-badge{display:inline-flex;align-items:center;gap:9px;font:700 12px/1 Inter,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#ffd9d6;background:rgba(211,47,47,.15);border:1px solid rgba(255,120,120,.34);border-radius:999px;padding:9px 16px}
+  .hero-badge .rd{width:8px;height:8px;border-radius:50%;background:#ff4d4f;box-shadow:0 0 0 4px rgba(255,77,79,.2);animation:pulse 1.8s infinite}
+  .hero h1{font-family:Manrope,'Public Sans',sans-serif;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:-.02em;line-height:1.04;font-size:clamp(33px,6.3vw,66px);margin:24px 0 0;text-shadow:0 2px 30px rgba(0,0,0,.5)}
+  .hero h1 .hl{color:#ffb3ac}
+  .hero .sub{color:#cdd6e8;font-size:clamp(15px,1.9vw,19px);line-height:1.6;margin:20px auto 0;max-width:58ch}
+  .hero-cta{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:34px}
+  .btn-red{background:#d32f2f;color:#fff;box-shadow:0 10px 26px rgba(175,16,26,.42)}
+  .btn-red:hover{background:#af101a}
+  /* full-width stat bar at the base of the hero */
+  .hero-stats{position:relative;z-index:1;margin-top:clamp(42px,7vw,72px);border-top:1px solid rgba(255,255,255,.1);background:rgba(6,10,20,.5)}
+  .hero-stats .in{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:26px clamp(20px,5vw,40px)}
+  .hero-stats .st .v{font:800 clamp(24px,3.2vw,36px)/1 Manrope,sans-serif;color:#fff;letter-spacing:-.01em}
+  .hero-stats .st .v em{color:#ffb3ac;font-style:normal}
+  .hero-stats .st .l{font:600 11px/1.35 Inter,sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#93a1bd;margin-top:9px}
 
   /* generic section head */
   .sec{padding:clamp(56px,8vw,96px) 0}
@@ -180,20 +191,18 @@
 
   /* RESPONSIVE */
   @media(max-width:1000px){
-    .hero-grid{grid-template-columns:1fr}
-    .hero .preview{max-width:520px}
+    .hud{display:none}
+    .hero-stats .in{grid-template-columns:repeat(2,1fr);gap:22px 10px}
     .cards,.why-grid,.steps{grid-template-columns:repeat(2,1fr)}
     .step::after{display:none}
     .form-wrap{grid-template-columns:1fr}
   }
   @media(max-width:600px){
     .cards,.why-grid,.steps{grid-template-columns:1fr}
-    .pv-kpis{grid-template-columns:repeat(3,1fr)}
     .fld.two{grid-template-columns:1fr;gap:0}
     .fld.two .fld{margin-bottom:16px}
     .ally-card{grid-template-columns:1fr;text-align:center;justify-items:center}
     .hero-cta .btn,.panel .row .btn{width:100%}
-    .badges{justify-content:flex-start}
   }
   @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -213,53 +222,33 @@
 </head>
 <body>
 
-<!-- 1. HERO -->
+<!-- 1. HERO — seismic command-center -->
 <header class="hero">
-  <div class="wrap hero-grid">
-    <div>
-      <span class="eyebrow">Alianza Humanitaria · Respuesta ante emergencias</span>
-      <h1>Únete a la Alianza Humanitaria de SISMO&nbsp;911</h1>
-      <p class="sub">Conectamos organizaciones, empresas, voluntarios, médicos, operadores logísticos y aliados estratégicos para responder más rápido cuando una emergencia ocurre.</p>
-      <div class="badges">
-        <span class="badge"><b>+8</b>&nbsp;tipos de aliados</span>
-        <span class="badge">Datos <b>verificados</b></span>
-        <span class="badge">Coordinación <b>en tiempo real</b></span>
-        <span class="badge">Sin&nbsp;<b>costo</b></span>
-      </div>
-      <div class="hero-cta">
-        <a href="#solicitud" class="btn btn-amber" data-scroll>Solicitar alianza
-          <svg class="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </a>
-        <a href="#como" class="btn btn-ghost" data-scroll>Ver cómo funciona</a>
-      </div>
-      <div class="hero-trust"><span class="dot"></span> Plataforma humanitaria activa · La Guaira · Venezuela</div>
-    </div>
+  <span class="epi" aria-hidden="true"></span>
+  <!-- decorative HUD labels (desktop) -->
+  <div class="hud tl" aria-hidden="true"><b>LA GUAIRA</b>Coastal Zone</div>
+  <div class="hud tr" aria-hidden="true"><span class="warn">▲ Tectonic Alert</span></div>
+  <div class="hud bl" aria-hidden="true">Epicenter Cluster · 10.6°N 66.9°W</div>
+  <div class="hud br" aria-hidden="true">Seismic Data Stream · Live</div>
 
-    <!-- dashboard preview -->
-    <div class="preview" aria-hidden="true">
-      <div class="preview-top">
-        <span style="font:900 13px 'Public Sans';color:#00173a">Panel de Coordinación</span>
-        <span class="live"><i></i> EN VIVO</span>
-      </div>
-      <div class="preview-body">
-        <div class="pv-kpis">
-          <div class="pv-kpi"><div class="v">142</div><div class="l">Aliados activos</div></div>
-          <div class="pv-kpi"><div class="v">27</div><div class="l">Operaciones</div></div>
-          <div class="pv-kpi"><div class="v">98%</div><div class="l">Datos verif.</div></div>
-        </div>
-        <div class="pv-rows">
-          <div class="pv-row"><span class="chip" style="background:#0038a8">LOG</span><span class="t">Ruta de suministros · La Guaira</span><span class="m">activa</span></div>
-          <div class="pv-row"><span class="chip" style="background:#0a7d3a">MED</span><span class="t">Brigada médica · 6 unidades</span><span class="m">en camino</span></div>
-          <div class="pv-row"><span class="chip" style="background:#cf142b">SOS</span><span class="t">Solicitud priorizada · Macuto</span><span class="m">asignada</span></div>
-        </div>
-        <div class="ally-strip">
-          <img src="/img/guardianes.jpg" alt="Guardianes">
-          <div>
-            <div class="t">Guardianes · Aliado fundador</div>
-            <div class="s">Protección de la niñez — Vigilamos · Protegemos · Apoyamos</div>
-          </div>
-        </div>
-      </div>
+  <div class="hero-inner">
+    <span class="hero-badge"><span class="rd"></span> Red Nacional de Respuesta Sísmica</span>
+    <h1>Una red construida<br>por quienes <span class="hl">responden</span></h1>
+    <p class="sub">Cada aliado aporta una capacidad crítica. Elige tu rol y solicita tu incorporación a la alianza para fortalecer la respuesta tecnológica nacional ante desastres.</p>
+    <div class="hero-cta">
+      <a href="#solicitud" class="btn btn-red" data-scroll>Unirse a la Alianza
+        <svg class="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a href="/contacto" class="btn btn-ghost">Solicitar Información</a>
+    </div>
+  </div>
+
+  <div class="hero-stats">
+    <div class="in">
+      <div class="st"><div class="v"><em>+</em>120</div><div class="l">Aliados corporativos</div></div>
+      <div class="st"><div class="v">15k</div><div class="l">Personal desplegable</div></div>
+      <div class="st"><div class="v">24/7</div><div class="l">Vigilancia satelital</div></div>
+      <div class="st"><div class="v">0.8<em>s</em></div><div class="l">Latencia de alerta</div></div>
     </div>
   </div>
 </header>
@@ -269,7 +258,7 @@
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">Tipos de aliados</span>
-      <h2>Una red construida por quienes responden</h2>
+      <h2>Elige tu rol en la red</h2>
       <p>Cada aliado aporta una capacidad crítica. Elige tu rol y solicita tu incorporación a la alianza.</p>
     </div>
     <div class="cards">
