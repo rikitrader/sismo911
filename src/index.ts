@@ -30,6 +30,7 @@ import { hospital } from './routes/hospital';
 import { stepUpGuard } from './lib/stepup';
 import { support, appendInboundReply, inboundEmailEnabled } from './routes/support';
 import { alianza } from './routes/alianza';
+import { guardianes } from './routes/guardianes';
 import { extractRef, stripQuotedReply } from './lib/support';
 import PostalMime from 'postal-mime';
 import { publicProfile } from './routes/public-profile';
@@ -358,6 +359,7 @@ app.route('/api/profile', contactsPersonal); // Personal "Contactos" address boo
 app.route('/api/persons', hospital);  // Hospital patient registry: /api/persons/hospital/{ingest(token),search(public),stats(public)} — the "Hospitalizados" data
 app.route('/api/support', support);   // Support ticket inbox ("Soporte"): citizen self-scoped + /admin/* ops:console-gated; inbound email threaded via email()
 app.route('/api/alianza', alianza);   // Alianza Humanitaria partner intake: POST / is public (anonymous CTA form); /admin/* ops:console-gated review queue
+app.route('/api/guardianes', guardianes); // Guardianes founding-ally profile: POST /mensaje (public contact→relay email) + POST /asistente (Workers-AI chat); /admin/* ops:console-gated
 app.route('/api/telegram', telegram); // Telegram case-status bot: POST /webhook (secret-gated) + GET /health. Verified-DB answers only; redacts PII; approved-group/admin-only. Inert until TELEGRAM_BOT_TOKEN+TELEGRAM_WEBHOOK_SECRET set.
 app.route('/api/sismos-bot', sismosBot); // Live-seismic Telegram bot (SEPARATE, PUBLIC): latest quakes/list/estado + opt-in auto-alerts. Webhook secret-gated only (public non-PII data). Inert until SISMOS_BOT_TOKEN+SISMOS_WEBHOOK_SECRET set.
 app.route('/api/u', publicProfile);   // Public payment profile (behind a citizen's "Enlace público"): name + active links + avatar. Public, no PII.
