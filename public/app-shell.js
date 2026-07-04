@@ -51,6 +51,7 @@
       { label: 'Alertas', href: '/alertas', m: ['/alertas'], d: 'M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z' },
       { label: 'Alerta PAGER', href: '/pager', m: ['/pager'], d: 'M12 3l8 4v5c0 4.5-3.1 7.9-8 9-4.9-1.1-8-4.5-8-9V7l8-4z' },
       { label: 'Víctimas y Fallecidos', href: '/victimas', m: ['/victimas', '/victimas.html'], alarm: true, d: 'M12 21s-7-4.35-9.5-8.5C.5 9 2 5 5.5 5 8 5 9.5 7 12 7s4-2 6.5-2C22 5 23.5 9 21.5 12.5 19 16.65 12 21 12 21z' },
+      { label: 'Informe ONU (OCHA)', href: '/informe-onu', m: ['/informe-onu'], d: 'M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20M12 2c2.5 2.7 4 6.2 4 10s-1.5 7.3-4 10c-2.5-2.7-4-6.2-4-10s1.5-7.3 4-10z' },
       { label: 'Archivo Histórico', href: '/archivo', m: ['/archivo'], d: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v3H3zM3 10h18v7a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 14h6' },
       { label: 'Daños (IA)', href: '/danos', m: ['/danos'], d: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
       { label: 'Daños Estructurales', href: '/danos-estructurales', m: ['/danos-estructurales'], d: 'M4 21V8l8-5 8 5v13M9 21v-5h6v5M8 11h2m4 0h2m-7 8 5-5' },

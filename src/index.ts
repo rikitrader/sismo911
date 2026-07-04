@@ -505,6 +505,9 @@ app.get('/cerca', (c) => c.env.ASSETS.fetch(new Request(new URL('/cerca.html', c
 // Víctimas y Fallecidos dashboard (public): multi-source casualty ledger with a
 // RED-ALERT banner, per-source figures, computed range, confidence + citations.
 app.get('/victimas', (c) => c.env.ASSETS.fetch(new Request(new URL('/victimas.html', c.req.url))));
+// Informe de Situación ONU/OCHA (public): Spanish summary of the latest official
+// OCHA situation report (currently No. 10, 03-Jul-2026) with the official toll.
+app.get('/informe-onu', (c) => c.env.ASSETS.fetch(new Request(new URL('/informe-onu.html', c.req.url))));
 
 // Muro Sísmico (public): WhatsApp/Telegram-style community wall about the quakes
 // (reuses the /api/chat backend on the 'terremotos' channel).
