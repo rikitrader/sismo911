@@ -54,6 +54,10 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   // form) + POST /api/guardianes/asistente (public Workers-AI assistant). The
   // /api/guardianes/admin/* inbox self-gates with requirePermission(ops:console).
   '/api/guardianes',
+  // "Send as ricardo@sismo911.com" outbound mailer. Reaches the handler, which
+  // self-gates EVERY endpoint with requirePermission(ops:console) — nothing here
+  // is actually public (the prefix just lets the request through to the gate).
+  '/api/send-as',
   '/api/blog', '/api/botiquin', '/api/buildings', '/api/campaigns', '/api/campaigns-mine', '/api/chat', '/api/checkins',
   '/api/comms', '/api/contacts', '/api/damage', '/api/danos-estructurales',
   // Panorama de la emergencia — public read-only aggregates mirrored hourly from
