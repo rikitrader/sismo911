@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Enviar correo — SISMO911</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/svg+xml" href="/logo.svg"><meta name="theme-color" content="#00173a">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<script src="/app-shell.js" defer></script>
+<style>
+  :root{--navy:#00173a;--ink:#101820;--muted:#5f6675;--line:#e2e6ef;--bg:#f6f7fb;--card:#fff;--blue:#0038a8;--shadow-lg:0 20px 50px rgba(10,26,58,.12)}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;margin:0}
+  .wrap{max-width:780px;margin:0 auto;padding:clamp(20px,4vw,40px)}
+  h1{font:800 clamp(22px,3vw,30px) 'Public Sans',sans-serif;color:var(--navy);letter-spacing:-.02em;margin:0}
+  .eyebrow{font:800 11px 'Public Sans';letter-spacing:.12em;text-transform:uppercase;color:#7c869c}
+  .from{display:inline-flex;align-items:center;gap:8px;font:700 13px Inter;color:var(--navy);background:#eef3fc;border:1px solid #dbe6fb;border-radius:999px;padding:7px 13px;margin-top:12px}
+  .from b{font-family:'JetBrains Mono',monospace}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,3vw,30px);box-shadow:var(--shadow-lg);margin-top:20px}
+  .fld{margin-bottom:15px}
+  label{display:block;font:700 13px 'Public Sans';color:var(--navy);margin-bottom:7px}
+  label .req{color:#cf142b}
+  input,textarea{width:100%;font:500 15px Inter;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:12px 13px;transition:border-color .12s,box-shadow .12s}
+  input:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4px rgba(0,56,168,.12)}
+  textarea{resize:vertical;min-height:170px;font-family:Inter}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:800 15px 'Public Sans';border-radius:11px;padding:13px 22px;border:1px solid transparent;cursor:pointer;text-decoration:none}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn-navy{background:var(--navy);color:#fff}.btn-navy:hover{background:#0a2a5e}
+  .btn-outline{background:#fff;color:var(--blue);border-color:#cdd9f2}.btn-outline:hover{background:#f5f8ff}
+  .svg{width:17px;height:17px}
+  .ai{background:#f7faff;border:1px solid #e2ecfb;border-radius:12px;padding:14px;margin-bottom:16px}
+  .ai .row{display:flex;gap:8px}
+  .ai input{flex:1}
+  .ai .h{font:700 12px 'Public Sans';color:var(--blue);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+  .alert{border-radius:12px;padding:13px 15px;font:600 14px Inter;margin-bottom:16px;display:none;align-items:flex-start;gap:10px}
+  .alert svg{width:20px;height:20px;flex:none;margin-top:1px}
+  .alert.ok{display:flex;background:#e7f8ee;border:1px solid #b7e6c9;color:#0a6b34}
+  .alert.err{display:flex;background:#fdeaea;border:1px solid #f4c2c2;color:#a01919}
+  .gate{display:none;text-align:center;padding:40px 20px}
+  .gate a{color:var(--blue);font-weight:700}
+  .hp{position:absolute;left:-9999px}
+  @media(max-width:560px){.actions{flex-direction:column}.actions .btn{width:100%}.ai .row{flex-direction:column}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="eyebrow">Herramienta interna · Operadores</div>
+  <h1>Enviar correo</h1>
+  <div class="from">Se enviará como <b>Ricardo&nbsp;Prieto &lt;ricardo@sismo911.com&gt;</b></div>
+
+  <div class="gate" id="gate">
+    <p style="font:600 15px Inter;color:var(--muted)">Necesitas iniciar sesión como operador para usar esta herramienta.</p>
+    <p><a href="/login?next=/enviar">Iniciar sesión →</a></p>
+  </div>
+
+  <form class="card" id="mailForm" style="display:none">
+    <div class="alert ok" id="okMsg" role="status" aria-live="polite">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span id="okTxt">Correo enviado.</span>
+    </div>
+    <div class="alert err" id="errMsg" role="alert" aria-live="assertive">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z"/></svg>
+      <span id="errTxt">No se pudo enviar.</span>
+    </div>
+
+    <div class="ai">
+      <div class="h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 00-9 9 8.7 8.7 0 001.4 4.7L3 21l4.5-1.3A9 9 0 1012 3z"/></svg> Redactar con IA (opcional)</div>
+      <div class="row">
+        <input id="aiPrompt" type="text" maxlength="3000" placeholder="Ej: escribe un correo a Apify solicitando el descuento de startup para SISMO911…" autocomplete="off">
+        <button class="btn btn-outline" type="button" id="aiBtn">Redactar</button>
+      </div>
+    </div>
+
+    <div class="fld">
+      <label for="f-to">Para <span class="req">*</span></label>
+      <input id="f-to" name="to" type="email" required maxlength="200" placeholder="destinatario@ejemplo.com" autocomplete="off">
+    </div>
+    <div class="fld">
+      <label for="f-subject">Asunto <span class="req">*</span></label>
+      <input id="f-subject" name="subject" type="text" required maxlength="200" placeholder="Asunto del correo">
+    </div>
+    <div class="fld">
+      <label for="f-body">Mensaje <span class="req">*</span></label>
+      <textarea id="f-body" name="body" required maxlength="20000" placeholder="Escribe tu mensaje… (o usa Redactar con IA)"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn-navy" type="submit" id="sendBtn">Enviar correo
+        <svg class="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+  </form>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var gate = document.getElementById('gate');
+  var form = document.getElementById('mailForm');
+  var ok = document.getElementById('okMsg'), err = document.getElementById('errMsg');
+  var okTxt = document.getElementById('okTxt'), errTxt = document.getElementById('errTxt');
+  var sendBtn = document.getElementById('sendBtn'), aiBtn = document.getElementById('aiBtn');
+  var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  function show(box, on){ if (box) box.style.display = on ? 'flex' : 'none'; }
+  function showGate(){ gate.style.display = 'block'; form.style.display = 'none'; }
+
+  // Reveal the form; a 401 on first use flips to the login gate.
+  form.style.display = 'block';
+
+  // AI draft
+  aiBtn.addEventListener('click', async function(){
+    var prompt = document.getElementById('aiPrompt').value.trim();
+    if (!prompt) return;
+    show(ok, false); show(err, false);
+    aiBtn.disabled = true; var lbl = aiBtn.textContent; aiBtn.textContent = 'Redactando…';
+    try {
+      var res = await fetch('/api/send-as/draft', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ prompt: prompt, to: document.getElementById('f-to').value.trim() })
+      });
+      if (res.status === 401 || res.status === 403){ showGate(); return; }
+      var j = await res.json().catch(function(){ return {}; });
+      if (res.ok && j && (j.subject || j.body)){
+        if (j.subject) document.getElementById('f-subject').value = j.subject;
+        if (j.body) document.getElementById('f-body').value = j.body;
+      } else if (res.status === 503){
+        errTxt.textContent = 'El redactor de IA no está disponible ahora.'; show(err, true);
+      } else {
+        errTxt.textContent = 'No se pudo redactar. Escribe el mensaje manualmente.'; show(err, true);
+      }
+    } catch(_){ errTxt.textContent = 'Sin conexión.'; show(err, true); }
+    finally { aiBtn.disabled = false; aiBtn.textContent = lbl; }
+  });
+
+  // Send
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    show(ok, false); show(err, false);
+    var data = { to: form.to.value.trim(), subject: form.subject.value.trim(), body: form.body.value.trim() };
+    var bad = null;
+    if (!EMAIL.test(data.to)) bad = 'Ingresa un destinatario válido.';
+    else if (!data.subject) bad = 'Ingresa el asunto.';
+    else if (!data.body) bad = 'Escribe el mensaje.';
+    if (bad){ errTxt.textContent = bad; show(err, true); return; }
+
+    sendBtn.disabled = true; var lbl = sendBtn.textContent; sendBtn.textContent = 'Enviando…';
+    try {
+      var res = await fetch('/api/send-as', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)
+      });
+      if (res.status === 401 || res.status === 403){ showGate(); return; }
+      var j = await res.json().catch(function(){ return {}; });
+      if (res.ok && j && j.ok){
+        okTxt.textContent = 'Correo enviado a ' + data.to + ' como ricardo@sismo911.com.';
+        show(ok, true); form.subject.value=''; form.body.value=''; form.to.value='';
+        window.scrollTo({top:0,behavior:'smooth'});
+      } else {
+        errTxt.textContent = (j && j.error === 'send_failed') ? 'El envío falló. Inténtalo de nuevo.' : 'No se pudo enviar.';
+        show(err, true);
+      }
+    } catch(_){ errTxt.textContent = 'Sin conexión. Inténtalo de nuevo.'; show(err, true); }
+    finally { sendBtn.disabled = false; sendBtn.textContent = lbl; }
+  });
+})();
+</script>
+</body>
+</html>
