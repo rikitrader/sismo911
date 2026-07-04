@@ -55,7 +55,7 @@ const PUBLIC_API_PREFIXES: readonly string[] = [
   // /api/guardianes/admin/* inbox self-gates with requirePermission(ops:console).
   '/api/guardianes',
   // "Send as ricardo@sismo911.com" outbound mailer. Reaches the handler, which
-  // self-gates EVERY endpoint with requirePermission(ops:console) — nothing here
+  // self-gates EVERY endpoint to SUPER_ADMIN only (role 'admin') — nothing here
   // is actually public (the prefix just lets the request through to the gate).
   '/api/send-as',
   '/api/blog', '/api/botiquin', '/api/buildings', '/api/campaigns', '/api/campaigns-mine', '/api/chat', '/api/checkins',

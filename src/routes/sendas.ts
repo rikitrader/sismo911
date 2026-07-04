@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
+import type { MiddlewareHandler } from 'hono';
 import type { Env } from '../types';
-import { requirePermission } from '../rbac/middleware';
 import { getUserFromRequest } from '../lib/auth';
 import { sendEmail } from '../lib/email';
 import { audit } from '../lib/audit';
@@ -17,6 +17,16 @@ export const sendas = new Hono<{ Bindings: Env }>();
 const FROM_EMAIL = 'ricardo@sismo911.com';
 const FROM_NAME = 'Ricardo Prieto';
 
+// Super-admin ONLY (role 'admin' — see isSuperAdmin in rbac/middleware). This tool
+// sends as ricardo@sismo911.com, so it is locked to the account owner, not every
+// operator: 401 if not logged in, 403 if logged in but not super_admin.
+const requireSuperAdmin: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
+  const me = await getUserFromRequest(c.env, c);
+  if (!me) return c.json({ error: 'unauthorized' }, 401);
+  if (me.role !== 'admin') return c.json({ error: 'forbidden' }, 403);
+  await next();
+};
+
 const str = (v: unknown, max: number) => (v == null ? '' : String(v).trim().slice(0, max));
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string));
@@ -24,8 +34,8 @@ const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt
 const toHtml = (body: string) =>
   `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1f2430">${esc(body).replace(/\n/g, '<br>')}</div>`;
 
-// POST /api/send-as — send as ricardo@sismo911.com (ops:console).
-sendas.post('/', requirePermission('ops:console'), async (c) => {
+// POST /api/send-as — send as ricardo@sismo911.com (super_admin only).
+sendas.post('/', requireSuperAdmin, async (c) => {
   const me = await getUserFromRequest(c.env, c);
   const b = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
 
@@ -59,7 +69,7 @@ sendas.post('/', requirePermission('ops:console'), async (c) => {
 // POST /api/send-as/draft — Workers-AI email drafter (ops:console).
 const DRAFT_SYSTEM = `Eres un asistente que redacta correos electrónicos profesionales y claros en nombre de Ricardo Prieto (ricardo@sismo911.com), fundador de SISMO911. Respondes SIEMPRE y ÚNICAMENTE con un objeto JSON válido: {"subject":"...","body":"..."}. El "body" es texto plano con saltos de línea (\\n), sin firmas duplicadas ni marcadores de posición como [nombre]. Escribe en el idioma del pedido (por defecto español). Sé conciso y cordial. No inventes datos que no te den.`;
 
-sendas.post('/draft', requirePermission('ops:console'), async (c) => {
+sendas.post('/draft', requireSuperAdmin, async (c) => {
   const ai = c.env.AI;
   if (!ai) return c.json({ error: 'ai_unavailable' }, 503);
   const b = (await c.req.json().catch(() => ({}))) as { prompt?: string; to?: string };
