@@ -36,8 +36,8 @@
   .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
   .alert{border-radius:12px;padding:13px 15px;font:600 14px Inter;margin-bottom:16px;display:none;align-items:flex-start;gap:10px}
   .alert svg{width:20px;height:20px;flex:none;margin-top:1px}
-  .alert.ok{display:flex;background:#e7f8ee;border:1px solid #b7e6c9;color:#0a6b34}
-  .alert.err{display:flex;background:#fdeaea;border:1px solid #f4c2c2;color:#a01919}
+  .alert.ok{background:#e7f8ee;border:1px solid #b7e6c9;color:#0a6b34}
+  .alert.err{background:#fdeaea;border:1px solid #f4c2c2;color:#a01919}
   .gate{display:none;text-align:center;padding:40px 20px}
   .gate a{color:var(--blue);font-weight:700}
   .hp{position:absolute;left:-9999px}
@@ -107,6 +107,15 @@
 
   // Reveal the form; a 401 on first use flips to the login gate.
   form.style.display = 'block';
+
+  // Pre-fill from the URL (?to=&subject=&body=) so a link can load a ready draft.
+  try {
+    var qs = new URLSearchParams(location.search);
+    [['to','f-to'],['subject','f-subject'],['body','f-body']].forEach(function(pair){
+      var v = qs.get(pair[0]);
+      if (v){ var el = document.getElementById(pair[1]); if (el && !el.value) el.value = v; }
+    });
+  } catch(_){}
 
   // AI draft
   aiBtn.addEventListener('click', async function(){
