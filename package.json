@@ -22,7 +22,8 @@
     "build": "npm run build:css && npm run build:admin",
     "build:css": "tailwindcss -i src/styles.css -o public/app.css --minify",
     "build:admin": "node esbuild.admin.mjs && tailwindcss -c tailwind.admin.config.js -i admin-src/admin.css -o public/console/app.css --minify",
-    "api:audit": "tsx scripts/api-audit.ts"
+    "api:audit": "tsx scripts/api-audit.ts",
+    "db:map": "tsx scripts/db-map.ts"
   },
   "dependencies": {
     "hono": "^4.6.14",
