@@ -57,6 +57,7 @@ import { adminImpersonation } from './routes/admin-impersonation';
 import { adminWithdrawals } from './routes/admin-withdrawals';
 import { adminIntake } from './routes/admin-intake';
 import { adminSheetSync } from './routes/admin-sheet-sync';
+import { dataQuality } from './routes/data-quality';
 import { adminRolesIo } from './routes/admin-roles-io';
 import { funding } from './routes/funding';
 import { dashboard } from './routes/dashboard';
@@ -413,7 +414,8 @@ app.route('/api/acopio', logistica); // /api/acopio/{inventory,needs,shipments,m
 app.route('/api/admin', admin);      // /api/admin/dedupe-personas — operator-triggered cleanup
 app.route('/api/admin/withdrawals', adminWithdrawals); // operator review of payout requests (ops:console)
 app.route('/api/admin/intake', adminIntake); // operator review of Telegram photo/PDF intake submissions (ops:console)
-app.route('/api/admin/sheet-sync', adminSheetSync); // "Casos CRM" Google Sheet → D1 sync (source of truth); ops:console
+app.route('/api/admin/sheet-sync', adminSheetSync);
+app.route('/api/admin/data-quality', dataQuality); // data-integrity pipeline metrics (ops:console) // "Casos CRM" Google Sheet → D1 sync (source of truth); ops:console
 // Step-up for the WHOLE /api/rbac/* admin surface in ONE place (all sub-apps share
 // this prefix, so a per-sub-app guard would gate cross-sub-app paths). The acting
 // admin must re-confirm their password for any RBAC mutation when they enabled
