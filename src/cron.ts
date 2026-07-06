@@ -38,12 +38,8 @@ import { sweepCaseScores } from './lib/case-score-sync';
 import { backfillHospitalMatches } from './ingest/hospital-match';
 import { drainHospitalRegistryMatch } from './ingest/hospital-registry-match';
 import { ingestHospitalRegistry } from './ingest/hospital-registry-sync';
-import { ingestCivisAtendidos } from './ingest/civis-atendidos';
-import { ingestCivisDesaparecidos } from './ingest/civis-desaparecidos';
 import { ingestTvBuildings } from './ingest/tv-buildings-cron';
 import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
-import { ingestCivisExtras } from './ingest/civis-extras';
-import { ingestCivisEdificaciones } from './ingest/civis-edificaciones';
 import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
@@ -51,6 +47,7 @@ import { sweepBulkJobs } from './bulk/import-job';
 import { runCaseAlerts } from './ingest/case-alerts';
 import { runBuildingCasesLink } from './lib/building-cases';
 import { runHourlyDedupe } from './db/dedupe-cron';
+import { runCivisPipeline } from './ingest/civis-pipeline';
 
 // Drain the hospital cross-match a bounded number of pages per tick (whole
 // registry completes over a few ticks; thereafter it re-scans for new intakes).
@@ -150,13 +147,6 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // Cross-reference the hospital_patients REGISTRY ↔ cases: link + tracer note
     // (cédula-confirmed → auto status). Cursor-drained, converges over ticks.
     { name: 'hospital-registry-match', run: (env) => drainHospitalRegistryMatch(env) },
-    // CIVIS satellite damage + live stats — HOURLY. /api/edificaciones →
-    // sat_edificaciones (Copernicus EMS verified + Microsoft AI4G, ~975 rows)
-    // + /api/estadisticas + /api/panorama → civis_stats_snapshots. Feeds
-    // /panorama and the Satélite section on /edificios. Light: ~3 fetches +
-    // ~11 D1 batches. Seated here (:05 is at the 10-job group cap). Lifts the
-    // PR #607 deferral of /api/edificaciones as its own evidence class.
-    { name: 'civis-edificaciones', run: ingestCivisEdificaciones },
   ],
   // :30 — photo mirroring (external fetch + R2 puts, the heaviest) plus the
   // sheet sync and fuzzyphone dedupe. Keep RAV off this trigger: together these
@@ -205,16 +195,13 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   // it always has a full subrequest budget. This is the job that used to fail.
   // RAV photo analysis (vision + content-hash) + the image-content dedupe ride here.
   '45 * * * *': [
-    // CIVIS atendidos (civisvenezuela.com) — HOURLY. Pulls the newest hospital feed
-    // + a rotating slice of centros (KV cursor) into hospital_patients as name-deduped
-    // profiles. Runs FIRST here so its bounded (~28) subrequests land before the
-    // heavier social/blog jobs draw down the invocation budget.
-    { name: 'civis-atendidos', run: ingestCivisAtendidos },
-    // CIVIS desaparecidos (civisvenezuela.com) — HOURLY. Pages the missing-persons
-    // registry (limit=100+offset KV cursor) into `personas` as new/updated rows;
-    // photos auto-mirror to R2 via familia-photo-mirror + dedupe crons. Also
-    // refreshes the Sheet "Desaparecidos" tab. Bounded (~10 subreq/tick).
-    { name: 'civis-desaparecidos', run: ingestCivisDesaparecidos },
+    // CIVIS consolidated pipeline (civisvenezuela.com) — ONE seat for what were
+    // FOUR jobs against the same upstream (atendidos, desaparecidos, extras,
+    // edificaciones), run SEQUENTIALLY and finished with the scored-dedupe pass:
+    // fetch → gate-filter/map (inside each source, unchanged) → dedupe. Runs
+    // FIRST so its bounded (~50) subrequests land before social/blog draw down
+    // the budget. One failing source never blocks the rest.
+    { name: 'civis-pipeline', run: (env) => runCivisPipeline(env) },
     { name: 'social-monitor', run: ingestSocialMonitor },
     { name: 'blog', run: ingestBlog },
     // Trailing casualty (fallecidos/heridos/desaparecidos) poller. Self-throttles
@@ -274,7 +261,6 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // CIVIS auxiliary feeds — HOURLY. /api/reportes/publicos → sos_damage (citizen
     // damage reports w/ photos+geo) + /api/puntos → civis_puntos (aid/collection
     // points). Both idempotent UPSERTs, ~3 fetches total. Rides :05 (external-pull group).
-    { name: 'civis-extras', run: ingestCivisExtras },
   ],
 };
 
