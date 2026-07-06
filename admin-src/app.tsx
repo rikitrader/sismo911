@@ -23,6 +23,7 @@ import { SupportInboxPage } from './pages/SupportInbox';
 import { SumSolicitudesPage } from './pages/SumSolicitudes';
 import { EvaluacionesPage } from './pages/Evaluaciones';
 import { IntakeReviewPage } from './pages/IntakeReview';
+import { DedupeReviewPage } from './pages/DedupeReview';
 import { rbac } from './api';
 
 const COLLAPSE_KEY = 'sismo-admin-nav-collapsed';
@@ -42,6 +43,7 @@ function PageRouter({ route }: { route: string }) {
     case 'security': return <SecurityPage />;
     case 'support': return <SupportInboxPage />;
     case 'intake': return <IntakeReviewPage />;
+    case 'dedupe': return <DedupeReviewPage />;
     case 'sum-solicitudes': return <SumSolicitudesPage />;
     case 'evaluaciones': return <EvaluacionesPage />;
     case 'dashboard':
