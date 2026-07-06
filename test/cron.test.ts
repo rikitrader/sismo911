@@ -7,14 +7,13 @@ import { CRON_GROUPS, jobsForCron } from '../src/cron';
 // per hour), every job has a runner, and the cron keys match wrangler.toml.
 
 const ALL_JOB_NAMES = [
-  'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync', 'civis-atendidos',
+  'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync', 'civis-pipeline',
   'hospital-sheet',
   'familia-ingest', 'personas-clean', 'personas-name-floods', 'search-index-backfill', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match', 'hospital-registry-match',
   'familia-photo-mirror', 'monitor-sheet', 'cases-sheet-sync', 'case-alerts', 'personas-dedupe-fuzzyphone', 'dedupe-engine-hourly', 'bulk-import-sweep', 'tv-buildings', 'tv-building-cases', 'rav-ingest', 'rav-stats', 'rav-verified',
-  'civis-desaparecidos',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
   'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30', 'rav-reports-safe', 'rav-reports-dedupe-extid',
-  'pacientes-rvz', 'sismos-bot-broadcast', 'botcommands-sync', 'civis-extras', 'civis-edificaciones',
+  'pacientes-rvz', 'sismos-bot-broadcast', 'botcommands-sync',
 ];
 
 describe('cron groups', () => {
@@ -79,7 +78,6 @@ describe('cron groups', () => {
       'rav-reports-dedupe-extid',
       'personas-phash-backfill-05',
       'sismos-bot-broadcast',
-      'civis-extras',
     ]);
   });
 
