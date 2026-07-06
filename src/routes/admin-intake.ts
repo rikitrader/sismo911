@@ -20,6 +20,7 @@ import { audit } from '../lib/audit';
 import { uid } from '../lib/db';
 import { summarize } from '../telegram/intake/persist';
 import { createBulkJob, processBulkJob } from '../bulk/import-job';
+import { DOCX_MIME } from '../telegram/intake/docx';
 import type { ExtractedRecord } from '../telegram/intake/types';
 
 export const adminIntake = new Hono<{ Bindings: Env }>();
@@ -122,17 +123,19 @@ interface BulkJobDto {
   updated_ms: number;
 }
 
-/** POST /api/admin/intake/bulk — upload a roster PDF (no 20 MB cap). Processes in the background. */
+/** POST /api/admin/intake/bulk — upload a roster PDF/DOCX (no 20 MB cap). Processes in the background. */
 adminIntake.post('/bulk', requirePermission('ops:console'), async (c) => {
   const form = await c.req.formData().catch(() => null);
   const file = form?.get('file');
   // Duck-typed: a Blob-like FormData entry (File isn't a typed global in Workers types).
   if (!file || typeof file === 'string' || typeof (file as Blob).arrayBuffer !== 'function') {
-    return c.json({ error: 'no_file', hint: 'Envía un PDF en el campo "file".' }, 400);
+    return c.json({ error: 'no_file', hint: 'Envía un PDF o Word (.docx) en el campo "file".' }, 400);
   }
   const blob = file as Blob & { name?: string };
   const mime = blob.type || 'application/pdf';
-  if (mime !== 'application/pdf') return c.json({ error: 'pdf_only', hint: 'Solo se aceptan archivos PDF.' }, 400);
+  if (mime !== 'application/pdf' && mime !== DOCX_MIME) {
+    return c.json({ error: 'pdf_or_docx_only', hint: 'Solo se aceptan archivos PDF o Word (.docx).' }, 400);
+  }
   const bytes = new Uint8Array(await blob.arrayBuffer());
   if (!bytes.byteLength) return c.json({ error: 'empty_file' }, 400);
   if (bytes.byteLength > MAX_BULK_BYTES) return c.json({ error: 'too_large', hint: 'Máximo 60 MB.' }, 413);

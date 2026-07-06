@@ -11,6 +11,7 @@
 
 import type { Env } from '../../types';
 import type { ExtractedRecord, IntakeMedia } from './types';
+import { DOCX_MIME, extractDocxText } from './docx';
 
 const STRUCT_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
@@ -78,8 +79,14 @@ export function normalize(obj: Record<string, unknown> | null): ExtractedRecord 
 
 /** OCR the media to markdown via Workers AI toMarkdown (PDF + image). Empty string on failure.
  *  `maxChars` bounds the returned text: the single-record path keeps ~8k (one cédula/flyer),
- *  the bulk roster path passes a much larger cap so a multi-page padrón isn't truncated. */
+ *  the bulk roster path passes a much larger cap so a multi-page padrón isn't truncated.
+ *  DOCX is parsed natively FIRST (deterministic, no AI call — see docx.ts for why);
+ *  toMarkdown stays as the fallback in case the file is a mislabeled/odd variant. */
 export async function markdownFromMedia(env: Env, media: IntakeMedia, maxChars = 8000): Promise<string> {
+  if (media.mime === DOCX_MIME) {
+    const text = await extractDocxText(media.bytes);
+    if (text) return text.slice(0, maxChars);
+  }
   const ai = env.AI as unknown as {
     toMarkdown?: (
       files: Array<{ name: string; blob: Blob }>,

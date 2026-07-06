@@ -13,11 +13,13 @@ import type { Env } from '../../types';
 import { uid } from '../../lib/db';
 import { computeSearchFields } from '../../lib/search-index';
 import type { ExtractedRecord, IntakeMedia, IntakeResult, MatchResult } from './types';
+import { DOCX_MIME } from './docx';
 
 const RAW_BUCKET_PREFIX = 'intake/telegram';
 
 function extFor(mime: string): string {
   if (mime === 'application/pdf') return 'pdf';
+  if (mime === DOCX_MIME) return 'docx';
   if (mime === 'image/png') return 'png';
   if (mime === 'image/webp') return 'webp';
   return 'jpg';

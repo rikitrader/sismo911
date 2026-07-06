@@ -20,6 +20,7 @@ import { extractRoster } from '../telegram/intake/roster';
 import { matchCase } from '../telegram/intake/match';
 import { persist } from '../telegram/intake/persist';
 import { parseIdList } from '../telegram/env';
+import { DOCX_MIME } from '../telegram/intake/docx';
 import type { IntakeMedia } from '../telegram/intake/types';
 
 const R2_PREFIX = 'intake/bulk';
@@ -66,11 +67,12 @@ interface JobRow {
   tg_user_id: string | null;
 }
 
-/** Store the source PDF and register a pending job. */
+/** Store the source document (PDF/DOCX) and register a pending job. */
 export async function createBulkJob(env: Env, input: BulkJobInput): Promise<BulkJobRef> {
   const jobId = uid('bik');
   const code = `IMP-${jobId.slice(4).toUpperCase()}`;
-  const r2Key = `${R2_PREFIX}/${jobId}.pdf`;
+  const ext = input.mime === DOCX_MIME ? 'docx' : 'pdf';
+  const r2Key = `${R2_PREFIX}/${jobId}.${ext}`;
   const now = Date.now();
   await env.PERSON_PHOTOS.put(r2Key, input.bytes, { httpMetadata: { contentType: input.mime } }).catch(() => {});
   await env.DB.prepare(
