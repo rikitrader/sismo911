@@ -30,7 +30,10 @@
     "db:dedupe:execute": "tsx scripts/dedupe-existing.ts --execute",
     "ingest:check": "tsx scripts/pre-ingest-gate.ts --check",
     "ingest:dry-run": "tsx scripts/pre-ingest-gate.ts --dry-run",
-    "ingest:execute": "tsx scripts/pre-ingest-gate.ts --execute"
+    "ingest:execute": "tsx scripts/pre-ingest-gate.ts --execute",
+    "data:quality": "tsx scripts/data-quality-report.ts",
+    "db:dedupe-hourly": "tsx scripts/dedupe-existing.ts --dry-run --max-groups=300",
+    "test:data-integrity": "vitest run test/ocr-normalize.test.ts test/db-map.test.ts test/dedupe-engine.test.ts test/dedupe-cron.test.ts test/ingest-adapters.test.ts test/civis-pipeline.test.ts test/data-quality-route.test.ts"
   },
   "dependencies": {
     "hono": "^4.6.14",
