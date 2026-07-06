@@ -50,6 +50,7 @@ import { ingestCasualties } from './ingest/casualty-cron';
 import { sweepBulkJobs } from './bulk/import-job';
 import { runCaseAlerts } from './ingest/case-alerts';
 import { runBuildingCasesLink } from './lib/building-cases';
+import { runHourlyDedupe } from './db/dedupe-cron';
 
 // Drain the hospital cross-match a bounded number of pages per tick (whole
 // registry completes over a few ticks; thereafter it re-scans for new intakes).
@@ -182,6 +183,11 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'case-alerts', run: (env) => runCaseAlerts(env) },
     // Safe fuzzy dedup: same normalized name + age + phone (near-zero false merges).
     { name: 'personas-dedupe-fuzzyphone', run: (env) => drain(() => dedupePersonas(env, { mode: 'fuzzyphone', apply: true, limit: 400 })) },
+    // Layered SCORED dedupe (engine v2): corroborated fuzzy matches auto-merge
+    // (bounded 15/tick, canonical restorable merge), 70-89 pairs → operator
+    // review queue (dedupe_candidates), conflicts recorded, data-quality
+    // snapshot written. Watermark + UNIQUE(pair) ⇒ idempotent; ~≤15 D1 calls.
+    { name: 'dedupe-engine-hourly', run: (env) => runHourlyDedupe(env) },
     // 2nd phash-backfill slot (batch 400). Adding the backfill to 3 hourly groups
     // (:05/:30/:45) is how we go faster WITHOUT a 6th cron (account caps at 5).
     // :30 has budget: familia-photo-mirror is only ~50 fetches (~100 subrequests).
