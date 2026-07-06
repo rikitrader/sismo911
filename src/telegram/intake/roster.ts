@@ -79,7 +79,16 @@ function keyFor(rec: ExtractedRecord): string | null {
 export async function extractRoster(env: Env, media: IntakeMedia): Promise<ExtractedRecord[]> {
   if (!env.AI) return [];
   const ocr = (await markdownFromMedia(env, media, MAX_OCR_CHARS)).trim();
-  if (!ocr) return [];
+  return extractRosterFromText(env, ocr);
+}
+
+/**
+ * Same chunk→AI→dedupe pipeline over raw text (a pasted list, not a file).
+ * Used by the text-roster path when its deterministic parser reads too little.
+ */
+export async function extractRosterFromText(env: Env, text: string): Promise<ExtractedRecord[]> {
+  if (!env.AI || !text.trim()) return [];
+  const ocr = text.slice(0, MAX_OCR_CHARS);
 
   const chunks = chunkText(ocr);
   const out: ExtractedRecord[] = [];

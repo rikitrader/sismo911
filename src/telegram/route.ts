@@ -34,6 +34,7 @@ import { auditTelegram, checkAbuse, queryFingerprint } from './audit';
 import { hashId } from './hash';
 import { isIntakeMessage, handleIntake } from './intake';
 import { parseModerationCommand, resolveIntakeModeration, buildModerationReply } from './intake/moderate';
+import { looksLikeTextRoster, handleTextRoster, parseLoteCommand, resolveLoteCommand } from './intake/text-roster';
 
 type BotEnv = Env & TelegramEnv;
 
@@ -282,6 +283,24 @@ telegram.post('/webhook', async (c) => {
       resultKind: res.kind,
     });
     c.executionCtx.waitUntil(sendMessages(token, chatId, [buildModerationReply(res)]));
+    return c.json({ ok: true });
+  }
+
+  // 4.7 Pending text-roster batches: /confirmar LOT-XXXX | /cancelar LOT-XXXX.
+  //     Confirms (creates) or discards a pasted-list preview. Chat-scoped.
+  const lote = parseLoteCommand(msg.text);
+  if (lote) {
+    await auditTelegram(c.env, { event: 'query', chatId, chatType, userHash, command: `roster_${lote.action}`, resultKind: 'intake' });
+    const reply = await resolveLoteCommand(c.env, cfg, msg, lote);
+    c.executionCtx.waitUntil(sendMessages(token, chatId, [reply]));
+    return c.json({ ok: true });
+  }
+
+  // 4.8 Pasted text roster (many "N NOMBRE · edad" lines): parse + match against
+  //     the DB and reply with a preview — NOTHING is created until /confirmar.
+  if (looksLikeTextRoster(msg.text)) {
+    await auditTelegram(c.env, { event: 'query', chatId, chatType, userHash, command: 'roster_preview', resultKind: 'intake' });
+    c.executionCtx.waitUntil(handleTextRoster(c.env, cfg, msg));
     return c.json({ ok: true });
   }
 
