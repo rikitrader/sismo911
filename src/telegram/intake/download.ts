@@ -1,12 +1,13 @@
 // SISMO911 — Telegram intake: pick + download the submitted media.
 // ---------------------------------------------------------------------------
 // Telegram sends photos as message.photo[] (multiple sizes; last = largest) and
-// files as message.document (with mime_type). We only ingest photos and
-// PDF/image documents; anything else is ignored. Download is a two-step dance:
+// files as message.document (with mime_type). We ingest photos and PDF/image/
+// DOCX documents; anything else is ignored. Download is a two-step dance:
 // getFile → file_path, then GET /file/bot<token>/<path>.
 
 import type { TelegramMessage } from '../types';
 import type { IntakeMedia } from './types';
+import { DOCX_MIME } from './docx';
 
 const TG_API = 'https://api.telegram.org';
 const MAX_BYTES = 20 * 1024 * 1024; // Telegram Bot API download cap is 20 MB.
@@ -17,7 +18,7 @@ export interface PickedFile {
   fileName: string;
 }
 
-/** Pick the intake-relevant media from a message: largest photo, or a PDF/image document. */
+/** Pick the intake-relevant media from a message: largest photo, or a PDF/image/DOCX document. */
 export function pickMedia(msg: TelegramMessage): PickedFile | null {
   const m = msg as unknown as {
     photo?: Array<{ file_id?: string }>;
@@ -30,7 +31,7 @@ export function pickMedia(msg: TelegramMessage): PickedFile | null {
   const doc = m.document;
   if (doc?.file_id) {
     const mime = String(doc.mime_type || '').toLowerCase();
-    if (mime === 'application/pdf' || mime.startsWith('image/')) {
+    if (mime === 'application/pdf' || mime === DOCX_MIME || mime.startsWith('image/')) {
       return { fileId: String(doc.file_id), mime, fileName: String(doc.file_name || 'documento').slice(0, 120) };
     }
   }

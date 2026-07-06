@@ -41,12 +41,12 @@
   <div class="wrap">
     <div class="eyebrow">SISMO911 · Operadores</div>
     <h1>Importar padrón de nombres</h1>
-    <p class="sub">Sube un PDF con muchos nombres (un padrón o expediente de varias páginas). El sistema lee cada nombre y crea un <strong>expediente en BORRADOR</strong> por persona. Nada se publica: quedan en la cola de revisión de <a href="/console">la consola</a>.</p>
+    <p class="sub">Sube un PDF o Word (.docx) con muchos nombres (un padrón o expediente de varias páginas). El sistema lee cada nombre y crea un <strong>expediente en BORRADOR</strong> por persona. Nada se publica: quedan en la cola de revisión de <a href="/console">la consola</a>.</p>
 
     <div class="card">
       <label class="file">
-        <span class="muted">Archivo PDF (máx. 60&nbsp;MB)</span>
-        <input id="file" type="file" accept="application/pdf" />
+        <span class="muted">Archivo PDF o Word .docx (máx. 60&nbsp;MB)</span>
+        <input id="file" type="file" accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx" />
       </label>
       <button id="go" disabled>Subir y procesar</button>
       <div class="hint">Telegram limita los archivos a 20&nbsp;MB — por eso los padrones grandes se suben aquí. Un PDF con texto real (no una foto escaneada) se lee mucho mejor.</div>

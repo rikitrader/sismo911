@@ -10,6 +10,7 @@ import type { Env } from '../../types';
 import type { TelegramConfig } from '../env';
 import type { TelegramMessage } from '../types';
 import { pickMedia, downloadFile } from './download';
+import { DOCX_MIME } from './docx';
 import { extractFields } from './extract';
 import { matchCase } from './match';
 import { persist } from './persist';
@@ -54,11 +55,11 @@ export async function handleIntake(env: Env, cfg: TelegramConfig, msg: TelegramM
     return null;
   }
 
-  // A PDF may be a multi-name roster (padrón/expediente), not a single flyer.
-  // Route every PDF through the bulk pipeline: it extracts a LIST of people and
-  // creates one draft case per name (a 1-name PDF still yields exactly 1 draft).
-  // Photos keep the single-person path (one cédula/face per photo).
-  if (media.mime === 'application/pdf') {
+  // A PDF/DOCX may be a multi-name roster (padrón/expediente), not a single
+  // flyer. Route every document through the bulk pipeline: it extracts a LIST of
+  // people and creates one draft case per name (a 1-name doc still yields
+  // exactly 1 draft). Photos keep the single-person path (one cédula/face each).
+  if (media.mime === 'application/pdf' || media.mime === DOCX_MIME) {
     return handleRosterIntake(env, cfg, msg, media);
   }
 
