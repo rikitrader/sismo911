@@ -14,6 +14,10 @@ export interface ExtractedRecord {
   fecha: string | null; // free-text date of disappearance or event
   contacto: string | null; // phone or email
   descripcion: string | null; // clothing / features / notes
+  // Advisory OCR-quality flags (src/lib/ocr-normalize.ts). Presence forces
+  // operator review — a flagged record is never auto-approved. Serialized
+  // inside extracted_json, so the console surfaces it with no schema change.
+  ocrFlags?: string[];
 }
 
 /** The media the bot pulled off a Telegram message. */
