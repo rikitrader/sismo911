@@ -14,19 +14,17 @@
 // (~5 pages each — comfortably inside one invocation's subrequest budget).
 
 import type { Env } from '../types';
+import { runIngestPipeline, type PipelineStage, type PipelineSummary } from './pipeline';
 import { ingestCivisAtendidos } from './civis-atendidos';
 import { ingestCivisDesaparecidos } from './civis-desaparecidos';
 import { ingestCivisExtras } from './civis-extras';
 import { ingestCivisEdificaciones } from './civis-edificaciones';
 import { runHourlyDedupe } from '../db/dedupe-cron';
 
-export interface PipelineStage {
-  name: string;
-  run: (env: Env) => Promise<unknown>;
-}
-
 /** Default stage order: person-registry sources first, then satellite/stats,
  *  then the dedupe pass that collapses whatever the tick just ingested. */
+export type { PipelineStage, PipelineSummary } from './pipeline';
+
 export const CIVIS_STAGES: PipelineStage[] = [
   { name: 'civis-desaparecidos', run: ingestCivisDesaparecidos },
   { name: 'civis-atendidos', run: ingestCivisAtendidos },
@@ -35,25 +33,7 @@ export const CIVIS_STAGES: PipelineStage[] = [
   { name: 'dedupe-pass', run: (env) => runHourlyDedupe(env) },
 ];
 
-export interface PipelineSummary {
-  stages: Array<{ name: string; ok: boolean; ms: number; error?: string; result?: unknown }>;
-  ok: number;
-  failed: number;
-}
-
 /** Run the stages sequentially; a failing stage is recorded, never fatal. */
 export async function runCivisPipeline(env: Env, stages: PipelineStage[] = CIVIS_STAGES): Promise<PipelineSummary> {
-  const out: PipelineSummary = { stages: [], ok: 0, failed: 0 };
-  for (const stage of stages) {
-    const started = Date.now();
-    try {
-      const result = await stage.run(env);
-      out.stages.push({ name: stage.name, ok: true, ms: Date.now() - started, result });
-      out.ok++;
-    } catch (e) {
-      out.stages.push({ name: stage.name, ok: false, ms: Date.now() - started, error: String((e as Error)?.message ?? e).slice(0, 200) });
-      out.failed++;
-    }
-  }
-  return out;
+  return runIngestPipeline(env, stages);
 }

@@ -26,20 +26,19 @@ import { syncBotCommands } from './telegram/botcommands';
 import { ingestSosDamage } from './ingest/sos-damage';
 import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
 import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from './lib/clean';
-import { dedupePersonas, dedupeRavReports } from './lib/dedupe';
+import { dedupePersonas } from './lib/dedupe';
 import { backfillSearchFields, reindexRemaining } from './lib/search-index';
 import { ingestSocialMonitor } from './ingest/social-monitor';
 import { syncMonitorSheet, syncSosSheet, syncHospitalSheet } from './lib/sheets-sync';
 import { syncCasesSheetToD1 } from './sync/sheet-source';
 import { ingestBlog } from './ingest/blog-cron';
-import { ingestRav, ingestRavStats, ingestRavVerified, ingestRavReports, ingestRavSafe } from './ingest/rav-cron';
+import { runRavPipeline } from './ingest/rav-pipeline';
 import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
 import { backfillHospitalMatches } from './ingest/hospital-match';
 import { drainHospitalRegistryMatch } from './ingest/hospital-registry-match';
 import { ingestHospitalRegistry } from './ingest/hospital-registry-sync';
 import { ingestTvBuildings } from './ingest/tv-buildings-cron';
-import { ingestPacientesRvz } from './ingest/pacientes-rvz-cron';
 import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
@@ -235,21 +234,13 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   // account-level cron schedule.
   '5 * * * *': [
     { name: 'history-bootstrap', run: bootstrapHistory },
-    { name: 'rav-ingest', run: (env) => ingestRav(env) },
-    // reportesvenezuela.com /pacientes.json (CC0): hospital intakes (ingresados)
-    // upserted as rav_reports kind='hospital'. The :15 hospital-match cron then
-    // cross-matches our desaparecidos against these by name → leads + docket
-    // notes. Light (1 fetch; skips the bulk upsert when the snapshot is unchanged).
-    { name: 'pacientes-rvz', run: ingestPacientesRvz },
-    { name: 'rav-stats', run: ingestRavStats },
-    { name: 'rav-verified', run: ingestRavVerified },
-    // RAV extra datasets: citizen reports (pets/volunteers/trapped/aid/damage) +
-    // "estoy a salvo" check-ins. Both bounded + UPSERT-keyed (no dupes); one job.
-    { name: 'rav-reports-safe', run: async (env) => ({ reports: await ingestRavReports(env), safe: await ingestRavSafe(env) }) },
-    // Collapse rav_reports re-imported under different `id`s (559 dup ext_id groups
-    // / ~2,526 redundant rows found in the audit). Runs right after the rav ingest
-    // so each tick's fresh dupes are caught in the same invocation. Convergent.
-    { name: 'rav-reports-dedupe-extid', run: (env) => drain(() => dedupeRavReports(env, { apply: true, limit: 400 })) },
+    // RAV consolidated pipeline — ONE seat for what were SIX same-upstream jobs
+    // (rav-ingest, pacientes-rvz, rav-stats, rav-verified, rav-reports+safe,
+    // rav-reports-dedupe-extid), run SEQUENTIALLY and finished with the scored
+    // dedupe pass: fetch → gate-filter/map (inside each source, unchanged) →
+    // dedupe. Same invocation budget as before (all six already shared :05);
+    // one failing source never blocks the rest. Twin of civis-pipeline (:45).
+    { name: 'rav-pipeline', run: (env) => runRavPipeline(env) },
     // 3rd phash-backfill slot (batch 400). :05's rav ingest is bounded (Supabase
     // REST pages), so there's budget. Together :05+:30+:45 hash ~950/hr → the
     // one-time ~58k backlog drains in ~2.6 days (vs ~16 at the :45-only 150/tick).
