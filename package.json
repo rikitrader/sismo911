@@ -27,7 +27,10 @@
     "db:backup": "mkdir -p backups && npx wrangler d1 export sismo911 --remote --env-file /dev/null --output backups/sismo911-$(date +%Y%m%d-%H%M%S).sql",
     "db:dedupe:dry-run": "tsx scripts/dedupe-existing.ts --dry-run",
     "db:dedupe:report": "tsx scripts/dedupe-existing.ts --report",
-    "db:dedupe:execute": "tsx scripts/dedupe-existing.ts --execute"
+    "db:dedupe:execute": "tsx scripts/dedupe-existing.ts --execute",
+    "ingest:check": "tsx scripts/pre-ingest-gate.ts --check",
+    "ingest:dry-run": "tsx scripts/pre-ingest-gate.ts --dry-run",
+    "ingest:execute": "tsx scripts/pre-ingest-gate.ts --execute"
   },
   "dependencies": {
     "hono": "^4.6.14",
