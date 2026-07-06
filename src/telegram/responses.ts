@@ -96,6 +96,7 @@ const HELP_ES = [
   '• Si el PDF tiene varias páginas, mándalo como ARCHIVO (no como foto) para no perder texto.',
   '• Tamaño máximo 20 MB. Formatos: JPG, PNG, PDF o Word (.docx).',
   '• Si no logro leer un nombre o una cédula, te pediré que los escribas por texto.',
+  '• LISTAS: también puedes PEGAR una lista de nombres como texto (una persona por línea, ej. "1 MARIA PEREZ · 40 años"). Te muestro cuántos son nuevos y cuáles ya existen (sin duplicar) y NO creo nada hasta que respondas /confirmar.',
   '',
   'Solo respondo con registros verificados. En grupos oculto los datos sensibles; para el detalle completo, escríbeme en privado (solo operadores autorizados).',
 ].join('\n');
@@ -134,6 +135,7 @@ const HELP_EN = [
   '• If the PDF has several pages, send it as a FILE (not as a photo) so no text is lost.',
   '• Max size 20 MB. Formats: JPG, PNG, PDF, or Word (.docx).',
   "• If I can't read a name or an ID number, I'll ask you to type them.",
+  '• LISTS: you can also PASTE a list of names as text (one person per line, e.g. "1 MARIA PEREZ · 40 años"). I show how many are new and which already exist (no duplicates) and create NOTHING until you reply /confirmar.',
   '',
   'I only reply with verified records. In groups sensitive data is hidden; for full detail, DM me (authorized operators only).',
 ].join('\n');
