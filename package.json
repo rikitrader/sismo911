@@ -23,7 +23,11 @@
     "build:css": "tailwindcss -i src/styles.css -o public/app.css --minify",
     "build:admin": "node esbuild.admin.mjs && tailwindcss -c tailwind.admin.config.js -i admin-src/admin.css -o public/console/app.css --minify",
     "api:audit": "tsx scripts/api-audit.ts",
-    "db:map": "tsx scripts/db-map.ts"
+    "db:map": "tsx scripts/db-map.ts",
+    "db:backup": "mkdir -p backups && npx wrangler d1 export sismo911 --remote --env-file /dev/null --output backups/sismo911-$(date +%Y%m%d-%H%M%S).sql",
+    "db:dedupe:dry-run": "tsx scripts/dedupe-existing.ts --dry-run",
+    "db:dedupe:report": "tsx scripts/dedupe-existing.ts --report",
+    "db:dedupe:execute": "tsx scripts/dedupe-existing.ts --execute"
   },
   "dependencies": {
     "hono": "^4.6.14",
