@@ -25,6 +25,7 @@ import { escapeHtml } from '../responses';
 import { uid } from '../../lib/db';
 import { titleCaseName } from '../../lib/names';
 import { normalizeName } from '../../lib/search-normalize';
+import { repairAgeToken, cleanOcrName, mergeFlags } from '../../lib/ocr-normalize';
 
 const KV_PREFIX = 'tgroster:';
 const BATCH_TTL_S = 3600; // a pending batch expires after 1 hour.
@@ -33,9 +34,8 @@ const MIN_ROSTER_LINES = 5; // below this, treat the text as a normal query.
 const PREVIEW_DUP_LINES = 12; // duplicates listed in the preview reply.
 
 // "1 ALEXIS RODRÍGUEZ · 9 años" | "23. MARIA PEREZ - 40" | "ACUÑA" (numbered).
-// Age separator accepts ·/•/-/– and OCR'd "ohms" for "años".
+// Age handling (incl. OCR'd units like "ohms") lives in src/lib/ocr-normalize.
 const NUMBERED = /^\s*(\d{1,4})\s*[.)\-–·•]?\s+(.+?)\s*$/;
-const AGE_TAIL = /^(.+?)\s*[·•\-–]\s*(\d{1,3})\s*(?:años?|anos?|ohms?)?\s*$/i;
 const NAMEISH = /^[\p{L}][\p{L}\s.'’-]{1,120}$/u;
 
 export interface TextRosterBatch {
@@ -55,18 +55,18 @@ const EMPTY_REC: ExtractedRecord = { nombre: null, cedula: null, edad: null, ubi
 export function parseRosterLine(line: string): ExtractedRecord | null {
   const numbered = line.match(NUMBERED);
   if (!numbered) return null;
-  let body = numbered[2];
-  let edad: number | null = null;
-  const aged = body.match(AGE_TAIL);
-  if (aged) {
-    body = aged[1].trim();
-    const n = parseInt(aged[2], 10);
-    if (Number.isFinite(n) && n >= 0 && n < 130) edad = n;
-  }
-  body = body.replace(/\s+/g, ' ').trim();
-  if (!NAMEISH.test(body)) return null;
-  if (!normalizeName(body)) return null;
-  return { ...EMPTY_REC, nombre: titleCaseName(body).slice(0, 140), edad };
+  const { age, rest, repaired } = repairAgeToken(numbered[2]);
+  const cleaned = cleanOcrName(rest);
+  if (!cleaned.name) return null; // pure "ILEGIBLE" marker or junk-only line
+  if (!NAMEISH.test(cleaned.name)) return null;
+  if (!normalizeName(cleaned.name)) return null;
+  const flags = mergeFlags(cleaned.flags, repaired ? ['age_unit_repaired'] : undefined);
+  return {
+    ...EMPTY_REC,
+    nombre: titleCaseName(cleaned.name).slice(0, 140),
+    edad: age,
+    ...(flags.length ? { ocrFlags: flags } : {}),
+  };
 }
 
 /** Deterministic parse of a pasted roster: numbered "NAME [· age]" lines. */
@@ -141,6 +141,14 @@ export function buildPreviewReply(batch: TextRosterBatch, matches: Array<{ rec: 
       lines.push(`— ${escapeHtml(d.rec.nombre ?? '?')} ≈ caso <code>${escapeHtml(d.match.personId ?? '')}</code> (${pct}%)`);
     }
     if (dup.length > PREVIEW_DUP_LINES) lines.push(`… y ${dup.length - PREVIEW_DUP_LINES} más.`);
+  }
+  const flagged = matches.filter((m) => m.rec.ocrFlags?.length);
+  if (flagged.length) {
+    lines.push('', `⚠️ Revisar OCR (${flagged.length} — texto dudoso, irán a revisión de operador aunque confirmes):`);
+    for (const f of flagged.slice(0, PREVIEW_DUP_LINES)) {
+      lines.push(`— ${escapeHtml(f.rec.nombre ?? '(nombre ilegible)')} [${(f.rec.ocrFlags ?? []).join(', ')}]`);
+    }
+    if (flagged.length > PREVIEW_DUP_LINES) lines.push(`… y ${flagged.length - PREVIEW_DUP_LINES} más.`);
   }
   lines.push(
     '',

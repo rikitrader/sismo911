@@ -14,6 +14,7 @@ import { uid } from '../../lib/db';
 import { computeSearchFields } from '../../lib/search-index';
 import type { ExtractedRecord, IntakeMedia, IntakeResult, MatchResult } from './types';
 import { DOCX_MIME } from './docx';
+import { ocrNote, type OcrFlag } from '../../lib/ocr-normalize';
 
 const RAW_BUCKET_PREFIX = 'intake/telegram';
 
@@ -88,7 +89,11 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
     await env.PERSON_PHOTOS.put(rawKey, media.bytes, { httpMetadata: { contentType: media.mime } }).catch(() => {});
   }
 
-  const autoApprove = !!input.autoApprove;
+  // OCR-flagged records are NEVER auto-approved — even from an admin. The
+  // flags mean the extracted text is suspect; a human must compare against the
+  // original document before anything publishes (No-Fabrication discipline).
+  const ocrFlagged = !!fields.ocrFlags?.length;
+  const autoApprove = !!input.autoApprove && !ocrFlagged;
   let outcome: IntakeResult['outcome'] = 'needs_review';
   let personId: string | null = null;
   let intelId: string | null = null;
@@ -150,6 +155,10 @@ export async function persist(env: Env, input: PersistInput): Promise<IntakeResu
     outcome = 'error';
     note = 'Error al guardar. La evidencia se conservó; un operador revisará.';
     console.warn('[tg-intake] persist failed', submissionId, (e as Error)?.message ?? e);
+  }
+
+  if (ocrFlagged && outcome !== 'error') {
+    note += ` ${ocrNote(fields.ocrFlags as OcrFlag[], fields.nombre ?? '')}`;
   }
 
   // Ledger row (always). An admin auto-approved submission is recorded as

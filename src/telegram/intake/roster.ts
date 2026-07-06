@@ -30,6 +30,7 @@ Reglas:
 - Una entrada por persona listada. Si aparecen 30 nombres, devuelve 30 entradas.
 - cedula: SOLO dígitos (sin "V-", sin puntos). Si no hay, null.
 - Si el texto no contiene personas, devuelve [].
+- Si un nombre o dato es ilegible o el OCR está corrupto, usa null — NUNCA adivines ni "repares" texto.
 Responde únicamente con el ARRAY JSON, sin texto adicional.`;
 
 /** Parse the first [...] block as a JSON array. */

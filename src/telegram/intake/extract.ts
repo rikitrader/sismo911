@@ -12,6 +12,7 @@
 import type { Env } from '../../types';
 import type { ExtractedRecord, IntakeMedia } from './types';
 import { DOCX_MIME, extractDocxText } from './docx';
+import { cleanOcrName } from '../../lib/ocr-normalize';
 
 const STRUCT_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
@@ -37,6 +38,7 @@ Reglas:
 - fecha: fecha de desaparición o del evento tal cual aparezca.
 - contacto: teléfono o correo de contacto si aparece.
 - descripcion: rasgos físicos, vestimenta o notas relevantes.
+- Si un dato es ilegible o el OCR está corrupto, usa null — NUNCA adivines ni "repares" un nombre.
 Responde únicamente con el JSON, sin texto adicional.`;
 
 /** Best-effort JSON extraction: parse the first {...} block. */
@@ -59,21 +61,25 @@ function str(v: unknown, max: number): string | null {
 
 function intOrNull(v: unknown): number | null {
   const n = typeof v === 'number' ? v : parseInt(String(v ?? '').replace(/\D/g, ''), 10);
-  return Number.isFinite(n) && n > 0 && n < 130 ? Math.trunc(n) : null;
+  // 0 is a legitimate age (an infant) — the July-5 roster had "0 años".
+  return Number.isFinite(n) && n >= 0 && n < 130 ? Math.trunc(n) : null;
 }
 
 export function normalize(obj: Record<string, unknown> | null): ExtractedRecord {
   if (!obj) return { ...EMPTY };
   const cedRaw = str(obj.cedula, 20);
   const cedula = cedRaw ? cedRaw.replace(/\D/g, '').slice(0, 9) || null : null;
+  // OCR hygiene on the name: strip junk, flag (never rewrite) suspect text.
+  const cleaned = cleanOcrName(str(obj.nombre, 140));
   return {
-    nombre: str(obj.nombre, 140),
+    nombre: cleaned.name,
     cedula,
     edad: intOrNull(obj.edad),
     ubicacion: str(obj.ubicacion, 200),
     fecha: str(obj.fecha, 60),
     contacto: str(obj.contacto, 160),
     descripcion: str(obj.descripcion, 1000),
+    ...(cleaned.flags.length ? { ocrFlags: cleaned.flags } : {}),
   };
 }
 
