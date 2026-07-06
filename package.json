@@ -2,7 +2,7 @@
   "name": "sismo911",
   "version": "0.1.0",
   "private": true,
-  "description": "SISMO911 — Venezuela national seismic emergency platform (Cloudflare Workers + Hono + D1 + KV, live USGS feed).",
+  "description": "SISMO911 \u2014 Venezuela national seismic emergency platform (Cloudflare Workers + Hono + D1 + KV, live USGS feed).",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
@@ -21,7 +21,8 @@
     "verify": "tsc --noEmit && vitest run",
     "build": "npm run build:css && npm run build:admin",
     "build:css": "tailwindcss -i src/styles.css -o public/app.css --minify",
-    "build:admin": "node esbuild.admin.mjs && tailwindcss -c tailwind.admin.config.js -i admin-src/admin.css -o public/console/app.css --minify"
+    "build:admin": "node esbuild.admin.mjs && tailwindcss -c tailwind.admin.config.js -i admin-src/admin.css -o public/console/app.css --minify",
+    "api:audit": "tsx scripts/api-audit.ts"
   },
   "dependencies": {
     "hono": "^4.6.14",
@@ -35,6 +36,7 @@
     "better-sqlite3": "^12.11.1",
     "esbuild": "^0.28.1",
     "tailwindcss": "^3.4.19",
+    "tsx": "^4.23.0",
     "typescript": "^5.7.2",
     "viem": "^2.53.1",
     "vitest": "^4.1.9",
