@@ -90,11 +90,27 @@ export function normalizeFunvisisFeature(f: any): SeismicEvent | null {
  */
 export async function fetchFunvisis(env: Env, _now: number): Promise<{ events: SeismicEvent[]; raw: any[] }> {
   const url = env.FUNVISIS_URL || DEFAULT_URL;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'SISMO911/0.1 (emergency monitoring)' },
-    cf: { cacheTtl: 60, cacheEverything: true },
-  });
-  if (!res.ok) throw new Error(`FUNVISIS ${res.status}`);
+  // FUNVISIS's Apache intermittently 403s Cloudflare egress IPs (the feed is
+  // always 200 from residential networks, even with this same User-Agent). A
+  // short in-invocation retry rides out the transient blocks; sustained blocks
+  // are handled by the funvisis-catchup seats on the other cron triggers.
+  let res: Response | null = null;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) await new Promise((r) => setTimeout(r, 400 * attempt));
+    try {
+      res = await fetch(url, {
+        headers: { 'User-Agent': 'SISMO911/0.1 (emergency monitoring)' },
+        cf: { cacheTtl: 60, cacheEverything: true },
+      });
+      if (res.ok) break;
+      lastErr = new Error(`FUNVISIS ${res.status}`);
+    } catch (e) {
+      res = null;
+      lastErr = e;
+    }
+  }
+  if (!res || !res.ok) throw lastErr instanceof Error ? lastErr : new Error(String(lastErr ?? 'FUNVISIS fetch failed'));
   const json: any = await res.json();
   const features: any[] = Array.isArray(json?.features) ? json.features : [];
 
