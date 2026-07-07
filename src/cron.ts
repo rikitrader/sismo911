@@ -24,78 +24,22 @@ import { broadcastSismos } from './telegram-sismos/broadcast';
 import { readTelegramConfig } from './telegram/env';
 import { syncBotCommands } from './telegram/botcommands';
 import { ingestSosDamage } from './ingest/sos-damage';
-import { ingestFamilia, mirrorFamiliaPhotos } from './ingest/familia-cron';
-import { cleanPersonas, cleanNameFloods, purgeRejectedPersonas } from './lib/clean';
 import { dedupePersonas } from './lib/dedupe';
-import { backfillSearchFields, reindexRemaining } from './lib/search-index';
 import { ingestSocialMonitor } from './ingest/social-monitor';
-import { syncMonitorSheet, syncSosSheet, syncHospitalSheet } from './lib/sheets-sync';
-import { syncCasesSheetToD1 } from './sync/sheet-source';
+import { syncSosSheet } from './lib/sheets-sync';
 import { ingestBlog } from './ingest/blog-cron';
 import { runRavPipeline } from './ingest/rav-pipeline';
+import { runPersonasPipeline } from './ingest/personas-pipeline';
+import { runBuildingsCasesPipeline } from './ingest/buildings-cases-pipeline';
+import { drain } from './ingest/pipeline';
 import { analyzeRavPhotos, backfillPhashes } from './ingest/rav-photos';
 import { sweepCaseScores } from './lib/case-score-sync';
-import { backfillHospitalMatches } from './ingest/hospital-match';
-import { drainHospitalRegistryMatch } from './ingest/hospital-registry-match';
 import { ingestHospitalRegistry } from './ingest/hospital-registry-sync';
-import { ingestTvBuildings } from './ingest/tv-buildings-cron';
-import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activity';
 import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
-import { sweepBulkJobs } from './bulk/import-job';
-import { runCaseAlerts } from './ingest/case-alerts';
-import { runBuildingCasesLink } from './lib/building-cases';
-import { runHourlyDedupe } from './db/dedupe-cron';
 import { runCivisPipeline } from './ingest/civis-pipeline';
 
-// Drain the hospital cross-match a bounded number of pages per tick (whole
-// registry completes over a few ticks; thereafter it re-scans for new intakes).
-async function drainHospitalMatch(env: Env): Promise<{ passes: number; matched: number; phase: string }> {
-  let passes = 0, matched = 0, phase = 'personas';
-  for (; passes < 10; passes++) {
-    const r = await backfillHospitalMatches(env, { pages: 3 });
-    matched += r.matched; phase = r.phase;
-    if (r.done) { passes++; break; }
-  }
-  // CRM tracking — one entry per sweep, only when NEW hospital↔desaparecido leads
-  // were found (status untouched; each is a pending docket note for verification).
-  if (matched > 0) {
-    const m = await missingStats(env);
-    await logAgentActivity(env, {
-      source: 'hospital-match', action: 'match', matched, stillMissing: m.total, stillUnique: m.unique,
-      summary: `🏥 Cruce hospitalario — ${matched} nueva(s) coincidencia(s) desaparecido↔ingreso (nota pendiente de verificación). ${missingPhrase(m)}.`,
-    });
-  }
-  return { passes, matched, phase };
-}
-
 export interface CronJob { name: string; run: (env: Env) => Promise<unknown>; }
-
-// Convergence helper: re-run a bounded-batch cleanup until it reports nothing
-// left (`remaining === 0`) or a pass cap is hit, so a backlog actually DRAINS
-// instead of trickling one batch per hour. Safe on the subrequest budget now
-// that R2 deletes are bulk (1 subrequest per ≤1000 keys). Returns a summary.
-// maxPasses is the burst ceiling, NOT the steady-state cost: every pass that
-// finds nothing left early-breaks (remaining===0), so a quiet tick does ~1 pass.
-// It only engages when a RAV-ingest burst leaves a big backlog — at 400 rows/pass
-// the old 6-pass cap (2,400/tick) couldn't outrun the firehose, so same-photo /
-// exact-resubmission duplicates stayed visible on /personas for hours. 16 passes
-// (6,400 rows/tick) drains a typical burst in one tick. Safe on the subrequest
-// budget: each pass is ~1 SELECT + ≤5 chunked D1 DELETEs + 1 BULK R2 delete.
-async function drain(
-  run: () => Promise<{ remaining?: number; deletedRows?: number; deletedPhotos?: number }>,
-  maxPasses = 16,
-): Promise<{ passes: number; deletedRows: number; deletedPhotos: number; remaining: number }> {
-  let passes = 0, deletedRows = 0, deletedPhotos = 0, remaining = 0;
-  for (; passes < maxPasses; passes++) {
-    const r = await run();
-    deletedRows += r.deletedRows ?? 0;
-    deletedPhotos += r.deletedPhotos ?? 0;
-    remaining = r.remaining ?? 0;
-    if (!remaining) { passes++; break; }
-  }
-  return { passes, deletedRows, deletedPhotos, remaining };
-}
 
 // Cron expression → ordered job list. Stagger across the hour so no single
 // invocation carries enough work to approach the subrequest ceiling.
@@ -117,78 +61,26 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     { name: 'sos-sheet', run: syncSosSheet },
     { name: 'telemed-reminders', run: sendTelemedReminders },
   ],
-  // :15 — Familia registry ingest + cleanup (D1-heavy, but chunked/batched).
+  // :15 — personas-hourly-pipeline: the full personas ingest/clean/dedupe +
+  // hospital-match run as ONE named pipeline seat (src/ingest/personas-pipeline.ts),
+  // with the ordering explicit inside the pipeline: familia-ingest →
+  // civis-edificaciones → clean → name-floods → search-index-backfill →
+  // dedupe (extid → exact → photo) → purge-rejected → hospital-match →
+  // hospital-registry-match. A KV lock (flock-style, auto-expiring) guarantees
+  // two hourly runs can never overlap. Same consolidation pattern as
+  // rav-pipeline (:05) and civis-pipeline (:45).
   '15 * * * *': [
-    { name: 'familia-ingest', run: ingestFamilia },
-    { name: 'personas-clean', run: (env) => cleanPersonas(env, { apply: true }) },
-    { name: 'personas-name-floods', run: (env) => cleanNameFloods(env, { apply: true }) },
-    // Structured-search backfill (name_norm / geo_estado / geo_municipio) — a
-    // standalone maintenance rule that DRAINS to convergence exactly like the
-    // personas-dedupe-* rules below. Manual + citizen writes set these fields
-    // inline, but the BULK importers (familia/RAV/CIVIS sync) insert WITHOUT them,
-    // so those rows accumulate NULL name_norm and fall out of name search + dedupe
-    // (a prior cron rebalance dropped this job, leaving ~124k rows unindexed).
-    // Covers personas + persons + hospital.
-    { name: 'search-index-backfill', run: (env) => drain(async () => { const p = await backfillSearchFields(env, 400); return { remaining: await reindexRemaining(env), deletedRows: p.total }; }) },
-    // Each cleanup DRAINS to convergence (up to N bounded passes) so backlogs
-    // clear over a single tick, not one 400-row batch per hour.
-    { name: 'personas-dedupe-exact', run: (env) => drain(() => dedupePersonas(env, { mode: 'exact', apply: true, limit: 400 })) },
-    { name: 'personas-dedupe-photo', run: (env) => drain(() => dedupePersonas(env, { mode: 'photo', apply: true, limit: 400 })) },
-    // Same upstream id re-imported under different namespaced `id`s (the RAV/familia
-    // sync upserts on `id`, so it never catches this). Groups by (origen, ext_id) —
-    // the root cause of the bulk personas duplication. Convergent drain.
-    { name: 'personas-dedupe-extid', run: (env) => drain(() => dedupePersonas(env, { mode: 'extid', apply: true, limit: 400 })) },
-    // PHYSICALLY drain the soft-rejected backlog (spam/junk flagged just above).
-    { name: 'personas-purge-rejected', run: (env) => drain(() => purgeRejectedPersonas(env, { apply: true, limit: 400 })) },
-    // Cross-match desaparecidos ↔ hospital intakes → persisted matches + pending
-    // docket notes (status untouched). Drains the registry, then re-scans for new intakes.
-    { name: 'hospital-match', run: (env) => drainHospitalMatch(env) },
-    // Cross-reference the hospital_patients REGISTRY ↔ cases: link + tracer note
-    // (cédula-confirmed → auto status). Cursor-drained, converges over ticks.
-    { name: 'hospital-registry-match', run: (env) => drainHospitalRegistryMatch(env) },
+    { name: 'personas-hourly-pipeline', run: (env) => runPersonasPipeline(env) },
   ],
-  // :30 — photo mirroring (external fetch + R2 puts, the heaviest) plus the
-  // sheet sync and fuzzyphone dedupe. Keep RAV off this trigger: together these
-  // jobs can exceed the Free-plan subrequest cap before RAV gets its turn.
+  // :30 — buildings-cases-hourly-pipeline: buildings/cases sync, sheet mirrors,
+  // photo mirror, hash/dedupe, stalled-import sweep and case alerts run as ONE
+  // named pipeline seat (src/ingest/buildings-cases-pipeline.ts), ordered by
+  // dependency inside the pipeline: tv-buildings → cases-sheet-sync →
+  // tv-building-cases → monitor/hospital sheet mirrors → familia-photo-mirror →
+  // phash-backfill → dedupe (fuzzyphone → scored engine) → bulk-import-sweep →
+  // case-alerts LAST (freshest state). KV lock prevents overlapping hourly runs.
   '30 * * * *': [
-    // Buildings ↔ cases auto-linker. Runs FIRST in the group: it needs only
-    // ~5-10 subrequests (2 registry reads + chunked INSERT OR IGNORE batches)
-    // but a few seconds of CPU for the name-token match — at the TAIL of this
-    // group (as part of tv-buildings) the invocation died before it could run.
-    { name: 'tv-building-cases', run: runBuildingCasesLink },
-    { name: 'familia-photo-mirror', run: mirrorFamiliaPhotos },
-    { name: 'monitor-sheet', run: syncMonitorSheet },
-    // Mirror the hospital_patients registry (Cruz Roja + CIVIS) into the Sheet's
-    // "Hospital" tab. No-op without HOSPITAL_SHEET_ID/MONITOR_SHEET_ID + Google creds.
-    { name: 'hospital-sheet', run: syncHospitalSheet },
-    // Sheet-as-source-of-truth: pull the curated "Casos CRM" sheet into D1 (one
-    // bounded 4k-row pass per tick, drains via KV cursor; dedup runs on wrap).
-    // No-op until CASES_SHEET_ID + GOOGLE_* creds are set.
-    { name: 'cases-sheet-sync', run: syncCasesSheetToD1 },
-    // Email subscribers when a case they follow changes (status / new verified
-    // lead / data). Scans only cases with active subs; the AI summary + email
-    // send fire ONLY on a real change, so a quiet tick is ~cheap D1 reads. Rides
-    // :30 (4 jobs, ample subrequest budget) rather than the full :00 group.
-    { name: 'case-alerts', run: (env) => runCaseAlerts(env) },
-    // Safe fuzzy dedup: same normalized name + age + phone (near-zero false merges).
-    { name: 'personas-dedupe-fuzzyphone', run: (env) => drain(() => dedupePersonas(env, { mode: 'fuzzyphone', apply: true, limit: 400 })) },
-    // Layered SCORED dedupe (engine v2): corroborated fuzzy matches auto-merge
-    // (bounded 15/tick, canonical restorable merge), 70-89 pairs → operator
-    // review queue (dedupe_candidates), conflicts recorded, data-quality
-    // snapshot written. Watermark + UNIQUE(pair) ⇒ idempotent; ~≤15 D1 calls.
-    { name: 'dedupe-engine-hourly', run: (env) => runHourlyDedupe(env) },
-    // 2nd phash-backfill slot (batch 400). Adding the backfill to 3 hourly groups
-    // (:05/:30/:45) is how we go faster WITHOUT a 6th cron (account caps at 5).
-    // :30 has budget: familia-photo-mirror is only ~50 fetches (~100 subrequests).
-    { name: 'personas-phash-backfill-30', run: (env) => backfillPhashes(env, 400) },
-    // Bulk roster importer backstop: start any 'pending' job whose ingest tick
-    // died before waitUntil ran it, and flag long-stuck 'processing' jobs as
-    // error. Cheap D1-only when idle (a couple of indexed reads).
-    { name: 'bulk-import-sweep', run: (env) => sweepBulkJobs(env) },
-    // Hourly mirror of terremotovenezuela.com's damaged-buildings map (real
-    // citizen field reports WITH photo galleries) into tv_buildings. Light:
-    // 1 external fetch of ~795 rows + chunked D1 upserts; idempotent (upsert on id).
-    { name: 'tv-buildings', run: ingestTvBuildings },
+    { name: 'buildings-cases-hourly-pipeline', run: (env) => runBuildingsCasesPipeline(env) },
   ],
   // :45 — social/web monitor + AI blog (external-fetch heavy) — now isolated, so
   // it always has a full subrequest budget. This is the job that used to fail.
@@ -265,11 +157,14 @@ export function jobsForCron(cron: string | undefined): CronJob[] {
 // Run a job group sequentially; one job's failure never aborts the rest.
 export async function runCronGroup(cron: string | undefined, env: Env): Promise<void> {
   for (const job of jobsForCron(cron)) {
+    const started = Date.now();
     try {
       const r = await job.run(env);
-      if (r !== undefined) console.log(`[cron:${cron ?? 'all'}] ${job.name}:`, typeof r === 'object' ? JSON.stringify(r) : r);
+      // Always log (even void results) so every job gets a duration line.
+      console.log(`[cron:${cron ?? 'all'}] ${job.name} (${Date.now() - started}ms):`, r === undefined ? 'ok' : typeof r === 'object' ? JSON.stringify(r) : r);
     } catch (e: any) {
-      console.error(`[cron:${cron ?? 'all'}] ${job.name} failed:`, e?.message ?? e);
+      const elapsed = Date.now() - started;
+      console.error(`[cron:${cron ?? 'all'}] ${job.name} failed (${elapsed}ms):`, e?.message ?? e);
       // SYS-02: job-failure alert to the ops distribution (only if configured).
       // Best-effort + isolated — a mail failure must never abort the cron loop,
       // and this is the rare (catch) path so it adds no steady-state subrequests.
@@ -284,6 +179,7 @@ export async function runCronGroup(cron: string | undefined, env: Env): Promise<
             details: [
               { label: 'Trabajo', value: job.name },
               { label: 'Grupo', value: cron ?? 'all' },
+              { label: 'Duración', value: `${elapsed}ms` },
               { label: 'Error', value: String(e?.message ?? e).slice(0, 200) },
             ],
           }));

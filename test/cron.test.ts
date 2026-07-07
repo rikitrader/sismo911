@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { CRON_GROUPS, jobsForCron } from '../src/cron';
+import { PERSONAS_STAGES } from '../src/ingest/personas-pipeline';
+import { BUILDINGS_CASES_STAGES } from '../src/ingest/buildings-cases-pipeline';
+import { CIVIS_STAGES } from '../src/ingest/civis-pipeline';
 
 // The whole point of the split is that no single invocation runs too many jobs.
 // These tests lock in: groups are non-empty, jobs are disjoint (each runs once
@@ -8,11 +11,10 @@ import { CRON_GROUPS, jobsForCron } from '../src/cron';
 
 const ALL_JOB_NAMES = [
   'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync', 'civis-pipeline',
-  'hospital-sheet',
-  'familia-ingest', 'personas-clean', 'personas-name-floods', 'search-index-backfill', 'personas-dedupe-exact', 'personas-dedupe-photo', 'personas-dedupe-extid', 'personas-purge-rejected', 'hospital-match', 'hospital-registry-match',
-  'familia-photo-mirror', 'monitor-sheet', 'cases-sheet-sync', 'case-alerts', 'personas-dedupe-fuzzyphone', 'dedupe-engine-hourly', 'bulk-import-sweep', 'tv-buildings', 'tv-building-cases',
+  'personas-hourly-pipeline',
+  'buildings-cases-hourly-pipeline',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
-  'history-bootstrap', 'personas-phash-backfill-05', 'personas-phash-backfill-30',  
+  'history-bootstrap', 'personas-phash-backfill-05',
   'rav-pipeline', 'sismos-bot-broadcast', 'botcommands-sync',
 ];
 
@@ -41,38 +43,67 @@ describe('cron groups', () => {
     // Coarse guardrail: keep groups small so even multi-subrequest jobs stay well
     // under the ~1000/invocation cap. Tighten/loosen deliberately, not by accident.
     for (const [cron, jobs] of Object.entries(CRON_GROUPS)) {
-      // :15 carries persons/familia D1 jobs (all bounded, D1-only — no external
-      // fetch); :00 carries the seismic core + every-6h hospital pull. :45 carries
-      // the external-fetch ingests incl. BOTH CIVIS pulls (atendidos ~28 subreq,
-      // desaparecidos ~10, both bounded/paged). Ceiling raised 9→10 to seat the
-      // second CIVIS ingest, then 10→11 to seat the standalone search-index-backfill
-      // rule in :15 (which is all bounded, D1-only, no external fetch); every job is
-      // bounded so the group stays far under the ~1000/invocation cap.
+      // :15 is ONE seat (personas-hourly-pipeline: same bounded stages as before,
+      // ordered inside the pipeline); :00 carries the seismic core + every-6h
+      // hospital pull. :45 carries the external-fetch ingests incl. the CIVIS
+      // pulls (atendidos ~28 subreq, desaparecidos ~10, both bounded/paged);
+      // every job is bounded so the group stays far under the ~1000/invocation cap.
       expect(jobs.length, `group ${cron} has too many jobs`).toBeLessThanOrEqual(11);
     }
   });
 
-  it('keeps RAV jobs isolated from the :30 cleanup/mirror group', () => {
+  it('keeps RAV jobs isolated from the :30 buildings/cases group', () => {
     expect(CRON_GROUPS['30 * * * *'].map((j) => j.name)).toEqual([
-      // tv-building-cases runs FIRST: it needs full budget headroom (it died at
-      // the tail of this group on 2026-07-02 when run inside tv-buildings).
-      'tv-building-cases',
-      'familia-photo-mirror',
-      'monitor-sheet',
-      'hospital-sheet',
-      'cases-sheet-sync',
-      'case-alerts',
-      'personas-dedupe-fuzzyphone',
-      'dedupe-engine-hourly',
-      'personas-phash-backfill-30',
-      'bulk-import-sweep',
-      'tv-buildings',
+      'buildings-cases-hourly-pipeline',
     ]);
     expect(CRON_GROUPS['5 * * * *'].map((j) => j.name)).toEqual([
       'history-bootstrap',
       'rav-pipeline',
       'personas-phash-backfill-05',
       'sismos-bot-broadcast',
+    ]);
+  });
+
+  it(':15 is the single personas-hourly-pipeline seat with the dependency-driven stage order', () => {
+    expect(CRON_GROUPS['15 * * * *'].map((j) => j.name)).toEqual(['personas-hourly-pipeline']);
+    // Order is load-bearing: ingest → clean → index (dedupes group on name_norm)
+    // → dedupe cheapest/most deterministic first → purge → hospital matching.
+    expect(PERSONAS_STAGES.map((s) => s.name)).toEqual([
+      'familia-ingest',
+      'civis-edificaciones',
+      'personas-clean',
+      'personas-name-floods',
+      'search-index-backfill',
+      'personas-dedupe-extid',
+      'personas-dedupe-exact',
+      'personas-dedupe-photo',
+      'personas-purge-rejected',
+      'hospital-match',
+      'hospital-registry-match',
+    ]);
+    // civis-edificaciones moved to :15 — it must NOT also run in the :45 CIVIS
+    // pipeline (stages must stay disjoint across the hour, like cron jobs).
+    expect(CIVIS_STAGES.map((s) => s.name)).not.toContain('civis-edificaciones');
+  });
+
+  it(':30 is the single buildings-cases-hourly-pipeline seat with the dependency-driven stage order', () => {
+    expect(CRON_GROUPS['30 * * * *'].map((j) => j.name)).toEqual(['buildings-cases-hourly-pipeline']);
+    // Order is load-bearing: buildings + CRM-sheet ingest BEFORE the
+    // building↔case linker; hash backfill BEFORE the dedupes; case-alerts LAST
+    // so alerts see the freshest case/building/sheet state. tv-building-cases
+    // stays near the FRONT (it died at the tail of the old :30 group, 2026-07-02).
+    expect(BUILDINGS_CASES_STAGES.map((s) => s.name)).toEqual([
+      'tv-buildings',
+      'cases-sheet-sync',
+      'tv-building-cases',
+      'monitor-sheet',
+      'hospital-sheet',
+      'familia-photo-mirror',
+      'personas-phash-backfill-30',
+      'personas-dedupe-fuzzyphone',
+      'dedupe-engine-hourly',
+      'bulk-import-sweep',
+      'case-alerts',
     ]);
   });
 

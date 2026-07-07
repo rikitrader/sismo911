@@ -31,6 +31,8 @@ describe('runCivisPipeline', () => {
 
   it('default stage order ends with the dedupe pass', () => {
     expect(CIVIS_STAGES[CIVIS_STAGES.length - 1].name).toBe('dedupe-pass');
-    expect(CIVIS_STAGES.map((s) => s.name).slice(0, 4)).toEqual(['civis-desaparecidos', 'civis-atendidos', 'civis-extras', 'civis-edificaciones']);
+    // civis-edificaciones moved to the :15 personas-hourly-pipeline (fresh
+    // building data before that tick's matching) — it must NOT reappear here.
+    expect(CIVIS_STAGES.map((s) => s.name).slice(0, 3)).toEqual(['civis-desaparecidos', 'civis-atendidos', 'civis-extras']);
   });
 });
