@@ -18,18 +18,19 @@ import { runIngestPipeline, type PipelineStage, type PipelineSummary } from './p
 import { ingestCivisAtendidos } from './civis-atendidos';
 import { ingestCivisDesaparecidos } from './civis-desaparecidos';
 import { ingestCivisExtras } from './civis-extras';
-import { ingestCivisEdificaciones } from './civis-edificaciones';
 import { runHourlyDedupe } from '../db/dedupe-cron';
 
 /** Default stage order: person-registry sources first, then satellite/stats,
- *  then the dedupe pass that collapses whatever the tick just ingested. */
+ *  then the dedupe pass that collapses whatever the tick just ingested.
+ *  NOTE: civis-edificaciones moved to the :15 personas-hourly-pipeline so
+ *  building data is fresh before that tick's matching — do not re-add it here
+ *  (jobs must stay disjoint across groups; test/cron.test.ts guards this). */
 export type { PipelineStage, PipelineSummary } from './pipeline';
 
 export const CIVIS_STAGES: PipelineStage[] = [
   { name: 'civis-desaparecidos', run: ingestCivisDesaparecidos },
   { name: 'civis-atendidos', run: ingestCivisAtendidos },
   { name: 'civis-extras', run: ingestCivisExtras },
-  { name: 'civis-edificaciones', run: ingestCivisEdificaciones },
   { name: 'dedupe-pass', run: (env) => runHourlyDedupe(env) },
 ];
 
