@@ -16,7 +16,7 @@ import type { Env } from './types';
 import { sendEmail } from './lib/email';
 import { operationalAlert } from './lib/email-catalog';
 import { ingestUsgs } from './ingest/usgs-cron';
-import { ingestFunvisis } from './ingest/funvisis-cron';
+import { ingestFunvisis, catchupFunvisis } from './ingest/funvisis-cron';
 import { bootstrapHistory } from './ingest/usgs-history';
 import { ingestKobo } from './ingest/kobo-cron';
 import { announceQuakes } from './ingest/quake-announce';
@@ -70,6 +70,10 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   // two hourly runs can never overlap. Same consolidation pattern as
   // rav-pipeline (:05) and civis-pipeline (:45).
   '15 * * * *': [
+    // FUNVISIS catch-up: 1 D1 read when the :00 run succeeded; re-fetches only
+    // when the primary run failed (intermittent 403 on CF egress). First seat —
+    // seismic data is the most time-sensitive thing on this trigger.
+    { name: 'funvisis-catchup-15', run: catchupFunvisis },
     { name: 'personas-hourly-pipeline', run: (env) => runPersonasPipeline(env) },
   ],
   // :30 — buildings-cases-hourly-pipeline: buildings/cases sync, sheet mirrors,
@@ -80,12 +84,16 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   // phash-backfill → dedupe (fuzzyphone → scored engine) → bulk-import-sweep →
   // case-alerts LAST (freshest state). KV lock prevents overlapping hourly runs.
   '30 * * * *': [
+    // FUNVISIS catch-up (see :15 note) — self-skips in 1 D1 read while fresh.
+    { name: 'funvisis-catchup-30', run: catchupFunvisis },
     { name: 'buildings-cases-hourly-pipeline', run: (env) => runBuildingsCasesPipeline(env) },
   ],
   // :45 — social/web monitor + AI blog (external-fetch heavy) — now isolated, so
   // it always has a full subrequest budget. This is the job that used to fail.
   // RAV photo analysis (vision + content-hash) + the image-content dedupe ride here.
   '45 * * * *': [
+    // FUNVISIS catch-up (see :15 note) — self-skips in 1 D1 read while fresh.
+    { name: 'funvisis-catchup-45', run: catchupFunvisis },
     // CIVIS consolidated pipeline (civisvenezuela.com) — ONE seat for what were
     // FOUR jobs against the same upstream (atendidos, desaparecidos, extras,
     // edificaciones), run SEQUENTIALLY and finished with the scored-dedupe pass:
@@ -125,6 +133,9 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
   // to stay away from the :30 cleanup/mirror group without adding a sixth
   // account-level cron schedule.
   '5 * * * *': [
+    // FUNVISIS catch-up (see :15 note) — the fastest retry after a failed :00
+    // run (5 min), so a 403-blocked hour usually self-heals before :10.
+    { name: 'funvisis-catchup-05', run: catchupFunvisis },
     { name: 'history-bootstrap', run: bootstrapHistory },
     // RAV consolidated pipeline — ONE seat for what were SIX same-upstream jobs
     // (rav-ingest, pacientes-rvz, rav-stats, rav-verified, rav-reports+safe,

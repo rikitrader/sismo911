@@ -10,7 +10,7 @@ import { CIVIS_STAGES } from '../src/ingest/civis-pipeline';
 // per hour), every job has a runner, and the cron keys match wrangler.toml.
 
 const ALL_JOB_NAMES = [
-  'usgs', 'funvisis', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync', 'civis-pipeline',
+  'usgs', 'funvisis', 'funvisis-catchup-05', 'funvisis-catchup-15', 'funvisis-catchup-30', 'funvisis-catchup-45', 'kobo', 'quake-announce', 'sos-damage', 'case-score-sweep', 'sos-sheet', 'telemed-reminders', 'hospital-registry-sync', 'civis-pipeline',
   'personas-hourly-pipeline',
   'buildings-cases-hourly-pipeline',
   'social-monitor', 'blog', 'casualties', 'rav-photos', 'personas-phash-backfill', 'personas-dedupe-phash', 'personas-dedupe-dhash',
@@ -54,9 +54,11 @@ describe('cron groups', () => {
 
   it('keeps RAV jobs isolated from the :30 buildings/cases group', () => {
     expect(CRON_GROUPS['30 * * * *'].map((j) => j.name)).toEqual([
+      'funvisis-catchup-30',
       'buildings-cases-hourly-pipeline',
     ]);
     expect(CRON_GROUPS['5 * * * *'].map((j) => j.name)).toEqual([
+      'funvisis-catchup-05',
       'history-bootstrap',
       'rav-pipeline',
       'personas-phash-backfill-05',
@@ -65,7 +67,7 @@ describe('cron groups', () => {
   });
 
   it(':15 is the single personas-hourly-pipeline seat with the dependency-driven stage order', () => {
-    expect(CRON_GROUPS['15 * * * *'].map((j) => j.name)).toEqual(['personas-hourly-pipeline']);
+    expect(CRON_GROUPS['15 * * * *'].map((j) => j.name)).toEqual(['funvisis-catchup-15', 'personas-hourly-pipeline']);
     // Order is load-bearing: ingest → clean → index (dedupes group on name_norm)
     // → dedupe cheapest/most deterministic first → purge → hospital matching.
     expect(PERSONAS_STAGES.map((s) => s.name)).toEqual([
@@ -87,7 +89,7 @@ describe('cron groups', () => {
   });
 
   it(':30 is the single buildings-cases-hourly-pipeline seat with the dependency-driven stage order', () => {
-    expect(CRON_GROUPS['30 * * * *'].map((j) => j.name)).toEqual(['buildings-cases-hourly-pipeline']);
+    expect(CRON_GROUPS['30 * * * *'].map((j) => j.name)).toEqual(['funvisis-catchup-30', 'buildings-cases-hourly-pipeline']);
     // Order is load-bearing: buildings + CRM-sheet ingest BEFORE the
     // building↔case linker; hash backfill BEFORE the dedupes; case-alerts LAST
     // so alerts see the freshest case/building/sheet state. tv-building-cases
