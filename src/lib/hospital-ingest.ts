@@ -3,6 +3,8 @@ import { uid } from './db';
 import { patientToRow, type RawPatient } from './hospital-registry';
 
 // Shared hospital-registry write path — used by the ingest route AND the pull cron.
+export const HOSPITAL_COLLAPSE_LAST_KEY = 'hospital-registry:collapse-last';
+const COLLAPSE_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 /** Idempotent bulk upsert by dedupe_key. Returns counts. */
 export async function upsertHospitalRows(env: Env, rawRows: RawPatient[], sourceUpdated: string): Promise<{ received: number; written: number; skipped: number }> {
@@ -65,8 +67,13 @@ export async function upsertHospitalRows(env: Env, rawRows: RawPatient[], source
  * desconocido winner). Set-based SQL (a handful of statements, no per-row fan-out)
  * so it stays well inside the Worker subrequest budget.
  */
-export async function collapseHospitalDupes(env: Env): Promise<{ collapsed: number; reason?: string }> {
+export async function collapseHospitalDupes(env: Env, opts: { force?: boolean } = {}): Promise<{ collapsed: number; reason?: string }> {
   const now = Date.now();
+  if (!opts.force) {
+    const last = Number(await env.CACHE.get(HOSPITAL_COLLAPSE_LAST_KEY) || 0);
+    if (last > 0 && now - last < COLLAPSE_COOLDOWN_MS)
+      return { collapsed: 0, reason: 'collapse_cooldown' };
+  }
   try {
     // Self-healing: tolerate an un-migrated DB (mirrors migration 0084).
     await env.DB.prepare(
@@ -138,6 +145,7 @@ export async function collapseHospitalDupes(env: Env): Promise<{ collapsed: numb
       `${grpRanked} DELETE FROM hospital_patients WHERE id IN (SELECT id FROM ranked WHERE rn > 1)`
     ).run();
     const collapsed = Number(del?.meta?.changes ?? del?.changes ?? 0);
+    await env.CACHE.put(HOSPITAL_COLLAPSE_LAST_KEY, String(now));
     return { collapsed };
   } catch (e: any) {
     return { collapsed: 0, reason: String(e?.message || e).slice(0, 120) };

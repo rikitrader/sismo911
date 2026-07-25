@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   normName, cleanCedula, splitNameVariants, parseStatus, dedupeKey, patientToRow,
 } from '../src/lib/hospital-registry';
 import { parseXlsxRows } from '../src/lib/xlsx-lite';
 import { hospital } from '../src/routes/hospital';
+import { HOSPITAL_SOURCE_MARKER_KEY, ingestHospitalRegistry } from '../src/ingest/hospital-registry-sync';
 import { makeDb, makeEnv, mount } from './helpers/d1';
 
 describe('hospital-registry parsers', () => {
@@ -130,5 +131,24 @@ describe('hospital ingest route (catches the upsert / ON CONFLICT partial-index 
     const found = await (await app.request('/api/persons/hospital/search?q=maria', {}, env)).json();
     expect(found.results[0].full_name).toBe('Maria Lopez');
     expect(found.results[0].estado).toBe('hospitalizado');
+  });
+
+  it('skips an unchanged upstream snapshot before the duplicate-collapse scan', async () => {
+    const db = makeDb([
+      'migrations/0083_hospital_patients.sql',
+      'migrations/0084_hospital_patients_dupes.sql',
+      'migrations/0085_hospital_dupes_bound.sql',
+    ]);
+    const env: any = makeEnv(db);
+    env.HOSPITAL_FEED_URL = 'https://feed.example/hospital.xlsx';
+    const fixture = readFileSync(new URL('./fixtures/hospital-sample.xlsx', import.meta.url));
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(fixture, { status: 200 })));
+    const first = await ingestHospitalRegistry(env);
+    expect(first.ok).toBe(true);
+    expect(first.written).toBeGreaterThan(0);
+    expect(await env.CACHE.get(HOSPITAL_SOURCE_MARKER_KEY)).toBe('30JUN26 00:40h');
+    const second = await ingestHospitalRegistry(env);
+    expect(second).toMatchObject({ ok: true, written: 0, reason: 'unchanged_source' });
+    vi.unstubAllGlobals();
   });
 });
