@@ -7,7 +7,7 @@ import { parseStatus, patientToRow } from '../lib/hospital-registry';
 import { upsertHospitalRows, collapseHospitalDupes, mapSheetRows } from '../lib/hospital-ingest';
 import { parseXlsxRows } from '../lib/xlsx-lite';
 import { drainHospitalRegistryMatch } from '../ingest/hospital-registry-match';
-import { ingestHospitalRegistry } from '../ingest/hospital-registry-sync';
+import { HOSPITAL_SOURCE_MARKER_KEY, ingestHospitalRegistry } from '../ingest/hospital-registry-sync';
 
 // Hospital patient registry API. Mounted under /api/persons (public allow-list):
 //   POST /api/persons/hospital/ingest  — token-gated bulk upsert (like /api/rav/run)
@@ -56,6 +56,7 @@ hospital.post('/hospital/reset', async (c) => {
   if (c.req.query('confirm') !== 'RESET-HOSPITAL') return c.json({ error: 'confirm_required', hint: '?confirm=RESET-HOSPITAL' }, 400);
   const before: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM hospital_patients`).first().catch(() => ({ n: 0 }));
   await c.env.DB.prepare(`DELETE FROM hospital_patients`).run();
+  await c.env.CACHE.delete(HOSPITAL_SOURCE_MARKER_KEY);
   const reload = await ingestHospitalRegistry(c.env);
   const after: any = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM hospital_patients`).first().catch(() => ({ n: 0 }));
   await audit(c, 'hospital.registry.reset', { deleted: Number(before?.n) || 0, reloaded: Number(after?.n) || 0 });

@@ -39,6 +39,7 @@ import { logAgentActivity, missingStats, missingPhrase } from './lib/agent-activ
 import { sendTelemedReminders } from './ingest/telemed-reminders';
 import { ingestCasualties } from './ingest/casualty-cron';
 import { runCaseAlerts } from './ingest/case-alerts';
+import { backfillSearchFields, reindexRemaining } from './lib/search-index';
 
 // Drain the hospital cross-match a bounded number of pages per tick (whole
 // registry completes over a few ticks; thereafter it re-scans for new intakes).
@@ -148,6 +149,12 @@ export const CRON_GROUPS: Record<string, CronJob[]> = {
     // (:05/:30/:45) is how we go faster WITHOUT a 6th cron (account caps at 5).
     // :30 has budget: familia-photo-mirror is only ~50 fetches (~100 subrequests).
     { name: 'personas-phash-backfill-30', run: (env) => backfillPhashes(env, 400) },
+    // Self-healing search index: populate name_norm / geo_estado / geo_municipio
+    // / age_num for any row a write path left un-indexed (bulk importers, citizen
+    // reports, operator edits). Convergent drain (each pass ≈ 3 SELECT + 3 batched
+    // UPDATEs; bounded to keep the :30 subrequest budget). The initial mass
+    // backfill is driven post-deploy via POST /api/persons/reindex-search.
+    { name: 'search-index-backfill', run: (env) => drain(async () => { const p = await backfillSearchFields(env, 400); return { remaining: await reindexRemaining(env), deletedRows: p.total }; }, 8) },
   ],
   // :45 — social/web monitor + AI blog (external-fetch heavy) — now isolated, so
   // it always has a full subrequest budget. This is the job that used to fail.
