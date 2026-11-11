@@ -148,7 +148,7 @@ const ApiReportSchema = z.object({
   lon: lonField.optional(),
   people_trapped: boundedInt(0, 10000).optional(),
   // free-form metadata bag — cleaned below, NOT trusted as-is
-  meta: z.record(z.unknown()).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
 });
 
 const META_SPEC = {
