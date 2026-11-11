@@ -105,6 +105,7 @@ export interface Env {
   // Ops distribution address for operational alerts (e.g. SYS-02 cron-failure).
   // Plain address (not a secret) — configured in wrangler.toml [vars].
   OPS_ALERT_EMAIL?: string;
+  CASE_ALERTS_PAUSED?: string;
   // Guardianes founding-ally direct contact address. Optional: when set, the
   // /guardianes contact form forwards messages here; otherwise they fall back to
   // the OPS_ALERT_EMAIL relay so nothing is lost. Configured in wrangler.toml [vars].

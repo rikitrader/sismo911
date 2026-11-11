@@ -124,3 +124,10 @@ describe('runCaseAlerts', () => {
     expect(sent[0].html).toContain('Resumen IA del cambio.');
   });
 });
+
+describe('CASE_ALERTS_PAUSED kill switch', () => {
+  it('sends nothing and never touches the DB when paused', async () => {
+    const env: any = { CASE_ALERTS_PAUSED: '1', DB: { prepare: () => { throw new Error('DB touched'); } } };
+    expect(await runCaseAlerts(env)).toEqual({ casesScanned: 0, casesChanged: 0, emailsSent: 0 });
+  });
+});

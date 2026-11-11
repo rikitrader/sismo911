@@ -59,6 +59,9 @@ export interface CaseAlertsResult { casesScanned: number; casesChanged: number; 
 export async function runCaseAlerts(
   env: Env, opts: { maxCases?: number; maxEmails?: number; origin?: string } = {},
 ): Promise<CaseAlertsResult> {
+  // Kill switch (Ricardo, 2026-11-11): CASE_ALERTS_PAUSED="1" in wrangler.toml
+  // stops all subscriber case-change emails. Remove the var to resume.
+  if (env.CASE_ALERTS_PAUSED === '1') return { casesScanned: 0, casesChanged: 0, emailsSent: 0 };
   const maxCases = opts.maxCases ?? 40;
   const maxEmails = opts.maxEmails ?? 80;
   const origin = opts.origin || 'https://sismo911.com';
