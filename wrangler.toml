@@ -191,7 +191,10 @@ HOSPITAL_SHEET_ID = "1_l2_VcReGbav1azaqZVl6vv5kCdeDqC8gZUarUnVr7g"
 DESAP_SHEET_ID = "18DFPjCMSnEIh9qabvPqeuO065QOdCRpRor_cjtjdXE0"
 # Ops distribution address for operational alerts (SYS-02 cron-failure, etc.).
 # Plain address, not a secret. Comment out to disable operational email alerts.
-OPS_ALERT_EMAIL = "rikitrader@gmail.com"
+# Disabled 2026-11-11 at Ricardo's request (stop SISMO911 ops emails).
+# OPS_ALERT_EMAIL = "rikitrader@gmail.com"
+# Subscriber case-change emails paused 2026-11-11. Remove to resume.
+CASE_ALERTS_PAUSED = "1"
 # Support inbox From/Reply-To. Outbound support email uses this address; inbound
 # replies must be routed to the Worker via Email Routing (Dashboard → Email →
 # Email Routing → route soporte@sismo911.com → Send to a Worker → sismo911).
